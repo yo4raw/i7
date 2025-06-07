@@ -7,9 +7,10 @@
       "Bash(ln:*)",
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
-      "Bash(mv:*)", 
+      "Bash(mv:*)",
       "Bash(npm run check:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
