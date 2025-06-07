@@ -19,6 +19,9 @@ https://i7.step-on-dream.net/index.phpを改善したサイトを目指してい
 ### データベース
 **Neon** - サーバーレスPostgreSQLデータベース
 
+### ORM
+Drizzle
+
 ### フレームワーク
 **SvelteKit** - モダンなWebアプリケーションフレームワーク
 
