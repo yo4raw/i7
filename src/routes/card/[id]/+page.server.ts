@@ -1,12 +1,12 @@
 import type { PageServerLoad } from './$types';
-import { getCardById, getSkillDetails } from '$lib/db';
+import { getCardById } from '$lib/db';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params }) => {
   const id = parseInt(params.id);
   
   if (isNaN(id)) {
-    throw error(404, 'Invalid card ID');
+    throw error(400, 'Invalid card ID');
   }
   
   const card = await getCardById(id);
@@ -15,10 +15,7 @@ export const load: PageServerLoad = async ({ params }) => {
     throw error(404, 'Card not found');
   }
   
-  const skillDetails = await getSkillDetails(id);
-  
   return {
-    card,
-    skillDetails
+    card
   };
 };

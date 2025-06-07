@@ -1,365 +1,210 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import Card from '$lib/components/Card.svelte';
+  import CardHeader from '$lib/components/CardHeader.svelte';
+  import CardContent from '$lib/components/CardContent.svelte';
+  import Badge from '$lib/components/Badge.svelte';
+  import Button from '$lib/components/Button.svelte';
   
   export let data: PageData;
   
-  const attributeNames = ['', 'Shout', 'Beat', 'Melody'];
+  const card = data.card;
+  
+  function getAttributeName(attribute: number | undefined) {
+    switch (attribute) {
+      case 1: return 'Shout';
+      case 2: return 'Beat';
+      case 3: return 'Melody';
+      default: return '-';
+    }
+  }
+  
+  function getAttributeColor(attribute: number | undefined) {
+    switch (attribute) {
+      case 1: return 'bg-red-500';
+      case 2: return 'bg-blue-500';
+      case 3: return 'bg-yellow-500';
+      default: return 'bg-gray-400';
+    }
+  }
+  
+  function getRarityClass(rarity: string) {
+    switch (rarity) {
+      case 'UR': return 'bg-gradient-to-r from-purple-600 to-pink-600 text-white';
+      case 'SSR': return 'bg-yellow-300 text-yellow-900';
+      case 'SR': return 'bg-purple-300 text-purple-900';
+      case 'R': return 'bg-blue-300 text-blue-900';
+      default: return 'bg-gray-300 text-gray-700';
+    }
+  }
+  
+  const totalStats = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
 </script>
 
-<svelte:head>
-  <title>{data.card.cardname} | アイドリッシュセブン 攻略ガイド</title>
-</svelte:head>
-
-<div class="container">
-  <nav class="breadcrumb">
-    <a href="/">ホーム</a> /
-    <a href="/cards">カード一覧</a> /
-    <span>{data.card.cardname}</span>
-  </nav>
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="mb-6">
+    <Button href="/cards" variant="ghost" size="sm" className="gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m12 19-7-7 7-7"/>
+        <path d="M19 12H5"/>
+      </svg>
+      カード一覧に戻る
+    </Button>
+  </div>
   
-  <div class="card-detail">
-    <div class="card-image">
-      <img src="/assets/cards/{data.card.id}.png" alt={data.card.cardname} />
-    </div>
-    
-    <div class="card-info">
-      <h1>{data.card.cardname}</h1>
-      
-      <div class="basic-info">
-        <div class="info-row">
-          <span class="label">キャラクター:</span>
-          <span class="value">{data.card.name}</span>
-        </div>
-        {#if data.card.name_other}
-          <div class="info-row">
-            <span class="label">別名:</span>
-            <span class="value">{data.card.name_other}</span>
-          </div>
-        {/if}
-        <div class="info-row">
-          <span class="label">グループ:</span>
-          <span class="value">{data.card.groupname}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">レアリティ:</span>
-          <span class="value rarity">{data.card.rarity}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">入手方法:</span>
-          <span class="value">{data.card.get_type}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">属性:</span>
-          <span class="value attribute-{data.card.attribute}">
-            {attributeNames[data.card.attribute] || '不明'}
-          </span>
+  <Card className="shadow-lg">
+    <div class="lg:grid lg:grid-cols-2 lg:gap-8">
+      <!-- 左側：カード画像 -->
+      <div class="p-8 bg-gray-50">
+        <div class="aspect-[3/4] bg-white rounded-lg shadow-md overflow-hidden">
+          <img 
+            src="https://i7.step-on-dream.net/img/cards/{card.id}.png" 
+            alt={card.cardname}
+            class="w-full h-full object-contain"
+          />
         </div>
       </div>
       
-      {#if data.card.story}
-        <div class="story">
-          <h2>ストーリー</h2>
-          <p>{data.card.story}</p>
-        </div>
-      {/if}
-    </div>
-  </div>
-  
-  <div class="stats-section">
-    <h2>ステータス</h2>
-    <div class="stats-grid">
-      <div class="stat-item">
-        <h3>Shout</h3>
-        <div class="stat-values">
-          <div>
-            <span class="stat-label">最小:</span>
-            <span class="stat-value">{data.card.shout_min}</span>
-          </div>
-          <div>
-            <span class="stat-label">最大:</span>
-            <span class="stat-value">{data.card.shout_max}</span>
+      <!-- 右側：カード情報 -->
+      <div class="p-8">
+        <!-- カード名とID -->
+        <div class="mb-6">
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">{card.cardname}</h1>
+          <div class="flex items-center gap-4">
+            <span class="text-gray-600">ID: #{card.card_id}</span>
+            {#if card.rarity === 'UR'}
+              <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1">{card.rarity}</Badge>
+            {:else if card.rarity === 'SSR'}
+              <Badge className="bg-yellow-300 text-yellow-900 px-3 py-1">{card.rarity}</Badge>
+            {:else if card.rarity === 'SR'}
+              <Badge className="bg-purple-300 text-purple-900 px-3 py-1">{card.rarity}</Badge>
+            {:else if card.rarity === 'R'}
+              <Badge className="bg-blue-300 text-blue-900 px-3 py-1">{card.rarity}</Badge>
+            {:else}
+              <Badge className="px-3 py-1">{card.rarity}</Badge>
+            {/if}
           </div>
         </div>
-      </div>
-      <div class="stat-item">
-        <h3>Beat</h3>
-        <div class="stat-values">
-          <div>
-            <span class="stat-label">最小:</span>
-            <span class="stat-value">{data.card.beat_min}</span>
-          </div>
-          <div>
-            <span class="stat-label">最大:</span>
-            <span class="stat-value">{data.card.beat_max}</span>
-          </div>
-        </div>
-      </div>
-      <div class="stat-item">
-        <h3>Melody</h3>
-        <div class="stat-values">
-          <div>
-            <span class="stat-label">最小:</span>
-            <span class="stat-value">{data.card.melody_min}</span>
-          </div>
-          <div>
-            <span class="stat-label">最大:</span>
-            <span class="stat-value">{data.card.melody_max}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="skills-section">
-    <h2>スキル</h2>
-    
-    {#if data.card.ap_skill_name}
-      <div class="skill-block">
-        <h3>APスキル: {data.card.ap_skill_name}</h3>
-        <p>タイプ: {data.card.ap_skill_type}</p>
-        <p>発動条件: {data.card.ap_skill_req}</p>
         
-        {#if data.skillDetails.length > 0}
-          <table class="skill-details">
-            <thead>
-              <tr>
-                <th>レベル</th>
-                <th>回数</th>
-                <th>パーセント</th>
-                <th>効果値</th>
-                <th>発動率</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each data.skillDetails as detail}
-                <tr>
-                  <td>{detail.skill_level}</td>
-                  <td>{detail.count}</td>
-                  <td>{detail.per}%</td>
-                  <td>{detail.value}</td>
-                  <td>{detail.rate}%</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
+        <!-- 基本情報 -->
+        <div class="mb-6 border-t pt-6">
+          <h2 class="text-xl font-semibold mb-4">基本情報</h2>
+          <dl class="grid grid-cols-2 gap-4">
+            <div>
+              <dt class="text-sm text-gray-600">キャラクター</dt>
+              <dd class="font-medium">{card.name}</dd>
+            </div>
+            {#if card.name_other}
+              <div>
+                <dt class="text-sm text-gray-600">別名</dt>
+                <dd class="font-medium">{card.name_other}</dd>
+              </div>
+            {/if}
+            <div>
+              <dt class="text-sm text-gray-600">グループ</dt>
+              <dd class="font-medium">{card.groupname || '-'}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-600">入手方法</dt>
+              <dd class="font-medium">{card.get_type || '-'}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-600">ストーリー</dt>
+              <dd class="font-medium">{card.story || '-'}</dd>
+            </div>
+            {#if card.awakening_item}
+              <div>
+                <dt class="text-sm text-gray-600">覚醒アイテム</dt>
+                <dd class="font-medium">{card.awakening_item}</dd>
+              </div>
+            {/if}
+          </dl>
+        </div>
+        
+        <!-- ステータス -->
+        {#if card.attribute}
+          <div class="mb-6 border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4">ステータス</h2>
+            <div class="mb-4">
+              <span class="text-sm text-gray-600">属性:</span>
+              <span class="inline-block ml-2 px-3 py-1 rounded-full text-white text-sm font-bold {getAttributeColor(card.attribute)}">
+                {getAttributeName(card.attribute)}
+              </span>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm font-medium">Shout</span>
+                  <span class="text-sm text-gray-600">{card.shout_min || 0} → {card.shout_max || 0}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-red-500 h-2 rounded-full" style="width: {((card.shout_max || 0) / 8000) * 100}%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm font-medium">Beat</span>
+                  <span class="text-sm text-gray-600">{card.beat_min || 0} → {card.beat_max || 0}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-blue-500 h-2 rounded-full" style="width: {((card.beat_max || 0) / 8000) * 100}%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm font-medium">Melody</span>
+                  <span class="text-sm text-gray-600">{card.melody_min || 0} → {card.melody_max || 0}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-yellow-500 h-2 rounded-full" style="width: {((card.melody_max || 0) / 8000) * 100}%"></div>
+                </div>
+              </div>
+              <div class="pt-3 border-t">
+                <div class="flex justify-between">
+                  <span class="font-medium">合計</span>
+                  <span class="font-bold text-lg">{totalStats}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        {/if}
+        
+        <!-- スキル情報 -->
+        {#if card.ap_skill_name || card.sp_time}
+          <div class="mb-6 border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4">スキル情報</h2>
+            <dl class="space-y-3">
+              {#if card.ap_skill_name}
+                <div>
+                  <dt class="text-sm text-gray-600">APスキル</dt>
+                  <dd class="font-medium">{card.ap_skill_name}</dd>
+                  {#if card.ap_skill_type}
+                    <dd class="text-sm text-gray-600 mt-1">タイプ: {card.ap_skill_type}</dd>
+                  {/if}
+                  {#if card.ap_skill_req}
+                    <dd class="text-sm text-gray-600">必要AP: {card.ap_skill_req}</dd>
+                  {/if}
+                </div>
+              {/if}
+              {#if card.ct_skill}
+                <div>
+                  <dt class="text-sm text-gray-600">CTスキル</dt>
+                  <dd class="font-medium">{card.ct_skill}</dd>
+                </div>
+              {/if}
+              {#if card.sp_time}
+                <div>
+                  <dt class="text-sm text-gray-600">SP時間</dt>
+                  <dd class="font-medium">{card.sp_time}秒</dd>
+                  {#if card.sp_value}
+                    <dd class="text-sm text-gray-600">SP値: {card.sp_value}</dd>
+                  {/if}
+                </div>
+              {/if}
+            </dl>
+          </div>
         {/if}
       </div>
-    {/if}
-    
-    {#if data.card.ct_skill > 0}
-      <div class="skill-block">
-        <h3>CTスキル</h3>
-        <p>効果: {data.card.ct_skill}</p>
-      </div>
-    {/if}
-    
-    {#if data.card.sp_time > 0}
-      <div class="skill-block">
-        <h3>SPスキル</h3>
-        <p>時間: {data.card.sp_time}</p>
-        <p>効果値: {data.card.sp_value}</p>
-      </div>
-    {/if}
-  </div>
-  
-  {#if data.card.year}
-    <div class="release-info">
-      <h2>リリース情報</h2>
-      <p>
-        {data.card.year}年{data.card.month}月{data.card.day}日
-        {#if data.card.event}
-          - {data.card.event}
-        {/if}
-      </p>
     </div>
-  {/if}
+  </Card>
 </div>
-
-<style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
-  }
-  
-  .breadcrumb {
-    margin-bottom: 2rem;
-    font-size: 0.9rem;
-    color: #666;
-  }
-  
-  .breadcrumb a {
-    color: #666;
-    text-decoration: none;
-  }
-  
-  .breadcrumb a:hover {
-    text-decoration: underline;
-  }
-  
-  .card-detail {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 2rem;
-    margin-bottom: 3rem;
-  }
-  
-  .card-image img {
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-  
-  .card-info h1 {
-    font-size: 2rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .basic-info {
-    margin-bottom: 2rem;
-  }
-  
-  .info-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.75rem;
-  }
-  
-  .label {
-    font-weight: bold;
-    margin-right: 1rem;
-    min-width: 120px;
-  }
-  
-  .value {
-    color: #666;
-  }
-  
-  .rarity {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    background: #f0f0f0;
-    border-radius: 4px;
-    color: #333;
-  }
-  
-  .attribute-1 { color: #ff6b6b; }
-  .attribute-2 { color: #4ecdc4; }
-  .attribute-3 { color: #ffe66d; }
-  
-  .story {
-    margin-top: 2rem;
-  }
-  
-  .story h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-  }
-  
-  .story p {
-    line-height: 1.6;
-    color: #666;
-  }
-  
-  .stats-section,
-  .skills-section,
-  .release-info {
-    margin-bottom: 3rem;
-  }
-  
-  h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 0.5rem;
-  }
-  
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  .stat-item {
-    background: #f8f8f8;
-    padding: 1.5rem;
-    border-radius: 8px;
-  }
-  
-  .stat-item h3 {
-    margin-bottom: 1rem;
-    color: #333;
-  }
-  
-  .stat-values {
-    display: flex;
-    justify-content: space-between;
-  }
-  
-  .stat-label {
-    font-size: 0.9rem;
-    color: #666;
-  }
-  
-  .stat-value {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #333;
-  }
-  
-  .skill-block {
-    background: #f8f8f8;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-  }
-  
-  .skill-block h3 {
-    margin-bottom: 1rem;
-    color: #333;
-  }
-  
-  .skill-block p {
-    margin-bottom: 0.5rem;
-    color: #666;
-  }
-  
-  .skill-details {
-    width: 100%;
-    margin-top: 1rem;
-    border-collapse: collapse;
-  }
-  
-  .skill-details th,
-  .skill-details td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .skill-details th {
-    background: #eee;
-    font-weight: bold;
-  }
-  
-  .skill-details tr:hover {
-    background: #f5f5f5;
-  }
-  
-  .release-info p {
-    font-size: 1.1rem;
-    color: #666;
-  }
-  
-  @media (max-width: 768px) {
-    .card-detail {
-      grid-template-columns: 1fr;
-    }
-    
-    .stat-values {
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-  }
-</style>

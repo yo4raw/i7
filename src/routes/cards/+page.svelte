@@ -1,216 +1,120 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import Badge from '$lib/components/Badge.svelte';
   
   export let data: PageData;
   
-  let currentPage = 1;
-  const cardsPerPage = 50;
-  
-  $: totalPages = Math.ceil(data.totalCards / cardsPerPage);
-  $: paginationRange = getPaginationRange(currentPage, totalPages);
-  
-  function getPaginationRange(current: number, total: number): number[] {
-    const range = [];
-    const delta = 2;
-    
-    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
-      range.push(i);
+  function handleImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    const placeholder = img.parentElement?.querySelector('.table-image-placeholder') as HTMLElement;
+    if (placeholder) {
+      placeholder.style.display = 'flex';
     }
-    
-    return range;
   }
 </script>
 
-<svelte:head>
-  <title>カード一覧 | アイドリッシュセブン 攻略ガイド</title>
-</svelte:head>
-
-<div class="container">
-  <header>
-    <h1>カード一覧</h1>
-    <p>全 {data.totalCards} 枚</p>
-  </header>
+<div class="mx-auto px-4 max-w-full">
+  <h1 class="text-2xl font-bold text-gray-800 mb-4">カード一覧 ✨</h1>
   
-  <div class="card-grid">
-    {#each data.cards as card}
-      <a href="/card/{card.id}" class="card-link">
-        <div class="card">
-          <img src="/assets/cards/{card.id}.png" alt={card.cardname} loading="lazy" />
-          <div class="card-info">
-            <h3>{card.cardname}</h3>
-            <p class="character">{card.name}</p>
-            <div class="meta">
-              <span class="rarity">{card.rarity}</span>
-              <span class="id">#{card.id}</span>
-            </div>
-          </div>
-        </div>
-      </a>
-    {/each}
+  <div class="mb-4 bg-blue-50 p-4 rounded-lg">
+    <p class="text-sm text-gray-600">総カード数: <span class="font-bold text-blue-600">{data.totalCount}枚</span></p>
+    <p class="text-xs text-gray-500 mt-1">ホットリロード対応済み 🔥</p>
   </div>
   
-  <nav class="pagination">
-    <a 
-      href="/cards?page={currentPage - 1}" 
-      class="page-link"
-      class:disabled={currentPage === 1}
-    >
-      前へ
-    </a>
-    
-    {#if paginationRange[0] > 1}
-      <a href="/cards?page=1" class="page-link">1</a>
-      {#if paginationRange[0] > 2}
-        <span class="ellipsis">...</span>
-      {/if}
-    {/if}
-    
-    {#each paginationRange as page}
-      <a 
-        href="/cards?page={page}" 
-        class="page-link"
-        class:active={page === currentPage}
-      >
-        {page}
-      </a>
-    {/each}
-    
-    {#if paginationRange[paginationRange.length - 1] < totalPages}
-      {#if paginationRange[paginationRange.length - 1] < totalPages - 1}
-        <span class="ellipsis">...</span>
-      {/if}
-      <a href="/cards?page={totalPages}" class="page-link">{totalPages}</a>
-    {/if}
-    
-    <a 
-      href="/cards?page={currentPage + 1}" 
-      class="page-link"
-      class:disabled={currentPage === totalPages}
-    >
-      次へ
-    </a>
-  </nav>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs border-collapse bg-white">
+      <thead>
+        <tr class="bg-gray-100 border-b-2 border-gray-300">
+          <th class="p-1 border border-gray-300 text-center font-normal">画像</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">カードID</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-20">レア</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">属性</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">SP<br/>時間</th>
+          <th class="p-1 border border-gray-300 text-center font-normal">入手方法</th>
+          <th class="p-1 border border-gray-300 text-center font-normal">ストーリー</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">Shout<br/>最大</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">Beat<br/>最大</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">Melody<br/>最大</th>
+          <th class="p-1 border border-gray-300 text-center font-normal w-16">合計<br/>最大</th>
+          <th class="p-1 border border-gray-300 text-center font-normal">APスキル</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each data.cards as card}
+          <tr class="hover:bg-yellow-50 border-b border-gray-200">
+            <td class="p-1 border border-gray-300 text-center">
+              <div class="relative w-12 h-12 mx-auto overflow-hidden bg-gray-100">
+                <img 
+                  src="https://i7.step-on-dream.net/img/cards/{card.id}.png" 
+                  alt={card.cardname}
+                  class="w-full h-full object-cover"
+                  on:error={handleImageError}
+                />
+                <div class="absolute inset-0 hidden items-center justify-center bg-gray-400 text-white text-xs font-bold image-placeholder">
+                  {card.card_id}
+                </div>
+              </div>
+            </td>
+            <td class="p-1 border border-gray-300 text-center font-mono">
+              <a href="/card/{card.id}" class="text-blue-600 hover:underline">{card.card_id}</a>
+            </td>
+            <td class="p-1 border border-gray-300 text-center">
+              {#if card.rarity === 'UR'}
+                <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">{card.rarity}</Badge>
+              {:else if card.rarity === 'SSR'}
+                <Badge className="bg-yellow-300 text-yellow-900">{card.rarity}</Badge>
+              {:else if card.rarity === 'SR'}
+                <Badge className="bg-purple-300 text-purple-900">{card.rarity}</Badge>
+              {:else if card.rarity === 'R'}
+                <Badge className="bg-blue-300 text-blue-900">{card.rarity}</Badge>
+              {:else}
+                <Badge>{card.rarity}</Badge>
+              {/if}
+            </td>
+            <td class="p-1 border border-gray-300 text-center">
+              {#if card.attribute}
+                <span class="inline-block w-8 h-8 rounded-full text-white font-bold flex items-center justify-center
+                  {card.attribute === 1 ? 'bg-red-500' : ''}
+                  {card.attribute === 2 ? 'bg-blue-500' : ''}
+                  {card.attribute === 3 ? 'bg-yellow-500' : ''}">
+                  {card.attribute === 1 ? 'S' : ''}
+                  {card.attribute === 2 ? 'B' : ''}
+                  {card.attribute === 3 ? 'M' : ''}
+                </span>
+              {:else}
+                -
+              {/if}
+            </td>
+            <td class="p-1 border border-gray-300 text-center">{card.sp_time || '-'}</td>
+            <td class="p-1 border border-gray-300 text-center text-xs">{card.get_type || '-'}</td>
+            <td class="p-1 border border-gray-300 text-center text-xs">{card.story || '-'}</td>
+            <td class="p-1 border border-gray-300 text-center font-mono text-xs">{card.shout_max || '-'}</td>
+            <td class="p-1 border border-gray-300 text-center font-mono text-xs">{card.beat_max || '-'}</td>
+            <td class="p-1 border border-gray-300 text-center font-mono text-xs">{card.melody_max || '-'}</td>
+            <td class="p-1 border border-gray-300 text-center font-mono text-xs font-bold">
+              {card.shout_max && card.beat_max && card.melody_max ? card.shout_max + card.beat_max + card.melody_max : '-'}
+            </td>
+            <td class="p-1 border border-gray-300 text-xs">
+              <div class="text-center">
+                {card.ap_skill_name || '-'}
+              </div>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+  
 </div>
 
 <style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
+  /* 画像プレースホルダーの表示制御のみカスタムCSSで実装 */
+  .image-placeholder {
+    display: none;
   }
   
-  header {
-    margin-bottom: 2rem;
-  }
-  
-  h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-  }
-  
-  .card-link {
-    text-decoration: none;
-    color: inherit;
-  }
-  
-  .card {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-  }
-  
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-  }
-  
-  .card img {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-  
-  .card-info {
-    padding: 1rem;
-  }
-  
-  .card-info h3 {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .character {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 0.75rem;
-  }
-  
-  .meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .rarity {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    background: #f0f0f0;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    color: #666;
-  }
-  
-  .id {
-    font-size: 0.8rem;
-    color: #999;
-  }
-  
-  .pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .page-link {
-    padding: 0.5rem 1rem;
-    text-decoration: none;
-    color: #333;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-  }
-  
-  .page-link:hover:not(.disabled):not(.active) {
-    background: #f5f5f5;
-  }
-  
-  .page-link.active {
-    background: #333;
-    color: white;
-    border-color: #333;
-  }
-  
-  .page-link.disabled {
-    color: #999;
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-  
-  .ellipsis {
-    padding: 0 0.5rem;
-    color: #999;
+  img[style*="display: none"] + .image-placeholder {
+    display: flex !important;
   }
 </style>

@@ -1,7 +1,10 @@
 # About
 このレポジトリはアイナナ（アイドリッシュセブン）の攻略サイトを構築するための諸々のファイルが格納されています。
-https://i7.step-on-dream.net/index.phpを改善したサイトを目指しています。
-またデプロイ先URLはhttps://i7-rs4b.onrender.comです。
+https://i7.step-on-dream.net/index.php
+を改善したサイトを目指しています。
+またデプロイ先URLはj
+https://i7-rs4b.onrender.com
+です。
 
 ## 🎯 プロジェクト概要
 このプロジェクトは、アイドリッシュセブンのカード情報を管理し、プレイヤーに有用な情報を提供する攻略サイトを構築することを目的としています。

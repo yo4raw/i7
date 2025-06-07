@@ -1,19 +1,14 @@
-import type { PageServerLoad } from './$types';
 import { getCards, getTotalCardCount } from '$lib/db';
+import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url }) => {
-  const page = Number(url.searchParams.get('page')) || 1;
-  const limit = 50;
-  const offset = (page - 1) * limit;
-  
-  const [cards, totalCards] = await Promise.all([
-    getCards(limit, offset),
+export const load: PageServerLoad = async () => {
+  const [cards, totalCount] = await Promise.all([
+    getCards(10000, 0),  // 大きな数値を設定してすべてのカードを取得
     getTotalCardCount()
   ]);
   
   return {
     cards,
-    totalCards,
-    currentPage: page
+    totalCount
   };
 };
