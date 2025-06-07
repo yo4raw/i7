@@ -2,9 +2,8 @@ services:
   - type: web
     name: i7-game-guide
     runtime: node
-    rootDirectory: .
     buildCommand: npm install && npm run build
-    startCommand: node ./build
+    startCommand: ./start.sh
     envVars:
       - key: NODE_ENV
         value: production

@@ -10,7 +10,9 @@
       "Bash(mv:*)",
       "Bash(npm run check:*)",
       "Bash(rm:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
