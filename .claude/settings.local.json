@@ -4,7 +4,12 @@
       "Bash(npm create:*)",
       "Bash(npx sv create:*)",
       "Bash(mkdir:*)",
-      "Bash(ln:*)"
+      "Bash(ln:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(mv:*)", 
+      "Bash(npm run check:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

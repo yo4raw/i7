@@ -1,7 +1,18 @@
 import { neon } from '@neondatabase/serverless';
 import { DATABASE_URL } from '$env/static/private';
 
-export const sql = neon(DATABASE_URL);
+// Create a lazy connection that will only be initialized when first used
+let sqlInstance: ReturnType<typeof neon> | null = null;
+
+export function getSql() {
+  if (!sqlInstance && DATABASE_URL) {
+    sqlInstance = neon(DATABASE_URL);
+  }
+  if (!sqlInstance) {
+    throw new Error('Database connection not initialized');
+  }
+  return sqlInstance;
+}
 
 export interface Card {
   id: number;
@@ -56,6 +67,7 @@ export interface ReleaseInfo {
 }
 
 export async function getCards(limit: number = 50, offset: number = 0) {
+  const sql = getSql();
   const result = await sql`
     SELECT * FROM i7card.cards 
     ORDER BY id DESC 
@@ -65,6 +77,7 @@ export async function getCards(limit: number = 50, offset: number = 0) {
 }
 
 export async function getCardById(id: number) {
+  const sql = getSql();
   const result = await sql`
     SELECT 
       c.*,
@@ -85,6 +98,7 @@ export async function getCardById(id: number) {
 }
 
 export async function getSkillDetails(cardId: number) {
+  const sql = getSql();
   const result = await sql`
     SELECT * FROM i7card.skill_details 
     WHERE card_id = ${cardId}
@@ -94,6 +108,7 @@ export async function getSkillDetails(cardId: number) {
 }
 
 export async function searchCards(query: string) {
+  const sql = getSql();
   const searchTerm = `%${query}%`;
   const result = await sql`
     SELECT * FROM i7card.cards 
@@ -108,6 +123,7 @@ export async function searchCards(query: string) {
 }
 
 export async function getCardsByRarity(rarity: string) {
+  const sql = getSql();
   const result = await sql`
     SELECT * FROM i7card.cards 
     WHERE rarity = ${rarity}
@@ -117,6 +133,7 @@ export async function getCardsByRarity(rarity: string) {
 }
 
 export async function getCardsByCharacter(name: string) {
+  const sql = getSql();
   const result = await sql`
     SELECT * FROM i7card.cards 
     WHERE name = ${name}
@@ -126,6 +143,7 @@ export async function getCardsByCharacter(name: string) {
 }
 
 export async function getCardsByAttribute(attribute: number) {
+  const sql = getSql();
   const result = await sql`
     SELECT c.*, cs.attribute
     FROM i7card.cards c
@@ -137,6 +155,7 @@ export async function getCardsByAttribute(attribute: number) {
 }
 
 export async function getTotalCardCount() {
+  const sql = getSql();
   const result = await sql`
     SELECT COUNT(*) as count FROM i7card.cards
   `;
@@ -144,6 +163,7 @@ export async function getTotalCardCount() {
 }
 
 export async function getRarityStats() {
+  const sql = getSql();
   const result = await sql`
     SELECT rarity, COUNT(*) as count
     FROM i7card.cards
@@ -154,6 +174,7 @@ export async function getRarityStats() {
 }
 
 export async function getCharacterStats() {
+  const sql = getSql();
   const result = await sql`
     SELECT name, COUNT(*) as count
     FROM i7card.cards
