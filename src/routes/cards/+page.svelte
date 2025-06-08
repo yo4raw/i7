@@ -18,8 +18,7 @@
   <h1 class="text-2xl font-bold text-gray-800 mb-4">カード一覧 ✨</h1>
   
   <div class="mb-4 bg-blue-50 p-4 rounded-lg">
-    <p class="text-sm text-gray-600">総カード数: <span class="font-bold text-blue-600">{data.totalCount}枚</span></p>
-    <p class="text-xs text-gray-500 mt-1">ホットリロード対応済み 🔥</p>
+    <p class="text-sm text-gray-600">総カード数: <span class="font-bold text-blue-600">{data.totalCount}枚</span></p>j
   </div>
   
   <div class="overflow-x-auto">
