@@ -33,7 +33,10 @@
       "WebFetch(domain:i7.step-on-dream.net)",
       "Bash(docker rmi:*)",
       "Bash(docker build:*)",
-      "WebFetch(domain:rabeeui.com)"
+      "WebFetch(domain:rabeeui.com)",
+      "Bash(docker container:*)",
+      "Bash(docker-compose:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }

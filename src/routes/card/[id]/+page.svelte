@@ -184,6 +184,9 @@
                   {#if card.ap_skill_req}
                     <dd class="text-sm text-gray-600">必要AP: {card.ap_skill_req}</dd>
                   {/if}
+                  {#if card.comment}
+                    <dd class="text-sm text-gray-600 mt-2">{card.comment}</dd>
+                  {/if}
                 </div>
               {/if}
               {#if card.ct_skill}
@@ -199,6 +202,109 @@
                   {#if card.sp_value}
                     <dd class="text-sm text-gray-600">SP値: {card.sp_value}</dd>
                   {/if}
+                </div>
+              {/if}
+            </dl>
+          </div>
+        {/if}
+        
+        <!-- スキルレベル詳細 -->
+        {#if card.skill_details && card.skill_details.length > 0}
+          <div class="mb-6 border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4">スキルレベル詳細</h2>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead>
+                  <tr class="border-b">
+                    <th class="text-left py-2 px-3">レベル</th>
+                    <th class="text-left py-2 px-3">発動条件</th>
+                    <th class="text-left py-2 px-3">確率</th>
+                    <th class="text-left py-2 px-3">効果</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each card.skill_details as detail}
+                    <tr class="border-b hover:bg-gray-50">
+                      <td class="py-2 px-3 font-medium">Lv{detail.skill_level}</td>
+                      <td class="py-2 px-3">
+                        {#if detail.count}
+                          {detail.per === 1 ? 'Perfect' : detail.per === 2 ? 'Great' : 'Good'} {detail.count}回
+                        {:else}
+                          -
+                        {/if}
+                      </td>
+                      <td class="py-2 px-3">{detail.rate ? `${detail.rate}%` : '-'}</td>
+                      <td class="py-2 px-3">
+                        {#if detail.value}
+                          スコア {detail.value.toLocaleString()} UP
+                        {:else}
+                          -
+                        {/if}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {/if}
+        
+        <!-- ブローチ情報 -->
+        {#if card.broach_shout || card.broach_beat || card.broach_melody}
+          <div class="mb-6 border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4">ブローチ情報</h2>
+            <dl class="space-y-2">
+              <div class="grid grid-cols-3 gap-4">
+                {#if card.broach_shout}
+                  <div>
+                    <dt class="text-sm text-gray-600">Shout</dt>
+                    <dd class="font-medium text-red-600">+{card.broach_shout}</dd>
+                  </div>
+                {/if}
+                {#if card.broach_beat}
+                  <div>
+                    <dt class="text-sm text-gray-600">Beat</dt>
+                    <dd class="font-medium text-blue-600">+{card.broach_beat}</dd>
+                  </div>
+                {/if}
+                {#if card.broach_melody}
+                  <div>
+                    <dt class="text-sm text-gray-600">Melody</dt>
+                    <dd class="font-medium text-yellow-600">+{card.broach_melody}</dd>
+                  </div>
+                {/if}
+              </div>
+              {#if card.broach_req}
+                <div>
+                  <dt class="text-sm text-gray-600">必要ブローチ数</dt>
+                  <dd class="font-medium">{card.broach_req}個</dd>
+                </div>
+              {/if}
+            </dl>
+          </div>
+        {/if}
+        
+        <!-- リリース情報 -->
+        {#if card.year || card.event}
+          <div class="mb-6 border-t pt-6">
+            <h2 class="text-xl font-semibold mb-4">リリース情報</h2>
+            <dl class="space-y-2">
+              {#if card.year && card.month && card.day}
+                <div>
+                  <dt class="text-sm text-gray-600">実装日</dt>
+                  <dd class="font-medium">{card.year}年{card.month}月{card.day}日</dd>
+                </div>
+              {/if}
+              {#if card.event}
+                <div>
+                  <dt class="text-sm text-gray-600">イベント</dt>
+                  <dd class="font-medium">{card.event}</dd>
+                </div>
+              {/if}
+              {#if card.updatetime}
+                <div>
+                  <dt class="text-sm text-gray-600">最終更新</dt>
+                  <dd class="font-medium">{new Date(card.updatetime).toLocaleString('ja-JP')}</dd>
                 </div>
               {/if}
             </dl>
