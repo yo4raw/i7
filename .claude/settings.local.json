@@ -17,7 +17,13 @@
       "Bash(docker exec:*)",
       "Bash(chmod:*)",
       "Bash(DB_HOST=localhost DB_PORT=5432 python3 fetch_all_sheets_data.py)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(python3:*)",
+      "Bash(docker logs:*)",
+      "Bash(python:*)",
+      "Bash(sed:*)",
+      "Bash(timeout 60 npm run build)",
+      "Bash(true)"
     ],
     "deny": []
   }

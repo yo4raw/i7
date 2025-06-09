@@ -60,7 +60,9 @@
               <a href="/card/{card.id}" class="text-blue-600 hover:underline">{card.card_id}</a>
             </td>
             <td class="p-1 border border-gray-300 text-center">
-              {#if card.rarity === 'UR'}
+              {#if card.rarity === 'GROUP'}
+                <Badge className="bg-gradient-to-r from-green-600 to-teal-600 text-white">グループ</Badge>
+              {:else if card.rarity === 'UR'}
                 <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">{card.rarity}</Badge>
               {:else if card.rarity === 'SSR'}
                 <Badge className="bg-yellow-300 text-yellow-900">{card.rarity}</Badge>

@@ -175,6 +175,43 @@ export const teamCompositionsRelations = relations(teamCompositions, ({ one }) =
   }),
 }));
 
+// Songs table (from sheet 2)
+export const songData = i7cardSchema.table('songs', {
+  id: serial('id').primaryKey(),
+  songId: integer('song_id').unique(),
+  category: varchar('category', { length: 100 }),
+  artistName: varchar('artist_name', { length: 200 }),
+  songName: varchar('song_name', { length: 200 }),
+  songType: varchar('song_type', { length: 50 }),
+  difficulty: varchar('difficulty', { length: 50 }),
+  starRating: integer('star_rating'),
+  shoutPercentage: decimal('shout_percentage', { precision: 5, scale: 2 }),
+  beatPercentage: decimal('beat_percentage', { precision: 5, scale: 2 }),
+  melodyPercentage: decimal('melody_percentage', { precision: 5, scale: 2 }),
+  notesCount: integer('notes_count'),
+  durationSeconds: integer('duration_seconds'),
+  updateDate: date('update_date'),
+});
+
+// Group cards table (from sheet 3)
+export const groupCards = i7cardSchema.table('group_cards', {
+  id: integer('id').primaryKey(),
+  cardId: integer('card_id'),
+  cardname: varchar('cardname', { length: 255 }),
+  groupName: varchar('group_name', { length: 100 }),
+  members: text('members'),
+  shoutValue: integer('shout_value'),
+  beatValue: integer('beat_value'),
+  melodyValue: integer('melody_value'),
+  attribute: integer('attribute'),
+  idolType: varchar('idol_type', { length: 50 }),
+  groupType: varchar('group_type', { length: 50 }),
+  autoScore: integer('auto_score'),
+  songScore: integer('song_score'),
+  scoreLimit: integer('score_limit'),
+  broachType: varchar('broach_type', { length: 100 }),
+});
+
 // Type exports
 export type Card = typeof cards.$inferSelect;
 export type NewCard = typeof cards.$inferInsert;
@@ -185,3 +222,5 @@ export type ReleaseInfo = typeof releaseInfo.$inferSelect;
 export type BroachInfo = typeof broachInfo.$inferSelect;
 export type Song = typeof songs.$inferSelect;
 export type TeamComposition = typeof teamCompositions.$inferSelect;
+export type SongData = typeof songData.$inferSelect;
+export type GroupCard = typeof groupCards.$inferSelect;

@@ -36,7 +36,7 @@ services:
       DB_PASS: i7password
     volumes:
       - ./scripts:/scripts:ro
-    command: ["/scripts/init-db.sh"]
+    command: ["/scripts/init-db-all.sh"]
     restart: "no"
 
   # Web Application (Development)

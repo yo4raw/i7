@@ -277,30 +277,50 @@ def import_game_mechanics_data(csv_data, conn):
     
     # Parse CSV
     csv_file = StringIO(csv_data)
-    lines = csv_file.readlines()
+    reader = csv.reader(csv_file)
     
-    if len(lines) < 2:
+    rows = list(reader)
+    if len(rows) < 2:
         print("No data found in game mechanics sheet")
         cur.close()
         return False
     
-    # The sheet structure seems to have categories as headers and data below
-    # Let's try to parse it in a more flexible way
     row_count = 0
     
     try:
-        # Process the CSV data line by line
-        # This is a simplified approach - you may need to adjust based on actual data structure
-        for i, line in enumerate(lines):
-            if i == 0:  # Skip header row
-                continue
-                
-            # Parse the line
-            values = line.strip().split(',')
-            if len(values) > 1 and values[0]:  # If there's a date in first column
-                update_date = values[0]
-                # Process remaining values as needed
-                # This is a placeholder - adjust based on actual data structure
+        # The game mechanics sheet has a specific structure:
+        # First row is headers, subsequent rows contain data
+        # Process actual data rows
+        for row in rows[1:]:  # Skip header row
+            if len(row) >= 6 and row[0]:  # Ensure we have enough columns and first column is not empty
+                try:
+                    # Parse date (handle various formats)
+                    update_date = None
+                    if row[0] and row[0] != '':
+                        try:
+                            # Try to parse as date
+                            update_date = row[0]
+                        except:
+                            update_date = None
+                    
+                    cur.execute("""
+                        INSERT INTO i7card.game_mechanics (
+                            update_date, category, attribute, 
+                            multiplier, value, notes
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        update_date,
+                        row[1] if len(row) > 1 and row[1] else None,
+                        row[2] if len(row) > 2 and row[2] else None,
+                        parse_value(row[3], float) if len(row) > 3 else None,
+                        parse_value(row[4], int) if len(row) > 4 else None,
+                        row[5] if len(row) > 5 and row[5] else None
+                    ))
+                    row_count += 1
+                except Exception as e:
+                    print(f"Error processing game mechanics row: {e}")
+                    print(f"Row data: {row}")
+                    continue
                 
         conn.commit()
         print(f"Game mechanics data imported: {row_count} rows")

@@ -18,7 +18,8 @@ export async function getCards(limit = 50, offset = 0): Promise<CardWithDetails[
   try {
     const db = getDb();
     
-    const result = await db
+    // Get regular cards
+    const regularCards = await db
       .select()
       .from(schema.cards)
       .leftJoin(schema.cardStats, eq(schema.cards.id, schema.cardStats.id))
@@ -27,8 +28,17 @@ export async function getCards(limit = 50, offset = 0): Promise<CardWithDetails[
       .limit(limit)
       .offset(offset);
     
-    // Transform the result to match the expected format with snake_case
-    return result.map(row => ({
+    // Get group cards - fetch all group cards if limit is large
+    const groupCardLimit = limit > 1000 ? 1000 : Math.floor(limit / 5);
+    const groupCardsResult = await db
+      .select()
+      .from(schema.groupCards)
+      .orderBy(desc(schema.groupCards.id))
+      .limit(groupCardLimit)
+      .offset(0);
+    
+    // Transform regular cards
+    const transformedRegularCards = regularCards.map(row => ({
       ...row.cards,
       // Add snake_case versions for backward compatibility
       card_id: row.cards.cardId,
@@ -50,7 +60,65 @@ export async function getCards(limit = 50, offset = 0): Promise<CardWithDetails[
       ct_skill: row.card_skills?.ctSkill,
       sp_time: row.card_skills?.spTime,
       sp_value: row.card_skills?.spValue,
-    })) as any[];
+      is_group_card: false,
+    }));
+    
+    // Transform group cards to match card interface
+    const transformedGroupCards = groupCardsResult.map(gc => ({
+      id: gc.id,
+      card_id: gc.cardId,
+      cardId: gc.cardId,
+      cardname: gc.cardname,
+      name: gc.groupName,
+      name_other: gc.members,
+      nameOther: gc.members,
+      groupname: gc.groupType,
+      rarity: 'GROUP',  // Special rarity for group cards
+      get_type: 'グループ',
+      getType: 'グループ',
+      attribute: gc.attribute,
+      shout_max: gc.shoutValue,
+      beat_max: gc.beatValue,
+      melody_max: gc.melodyValue,
+      is_group_card: true,
+      broach_type: gc.broachType,
+    }));
+    
+    // For large limits, interleave group cards throughout the results
+    // For small limits, just combine and sort
+    let allCards: any[];
+    
+    if (limit > 100 && transformedGroupCards.length > 0) {
+      // Interleave group cards every N regular cards
+      const interleaveRatio = Math.floor(transformedRegularCards.length / transformedGroupCards.length);
+      allCards = [];
+      let groupIndex = 0;
+      
+      for (let i = 0; i < transformedRegularCards.length; i++) {
+        allCards.push(transformedRegularCards[i]);
+        
+        // Add a group card every N regular cards
+        if ((i + 1) % interleaveRatio === 0 && groupIndex < transformedGroupCards.length) {
+          allCards.push(transformedGroupCards[groupIndex]);
+          groupIndex++;
+        }
+      }
+      
+      // Add any remaining group cards
+      while (groupIndex < transformedGroupCards.length) {
+        allCards.push(transformedGroupCards[groupIndex]);
+        groupIndex++;
+      }
+      
+      allCards = allCards.slice(0, limit);
+    } else {
+      // For small limits, just combine and sort normally
+      allCards = [...transformedRegularCards, ...transformedGroupCards]
+        .sort((a, b) => b.id - a.id)
+        .slice(0, limit);
+    }
+    
+    return allCards as any[];
   } catch (error) {
     console.error('Error fetching cards:', error);
     return [];
@@ -196,11 +264,20 @@ export async function getTotalCardCount(): Promise<number> {
   try {
     const db = getDb();
     
-    const result = await db
+    // Count regular cards
+    const regularResult = await db
       .select({ count: count() })
       .from(schema.cards);
     
-    return result[0]?.count || 0;
+    // Count group cards
+    const groupResult = await db
+      .select({ count: count() })
+      .from(schema.groupCards);
+    
+    const regularCount = regularResult[0]?.count || 0;
+    const groupCount = groupResult[0]?.count || 0;
+    
+    return regularCount + groupCount;
   } catch (error) {
     console.error('Error counting cards:', error);
     return 0;
