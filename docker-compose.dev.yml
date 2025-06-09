@@ -36,7 +36,7 @@ services:
       DB_PASS: i7password
     volumes:
       - ./scripts:/scripts:ro
-    command: ["/scripts/init-db-all.sh"]
+    command: ["sh", "/scripts/init-db-all.sh"]
     restart: "no"
 
   # Web Application (Development)
@@ -44,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: i7-app-dev
+    container_name: i7-app
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -68,13 +68,20 @@ services:
       - ./tailwind.config.js:/app/tailwind.config.js
       - ./postcss.config.js:/app/postcss.config.js
       - ./package.json:/app/package.json
-      # Exclude node_modules
+      - ./app.css:/app/app.css
+      - ./app.html:/app/app.html
+      # Exclude node_modules and .svelte-kit
       - /app/node_modules
+      - /app/.svelte-kit
     depends_on:
       postgres:
         condition: service_healthy
-      data-loader:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
