@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: i7-postgres-init
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: i7user
+      POSTGRES_PASSWORD: i7password
+      POSTGRES_DB: i7card
+    volumes:
+      - postgres_data_init:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U i7user -d i7card"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Data initialization service for all sheets
+  data-loader:
+    image: python:3.11-alpine
+    container_name: i7-data-loader-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: i7card
+      DB_USER: i7user
+      DB_PASS: i7password
+    volumes:
+      - ./scripts:/scripts:ro
+    command: ["/scripts/init-db-all.sh"]
+    restart: "no"
+
+volumes:
+  postgres_data_init:
+    driver: local
+
+networks:
+  default:
+    name: i7-network-init

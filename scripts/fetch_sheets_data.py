@@ -7,8 +7,9 @@ import os
 from io import StringIO
 
 # Google Sheets CSV export URL
-SHEET_ID = "1LifgqDiRlQOIhP8blqEngJhI_Nnagbo8uspwmfg72fY"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+SHEET_ID = "1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4"
+GID = "480354522"
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
 # Database connection
 DB_HOST = os.environ.get('DB_HOST', 'postgres')

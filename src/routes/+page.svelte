@@ -1,12 +1,9 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import Card from '$lib/components/Card.svelte';
 	import CardHeader from '$lib/components/CardHeader.svelte';
 	import CardContent from '$lib/components/CardContent.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Badge from '$lib/components/Badge.svelte';
-	
-	export let data: PageData;
 </script>
 
 <div class="max-w-7xl mx-auto px-4 py-8">

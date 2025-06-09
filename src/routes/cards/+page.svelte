@@ -45,7 +45,7 @@
             <td class="p-1 border border-gray-300 text-center">
               <div class="relative w-12 h-12 mx-auto overflow-hidden bg-gray-100">
                 <img 
-                  src="https://i7.step-on-dream.net/img/cards/th/{card.id}.png" 
+                  src="static/assets/{card.id}.png" 
                   alt={card.cardname}
                   class="w-full h-full object-cover"
                   loading="lazy"

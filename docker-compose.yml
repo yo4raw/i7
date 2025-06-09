@@ -49,17 +49,17 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://i7user:i7password@postgres:5432/i7card?sslmode=disable
-      PORT: 3000
+      PORT: 3001
       HOST: 0.0.0.0
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
       data-loader:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"]
       interval: 30s
       timeout: 10s
       retries: 3

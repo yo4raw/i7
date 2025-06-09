@@ -49,14 +49,14 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://i7user:i7password@postgres:5432/i7card?sslmode=disable
-      PORT: 3000
+      PORT: 3001
       HOST: 0.0.0.0
       VITE_HMR_HOST: localhost
       VITE_HMR_PORT: 24678
       VITE_HMR_PROTOCOL: ws
       CHOKIDAR_USEPOLLING: true
     ports:
-      - "3000:3000"
+      - "3001:3001"
       - "24678:24678"  # Vite HMR port
     volumes:
       # Mount source code for hot reload
