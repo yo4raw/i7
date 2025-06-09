@@ -7,18 +7,19 @@
   function handleImageError(event: Event) {
     const img = event.target as HTMLImageElement;
     img.style.display = 'none';
-    const placeholder = img.parentElement?.querySelector('.table-image-placeholder') as HTMLElement;
-    if (placeholder) {
+    const placeholder = img.nextElementSibling as HTMLElement;
+    if (placeholder && placeholder.classList.contains('table-image-placeholder')) {
       placeholder.style.display = 'flex';
     }
   }
 </script>
 
+
 <div class="mx-auto px-4 max-w-full">
-  <h1 class="text-2xl font-bold text-gray-800 mb-4">カード一覧 ✨</h1>
+  <h1 class="text-2xl font-bold text-gray-800 mb-4">カード一覧 </h1>
   
   <div class="mb-4 bg-blue-50 p-4 rounded-lg">
-    <p class="text-sm text-gray-600">総カード数: <span class="font-bold text-blue-600">{data.totalCount}枚</span></p>j
+    <p class="text-sm text-gray-600">総カード数: <span class="font-bold text-blue-600">{data.totalCount}枚</span></p>
   </div>
   
   <div class="overflow-x-auto">
@@ -45,13 +46,13 @@
             <td class="p-1 border border-gray-300 text-center">
               <div class="relative w-12 h-12 mx-auto overflow-hidden bg-gray-100">
                 <img 
-                  src="static/assets/{card.id}.png" 
+                  src="/assets/cards/{card.id}.png" 
                   alt={card.cardname}
                   class="w-full h-full object-cover"
                   loading="lazy"
                   on:error={handleImageError}
                 />
-                <div class="absolute inset-0 hidden items-center justify-center bg-gray-400 text-white text-xs font-bold image-placeholder">
+                <div class="absolute inset-0 hidden items-center justify-center bg-gray-400 text-white text-xs font-bold table-image-placeholder">
                   {card.card_id}
                 </div>
               </div>
@@ -112,11 +113,11 @@
 
 <style>
   /* 画像プレースホルダーの表示制御のみカスタムCSSで実装 */
-  .image-placeholder {
+  .table-image-placeholder {
     display: none;
   }
   
-  img[style*="display: none"] + .image-placeholder {
+  img[style*="display: none"] + .table-image-placeholder {
     display: flex !important;
   }
 </style>

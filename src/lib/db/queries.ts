@@ -204,6 +204,21 @@ export async function getCardById(id: number): Promise<CardWithDetails | null> {
   }
 }
 
+export async function getSongs(): Promise<schema.SongData[]> {
+  try {
+    const db = getDb();
+    const songs = await db
+      .select()
+      .from(schema.songData)
+      .orderBy(schema.songData.songName);
+    
+    return songs;
+  } catch (error) {
+    console.error('Error fetching songs:', error);
+    return [];
+  }
+}
+
 export async function searchCards(query: string): Promise<CardWithDetails[]> {
   try {
     const db = getDb();

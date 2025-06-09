@@ -39,6 +39,18 @@
   }
   
   const totalStats = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
+  
+  function handleImageError(e: Event) {
+    const target = e.target;
+    if (target instanceof HTMLImageElement) {
+      // Hide the broken image and show placeholder
+      target.style.display = 'none';
+      const placeholder = target.nextElementSibling;
+      if (placeholder instanceof HTMLElement) {
+        placeholder.style.display = 'flex';
+      }
+    }
+  }
 </script>
 
 <div class="max-w-6xl mx-auto px-4 py-8">
@@ -56,12 +68,20 @@
     <div class="lg:grid lg:grid-cols-2 lg:gap-8">
       <!-- 左側：カード画像 -->
       <div class="p-8 bg-gray-50">
-        <div class="aspect-[3/4] bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="aspect-[3/4] bg-white rounded-lg shadow-md overflow-hidden relative">
           <img 
-            src="https://i7.step-on-dream.net/img/cards/{card.id}.png" 
+            src="/assets/cards/{card.card_id}.png" 
             alt={card.cardname}
             class="w-full h-full object-contain"
+            on:error={handleImageError}
           />
+          <div class="absolute inset-0 hidden items-center justify-center bg-gray-200">
+            <div class="text-center">
+              <div class="text-6xl text-gray-400 mb-2">🎵</div>
+              <div class="text-gray-500">No Image</div>
+              <div class="text-sm text-gray-400">#{card.card_id}</div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -100,216 +120,94 @@
                 <dd class="font-medium">{card.name_other}</dd>
               </div>
             {/if}
-            <div>
-              <dt class="text-sm text-gray-600">グループ</dt>
-              <dd class="font-medium">{card.groupname || '-'}</dd>
-            </div>
-            <div>
-              <dt class="text-sm text-gray-600">入手方法</dt>
-              <dd class="font-medium">{card.get_type || '-'}</dd>
-            </div>
-            <div>
-              <dt class="text-sm text-gray-600">ストーリー</dt>
-              <dd class="font-medium">{card.story || '-'}</dd>
-            </div>
-            {#if card.awakening_item}
+            {#if card.groupname}
               <div>
-                <dt class="text-sm text-gray-600">覚醒アイテム</dt>
-                <dd class="font-medium">{card.awakening_item}</dd>
+                <dt class="text-sm text-gray-600">グループ</dt>
+                <dd class="font-medium">{card.groupname}</dd>
               </div>
             {/if}
+            <div>
+              <dt class="text-sm text-gray-600">属性</dt>
+              <dd class="font-medium">
+                <span class="inline-flex items-center gap-2">
+                  <span class={`inline-block w-6 h-6 rounded-full ${getAttributeColor(card.attribute)}`}></span>
+                  {getAttributeName(card.attribute)}
+                </span>
+              </dd>
+            </div>
           </dl>
         </div>
         
         <!-- ステータス -->
-        {#if card.attribute}
+        {#if card.shout_max || card.beat_max || card.melody_max}
           <div class="mb-6 border-t pt-6">
-            <h2 class="text-xl font-semibold mb-4">ステータス</h2>
-            <div class="mb-4">
-              <span class="text-sm text-gray-600">属性:</span>
-              <span class="inline-block ml-2 px-3 py-1 rounded-full text-white text-sm font-bold {getAttributeColor(card.attribute)}">
-                {getAttributeName(card.attribute)}
-              </span>
-            </div>
+            <h2 class="text-xl font-semibold mb-4">ステータス（最大値）</h2>
             <div class="space-y-3">
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-sm font-medium">Shout</span>
-                  <span class="text-sm text-gray-600">{card.shout_min || 0} → {card.shout_max || 0}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div class="bg-red-500 h-2 rounded-full" style="width: {((card.shout_max || 0) / 8000) * 100}%"></div>
-                </div>
+              <div class="flex items-center justify-between">
+                <span class="text-red-600 font-medium">Shout</span>
+                <span class="font-mono">{card.shout_max || 0}</span>
               </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-sm font-medium">Beat</span>
-                  <span class="text-sm text-gray-600">{card.beat_min || 0} → {card.beat_max || 0}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div class="bg-blue-500 h-2 rounded-full" style="width: {((card.beat_max || 0) / 8000) * 100}%"></div>
-                </div>
+              <div class="flex items-center justify-between">
+                <span class="text-blue-600 font-medium">Beat</span>
+                <span class="font-mono">{card.beat_max || 0}</span>
               </div>
-              <div>
-                <div class="flex justify-between mb-1">
-                  <span class="text-sm font-medium">Melody</span>
-                  <span class="text-sm text-gray-600">{card.melody_min || 0} → {card.melody_max || 0}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div class="bg-yellow-500 h-2 rounded-full" style="width: {((card.melody_max || 0) / 8000) * 100}%"></div>
-                </div>
+              <div class="flex items-center justify-between">
+                <span class="text-green-600 font-medium">Melody</span>
+                <span class="font-mono">{card.melody_max || 0}</span>
               </div>
-              <div class="pt-3 border-t">
-                <div class="flex justify-between">
-                  <span class="font-medium">合計</span>
-                  <span class="font-bold text-lg">{totalStats}</span>
-                </div>
+              <div class="flex items-center justify-between border-t pt-3">
+                <span class="font-semibold">合計</span>
+                <span class="font-mono font-bold text-lg">{totalStats}</span>
               </div>
             </div>
           </div>
         {/if}
         
         <!-- スキル情報 -->
-        {#if card.ap_skill_name || card.sp_time}
+        {#if card.ap_skill_name || card.ct_skill}
           <div class="mb-6 border-t pt-6">
-            <h2 class="text-xl font-semibold mb-4">スキル情報</h2>
-            <dl class="space-y-3">
-              {#if card.ap_skill_name}
-                <div>
-                  <dt class="text-sm text-gray-600">APスキル</dt>
-                  <dd class="font-medium">{card.ap_skill_name}</dd>
-                  {#if card.ap_skill_type}
-                    <dd class="text-sm text-gray-600 mt-1">タイプ: {card.ap_skill_type}</dd>
-                  {/if}
-                  {#if card.ap_skill_req}
-                    <dd class="text-sm text-gray-600">必要AP: {card.ap_skill_req}</dd>
-                  {/if}
-                  {#if card.comment}
-                    <dd class="text-sm text-gray-600 mt-2">{card.comment}</dd>
-                  {/if}
-                </div>
-              {/if}
-              {#if card.ct_skill}
-                <div>
-                  <dt class="text-sm text-gray-600">CTスキル</dt>
-                  <dd class="font-medium">{card.ct_skill}</dd>
-                </div>
-              {/if}
-              {#if card.sp_time}
-                <div>
-                  <dt class="text-sm text-gray-600">SP時間</dt>
-                  <dd class="font-medium">{card.sp_time}秒</dd>
-                  {#if card.sp_value}
-                    <dd class="text-sm text-gray-600">SP値: {card.sp_value}</dd>
-                  {/if}
-                </div>
-              {/if}
-            </dl>
-          </div>
-        {/if}
-        
-        <!-- スキルレベル詳細 -->
-        {#if card.skill_details && card.skill_details.length > 0}
-          <div class="mb-6 border-t pt-6">
-            <h2 class="text-xl font-semibold mb-4">スキルレベル詳細</h2>
-            <div class="overflow-x-auto">
-              <table class="min-w-full text-sm">
-                <thead>
-                  <tr class="border-b">
-                    <th class="text-left py-2 px-3">レベル</th>
-                    <th class="text-left py-2 px-3">発動条件</th>
-                    <th class="text-left py-2 px-3">確率</th>
-                    <th class="text-left py-2 px-3">効果</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each card.skill_details as detail}
-                    <tr class="border-b hover:bg-gray-50">
-                      <td class="py-2 px-3 font-medium">Lv{detail.skill_level}</td>
-                      <td class="py-2 px-3">
-                        {#if detail.count}
-                          {detail.per === 1 ? 'Perfect' : detail.per === 2 ? 'Great' : 'Good'} {detail.count}回
-                        {:else}
-                          -
-                        {/if}
-                      </td>
-                      <td class="py-2 px-3">{detail.rate ? `${detail.rate}%` : '-'}</td>
-                      <td class="py-2 px-3">
-                        {#if detail.value}
-                          スコア {detail.value.toLocaleString()} UP
-                        {:else}
-                          -
-                        {/if}
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        {/if}
-        
-        <!-- ブローチ情報 -->
-        {#if card.broach_shout || card.broach_beat || card.broach_melody}
-          <div class="mb-6 border-t pt-6">
-            <h2 class="text-xl font-semibold mb-4">ブローチ情報</h2>
-            <dl class="space-y-2">
-              <div class="grid grid-cols-3 gap-4">
-                {#if card.broach_shout}
-                  <div>
-                    <dt class="text-sm text-gray-600">Shout</dt>
-                    <dd class="font-medium text-red-600">+{card.broach_shout}</dd>
-                  </div>
-                {/if}
-                {#if card.broach_beat}
-                  <div>
-                    <dt class="text-sm text-gray-600">Beat</dt>
-                    <dd class="font-medium text-blue-600">+{card.broach_beat}</dd>
-                  </div>
-                {/if}
-                {#if card.broach_melody}
-                  <div>
-                    <dt class="text-sm text-gray-600">Melody</dt>
-                    <dd class="font-medium text-yellow-600">+{card.broach_melody}</dd>
-                  </div>
+            <h2 class="text-xl font-semibold mb-4">スキル</h2>
+            {#if card.ap_skill_name}
+              <div class="mb-4">
+                <h3 class="text-sm text-gray-600 mb-1">APスキル</h3>
+                <p class="font-medium">{card.ap_skill_name}</p>
+                {#if card.ap_skill_type}
+                  <p class="text-sm text-gray-500">タイプ: {card.ap_skill_type}</p>
                 {/if}
               </div>
-              {#if card.broach_req}
-                <div>
-                  <dt class="text-sm text-gray-600">必要ブローチ数</dt>
-                  <dd class="font-medium">{card.broach_req}個</dd>
-                </div>
-              {/if}
-            </dl>
+            {/if}
+            {#if card.ct_skill}
+              <div>
+                <h3 class="text-sm text-gray-600 mb-1">CTスキル</h3>
+                <p class="text-sm">{card.ct_skill}</p>
+              </div>
+            {/if}
           </div>
         {/if}
         
-        <!-- リリース情報 -->
-        {#if card.year || card.event}
-          <div class="mb-6 border-t pt-6">
-            <h2 class="text-xl font-semibold mb-4">リリース情報</h2>
-            <dl class="space-y-2">
-              {#if card.year && card.month && card.day}
-                <div>
-                  <dt class="text-sm text-gray-600">実装日</dt>
-                  <dd class="font-medium">{card.year}年{card.month}月{card.day}日</dd>
-                </div>
-              {/if}
-              {#if card.event}
-                <div>
-                  <dt class="text-sm text-gray-600">イベント</dt>
-                  <dd class="font-medium">{card.event}</dd>
-                </div>
-              {/if}
-              {#if card.updatetime}
-                <div>
-                  <dt class="text-sm text-gray-600">最終更新</dt>
-                  <dd class="font-medium">{new Date(card.updatetime).toLocaleString('ja-JP')}</dd>
-                </div>
-              {/if}
-            </dl>
-          </div>
-        {/if}
+        <!-- その他の情報 -->
+        <div class="border-t pt-6">
+          <dl class="space-y-2 text-sm">
+            {#if card.get_type}
+              <div class="flex justify-between">
+                <dt class="text-gray-600">入手方法</dt>
+                <dd>{card.get_type}</dd>
+              </div>
+            {/if}
+            {#if card.story}
+              <div class="flex justify-between">
+                <dt class="text-gray-600">ストーリー</dt>
+                <dd>{card.story}</dd>
+              </div>
+            {/if}
+            {#if card.sp_time}
+              <div class="flex justify-between">
+                <dt class="text-gray-600">SP時間</dt>
+                <dd>{card.sp_time}秒</dd>
+              </div>
+            {/if}
+          </dl>
+        </div>
       </div>
     </div>
   </Card>
