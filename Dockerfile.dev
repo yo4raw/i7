@@ -16,7 +16,7 @@ COPY vite.config.ts ./
 COPY tsconfig.json ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
-COPY app.* ./
+COPY src/app.* ./src/
 COPY src ./src
 COPY static ./static
 

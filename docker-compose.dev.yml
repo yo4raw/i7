@@ -68,8 +68,8 @@ services:
       - ./tailwind.config.js:/app/tailwind.config.js
       - ./postcss.config.js:/app/postcss.config.js
       - ./package.json:/app/package.json
-      - ./app.css:/app/app.css
-      - ./app.html:/app/app.html
+      - ./src/app.css:/app/src/app.css
+      - ./src/app.html:/app/src/app.html
       # Exclude node_modules and .svelte-kit
       - /app/node_modules
       - /app/.svelte-kit

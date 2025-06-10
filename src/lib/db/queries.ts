@@ -219,7 +219,7 @@ export async function getSongs(): Promise<schema.SongData[]> {
   }
 }
 
-export async function searchCards(query: string): Promise<CardWithDetails[]> {
+export async function searchCardsByQuery(query: string): Promise<CardWithDetails[]> {
   try {
     const db = getDb();
     const searchTerm = `%${query}%`;
@@ -331,6 +331,10 @@ export interface ScoreUpSearchParams {
   skillType?: string[];
   eventBonus?: boolean;
 }
+
+// カード検索用の関数をsearchCards.tsからエクスポート
+export { searchCards } from './searchCards';
+export type { CardSearchParams } from './searchCards';
 
 export async function searchScoreUpCards(params: ScoreUpSearchParams): Promise<CardWithDetails[]> {
   try {
