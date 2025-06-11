@@ -30,7 +30,7 @@
 #### 楽曲データインポート機能
 - **概要**: 楽曲情報のデータをインポートする
 - **データソース**: 
-  - https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=1083871743#gid=1083871743
+  - https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=480354522#gid=480354522
 - **データ項目**: 
   - 基本情報（0-11）
     - ID - 楽曲ID
