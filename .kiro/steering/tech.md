@@ -1,118 +1,151 @@
 # Technology Stack
 
 ## Architecture Overview
-A Claude Code extension system that uses hooks and slash commands to implement Kiro-style spec-driven development workflows.
+モダンなフルスタックWebアプリケーション。SvelteKitによるSSR/CSRハイブリッドアーキテクチャを採用し、PostgreSQLデータベースとDrizzle ORMによる型安全なデータ層を実装。Dockerによる開発環境の統一とRender/Neonによるクラウドデプロイメント。
 
-## Core Technologies
-- **Platform**: Claude Code CLI (darwin)
-- **Language**: Markdown-based specifications and documentation
-- **Automation**: Claude Code hooks system
-- **Version Control**: Git
+## Frontend Technologies
+- **Framework**: SvelteKit 2.0+
+  - Server-Side Rendering (SSR) 対応
+  - Client-Side Routing
+  - Built-in API Routes
+- **Language**: TypeScript 5.0+
+  - 完全な型安全性
+  - 最新ECMAScript機能
+- **Styling**: Tailwind CSS 3.0+
+  - Utility-first CSS
+  - レスポンシブデザイン
+  - カスタムコンポーネント
+- **UI Components**: 
+  - Shadcn/ui ベースのコンポーネント
+  - カスタムSvelteコンポーネント
+- **State Management**: Svelte Stores
+- **Data Visualization**: Chart.js (円グラフ等)
+
+## Backend Technologies
+- **Runtime**: Node.js 20 LTS
+- **Framework**: SvelteKit (統合バックエンド)
+  - API Routes
+  - Form Actions
+  - Load Functions
+- **Database**: PostgreSQL 16
+  - リレーショナルデータモデル
+  - 高度なクエリ機能
+  - トランザクション管理
+- **ORM**: Drizzle ORM
+  - TypeScript型安全性
+  - マイグレーション管理
+  - クエリビルダー
+- **External APIs**: 
+  - Google Sheets API (データインポート)
 
 ## Development Environment
 
-### System Requirements
-- Claude Code CLI
-- Git repository
-- macOS (darwin platform)
-
-### Project Dependencies
-- Claude Code slash commands (.claude/commands/)
-- File system access for steering/spec management
-- No external package dependencies (pure markdown/JSON system)
-- TodoWrite tool integration for task management
-
-### Language Specifications
-- **Thinking**: English (internal processing)
-- **Responses**: Japanese (user-facing content)
-- **Documentation**: Bilingual with Japanese emphasis
-
-### Task Tracking Approach
-- **Manual Progress**: Checkbox manipulation in tasks.md files
-- **Automatic Parsing**: Progress percentage calculation from checkboxes
-- **Enhanced Tracking**: Improved hook error resolution and progress monitoring
-- **TodoWrite Integration**: Active task management during implementation
-
-## Key Commands
-
-### Steering Commands
+### Prerequisites
 ```bash
-/steering-init          # Generate initial steering documents
-/steering-update        # Update steering after changes  
-/steering-custom        # Create custom steering for specialized contexts
+# Required versions
+Node.js: 20.x LTS
+npm: 10.x
+Docker: 24.x
+Docker Compose: 2.x
 ```
 
-### Specification Commands
+### Environment Variables
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/i7_db
+DATABASE_URL_PROD=postgresql://...
+
+# Google API
+GOOGLE_SHEETS_API_KEY=...
+SPREADSHEET_ID_SONGS=...
+SPREADSHEET_ID_CARDS=...
+SPREADSHEET_ID_BROOCHES=...
+
+# App Config
+PUBLIC_BASE_URL=http://localhost:5173
+NODE_ENV=development
+```
+
+### Common Commands
 ```bash
-/spec-init [feature-name]           # Initialize spec structure only
-/spec-requirements [feature-name]   # Generate requirements
-/spec-design [feature-name]         # Generate technical design
-/spec-tasks [feature-name]          # Generate implementation tasks
-/spec-status [feature-name]         # Check current progress and phases
+# Development
+npm install              # 依存関係のインストール
+npm run dev             # 開発サーバー起動 (http://localhost:5173)
+npm run build           # プロダクションビルド
+npm run preview         # ビルドのプレビュー
+
+# Database
+npm run db:generate     # Drizzleスキーマ生成
+npm run db:migrate      # マイグレーション実行
+npm run db:push         # スキーマ同期
+npm run db:studio       # Drizzle Studio起動
+
+# Docker
+docker-compose up -d    # サービス起動
+docker-compose down     # サービス停止
+docker-compose logs -f  # ログ確認
+
+# Testing
+npm run test            # Vitestテスト実行
+npm run test:ui         # テストUIモード
+npm run test:coverage   # カバレッジレポート
+
+# Linting & Formatting
+npm run lint            # ESLint実行
+npm run format          # Prettier実行
+npm run check           # SvelteKit診断
 ```
 
-## File Structure
-```
-.kiro/
-├── steering/           # Project steering documents
-│   ├── product.md     # Product overview
-│   ├── tech.md        # Technology stack
-│   └── structure.md   # Code organization
-├── specs/             # Feature specifications
-│   └── [feature]/
-│       ├── spec.json      # Spec metadata and approval status
-│       ├── requirements.md # Feature requirements
-│       ├── design.md      # Technical design
-│       └── tasks.md       # Implementation tasks
+### Port Configuration
+- **Development Server**: 5173
+- **Preview Server**: 4173
+- **PostgreSQL**: 5432
+- **Drizzle Studio**: 3000
 
-.claude/
-└── commands/          # Slash command definitions
-    ├── spec-init.md
-    ├── spec-requirements.md
-    ├── spec-design.md
-    ├── spec-tasks.md
-    ├── spec-status.md
-    ├── steering-init.md
-    ├── steering-update.md
-    └── steering-custom.md
+## Infrastructure & Deployment
 
-docs/                  # Comprehensive documentation
-├── claude-code/       # Claude Code specific guides
-│   ├── hooks-guide.md # Hook system implementation
-│   ├── hooks.md       # Hook reference
-│   └── slash-commands.md # Command reference
-└── kiro/              # Kiro IDE reference and examples
-    ├── llms.txt       # Kiro IDE documentation
-    ├── specs-example/ # Example specifications
-    └── steering-example/ # Example steering documents
+### Development
+- **Containerization**: Docker & Docker Compose
+  - PostgreSQLコンテナ
+  - 開発環境の一貫性
+- **Version Control**: Git
+- **Package Manager**: npm
 
-README.md             # Japanese user documentation with workflow diagrams
-```
+### Production
+- **Web Hosting**: Render.com
+  - 自動デプロイ
+  - SSL証明書
+  - CDN統合
+- **Database**: Neon (Serverless PostgreSQL)
+  - 自動スケーリング
+  - バックアップ
+  - 接続プーリング
+- **Asset Storage**: 
+  - 静的ファイル: `/static`
+  - カード画像: `/static/assets/cards/`
 
-## Integration Points
-- **Claude Code CLI**: Primary interface for all commands
-- **Git**: Version control for specs and steering
-- **File System**: Markdown file management
-- **Hooks System**: Automated tracking and compliance
-- **TodoWrite Tool**: Task progress tracking and management
+## Testing & Quality Assurance
+- **Unit Testing**: Vitest
+- **Integration Testing**: Playwright (予定)
+- **Type Checking**: TypeScript strict mode
+- **Linting**: ESLint + Svelte ESLint
+- **Formatting**: Prettier
 
-## Development Workflow
-1. Initialize project steering with `/steering-init`
-2. Create feature specifications with `/spec-init`
-3. Follow 3-phase approval process (Requirements → Design → Tasks)
-4. Implement with manual task tracking via checkbox manipulation
-5. Monitor progress with `/spec-status`
-6. Update steering as needed with `/steering-update`
+## Security Considerations
+- **Environment Variables**: 機密情報の分離
+- **CORS**: SvelteKit内蔵設定
+- **SQL Injection**: Drizzle ORMによる防御
+- **XSS Protection**: SvelteKitの自動エスケープ
 
-## Task Progress Management
-- **Manual Tracking**: Update tasks.md checkboxes during implementation
-- **Progress Calculation**: Automatic percentage computation from checkbox states  
-- **Enhanced Monitoring**: Improved hook error resolution and progress tracking
-- **Status Monitoring**: Use `/spec-status` for current progress overview
-- **TodoWrite Integration**: Track active work items during development sessions
+## Performance Optimization
+- **SSR/CSR Hybrid**: 初期表示の高速化
+- **Image Optimization**: 遅延読み込み
+- **Database Indexing**: 検索性能の最適化
+- **Caching Strategy**: 
+  - ブラウザキャッシュ
+  - APIレスポンスキャッシュ
 
-## Security & Access
-- Local file system based
-- No external dependencies
-- Git-based version control
-- Manual approval gates for phase transitions
+## Monitoring & Logging
+- **Error Tracking**: Console logging (開発)
+- **Performance Monitoring**: Web Vitals
+- **Database Monitoring**: PostgreSQLログ

@@ -1,75 +1,54 @@
 # Product Overview
 
 ## Product Name
-Claude Code Spec-Driven Development System
+アイドリッシュセブン（IDOLiSH7）カードデータベース & スコア最適化ツール
 
 ## Product Description
-A Kiro-style specification-driven development system for Claude Code that provides structured workflows, automated progress tracking, and phase-based approval processes for software development projects.
+スマートフォンゲーム「アイドリッシュセブン」のプレイヤー向けWebアプリケーション。カードデータの管理、楽曲情報の参照、最適なユニット編成のためのスコア計算機能を提供し、プレイヤーがより効率的にゲームを楽しめるようサポートします。
 
 ## Core Features
-1. **Spec-Driven Development Workflow**
-   - Three-phase approval process (Requirements → Design → Tasks)
-   - Manual approval gates between phases
-   - Structured document generation
+1. **データインポート機能**
+   - Googleスプレッドシートからの楽曲データ自動取得
+   - カードデータの一括インポート（1000枚以上対応）
+   - ブローチデータの自動同期
+   - 定期的な自動更新機能
 
-2. **Steering System**
-   - Project context management through markdown files
-   - Core steering documents (product, tech, structure)
-   - Custom steering for specialized contexts
+2. **カード管理機能**
+   - カード一覧表示（無限スクロール/ページネーション）
+   - 高度な検索機能（名前、レアリティ、属性、キャラクター、スキル）
+   - カード詳細情報の表示
+   - ビジュアル重視のカード画像表示
 
-3. **Slash Commands**
-   - `/steering-init` - Initialize steering documents
-   - `/steering-update` - Update steering after changes
-   - `/steering-custom` - Create custom steering
-   - `/spec-init` - Initialize spec structure
-   - `/spec-requirements` - Generate requirements
-   - `/spec-design` - Generate technical design
-   - `/spec-tasks` - Generate implementation tasks
-   - `/spec-status` - Check progress and phases
+3. **スコア最適化機能**
+   - ゲーム内スコア計算システムの完全再現
+   - 最適ユニット編成の自動提案
+   - 所有カード登録（ローカルストレージ保存）
+   - スコア効率によるソート・フィルタリング
 
-4. **Task Progress Tracking**
-   - Manual task tracking through tasks.md checkboxes
-   - Progress monitoring with checkbox parsing
-   - TodoWrite integration for active work items
-   - Spec compliance checking
-   - Context preservation during compaction
-   - Minimal automation to prevent hook errors
-
-5. **Comprehensive Documentation**
-   - Technical blog explaining implementation approach
-   - Structured docs/ directory with examples and guides
-   - Kiro IDE reference documentation (llms.txt)
-   - Example specifications and steering documents
-   - Step-by-step workflow diagrams
-
-6. **Language Support**
-   - Bilingual operation: English thinking, Japanese responses
-   - Japanese README with comprehensive workflow documentation
-   - Localized user interface and command descriptions
-
-## Development Status
-> **Initial Version Warning**: This is an initial version under active development and improvement based on usage feedback.
+4. **楽曲管理機能**
+   - 楽曲一覧表示と詳細情報
+   - 属性比率の可視化（円グラフ）
+   - 難易度別ノーツ数表示
+   - 楽曲特性に基づくカード推奨
 
 ## Use Cases
-- **New Feature Development**: Start with steering, create specs, implement with confidence
-- **Project Documentation**: Maintain living documentation through steering files
-- **Team Collaboration**: Clear approval workflow ensures alignment
-- **Quality Assurance**: Phase-based approvals prevent premature implementation
-- **Real-world Applications**: Proven with complex specs including Rubik's cube solver app and real-time election results tracking app
+- **新規プレイヤー**: カード性能を理解し、効率的な育成計画を立てる
+- **中級プレイヤー**: 所有カードから最適なユニットを編成する
+- **上級プレイヤー**: スコアアタックのための詳細な計算とシミュレーション
+- **コレクター**: カード情報の検索・管理、未所持カードの確認
 
 ## Value Proposition
-- **Reduced Development Risk**: Structured approach catches issues early
-- **Improved Communication**: Clear specifications and approval process
-- **Better Documentation**: Living steering documents stay current with comprehensive guides
-- **Faster Iteration**: Well-defined tasks and clear progress tracking
-- **Context Preservation**: Manual tracking maintains project knowledge
-- **Easy Integration**: Simple copy-and-paste setup for existing projects
-- **Language Flexibility**: Bilingual support (English thinking, Japanese responses)
-- **Comprehensive Learning**: Technical blog and documentation provide deep understanding
-- **Real-world Validation**: Proven with complex example specifications including Rubik's cube solver and election tracking applications
+- **正確性**: ゲーム内計算式を完全に再現した信頼できるスコア計算
+- **効率性**: 手動計算では困難な最適編成を瞬時に提案
+- **利便性**: Webアプリとしてどこからでもアクセス可能
+- **視覚性**: カード画像とグラフによる直感的な情報表示
+- **持続性**: 自動データ更新により常に最新情報を提供
 
 ## Target Users
-- Software development teams using Claude Code
-- Projects requiring structured development workflows
-- Teams needing clear documentation and approval processes
-- Developers seeking better spec-driven development tools
+- アイドリッシュセブンの現役プレイヤー
+- ゲーム内スコアを向上させたいユーザー
+- カード情報を効率的に管理したいユーザー
+- ゲームデータの分析に興味があるユーザー
+
+## Development Status
+> **要件定義完了**: 詳細な要件定義書（requirements_definition.md）が作成済み。実装準備段階。
