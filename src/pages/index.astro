@@ -1,0 +1,64 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ホーム">
+  <h1 class="text-2xl font-bold mb-6">アイドリッシュセブン カードデータベース</h1>
+  <p class="text-gray-600 mb-8">カード情報の検索・閲覧ができるデータベースサイトです。</p>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="stats-area">
+    <a href={`${import.meta.env.BASE_URL}cards/`}
+       class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+      <h2 class="text-lg font-semibold text-indigo-700 mb-2">カード一覧</h2>
+      <p class="text-sm text-gray-500">全カードの検索・フィルタリング</p>
+      <div id="card-count" class="mt-3 text-2xl font-bold text-gray-800">--</div>
+    </a>
+    <a href={`${import.meta.env.BASE_URL}songs/`}
+       class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+      <h2 class="text-lg font-semibold text-indigo-700 mb-2">楽曲一覧</h2>
+      <p class="text-sm text-gray-500">楽曲情報と属性比率の確認</p>
+      <div id="song-count" class="mt-3 text-2xl font-bold text-gray-800">--</div>
+    </a>
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold text-indigo-700 mb-2">レアリティ別</h2>
+      <div id="rarity-stats" class="mt-3 space-y-1 text-sm text-gray-600">
+        <p>読み込み中...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { fetchCardsJson } from '../lib/data/fetchCardsJson.js';
+    import { fetchSongsJson } from '../lib/data/fetchSongsJson.js';
+
+    async function loadStats() {
+      try {
+        const [cards, songs] = await Promise.all([fetchCardsJson(), fetchSongsJson()]);
+
+        const cardCountEl = document.getElementById('card-count');
+        if (cardCountEl) cardCountEl.textContent = `${cards.length} 枚`;
+
+        const songCountEl = document.getElementById('song-count');
+        if (songCountEl) songCountEl.textContent = `${songs.length} 曲`;
+
+        const rarityCounts: Record<string, number> = {};
+        for (const card of cards) {
+          const r = (card as any).rarity || '不明';
+          rarityCounts[r] = (rarityCounts[r] || 0) + 1;
+        }
+
+        const rarityEl = document.getElementById('rarity-stats');
+        if (rarityEl) {
+          rarityEl.innerHTML = Object.entries(rarityCounts)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([rarity, count]) => `<p><span class="font-medium">${rarity}</span>: ${count}枚</p>`)
+            .join('');
+        }
+      } catch (e) {
+        console.error('データ取得エラー:', e);
+      }
+    }
+
+    loadStats();
+  </script>
+</BaseLayout>
