@@ -97,7 +97,7 @@ const base = import.meta.env.BASE_URL;
 
   <script>
     import { fetchCardsJson } from '../../lib/data/fetchCardsJson.js';
-    import { CARD_IMAGE_BASE_URL, ATTRIBUTE_MAP, PAGE_SIZE } from '../../lib/constants';
+    import { CARD_THUMB_BASE_URL, ATTRIBUTE_MAP, PAGE_SIZE } from '../../lib/constants';
 
     interface Card {
       ID: number;
@@ -137,7 +137,7 @@ const base = import.meta.env.BASE_URL;
     }
 
     function imgTag(cardID: number): string {
-      return `<img src="${CARD_IMAGE_BASE_URL}/${cardID}.png" alt="" class="w-12 h-auto rounded"
+      return `<img src="${CARD_THUMB_BASE_URL}/${cardID}.png" alt="" class="w-12 h-auto rounded"
         onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />`;
     }
 

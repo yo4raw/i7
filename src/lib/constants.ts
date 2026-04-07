@@ -21,5 +21,6 @@ export const ATTRIBUTE_MAP: Record<number, string> = {
 };
 
 export const CARD_IMAGE_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/cards';
+export const CARD_THUMB_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/th_cards';
 
 export const PAGE_SIZE = 100;
