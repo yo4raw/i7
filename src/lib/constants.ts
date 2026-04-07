@@ -9,15 +9,28 @@ export const CHARACTERS = [
 export const RARITIES = ['UR', 'SSR', 'SR', 'R', 'GROUP'] as const;
 
 export const ATTRIBUTES = [
-  { value: 1, label: 'Shout', color: 'shout' },
-  { value: 2, label: 'Beat', color: 'beat' },
-  { value: 3, label: 'Melody', color: 'melody' },
+  { value: 1, label: 'Shout', color: 'red' },
+  { value: 2, label: 'Beat', color: 'green' },
+  { value: 3, label: 'Melody', color: 'blue' },
 ] as const;
 
 export const ATTRIBUTE_MAP: Record<number, string> = {
   1: 'Shout',
   2: 'Beat',
   3: 'Melody',
+};
+
+/** 属性色: Shout=赤, Beat=緑, Melody=青 */
+export const ATTRIBUTE_COLORS: Record<number, string> = {
+  1: '#ef4444',  // red - Shout
+  2: '#22c55e',  // green - Beat
+  3: '#3b82f6',  // blue - Melody
+};
+
+export const ATTRIBUTE_BADGE_CLASSES: Record<number, string> = {
+  1: 'bg-red-500',    // Shout
+  2: 'bg-green-500',  // Beat
+  3: 'bg-blue-500',   // Melody
 };
 
 export const CARD_IMAGE_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/cards';

@@ -1,111 +1,99 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
+
+const allSongs = await fetchSongsJson() as any[];
+const songs = allSongs.filter((s: any) => s.category && s.artist && s.notes_count);
 ---
 
 <BaseLayout title="楽曲一覧">
   <h1 class="text-2xl font-bold mb-6">楽曲一覧</h1>
 
-  <div id="loading" class="text-center py-12 text-gray-500">楽曲データを読み込み中...</div>
-
-  <div id="song-content" class="hidden">
-    <!-- デスクトップテーブル -->
-    <div class="hidden md:block overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
-            <th class="px-3 py-2">分類</th>
-            <th class="px-3 py-2">曲名</th>
-            <th class="px-3 py-2">アーティスト</th>
-            <th class="px-3 py-2">難易度</th>
-            <th class="px-3 py-2 text-right">ノーツ数</th>
-            <th class="px-3 py-2 text-right">秒数</th>
-            <th class="px-3 py-2 w-48">属性比率</th>
-          </tr>
-        </thead>
-        <tbody id="song-table-body" class="divide-y divide-gray-100"></tbody>
-      </table>
-    </div>
-    <!-- モバイル -->
-    <div id="song-mobile" class="md:hidden space-y-3"></div>
+  <!-- デスクトップテーブル -->
+  <div class="hidden md:block overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+          <th class="px-3 py-2">分類</th>
+          <th class="px-3 py-2">曲名</th>
+          <th class="px-3 py-2">アーティスト</th>
+          <th class="px-3 py-2">難易度</th>
+          <th class="px-3 py-2 text-right">ノーツ数</th>
+          <th class="px-3 py-2 text-right">秒数</th>
+          <th class="px-3 py-2 w-48">属性比率</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {songs.map((song: any) => {
+          const s = Math.round(song.shout_ratio || 0);
+          const b = Math.round(song.beat_ratio || 0);
+          const m = Math.round(song.melody_ratio || 0);
+          const total = s + b + m;
+          return (
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 text-xs">{song.category || ''}</td>
+              <td class="px-3 py-2 font-medium">{song.song_name || ''}</td>
+              <td class="px-3 py-2">{song.artist || ''}</td>
+              <td class="px-3 py-2 text-xs">{song.difficulty || ''}</td>
+              <td class="px-3 py-2 text-right">{(song.notes_count || 0).toLocaleString()}</td>
+              <td class="px-3 py-2 text-right">{song.duration || '-'}</td>
+              <td class="px-3 py-2">
+                {total ? (
+                  <Fragment>
+                    <div class="flex h-4 rounded-full overflow-hidden bg-gray-200" title={`S:${s}% B:${b}% M:${m}%`}>
+                      <div class="bg-red-500" style={`width:${s}%`}></div>
+                      <div class="bg-green-500" style={`width:${b}%`}></div>
+                      <div class="bg-blue-500" style={`width:${m}%`}></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                      <span>S:{s}%</span><span>B:{b}%</span><span>M:{m}%</span>
+                    </div>
+                  </Fragment>
+                ) : (
+                  <span class="text-gray-400 text-xs">-</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   </div>
 
-  <script>
-    import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
-
-    interface Song {
-      id: number;
-      category: string;
-      artist: string;
-      song_name: string;
-      song_type: string;
-      difficulty: string;
-      stars: number;
-      shout_ratio: number;
-      beat_ratio: number;
-      melody_ratio: number;
-      notes_count: number;
-      duration: number;
-      [key: string]: any;
-    }
-
-    function attrBar(s: number, b: number, m: number): string {
+  <!-- モバイル -->
+  <div class="md:hidden space-y-3">
+    {songs.map((song: any) => {
+      const s = Math.round(song.shout_ratio || 0);
+      const b = Math.round(song.beat_ratio || 0);
+      const m = Math.round(song.melody_ratio || 0);
       const total = s + b + m;
-      if (!total) return '<span class="text-gray-400 text-xs">-</span>';
-      const sp = Math.round(s), bp = Math.round(b), mp = Math.round(m);
-      return `<div class="flex h-4 rounded-full overflow-hidden bg-gray-200" title="S:${sp}% B:${bp}% M:${mp}%">
-        <div class="bg-red-500" style="width:${sp}%"></div>
-        <div class="bg-blue-500" style="width:${bp}%"></div>
-        <div class="bg-green-500" style="width:${mp}%"></div>
-      </div>
-      <div class="flex justify-between text-[10px] text-gray-400 mt-0.5">
-        <span>S:${sp}%</span><span>B:${bp}%</span><span>M:${mp}%</span>
-      </div>`;
-    }
-
-    function renderRow(song: Song): string {
-      return `<tr class="hover:bg-gray-50">
-        <td class="px-3 py-2 text-xs">${song.category || ''}</td>
-        <td class="px-3 py-2 font-medium">${song.song_name || ''}</td>
-        <td class="px-3 py-2">${song.artist || ''}</td>
-        <td class="px-3 py-2 text-xs">${song.difficulty || ''}</td>
-        <td class="px-3 py-2 text-right">${(song.notes_count || 0).toLocaleString()}</td>
-        <td class="px-3 py-2 text-right">${song.duration || '-'}</td>
-        <td class="px-3 py-2">${attrBar(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</td>
-      </tr>`;
-    }
-
-    function renderMobile(song: Song): string {
-      return `<div class="bg-white rounded-lg shadow p-3">
-        <p class="font-medium text-sm">${song.song_name || ''}</p>
-        <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
-        <div class="flex gap-3 mt-1 text-xs text-gray-600">
-          <span>${song.difficulty || ''}</span>
-          <span>Notes: ${(song.notes_count || 0).toLocaleString()}</span>
-          <span>${song.duration || '-'}秒</span>
+      return (
+        <div class="bg-white rounded-lg shadow p-3">
+          <p class="font-medium text-sm">{song.song_name || ''}</p>
+          <p class="text-xs text-gray-500">{song.artist || ''} / {song.category || ''}</p>
+          <div class="flex gap-3 mt-1 text-xs text-gray-600">
+            <span>{song.difficulty || ''}</span>
+            <span>Notes: {(song.notes_count || 0).toLocaleString()}</span>
+            <span>{song.duration || '-'}秒</span>
+          </div>
+          <div class="mt-2">
+            {total ? (
+              <Fragment>
+                <div class="flex h-4 rounded-full overflow-hidden bg-gray-200" title={`S:${s}% B:${b}% M:${m}%`}>
+                  <div class="bg-red-500" style={`width:${s}%`}></div>
+                  <div class="bg-blue-500" style={`width:${b}%`}></div>
+                  <div class="bg-green-500" style={`width:${m}%`}></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                  <span>S:{s}%</span><span>B:{b}%</span><span>M:{m}%</span>
+                </div>
+              </Fragment>
+            ) : (
+              <span class="text-gray-400 text-xs">-</span>
+            )}
+          </div>
         </div>
-        <div class="mt-2">${attrBar(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</div>
-      </div>`;
-    }
-
-    async function init() {
-      try {
-        const songs = (await fetchSongsJson() as Song[])
-          .filter(s => s.category && s.artist && s.notes_count);
-
-        document.getElementById('song-table-body')!.innerHTML = songs.map(renderRow).join('');
-        document.getElementById('song-mobile')!.innerHTML = songs.map(renderMobile).join('');
-
-        document.getElementById('loading')!.classList.add('hidden');
-        document.getElementById('song-content')!.classList.remove('hidden');
-
-      } catch (e) {
-        console.error('楽曲データ取得エラー:', e);
-        const el = document.getElementById('loading')!;
-        el.textContent = 'データの取得に失敗しました。';
-        el.classList.add('text-red-500');
-      }
-    }
-
-    init();
-  </script>
+      );
+    })}
+  </div>
 </BaseLayout>

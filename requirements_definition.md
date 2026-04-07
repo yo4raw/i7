@@ -30,7 +30,7 @@
 #### 楽曲データインポート機能
 - **概要**: 楽曲情報のデータをインポートする
 - **データソース**: 
-  - https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=480354522#gid=480354522
+  - <https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=480354522#gid=480354522>
 - **データ項目**: 
   - 基本情報（0-11）
     - ID - 楽曲ID
@@ -66,7 +66,7 @@
 #### 楽曲データインポート機能
 - **概要**: 楽曲情報のデータをインポートする
 - **データソース**: 
-  - https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=1083871743#gid=1083871743
+  - <https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=1083871743#gid=1083871743>
 - **データ項目**: 
   - カード基本情報（0-9）
     - ID - カードの一意識別子
@@ -109,7 +109,7 @@
 #### 固有ブローチデータインポート機能
 - **概要**: ブローチ情報のデータをインポートする。
 - **データソース**: 
-  - https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=1087762308#gid=1087762308
+  - <https://docs.google.com/spreadsheets/d/1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4/edit?gid=1087762308#gid=1087762308>
 - **データ項目**: 
   - グループカード基本情報（0-4）
     - ID - グループカードの一意識別子

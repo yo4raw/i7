@@ -14,18 +14,24 @@ No test runner or linter is configured.
 
 ## Architecture
 
-Astro 6 static site for an IDOLiSH7 card database. All pages are pre-rendered HTML shells that fetch data client-side from Google Sheets via the GViz API.
+Astro 6 static site for an IDOLiSH7 card database. Data is fetched at build time from Google Sheets via the GViz API and pre-rendered into static HTML. The card list page embeds card data as JSON for client-side filtering/sorting.
 
 ### Data Flow
 
-Google Sheets (GViz JSON API) → `src/lib/data/fetch*.js` → client-side `<script>` in .astro pages
+Google Sheets (GViz JSON API) → `src/lib/data/fetch*.js` → Astro frontmatter (build time) → static HTML
 
 Three data fetchers in `src/lib/data/` parse GViz JSONP responses from a single Google Spreadsheet (`1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4`) with different GIDs:
 - **fetchCardsJson.js** (GID 480354522) — card stats, skills, metadata
 - **fetchSongsJson.js** (GID 1083871743) — song data with complex nested attribute groups (8 groups × 6 sub-columns)
 - **fetchFixedBroachsJson.js** (GID 1087762308) — equipment data linked to cards
 
-**No data is fetched at build time.** All data loading happens in the browser via `<script>` tags in .astro pages.
+### Game Attributes
+
+| 属性 | 色 |
+|------|------|
+| Shout（シャウト） | 🔴 赤 |
+| Beat（ビート） | 🟢 緑 |
+| Melody（メロディ） | 🔵 青 |
 
 ### Key Constants (`src/lib/constants.ts`)
 
@@ -35,12 +41,22 @@ Three data fetchers in `src/lib/data/` parse GViz JSONP responses from a single 
 
 ### Page Patterns
 
-All pages use `BaseLayout.astro` and follow the same pattern: render empty containers server-side, then populate via client-side JS. Filter state is persisted in URL query parameters.
+- **Home, Songs, Card Detail**: Fully pre-rendered at build time (zero client-side JS)
+- **Card List**: Initial data embedded as JSON, client-side JS handles filtering/sorting/pagination with htmx for DOM updates
+- **Card Detail**: Dynamic routes via `src/pages/cards/[id].astro` with `getStaticPaths()`
 
 ### Deployment
 
-GitHub Pages via `.github/workflows/deploy.yml`. Triggers on push to `main`. Site is deployed at `https://yo4raw.github.io/i7/` — the `base: '/i7'` in `astro.config.mjs` must stay in sync.
+GitHub Pages via `.github/workflows/deploy.yml`. Triggers on push to `main` and every 6 hours via cron (for data freshness). Site is deployed at `https://yo4raw.github.io/i7/` — the `base: '/i7'` in `astro.config.mjs` must stay in sync.
 
 ### Styling
 
 Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astrojs/tailwind` integration). Custom theme colors defined in `src/styles/global.css` via `@theme` block.
+
+## Workflow
+
+作業完了後は以下を自動で行うこと:
+1. `git commit` — 変更内容をコミット
+2. `git push` — リモートにプッシュ
+3. Playwright MCP で `npm run preview` のローカルサーバーにアクセスし、画面表示を確認する
+   - スクリーンショットは `tmp/` ディレクトリを作成してその下に保存する

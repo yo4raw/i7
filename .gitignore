@@ -26,6 +26,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# playwright
+.playwright-mcp/
+
 # legacy remnants (permission-protected, cannot delete)
 _build/
 deps/
