@@ -29,6 +29,9 @@ yarn-error.log*
 # playwright
 .playwright-mcp/
 
+# screenshots
+tmp/
+
 # legacy remnants (permission-protected, cannot delete)
 _build/
 deps/
