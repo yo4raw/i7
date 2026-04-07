@@ -2,128 +2,247 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
 
-const allSongs = await fetchSongsJson() as any[];
-const songs = allSongs.filter((s: any) => s.category && s.artist && s.notes_count);
-
-/** SVG円グラフ生成（比率は0〜1の小数値） */
-function songPie(sr: number, br: number, mr: number, size: string = 'w-10 h-10') {
-  const total = sr + br + mr;
-  if (!total) return '<span class="text-gray-400 text-xs">-</span>';
-  const sPct = Math.round(sr * 100);
-  const bPct = Math.round(br * 100);
-  const mPct = Math.round(mr * 100);
-  const r = 15.9155;
-  const c = 2 * Math.PI * r;
-  const sLen = sr / total * c;
-  const bLen = br / total * c;
-  const mLen = mr / total * c;
-  return { sPct, bPct, mPct, r, c, sLen, bLen, mLen };
-}
+const allSongs = (await fetchSongsJson() as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
+const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as string[];
 ---
 
 <BaseLayout title="楽曲一覧">
   <h1 class="text-2xl font-bold mb-6">楽曲一覧</h1>
 
-  <!-- デスクトップテーブル -->
-  <div class="hidden md:block overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
-          <th class="px-3 py-2">グループ</th>
-          <th class="px-3 py-2">曲名</th>
-          <th class="px-3 py-2">アーティスト</th>
-          <th class="px-3 py-2">難易度</th>
-          <th class="px-3 py-2 text-right">ノーツ数</th>
-          <th class="px-3 py-2 text-right">秒数</th>
-          <th class="px-3 py-2 w-48">属性比率</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        {songs.map((song: any) => {
-          const sr = song.shout_ratio || 0;
-          const br = song.beat_ratio || 0;
-          const mr = song.melody_ratio || 0;
-          const p = songPie(sr, br, mr);
-          return (
-            <tr class="hover:bg-gray-50">
-              <td class="px-3 py-2 text-xs">{song.category || ''}</td>
-              <td class="px-3 py-2 font-medium">{song.song_name || ''}</td>
-              <td class="px-3 py-2">{song.artist || ''}</td>
-              <td class="px-3 py-2 text-xs">
-                <div>{song.difficulty || ''}</div>
-                {song.stars ? <div class="text-amber-400">{'★'.repeat(song.stars)}{'☆'.repeat(Math.max(0, 5 - song.stars))}</div> : null}
-              </td>
-              <td class="px-3 py-2 text-right">{(song.notes_count || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right">{song.duration || '-'}</td>
-              <td class="px-3 py-2">
-                {typeof p === 'string' ? (
-                  <span class="text-gray-400 text-xs">-</span>
-                ) : (
-                  <div class="flex items-center gap-2">
-                    <svg viewBox="0 0 36 36" class="w-10 h-10 flex-shrink-0">
-                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#e5e7eb" stroke-width="5" />
-                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#ef4444" stroke-width="5"
-                        stroke-dasharray={`${p.sLen} ${p.c - p.sLen}`} stroke-dashoffset="0" transform="rotate(-90 18 18)" />
-                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#22c55e" stroke-width="5"
-                        stroke-dasharray={`${p.bLen} ${p.c - p.bLen}`} stroke-dashoffset={-p.sLen} transform="rotate(-90 18 18)" />
-                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#3b82f6" stroke-width="5"
-                        stroke-dasharray={`${p.mLen} ${p.c - p.mLen}`} stroke-dashoffset={-(p.sLen + p.bLen)} transform="rotate(-90 18 18)" />
-                    </svg>
-                    <div class="text-[10px] text-gray-500 leading-tight">
-                      <span class="text-red-500">S:{p.sPct}%</span>{' '}
-                      <span class="text-green-500">B:{p.bPct}%</span>{' '}
-                      <span class="text-blue-500">M:{p.mPct}%</span>
-                    </div>
-                  </div>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+  <!-- 検索フォーム -->
+  <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">曲名検索</label>
+        <input type="text" id="search-text" placeholder="曲名/アーティスト"
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label for="search-group" class="block text-xs font-medium text-gray-500 mb-1">グループ</label>
+        <select id="search-group" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">すべて</option>
+          {categories.map(c => <option value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div>
+        <label for="search-stars" class="block text-xs font-medium text-gray-500 mb-1">難易度（星）</label>
+        <select id="search-stars" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">すべて</option>
+          <option value="1">★☆☆☆☆</option>
+          <option value="2">★★☆☆☆</option>
+          <option value="3">★★★☆☆</option>
+          <option value="4">★★★★☆</option>
+          <option value="5">★★★★★</option>
+        </select>
+      </div>
+      <div>
+        <label for="sort-by" class="block text-xs font-medium text-gray-500 mb-1">ソート</label>
+        <select id="sort-by" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="default">デフォルト</option>
+          <option value="name-asc">曲名（A→Z）</option>
+          <option value="notes-desc">ノーツ数（多い順）</option>
+          <option value="notes-asc">ノーツ数（少ない順）</option>
+          <option value="stars-desc">難易度（高い順）</option>
+          <option value="stars-asc">難易度（低い順）</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-3 flex items-center gap-3">
+      <button id="btn-reset" class="text-sm text-indigo-600 hover:underline">条件リセット</button>
+      <span id="result-count" class="text-sm text-gray-500">{allSongs.length}曲を表示</span>
+    </div>
   </div>
 
-  <!-- モバイル -->
-  <div class="md:hidden space-y-3">
-    {songs.map((song: any) => {
-      const sr = song.shout_ratio || 0;
-      const br = song.beat_ratio || 0;
-      const mr = song.melody_ratio || 0;
-      const p = songPie(sr, br, mr);
-      return (
-        <div class="bg-white rounded-lg shadow p-3">
-          <p class="font-medium text-sm">{song.song_name || ''}</p>
-          <p class="text-xs text-gray-500">{song.artist || ''} / {song.category || ''}</p>
-          <div class="flex gap-3 mt-1 text-xs text-gray-600">
-            <span>{song.difficulty || ''}{song.stars ? ` ${'★'.repeat(song.stars)}${'☆'.repeat(Math.max(0, 5 - song.stars))}` : ''}</span>
-            <span>Notes: {(song.notes_count || 0).toLocaleString()}</span>
-            <span>{song.duration || '-'}秒</span>
-          </div>
-          <div class="mt-2">
-            {typeof p === 'string' ? (
-              <span class="text-gray-400 text-xs">-</span>
-            ) : (
-              <div class="flex items-center gap-2">
-                <svg viewBox="0 0 36 36" class="w-10 h-10 flex-shrink-0">
-                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#e5e7eb" stroke-width="5" />
-                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#ef4444" stroke-width="5"
-                    stroke-dasharray={`${p.sLen} ${p.c - p.sLen}`} stroke-dashoffset="0" transform="rotate(-90 18 18)" />
-                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#22c55e" stroke-width="5"
-                    stroke-dasharray={`${p.bLen} ${p.c - p.bLen}`} stroke-dashoffset={-p.sLen} transform="rotate(-90 18 18)" />
-                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#3b82f6" stroke-width="5"
-                    stroke-dasharray={`${p.mLen} ${p.c - p.mLen}`} stroke-dashoffset={-(p.sLen + p.bLen)} transform="rotate(-90 18 18)" />
-                </svg>
-                <div class="text-[10px] text-gray-500">
-                  <span class="text-red-500">S:{p.sPct}%</span>{' '}
-                  <span class="text-green-500">B:{p.bPct}%</span>{' '}
-                  <span class="text-blue-500">M:{p.mPct}%</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    })}
+  <!-- 楽曲リスト -->
+  <div id="song-list">
+    <!-- デスクトップテーブル -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+            <th class="px-3 py-2">グループ</th>
+            <th class="px-3 py-2">曲名</th>
+            <th class="px-3 py-2">アーティスト</th>
+            <th class="px-3 py-2">難易度</th>
+            <th class="px-3 py-2 text-right">ノーツ数</th>
+            <th class="px-3 py-2 text-right">秒数</th>
+            <th class="px-3 py-2 w-48">属性比率</th>
+          </tr>
+        </thead>
+        <tbody id="table-body" class="divide-y divide-gray-100"></tbody>
+      </table>
+    </div>
+    <!-- モバイル -->
+    <div id="mobile-cards" class="md:hidden space-y-3"></div>
   </div>
+
+  <script type="application/json" id="song-data" set:html={JSON.stringify(allSongs)}></script>
+
+  <script>
+    interface Song {
+      category: string;
+      artist: string;
+      song_name: string;
+      difficulty: string;
+      stars: number;
+      notes_count: number;
+      duration: number;
+      shout_ratio: number;
+      beat_ratio: number;
+      melody_ratio: number;
+      [key: string]: any;
+    }
+
+    const allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
+    let filtered: Song[] = [];
+
+    const $ = (id: string) => document.getElementById(id)!;
+
+    function statsPie(sr: number, br: number, mr: number): string {
+      const total = sr + br + mr;
+      if (!total) return '<span class="text-gray-400 text-xs">-</span>';
+      const sPct = Math.round(sr * 100);
+      const bPct = Math.round(br * 100);
+      const mPct = Math.round(mr * 100);
+      const r = 15.9155;
+      const c = 2 * Math.PI * r;
+      const sLen = (sr / total) * c;
+      const bLen = (br / total) * c;
+      const mLen = (mr / total) * c;
+      return `<div class="flex items-center gap-2">
+        <svg viewBox="0 0 36 36" class="w-10 h-10 flex-shrink-0">
+          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="5"/>
+          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#ef4444" stroke-width="5"
+            stroke-dasharray="${sLen} ${c - sLen}" stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
+          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#22c55e" stroke-width="5"
+            stroke-dasharray="${bLen} ${c - bLen}" stroke-dashoffset="${-sLen}" transform="rotate(-90 18 18)"/>
+          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#3b82f6" stroke-width="5"
+            stroke-dasharray="${mLen} ${c - mLen}" stroke-dashoffset="${-(sLen + bLen)}" transform="rotate(-90 18 18)"/>
+        </svg>
+        <div class="text-[10px] text-gray-500 leading-tight">
+          <span class="text-red-500">S:${sPct}%</span>
+          <span class="text-green-500">B:${bPct}%</span>
+          <span class="text-blue-500">M:${mPct}%</span>
+        </div>
+      </div>`;
+    }
+
+    function starsHtml(n: number): string {
+      if (!n) return '';
+      return `<div class="text-amber-400">${'★'.repeat(n)}${'☆'.repeat(Math.max(0, 5 - n))}</div>`;
+    }
+
+    function renderTableRow(song: Song): string {
+      return `<tr class="hover:bg-gray-50">
+        <td class="px-3 py-2 text-xs">${song.category || ''}</td>
+        <td class="px-3 py-2 font-medium">${song.song_name || ''}</td>
+        <td class="px-3 py-2">${song.artist || ''}</td>
+        <td class="px-3 py-2 text-xs">
+          <div>${song.difficulty || ''}</div>
+          ${starsHtml(song.stars)}
+        </td>
+        <td class="px-3 py-2 text-right">${(song.notes_count || 0).toLocaleString()}</td>
+        <td class="px-3 py-2 text-right">${song.duration || '-'}</td>
+        <td class="px-3 py-2">${statsPie(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</td>
+      </tr>`;
+    }
+
+    function renderMobileCard(song: Song): string {
+      return `<div class="bg-white rounded-lg shadow p-3">
+        <p class="font-medium text-sm">${song.song_name || ''}</p>
+        <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
+        <div class="flex gap-3 mt-1 text-xs text-gray-600">
+          <span>${song.difficulty || ''}${song.stars ? ' ' + '★'.repeat(song.stars) + '☆'.repeat(Math.max(0, 5 - song.stars)) : ''}</span>
+          <span>Notes: ${(song.notes_count || 0).toLocaleString()}</span>
+          <span>${song.duration || '-'}秒</span>
+        </div>
+        <div class="mt-2">${statsPie(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</div>
+      </div>`;
+    }
+
+    function render() {
+      $('table-body').innerHTML = filtered.map(renderTableRow).join('');
+      $('mobile-cards').innerHTML = filtered.map(renderMobileCard).join('');
+      $('result-count').textContent = `${filtered.length}曲を表示`;
+    }
+
+    function applyFilters() {
+      const text = ($('search-text') as HTMLInputElement).value.toLowerCase();
+      const group = ($('search-group') as HTMLSelectElement).value;
+      const stars = ($('search-stars') as HTMLSelectElement).value;
+      const sortBy = ($('sort-by') as HTMLSelectElement).value;
+
+      filtered = allSongs.filter(song => {
+        if (text && !(song.song_name || '').toLowerCase().includes(text) &&
+            !(song.artist || '').toLowerCase().includes(text)) return false;
+        if (group && song.category !== group) return false;
+        if (stars && song.stars !== Number(stars)) return false;
+        return true;
+      });
+
+      switch (sortBy) {
+        case 'name-asc':
+          filtered.sort((a, b) => (a.song_name || '').localeCompare(b.song_name || ''));
+          break;
+        case 'notes-desc':
+          filtered.sort((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
+          break;
+        case 'notes-asc':
+          filtered.sort((a, b) => (a.notes_count || 0) - (b.notes_count || 0));
+          break;
+        case 'stars-desc':
+          filtered.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+          break;
+        case 'stars-asc':
+          filtered.sort((a, b) => (a.stars || 0) - (b.stars || 0));
+          break;
+      }
+
+      render();
+      updateUrlParams();
+    }
+
+    function updateUrlParams() {
+      const params = new URLSearchParams();
+      const text = ($('search-text') as HTMLInputElement).value;
+      const group = ($('search-group') as HTMLSelectElement).value;
+      const stars = ($('search-stars') as HTMLSelectElement).value;
+      const sortBy = ($('sort-by') as HTMLSelectElement).value;
+
+      if (text) params.set('q', text);
+      if (group) params.set('group', group);
+      if (stars) params.set('stars', stars);
+      if (sortBy !== 'default') params.set('sort', sortBy);
+
+      const qs = params.toString();
+      history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+    }
+
+    function restoreFromUrl() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('q')) ($('search-text') as HTMLInputElement).value = params.get('q')!;
+      if (params.get('group')) ($('search-group') as HTMLSelectElement).value = params.get('group')!;
+      if (params.get('stars')) ($('search-stars') as HTMLSelectElement).value = params.get('stars')!;
+      if (params.get('sort')) ($('sort-by') as HTMLSelectElement).value = params.get('sort')!;
+    }
+
+    // イベント登録
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    $('search-text').addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(applyFilters, 300);
+    });
+    for (const id of ['search-group', 'search-stars', 'sort-by']) {
+      $(id).addEventListener('change', applyFilters);
+    }
+    $('btn-reset').addEventListener('click', () => {
+      ($('search-text') as HTMLInputElement).value = '';
+      ['search-group', 'search-stars'].forEach(id => ($(id) as HTMLSelectElement).value = '');
+      ($('sort-by') as HTMLSelectElement).value = 'default';
+      applyFilters();
+    });
+
+    restoreFromUrl();
+    applyFilters();
+  </script>
 </BaseLayout>
