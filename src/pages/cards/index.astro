@@ -202,7 +202,7 @@ const base = import.meta.env.BASE_URL;
       return `<tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='${base}cards/${card.ID}/'">
         <td class="px-3 py-2">${imgTag(card.cardID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
-        <td class="px-3 py-2"><a href="${base}cards/${card.ID}/" class="text-indigo-600 hover:underline">${card.cardname || ''}</a></td>
+        <td class="px-3 py-2" data-filter-cardname="${(card.cardname || '').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()"><span class="text-indigo-600 hover:underline cursor-pointer">${card.cardname || ''}</span></td>
         <td class="px-3 py-2">${card.name || ''}</td>
         <td class="px-3 py-2">${rarityBadge(card.rarity)}</td>
         <td class="px-3 py-2">${attrBadge(card.attribute)}</td>
@@ -217,11 +217,11 @@ const base = import.meta.env.BASE_URL;
 
     function renderMobileCard(card: Card): string {
       return `<div class="bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
-        <a href="${base}cards/${card.ID}/" class="flex gap-3">
+        <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
           <div class="flex-shrink-0">${imgTag(card.cardID)}</div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
-            <p class="font-medium text-sm truncate">${card.cardname || ''}</p>
+            <p class="font-medium text-sm truncate" data-filter-cardname="${(card.cardname || '').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()"><span class="text-indigo-600 hover:underline cursor-pointer">${card.cardname || ''}</span></p>
             <p class="text-xs text-gray-500">${card.name || ''}</p>
             <div class="flex items-center gap-2 mt-1">
               ${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}
@@ -232,7 +232,7 @@ const base = import.meta.env.BASE_URL;
               </div>
             </div>
           </div>
-        </a>
+        </div>
         <div class="mt-2 flex items-center justify-between border-t pt-2">
           <span class="text-xs text-gray-500">所持数</span>
           ${countControl(card.ID)}
@@ -285,6 +285,18 @@ const base = import.meta.env.BASE_URL;
       });
 
       $('result-count').textContent = `${filtered.length}件中 ${start + 1}~${Math.min(start + PAGE_SIZE, filtered.length)}件を表示`;
+
+      // カード名クリック → 同名カードでフィルタ
+      document.querySelectorAll<HTMLElement>('[data-filter-cardname]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const name = el.dataset.filterCardname || '';
+          ($('search-text') as HTMLInputElement).value = name;
+          applyFilters();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
 
       // 所持数ボタン・入力イベント
       document.querySelectorAll<HTMLButtonElement>('button[data-count-btn]').forEach(btn => {
