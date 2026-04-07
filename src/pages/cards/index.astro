@@ -82,6 +82,7 @@ const base = import.meta.env.BASE_URL;
             <th class="px-3 py-2 text-right">Beat</th>
             <th class="px-3 py-2 text-right">Melody</th>
             <th class="px-3 py-2">スキル</th>
+            <th class="px-3 py-2 w-28 text-center">所持数</th>
           </tr>
         </thead>
         <tbody id="table-body" class="divide-y divide-gray-100">
@@ -130,6 +131,35 @@ const base = import.meta.env.BASE_URL;
     let currentPage = 1;
 
     const $ = (id: string) => document.getElementById(id)!;
+
+    // 所持数管理（localStorage）
+    const STORAGE_KEY = 'i7_card_counts';
+    function loadCounts(): Record<string, number> {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+    }
+    function saveCounts(counts: Record<string, number>) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
+    }
+    function getCount(cardId: number): number {
+      return loadCounts()[String(cardId)] || 0;
+    }
+    function setCount(cardId: number, value: number) {
+      const counts = loadCounts();
+      const v = Math.max(0, value);
+      if (v === 0) { delete counts[String(cardId)]; } else { counts[String(cardId)] = v; }
+      saveCounts(counts);
+    }
+    function countControl(cardId: number): string {
+      const count = getCount(cardId);
+      return `<div class="flex items-center justify-center gap-1" onclick="event.stopPropagation()">
+        <button data-count-btn="${cardId}" data-delta="-1"
+          class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none">−</button>
+        <input type="number" data-count-input="${cardId}" value="${count}" min="0"
+          class="w-10 h-6 text-center text-sm border border-gray-300 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+        <button data-count-btn="${cardId}" data-delta="1"
+          class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none">+</button>
+      </div>`;
+    }
 
     function rarityBadge(r: string): string {
       const c: Record<string, string> = { UR: 'bg-amber-500', SSR: 'bg-purple-500', SR: 'bg-sky-400', R: 'bg-gray-400', GROUP: 'bg-pink-400' };
@@ -181,12 +211,13 @@ const base = import.meta.env.BASE_URL;
         <td class="px-3 py-2 text-right">${(card.beat_max || 0).toLocaleString()}</td>
         <td class="px-3 py-2 text-right">${(card.melody_max || 0).toLocaleString()}</td>
         <td class="px-3 py-2 text-xs">${card.ap_skill_type || ''}</td>
+        <td class="px-3 py-2">${countControl(card.ID)}</td>
       </tr>`;
     }
 
     function renderMobileCard(card: Card): string {
-      return `<a href="${base}cards/${card.ID}/" class="block bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
-        <div class="flex gap-3">
+      return `<div class="bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
+        <a href="${base}cards/${card.ID}/" class="flex gap-3">
           <div class="flex-shrink-0">${imgTag(card.cardID)}</div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
@@ -201,8 +232,12 @@ const base = import.meta.env.BASE_URL;
               </div>
             </div>
           </div>
+        </a>
+        <div class="mt-2 flex items-center justify-between border-t pt-2">
+          <span class="text-xs text-gray-500">所持数</span>
+          ${countControl(card.ID)}
         </div>
-      </a>`;
+      </div>`;
     }
 
     function renderPage() {
@@ -250,6 +285,30 @@ const base = import.meta.env.BASE_URL;
       });
 
       $('result-count').textContent = `${filtered.length}件中 ${start + 1}~${Math.min(start + PAGE_SIZE, filtered.length)}件を表示`;
+
+      // 所持数ボタン・入力イベント
+      document.querySelectorAll<HTMLButtonElement>('button[data-count-btn]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const cardId = Number(btn.dataset.countBtn);
+          const delta = Number(btn.dataset.delta);
+          const newVal = Math.max(0, getCount(cardId) + delta);
+          setCount(cardId, newVal);
+          document.querySelectorAll<HTMLInputElement>(`input[data-count-input="${cardId}"]`).forEach(inp => {
+            inp.value = String(newVal);
+          });
+        });
+      });
+      document.querySelectorAll<HTMLInputElement>('input[data-count-input]').forEach(inp => {
+        inp.addEventListener('change', (e) => {
+          e.stopPropagation();
+          const cardId = Number(inp.dataset.countInput);
+          const val = Math.max(0, Number(inp.value) || 0);
+          setCount(cardId, val);
+          inp.value = String(val);
+        });
+        inp.addEventListener('click', (e) => e.stopPropagation());
+      });
     }
 
     function applyFilters() {
