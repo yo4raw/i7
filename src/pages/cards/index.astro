@@ -198,8 +198,13 @@ const base = import.meta.env.BASE_URL;
         onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />`;
     }
 
+    const attrBg: Record<string, string> = { Shout: 'rgba(239,68,68,0.06)', Beat: 'rgba(34,197,94,0.06)', Melody: 'rgba(59,130,246,0.06)' };
+    const attrBgHover: Record<string, string> = { Shout: 'rgba(239,68,68,0.12)', Beat: 'rgba(34,197,94,0.12)', Melody: 'rgba(59,130,246,0.12)' };
+
     function renderTableRow(card: Card): string {
-      return `<tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='${base}cards/${card.ID}/'">
+      const bg = attrBg[card.attribute] || '';
+      const bgH = attrBgHover[card.attribute] || 'rgba(0,0,0,0.02)';
+      return `<tr class="cursor-pointer" style="background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/${card.ID}/'">
         <td class="px-3 py-2">${imgTag(card.cardID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
         <td class="px-3 py-2" data-filter-cardname="${(card.cardname || '').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()"><span class="text-indigo-600 hover:underline cursor-pointer">${card.cardname || ''}</span></td>
@@ -216,7 +221,8 @@ const base = import.meta.env.BASE_URL;
     }
 
     function renderMobileCard(card: Card): string {
-      return `<div class="bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
+      const bg = attrBg[card.attribute] || '';
+      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="background:${bg}">
         <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
           <div class="flex-shrink-0">${imgTag(card.cardID)}</div>
           <div class="flex-1 min-w-0">
