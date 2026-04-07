@@ -4,6 +4,7 @@ import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
 
 const allSongs = (await fetchSongsJson() as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
 const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as string[];
+const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title="楽曲一覧">
@@ -77,9 +78,15 @@ const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as 
   </div>
 
   <script type="application/json" id="song-data" set:html={JSON.stringify(allSongs)}></script>
+  <script define:vars={{ base }}>
+    window.__BASE_URL__ = base;
+  </script>
 
   <script>
+    const base = (window as any).__BASE_URL__ || '/i7/';
+
     interface Song {
+      id: number;
       category: string;
       artist: string;
       song_name: string;
@@ -133,9 +140,9 @@ const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as 
     }
 
     function renderTableRow(song: Song): string {
-      return `<tr class="hover:bg-gray-50">
+      return `<tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='${base}songs/${song.id}/'">
         <td class="px-3 py-2 text-xs">${song.category || ''}</td>
-        <td class="px-3 py-2 font-medium">${song.song_name || ''}</td>
+        <td class="px-3 py-2 font-medium"><a href="${base}songs/${song.id}/" class="text-indigo-600 hover:underline">${song.song_name || ''}</a></td>
         <td class="px-3 py-2">${song.artist || ''}</td>
         <td class="px-3 py-2 text-xs">
           <div>${song.difficulty || ''}</div>
@@ -148,8 +155,8 @@ const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as 
     }
 
     function renderMobileCard(song: Song): string {
-      return `<div class="bg-white rounded-lg shadow p-3">
-        <p class="font-medium text-sm">${song.song_name || ''}</p>
+      return `<a href="${base}songs/${song.id}/" class="block bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
+        <p class="font-medium text-sm text-indigo-600">${song.song_name || ''}</p>
         <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
         <div class="flex gap-3 mt-1 text-xs text-gray-600">
           <span>${song.difficulty || ''}${song.stars ? ' ' + '★'.repeat(song.stars) + '☆'.repeat(Math.max(0, 5 - song.stars)) : ''}</span>
@@ -157,7 +164,7 @@ const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as 
           <span>${song.duration || '-'}秒</span>
         </div>
         <div class="mt-2">${statsPie(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</div>
-      </div>`;
+      </a>`;
     }
 
     function render() {
