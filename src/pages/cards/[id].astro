@@ -92,25 +92,53 @@ const otherSkills = [
   </div>
 
   <!-- ステータス -->
-  <section class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-semibold mb-4">ステータス</h2>
-    <div class="space-y-3">
-      {stats.map(s => {
-        const pct = Math.min((s.max / 20000) * 100, 100);
-        return (
-          <div>
-            <div class="flex justify-between text-sm mb-1">
-              <span class="font-medium">{s.label}</span>
-              <span>{s.min.toLocaleString()} ~ {s.max.toLocaleString()}</span>
-            </div>
-            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div class="h-full rounded-full" style={`width:${pct}%;background:${s.color}`}></div>
-            </div>
+  {(() => {
+    const sMax = card.shout_max || 0;
+    const bMax = card.beat_max || 0;
+    const mMax = card.melody_max || 0;
+    const total = sMax + bMax + mMax;
+    const r = 15.9155;
+    const c = 2 * Math.PI * r;
+    const sLen = total ? (sMax / total) * c : 0;
+    const bLen = total ? (bMax / total) * c : 0;
+    const mLen = total ? (mMax / total) * c : 0;
+    const sPct = total ? Math.round((sMax / total) * 100) : 0;
+    const bPct = total ? Math.round((bMax / total) * 100) : 0;
+    const mPct = total ? Math.round((mMax / total) * 100) : 0;
+    return (
+      <section class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">ステータス</h2>
+        <div class="flex flex-col sm:flex-row items-center gap-6">
+          <div class="w-36 h-36 relative flex-shrink-0">
+            <svg viewBox="0 0 36 36" class="w-full h-full">
+              <circle cx="18" cy="18" r={r} fill="none" stroke="#e5e7eb" stroke-width="4" />
+              <circle cx="18" cy="18" r={r} fill="none" stroke="#ef4444" stroke-width="4"
+                stroke-dasharray={`${sLen} ${c - sLen}`} stroke-dashoffset="0" transform="rotate(-90 18 18)" />
+              <circle cx="18" cy="18" r={r} fill="none" stroke="#22c55e" stroke-width="4"
+                stroke-dasharray={`${bLen} ${c - bLen}`} stroke-dashoffset={-sLen} transform="rotate(-90 18 18)" />
+              <circle cx="18" cy="18" r={r} fill="none" stroke="#3b82f6" stroke-width="4"
+                stroke-dasharray={`${mLen} ${c - mLen}`} stroke-dashoffset={-(sLen + bLen)} transform="rotate(-90 18 18)" />
+              <text x="18" y="17" text-anchor="middle" class="fill-gray-500" font-size="3">合計</text>
+              <text x="18" y="21" text-anchor="middle" class="fill-gray-800 font-bold" font-size="4">{total.toLocaleString()}</text>
+            </svg>
           </div>
-        );
-      })}
-    </div>
-  </section>
+          <div class="flex-1 w-full space-y-3">
+            {stats.map((s, i) => {
+              const pct = [sPct, bPct, mPct][i];
+              return (
+                <div class="flex items-center gap-3">
+                  <span class="w-2 h-2 rounded-full flex-shrink-0" style={`background:${s.color}`}></span>
+                  <span class="font-medium text-sm w-16">{s.label}</span>
+                  <span class="text-sm text-gray-500 w-10 text-right">{pct}%</span>
+                  <span class="text-sm text-right flex-1">{s.min.toLocaleString()} ~ {s.max.toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    );
+  })()}
 
   <!-- APスキル -->
   {card.ap_skill_name && (
