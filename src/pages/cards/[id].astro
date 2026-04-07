@@ -10,7 +10,7 @@ const ATTR_COLORS = ATTRIBUTE_COLORS;
 const RARITY_COLORS: Record<string, string> = {
   UR: 'bg-amber-500', SSR: 'bg-purple-500', SR: 'bg-sky-400', R: 'bg-gray-400', GROUP: 'bg-pink-400',
 };
-const ATTR_BADGE_COLORS = ATTRIBUTE_BADGE_CLASSES;
+const ATTR_BADGE_COLORS: Record<string, string> = { Shout: 'bg-red-500', Beat: 'bg-green-500', Melody: 'bg-blue-500' };
 
 export async function getStaticPaths() {
   const [cards, broachs] = await Promise.all([fetchCardsJson(), fetchFixedBroachsJson()]);
@@ -75,7 +75,7 @@ const otherSkills = [
     <div class="md:col-span-2">
       <h1 class="text-2xl font-bold mb-4">
         <span class={`inline-block px-2 py-0.5 text-xs font-bold text-white rounded ${RARITY_COLORS[card.rarity] || 'bg-gray-300'}`}>{card.rarity}</span>
-        <span class={`inline-block px-2 py-0.5 text-xs font-bold text-white rounded ${ATTR_BADGE_COLORS[card.attribute] || 'bg-gray-300'}`}>{ATTRIBUTE_MAP[card.attribute] || '不明'}</span>
+        <span class={`inline-block px-2 py-0.5 text-xs font-bold text-white rounded ${ATTR_BADGE_COLORS[card.attribute] || 'bg-gray-300'}`}>{card.attribute || '不明'}</span>
         {card.cardname || ''}
       </h1>
       <table class="w-full text-sm">
