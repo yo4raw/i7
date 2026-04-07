@@ -134,8 +134,8 @@ const base = import.meta.env.BASE_URL;
       </svg>`;
     }
 
-    function imgTag(cardID: number): string {
-      return `<img src="${THUMB_URL}/${cardID}.png" alt="" class="w-12 h-auto rounded"
+    function imgTag(id: number): string {
+      return `<img src="${THUMB_URL}/${id}.png" alt="" class="w-12 h-auto rounded"
         onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />`;
     }
 
@@ -146,7 +146,7 @@ const base = import.meta.env.BASE_URL;
       const bg = attrBg[card.attribute] || '';
       const bgH = attrBgHover[card.attribute] || 'rgba(0,0,0,0.02)';
       return `<tr class="cursor-pointer" style="background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/${card.ID}/'">
-        <td class="px-3 py-2">${imgTag(card.cardID)}</td>
+        <td class="px-3 py-2">${imgTag(card.ID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
         <td class="px-3 py-2 font-medium">${card.cardname || ''}</td>
         <td class="px-3 py-2">${card.name || ''}</td>
@@ -164,7 +164,7 @@ const base = import.meta.env.BASE_URL;
       const bg = attrBg[card.attribute] || '';
       return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="background:${bg}">
         <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
-          <div class="flex-shrink-0">${imgTag(card.cardID)}</div>
+          <div class="flex-shrink-0">${imgTag(card.ID)}</div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
             <p class="font-medium text-sm truncate">${card.cardname || ''}</p>
