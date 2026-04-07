@@ -50,7 +50,7 @@ const infoRows = [
   { label: 'グループ', value: song.category },
   { label: 'アーティスト', value: song.artist },
   { label: '楽曲タイプ', value: song.song_type },
-  { label: '難易度', value: song.difficulty },
+  { label: '難易度', value: song.difficulty ? `${song.difficulty}${song.stars ? ' ' + '★'.repeat(song.stars) + '☆'.repeat(Math.max(0, 5 - song.stars)) : ''}` : null },
   { label: 'ノーツ数', value: song.notes_count?.toLocaleString() },
   { label: '秒数', value: song.duration ? `${song.duration}秒` : null },
   { label: '更新日', value: song.updated_at },
