@@ -4,6 +4,21 @@ import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
 
 const allSongs = await fetchSongsJson() as any[];
 const songs = allSongs.filter((s: any) => s.category && s.artist && s.notes_count);
+
+/** SVG円グラフ生成（比率は0〜1の小数値） */
+function songPie(sr: number, br: number, mr: number, size: string = 'w-10 h-10') {
+  const total = sr + br + mr;
+  if (!total) return '<span class="text-gray-400 text-xs">-</span>';
+  const sPct = Math.round(sr * 100);
+  const bPct = Math.round(br * 100);
+  const mPct = Math.round(mr * 100);
+  const r = 15.9155;
+  const c = 2 * Math.PI * r;
+  const sLen = sr / total * c;
+  const bLen = br / total * c;
+  const mLen = mr / total * c;
+  return { sPct, bPct, mPct, r, c, sLen, bLen, mLen };
+}
 ---
 
 <BaseLayout title="楽曲一覧">
@@ -25,32 +40,41 @@ const songs = allSongs.filter((s: any) => s.category && s.artist && s.notes_coun
       </thead>
       <tbody class="divide-y divide-gray-100">
         {songs.map((song: any) => {
-          const s = Math.round(song.shout_ratio || 0);
-          const b = Math.round(song.beat_ratio || 0);
-          const m = Math.round(song.melody_ratio || 0);
-          const total = s + b + m;
+          const sr = song.shout_ratio || 0;
+          const br = song.beat_ratio || 0;
+          const mr = song.melody_ratio || 0;
+          const p = songPie(sr, br, mr);
           return (
             <tr class="hover:bg-gray-50">
               <td class="px-3 py-2 text-xs">{song.category || ''}</td>
               <td class="px-3 py-2 font-medium">{song.song_name || ''}</td>
               <td class="px-3 py-2">{song.artist || ''}</td>
-              <td class="px-3 py-2 text-xs">{song.difficulty || ''}</td>
+              <td class="px-3 py-2 text-xs">
+                <div>{song.difficulty || ''}</div>
+                {song.stars ? <div class="text-amber-400">{'★'.repeat(song.stars)}{'☆'.repeat(Math.max(0, 5 - song.stars))}</div> : null}
+              </td>
               <td class="px-3 py-2 text-right">{(song.notes_count || 0).toLocaleString()}</td>
               <td class="px-3 py-2 text-right">{song.duration || '-'}</td>
               <td class="px-3 py-2">
-                {total ? (
-                  <Fragment>
-                    <div class="flex h-4 rounded-full overflow-hidden bg-gray-200" title={`S:${s}% B:${b}% M:${m}%`}>
-                      <div class="bg-red-500" style={`width:${s}%`}></div>
-                      <div class="bg-green-500" style={`width:${b}%`}></div>
-                      <div class="bg-blue-500" style={`width:${m}%`}></div>
-                    </div>
-                    <div class="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                      <span>S:{s}%</span><span>B:{b}%</span><span>M:{m}%</span>
-                    </div>
-                  </Fragment>
-                ) : (
+                {typeof p === 'string' ? (
                   <span class="text-gray-400 text-xs">-</span>
+                ) : (
+                  <div class="flex items-center gap-2">
+                    <svg viewBox="0 0 36 36" class="w-10 h-10 flex-shrink-0">
+                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#e5e7eb" stroke-width="5" />
+                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#ef4444" stroke-width="5"
+                        stroke-dasharray={`${p.sLen} ${p.c - p.sLen}`} stroke-dashoffset="0" transform="rotate(-90 18 18)" />
+                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#22c55e" stroke-width="5"
+                        stroke-dasharray={`${p.bLen} ${p.c - p.bLen}`} stroke-dashoffset={-p.sLen} transform="rotate(-90 18 18)" />
+                      <circle cx="18" cy="18" r={p.r} fill="none" stroke="#3b82f6" stroke-width="5"
+                        stroke-dasharray={`${p.mLen} ${p.c - p.mLen}`} stroke-dashoffset={-(p.sLen + p.bLen)} transform="rotate(-90 18 18)" />
+                    </svg>
+                    <div class="text-[10px] text-gray-500 leading-tight">
+                      <span class="text-red-500">S:{p.sPct}%</span>{' '}
+                      <span class="text-green-500">B:{p.bPct}%</span>{' '}
+                      <span class="text-blue-500">M:{p.mPct}%</span>
+                    </div>
+                  </div>
                 )}
               </td>
             </tr>
@@ -63,33 +87,39 @@ const songs = allSongs.filter((s: any) => s.category && s.artist && s.notes_coun
   <!-- モバイル -->
   <div class="md:hidden space-y-3">
     {songs.map((song: any) => {
-      const s = Math.round(song.shout_ratio || 0);
-      const b = Math.round(song.beat_ratio || 0);
-      const m = Math.round(song.melody_ratio || 0);
-      const total = s + b + m;
+      const sr = song.shout_ratio || 0;
+      const br = song.beat_ratio || 0;
+      const mr = song.melody_ratio || 0;
+      const p = songPie(sr, br, mr);
       return (
         <div class="bg-white rounded-lg shadow p-3">
           <p class="font-medium text-sm">{song.song_name || ''}</p>
           <p class="text-xs text-gray-500">{song.artist || ''} / {song.category || ''}</p>
           <div class="flex gap-3 mt-1 text-xs text-gray-600">
-            <span>{song.difficulty || ''}</span>
+            <span>{song.difficulty || ''}{song.stars ? ` ${'★'.repeat(song.stars)}${'☆'.repeat(Math.max(0, 5 - song.stars))}` : ''}</span>
             <span>Notes: {(song.notes_count || 0).toLocaleString()}</span>
             <span>{song.duration || '-'}秒</span>
           </div>
           <div class="mt-2">
-            {total ? (
-              <Fragment>
-                <div class="flex h-4 rounded-full overflow-hidden bg-gray-200" title={`S:${s}% B:${b}% M:${m}%`}>
-                  <div class="bg-red-500" style={`width:${s}%`}></div>
-                  <div class="bg-blue-500" style={`width:${b}%`}></div>
-                  <div class="bg-green-500" style={`width:${m}%`}></div>
-                </div>
-                <div class="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                  <span>S:{s}%</span><span>B:{b}%</span><span>M:{m}%</span>
-                </div>
-              </Fragment>
-            ) : (
+            {typeof p === 'string' ? (
               <span class="text-gray-400 text-xs">-</span>
+            ) : (
+              <div class="flex items-center gap-2">
+                <svg viewBox="0 0 36 36" class="w-10 h-10 flex-shrink-0">
+                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#e5e7eb" stroke-width="5" />
+                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#ef4444" stroke-width="5"
+                    stroke-dasharray={`${p.sLen} ${p.c - p.sLen}`} stroke-dashoffset="0" transform="rotate(-90 18 18)" />
+                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#22c55e" stroke-width="5"
+                    stroke-dasharray={`${p.bLen} ${p.c - p.bLen}`} stroke-dashoffset={-p.sLen} transform="rotate(-90 18 18)" />
+                  <circle cx="18" cy="18" r={p.r} fill="none" stroke="#3b82f6" stroke-width="5"
+                    stroke-dasharray={`${p.mLen} ${p.c - p.mLen}`} stroke-dashoffset={-(p.sLen + p.bLen)} transform="rotate(-90 18 18)" />
+                </svg>
+                <div class="text-[10px] text-gray-500">
+                  <span class="text-red-500">S:{p.sPct}%</span>{' '}
+                  <span class="text-green-500">B:{p.bPct}%</span>{' '}
+                  <span class="text-blue-500">M:{p.mPct}%</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
