@@ -18,8 +18,19 @@ const base = import.meta.env.BASE_URL;
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <title>{title} | i7 カードDB</title>
     <script src="https://unpkg.com/htmx.org@2.0.4" is:inline></script>
+    <!-- Google Tag Manager -->
+    <script is:inline>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KR6P85NL');</script>
+    <!-- End Google Tag Manager -->
   </head>
   <body class="min-h-screen flex flex-col">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KR6P85NL"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <header class="bg-indigo-700 text-white sticky top-0 z-50 shadow-md">
       <nav class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <a href={base} class="text-lg font-bold tracking-wide">i7 カードDB</a>
