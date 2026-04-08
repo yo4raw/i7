@@ -1,42 +1,57 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { fetchCardsJson } from '../lib/data/fetchCardsJson.js';
-import { fetchSongsJson } from '../lib/data/fetchSongsJson.js';
 
-const [cards, songs] = await Promise.all([fetchCardsJson(), fetchSongsJson()]);
-
-const rarityCounts: Record<string, number> = {};
-for (const card of cards as any[]) {
-  const r = card.rarity || '不明';
-  rarityCounts[r] = (rarityCounts[r] || 0) + 1;
-}
-const sortedRarities = Object.entries(rarityCounts).sort(([a], [b]) => a.localeCompare(b));
+const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title="ホーム">
   <h1 class="text-2xl font-bold mb-6">アイドリッシュセブン カードデータベース</h1>
   <p class="text-gray-600 mb-8">カード情報の検索・閲覧ができるデータベースサイトです。</p>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <a href={`${import.meta.env.BASE_URL}cards/`}
+  <div id="loading" class="text-center py-12 text-gray-400">読み込み中...</div>
+
+  <div id="home-content" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <a href={`${base}cards/`}
        class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
       <h2 class="text-lg font-semibold text-indigo-700 mb-2">カード一覧</h2>
       <p class="text-sm text-gray-500">全カードの検索・フィルタリング</p>
-      <div class="mt-3 text-2xl font-bold text-gray-800">{cards.length} 枚</div>
+      <div class="mt-3 text-2xl font-bold text-gray-800" id="card-count">-</div>
     </a>
-    <a href={`${import.meta.env.BASE_URL}songs/`}
+    <a href={`${base}songs/`}
        class="block bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
       <h2 class="text-lg font-semibold text-indigo-700 mb-2">楽曲一覧</h2>
       <p class="text-sm text-gray-500">楽曲情報と属性比率の確認</p>
-      <div class="mt-3 text-2xl font-bold text-gray-800">{songs.length} 曲</div>
+      <div class="mt-3 text-2xl font-bold text-gray-800" id="song-count">-</div>
     </a>
     <div class="bg-white rounded-lg shadow p-6">
       <h2 class="text-lg font-semibold text-indigo-700 mb-2">レアリティ別</h2>
-      <div class="mt-3 space-y-1 text-sm text-gray-600">
-        {sortedRarities.map(([rarity, count]) => (
-          <p><span class="font-medium">{rarity}</span>: {count}枚</p>
-        ))}
-      </div>
+      <div class="mt-3 space-y-1 text-sm text-gray-600" id="rarity-list"></div>
     </div>
   </div>
+
+  <script>
+    import { getCards, getSongs } from '../lib/client/dataService';
+
+    async function init() {
+      const [cards, songs] = await Promise.all([getCards(), getSongs()]);
+
+      document.getElementById('card-count')!.textContent = `${cards.length} 枚`;
+      document.getElementById('song-count')!.textContent = `${songs.length} 曲`;
+
+      const rarityCounts: Record<string, number> = {};
+      for (const card of cards) {
+        const r = card.rarity || '不明';
+        rarityCounts[r] = (rarityCounts[r] || 0) + 1;
+      }
+      const sorted = Object.entries(rarityCounts).sort(([a], [b]) => a.localeCompare(b));
+      document.getElementById('rarity-list')!.innerHTML = sorted
+        .map(([rarity, count]) => `<p><span class="font-medium">${rarity}</span>: ${count}枚</p>`)
+        .join('');
+
+      document.getElementById('loading')!.classList.add('hidden');
+      document.getElementById('home-content')!.classList.remove('hidden');
+    }
+
+    init();
+  </script>
 </BaseLayout>

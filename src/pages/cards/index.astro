@@ -1,10 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchCardsJson } from '../../lib/data/fetchCardsJson.js';
 import { CHARACTERS, RARITIES, ATTRIBUTES, CARD_THUMB_BASE_URL, ATTRIBUTE_MAP, PAGE_SIZE } from '../../lib/constants';
-
-const allCards = await fetchCardsJson() as any[];
-const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].sort() as string[];
 
 const base = import.meta.env.BASE_URL;
 ---
@@ -45,7 +41,6 @@ const base = import.meta.env.BASE_URL;
         <label for="search-skill" class="block text-xs font-medium text-gray-500 mb-1">スキルタイプ</label>
         <select id="search-skill" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="">すべて</option>
-          {skillTypes.map(s => <option value={s}>{s}</option>)}
         </select>
       </div>
       <div>
@@ -60,12 +55,14 @@ const base = import.meta.env.BASE_URL;
     </div>
     <div class="mt-3 flex items-center gap-3">
       <button id="btn-reset" class="text-sm text-indigo-600 hover:underline">条件リセット</button>
-      <span id="result-count" class="text-sm text-gray-500">{allCards.length}件中 1~{Math.min(PAGE_SIZE, allCards.length)}件を表示</span>
+      <span id="result-count" class="text-sm text-gray-500">読み込み中...</span>
     </div>
   </div>
 
+  <div id="loading" class="text-center py-12 text-gray-400">読み込み中...</div>
+
   <!-- カードリスト -->
-  <div id="card-list">
+  <div id="card-list" class="hidden">
     <!-- デスクトップテーブル -->
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-sm">
@@ -96,8 +93,6 @@ const base = import.meta.env.BASE_URL;
   <!-- ページネーション -->
   <div id="pagination" class="mt-6 flex flex-wrap items-center justify-center gap-2"></div>
 
-  <!-- ビルド時に埋め込んだカードデータ -->
-  <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
   <script define:vars={{ base, PAGE_SIZE, CARD_THUMB_BASE_URL, ATTRIBUTE_MAP }}>
     window.__BASE_URL__ = base;
     window.__PAGE_SIZE__ = PAGE_SIZE;
@@ -106,6 +101,8 @@ const base = import.meta.env.BASE_URL;
   </script>
 
   <script>
+    import { getCards } from '../../lib/client/dataService';
+
     const base = (window as any).__BASE_URL__ || '/i7/';
     const PAGE_SIZE = (window as any).__PAGE_SIZE__ || 100;
     const THUMB_URL = (window as any).__CARD_THUMB_BASE_URL__;
@@ -125,8 +122,7 @@ const base = import.meta.env.BASE_URL;
       [key: string]: any;
     }
 
-    // ビルド時に埋め込んだデータを読み込み（ネットワーク通信なし）
-    const allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    let allCards: Card[] = [];
     let filtered: Card[] = [];
     let currentPage = 1;
 
@@ -204,7 +200,7 @@ const base = import.meta.env.BASE_URL;
     function renderTableRow(card: Card): string {
       const bg = attrBg[card.attribute] || '';
       const bgH = attrBgHover[card.attribute] || 'rgba(0,0,0,0.02)';
-      return `<tr class="cursor-pointer" style="background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/${card.ID}/'">
+      return `<tr class="cursor-pointer" style="background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/detail/?id=${card.ID}'">
         <td class="px-3 py-2">${imgTag(card.ID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
         <td class="px-3 py-2" data-filter-cardname="${(card.cardname || '').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()"><span class="text-indigo-600 hover:underline cursor-pointer">${card.cardname || ''}</span></td>
@@ -223,7 +219,7 @@ const base = import.meta.env.BASE_URL;
     function renderMobileCard(card: Card): string {
       const bg = attrBg[card.attribute] || '';
       return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="background:${bg}">
-        <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
+        <div class="flex gap-3" onclick="location.href='${base}cards/detail/?id=${card.ID}'" style="cursor:pointer">
           <div class="flex-shrink-0">${imgTag(card.ID)}</div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
@@ -239,10 +235,6 @@ const base = import.meta.env.BASE_URL;
             </div>
           </div>
         </div>
-        <div class="mt-2 flex items-center justify-between border-t pt-2">
-          <span class="text-xs text-gray-500">所持数</span>
-          ${countControl(card.ID)}
-        </div>
       </div>`;
     }
 
@@ -250,7 +242,6 @@ const base = import.meta.env.BASE_URL;
       const start = (currentPage - 1) * PAGE_SIZE;
       const page = filtered.slice(start, start + PAGE_SIZE);
 
-      // htmx.swap でDOM更新
       const tableHtml = page.map(renderTableRow).join('');
       const mobileHtml = page.map(renderMobileCard).join('');
 
@@ -424,8 +415,27 @@ const base = import.meta.env.BASE_URL;
       applyFilters();
     });
 
-    // URLからフィルタ復元して初期表示
-    restoreFromUrl();
-    applyFilters();
+    // データ取得 → スキルタイプ動的生成 → 初期表示
+    async function init() {
+      allCards = await getCards() as Card[];
+
+      // スキルタイプ select を動的に生成
+      const skillTypes = [...new Set(allCards.map(c => c.ap_skill_type).filter(Boolean))].sort() as string[];
+      const skillSelect = $('search-skill') as HTMLSelectElement;
+      for (const s of skillTypes) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        skillSelect.appendChild(opt);
+      }
+
+      $('loading').classList.add('hidden');
+      $('card-list').classList.remove('hidden');
+
+      restoreFromUrl();
+      applyFilters();
+    }
+
+    init();
   </script>
 </BaseLayout>

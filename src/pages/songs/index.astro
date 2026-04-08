@@ -1,9 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
 
-const allSongs = (await fetchSongsJson() as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
-const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as string[];
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -22,7 +19,6 @@ const base = import.meta.env.BASE_URL;
         <label for="search-group" class="block text-xs font-medium text-gray-500 mb-1">グループ</label>
         <select id="search-group" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="">すべて</option>
-          {categories.map(c => <option value={c}>{c}</option>)}
         </select>
       </div>
       <div>
@@ -50,12 +46,14 @@ const base = import.meta.env.BASE_URL;
     </div>
     <div class="mt-3 flex items-center gap-3">
       <button id="btn-reset" class="text-sm text-indigo-600 hover:underline">条件リセット</button>
-      <span id="result-count" class="text-sm text-gray-500">{allSongs.length}曲を表示</span>
+      <span id="result-count" class="text-sm text-gray-500">読み込み中...</span>
     </div>
   </div>
 
+  <div id="loading" class="text-center py-12 text-gray-400">読み込み中...</div>
+
   <!-- 楽曲リスト -->
-  <div id="song-list">
+  <div id="song-list" class="hidden">
     <!-- デスクトップテーブル -->
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-sm">
@@ -77,12 +75,13 @@ const base = import.meta.env.BASE_URL;
     <div id="mobile-cards" class="md:hidden space-y-3"></div>
   </div>
 
-  <script type="application/json" id="song-data" set:html={JSON.stringify(allSongs)}></script>
   <script define:vars={{ base }}>
     window.__BASE_URL__ = base;
   </script>
 
   <script>
+    import { getSongs } from '../../lib/client/dataService';
+
     const base = (window as any).__BASE_URL__ || '/i7/';
 
     interface Song {
@@ -100,7 +99,7 @@ const base = import.meta.env.BASE_URL;
       [key: string]: any;
     }
 
-    const allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
+    let allSongs: Song[] = [];
     let filtered: Song[] = [];
 
     const $ = (id: string) => document.getElementById(id)!;
@@ -140,9 +139,9 @@ const base = import.meta.env.BASE_URL;
     }
 
     function renderTableRow(song: Song): string {
-      return `<tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='${base}songs/${song.id}/'">
+      return `<tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='${base}songs/detail/?id=${song.id}'">
         <td class="px-3 py-2 text-xs">${song.category || ''}</td>
-        <td class="px-3 py-2 font-medium"><a href="${base}songs/${song.id}/" class="text-indigo-600 hover:underline">${song.song_name || ''}</a></td>
+        <td class="px-3 py-2 font-medium"><a href="${base}songs/detail/?id=${song.id}" class="text-indigo-600 hover:underline">${song.song_name || ''}</a></td>
         <td class="px-3 py-2">${song.artist || ''}</td>
         <td class="px-3 py-2 text-xs">
           <div>${song.difficulty || ''}</div>
@@ -155,7 +154,7 @@ const base = import.meta.env.BASE_URL;
     }
 
     function renderMobileCard(song: Song): string {
-      return `<a href="${base}songs/${song.id}/" class="block bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
+      return `<a href="${base}songs/detail/?id=${song.id}" class="block bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
         <p class="font-medium text-sm text-indigo-600">${song.song_name || ''}</p>
         <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
         <div class="flex gap-3 mt-1 text-xs text-gray-600">
@@ -249,7 +248,26 @@ const base = import.meta.env.BASE_URL;
       applyFilters();
     });
 
-    restoreFromUrl();
-    applyFilters();
+    async function init() {
+      allSongs = ((await getSongs()) as Song[]).filter(s => s.category && s.artist && s.notes_count);
+
+      // グループ select を動的に生成
+      const categories = [...new Set(allSongs.map(s => s.category))].sort();
+      const groupSelect = $('search-group') as HTMLSelectElement;
+      for (const cat of categories) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        groupSelect.appendChild(opt);
+      }
+
+      $('loading').classList.add('hidden');
+      $('song-list').classList.remove('hidden');
+
+      restoreFromUrl();
+      applyFilters();
+    }
+
+    init();
   </script>
 </BaseLayout>

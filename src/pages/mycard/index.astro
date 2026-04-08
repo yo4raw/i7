@@ -1,14 +1,14 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchCardsJson } from '../../lib/data/fetchCardsJson.js';
-import { CARD_THUMB_BASE_URL, PAGE_SIZE } from '../../lib/constants';
+import { CARD_THUMB_BASE_URL } from '../../lib/constants';
 
-const allCards = await fetchCardsJson() as any[];
 const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title="所持カード一覧">
   <h1 class="text-2xl font-bold mb-6">所持カード一覧</h1>
+
+  <div id="loading" class="text-center py-12 text-gray-400">読み込み中...</div>
 
   <div id="empty-message" class="hidden text-center py-12 text-gray-500">
     <p class="text-lg mb-2">所持カードがありません</p>
@@ -48,13 +48,14 @@ const base = import.meta.env.BASE_URL;
     <div id="mobile-cards" class="md:hidden space-y-3"></div>
   </div>
 
-  <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
   <script define:vars={{ base, CARD_THUMB_BASE_URL }}>
     window.__BASE_URL__ = base;
     window.__CARD_THUMB_BASE_URL__ = CARD_THUMB_BASE_URL;
   </script>
 
   <script>
+    import { getCards } from '../../lib/client/dataService';
+
     const base = (window as any).__BASE_URL__ || '/i7/';
     const THUMB_URL = (window as any).__CARD_THUMB_BASE_URL__;
 
@@ -72,7 +73,7 @@ const base = import.meta.env.BASE_URL;
       [key: string]: any;
     }
 
-    const allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    let allCards: Card[] = [];
     const $ = (id: string) => document.getElementById(id)!;
 
     // localStorage管理（カード一覧と共有）
@@ -145,7 +146,7 @@ const base = import.meta.env.BASE_URL;
     function renderTableRow(card: Card): string {
       const bg = attrBg[card.attribute] || '';
       const bgH = attrBgHover[card.attribute] || 'rgba(0,0,0,0.02)';
-      return `<tr class="cursor-pointer" style="background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/${card.ID}/'">
+      return `<tr class="cursor-pointer" style="background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/detail/?id=${card.ID}'">
         <td class="px-3 py-2">${imgTag(card.ID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
         <td class="px-3 py-2 font-medium">${card.cardname || ''}</td>
@@ -163,7 +164,7 @@ const base = import.meta.env.BASE_URL;
     function renderMobileCard(card: Card): string {
       const bg = attrBg[card.attribute] || '';
       return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="background:${bg}">
-        <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
+        <div class="flex gap-3" onclick="location.href='${base}cards/detail/?id=${card.ID}'" style="cursor:pointer">
           <div class="flex-shrink-0">${imgTag(card.ID)}</div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
@@ -217,7 +218,7 @@ const base = import.meta.env.BASE_URL;
           const newVal = Math.max(0, getCount(cardId) + delta);
           setCount(cardId, newVal);
           if (newVal === 0) {
-            render(); // 0になったら一覧から消す
+            render();
           } else {
             document.querySelectorAll<HTMLInputElement>(`input[data-count-input="${cardId}"]`).forEach(inp => {
               inp.value = String(newVal);
@@ -241,6 +242,12 @@ const base = import.meta.env.BASE_URL;
       });
     }
 
-    render();
+    async function init() {
+      allCards = await getCards() as Card[];
+      $('loading').classList.add('hidden');
+      render();
+    }
+
+    init();
   </script>
 </BaseLayout>
