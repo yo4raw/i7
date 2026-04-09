@@ -3,10 +3,10 @@ export const CHARACTERS = [
   '逢坂壮五', '六弥ナギ', '七瀬陸',
   '八乙女楽', '九条天', '十龍之介',
   '亥清悠', '狗丸トウマ', '棗巳波',
-  '御堂虎於', '日向つむぎ', '月雲了', '桜春樹',
+  '御堂虎於'
 ] as const;
 
-export const RARITIES = ['UR', 'SSR', 'SR', 'R', 'GROUP'] as const;
+export const RARITIES = ['UR', 'SSR', 'SR', 'R'] as const;
 
 export const ATTRIBUTES = [
   { value: 1, label: 'Shout', color: 'red' },
