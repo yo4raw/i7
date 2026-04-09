@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
+import { fetchSongsJson } from '../../lib/data/fetchSongsJson.ts';
 
 export async function getStaticPaths() {
   const allSongs = (await fetchSongsJson() as any[]).filter((s: any) => s.category && s.artist && s.notes_count);

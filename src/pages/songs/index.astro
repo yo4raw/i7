@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchSongsJson } from '../../lib/data/fetchSongsJson.js';
+import { fetchSongsJson } from '../../lib/data/fetchSongsJson.ts';
 
 const allSongs = (await fetchSongsJson() as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
 const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as string[];

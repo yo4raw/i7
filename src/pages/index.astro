@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { fetchCardsJson } from '../lib/data/fetchCardsJson.js';
-import { fetchSongsJson } from '../lib/data/fetchSongsJson.js';
+import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
+import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
 
 const [cards, songs] = await Promise.all([fetchCardsJson(), fetchSongsJson()]);
 

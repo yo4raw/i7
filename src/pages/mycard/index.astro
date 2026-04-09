@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchCardsJson } from '../../lib/data/fetchCardsJson.js';
+import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { CARD_THUMB_BASE_URL, PAGE_SIZE } from '../../lib/constants';
 
 const allCards = await fetchCardsJson() as any[];

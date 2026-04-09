@@ -1,21 +1,36 @@
 /**
- * Google Spreadsheet GViz JSON → クリーンJSON変換ユーティリティ
+ * GViz (Google Visualization) API 共通ユーティリティ
  *
- * GViz (Google Visualization) エンドポイントからスプレッドシートデータを取得し、
+ * Google Spreadsheet の GViz エンドポイントからデータを取得し、
  * 1行目をヘッダーとしたオブジェクト配列に変換する。
- *
- * 使い方:
- *   import { fetchCardsJson } from './fetchCardsJson.js';
- *   const data = await fetchCardsJson();
- *   console.log(data);
  */
+
+export interface GVizCell {
+  v: string | number | boolean | null;
+  f?: string;
+}
+
+export interface GVizRow {
+  c: (GVizCell | null)[];
+}
+
+export interface GVizTable {
+  cols: { id: string; label: string; type: string }[];
+  rows: GVizRow[];
+}
+
+export interface GVizResponse {
+  version: string;
+  status: string;
+  table: GVizTable;
+}
+
+export const SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
 
 /**
  * GVizセルから値を抽出する
- * @param {Object|null} cell - GVizセルオブジェクト {v: value, f: formattedValue}
- * @returns {*} セルの値
  */
-function extractCellValue(cell) {
+export function extractCellValue(cell: GVizCell | null | undefined): string | number | boolean | null {
   if (!cell || cell.v === null || cell.v === undefined) {
     return null;
   }
@@ -30,11 +45,8 @@ function extractCellValue(cell) {
 
 /**
  * GViz JSONレスポンスからJSONP wrappingを除去してパースする
- * @param {string} text - GVizレスポンステキスト
- * @returns {Object} パースされたJSONオブジェクト
  */
-function parseGvizResponse(text) {
-  // "/*O_o*/\ngoogle.visualization.Query.setResponse({...});" の形式
+export function parseGvizResponse(text: string): GVizResponse {
   const match = text.match(/google\.visualization\.Query\.setResponse\((.+)\);?\s*$/s);
   if (!match) {
     throw new Error('GViz JSONレスポンスのパースに失敗しました');
@@ -42,13 +54,10 @@ function parseGvizResponse(text) {
   return JSON.parse(match[1]);
 }
 
-const CARDS_SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
-const CARDS_GID = 480354522;
-
 /**
  * GViz JSON経由でスプレッドシートデータを取得し、クリーンなJSON配列に変換する
  */
-async function fetchSheetAsJson(spreadsheetId, gid) {
+export async function fetchSheetAsJson(spreadsheetId: string, gid: number): Promise<Record<string, string | number | boolean | null>[]> {
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
 
   const response = await fetch(url);
@@ -63,7 +72,7 @@ async function fetchSheetAsJson(spreadsheetId, gid) {
   const headers = table.cols.map((col, i) => col.label || `column_${i}`);
 
   return table.rows.map((row) => {
-    const obj = {};
+    const obj: Record<string, string | number | boolean | null> = {};
     headers.forEach((header, i) => {
       if (header.startsWith('column_')) return;
       const cell = row.c ? row.c[i] : null;
@@ -71,12 +80,4 @@ async function fetchSheetAsJson(spreadsheetId, gid) {
     });
     return obj;
   });
-}
-
-/**
- * カードデータをGoogle Spreadsheetから取得してクリーンなJSON配列で返す
- * @returns {Promise<Object[]>} カードデータ配列
- */
-export async function fetchCardsJson() {
-  return fetchSheetAsJson(CARDS_SPREADSHEET_ID, CARDS_GID);
 }

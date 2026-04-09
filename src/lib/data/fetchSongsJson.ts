@@ -1,20 +1,49 @@
-/**
- * Google Spreadsheet GViz JSON → 楽曲データJSON変換ユーティリティ
- *
- * 2行ヘッダーのSongsシートからデータを取得し、
- * ネスト構造のオブジェクト配列に変換する。
- *
- * 使い方:
- *   import { fetchSongsJson } from './fetchSongsJson.js';
- *   const data = await fetchSongsJson();
- *   console.log(data);
- */
+import { SPREADSHEET_ID, extractCellValue, parseGvizResponse, type GVizCell } from './gviz.ts';
 
-const SONGS_SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
+export interface SongNoteGroup {
+  shout_white: number;
+  shout_color: number;
+  beat_white: number;
+  beat_color: number;
+  melody_white: number;
+  melody_color: number;
+}
+
+export interface Song {
+  id: number | null;
+  category: string | null;
+  artist: string | null;
+  song_name: string | null;
+  song_type: string | null;
+  difficulty: string | null;
+  stars: number | null;
+  shout_ratio: number | null;
+  beat_ratio: number | null;
+  melody_ratio: number | null;
+  notes_count: number | null;
+  duration: number | null;
+  notes_20: SongNoteGroup;
+  light_2: SongNoteGroup;
+  light_3: SongNoteGroup;
+  light_4: SongNoteGroup;
+  light_5: SongNoteGroup;
+  light_6: SongNoteGroup;
+  chorus_light_5: SongNoteGroup;
+  chorus_light_6: SongNoteGroup;
+  total_shout_white: number | null;
+  total_shout_color: number | null;
+  total_beat_white: number | null;
+  total_beat_color: number | null;
+  total_melody_white: number | null;
+  total_melody_color: number | null;
+  updated_at: string | null;
+  [key: string]: string | number | boolean | null | SongNoteGroup;
+}
+
 const SONGS_GID = 1083871743;
 
 // フラットカラム定義 (col index → key)
-const FLAT_COLUMNS = {
+const FLAT_COLUMNS: Record<number, string> = {
   0: 'id',
   1: 'category',
   2: 'artist',
@@ -30,7 +59,7 @@ const FLAT_COLUMNS = {
 };
 
 // ネストグループ定義 (開始col index → group key)
-const NESTED_GROUPS = {
+const NESTED_GROUPS: Record<number, string> = {
   12: 'notes_20',
   18: 'light_2',
   24: 'light_3',
@@ -42,14 +71,14 @@ const NESTED_GROUPS = {
 };
 
 // 各グループ内のサブキー (6列固定)
-const SUB_KEYS = [
+const SUB_KEYS: (keyof SongNoteGroup)[] = [
   'shout_white', 'shout_color',
   'beat_white', 'beat_color',
   'melody_white', 'melody_color',
 ];
 
 // 合計カラム定義
-const TOTAL_COLUMNS = {
+const TOTAL_COLUMNS: Record<number, string> = {
   60: 'total_shout_white',
   61: 'total_shout_color',
   62: 'total_beat_white',
@@ -60,32 +89,12 @@ const TOTAL_COLUMNS = {
 
 // col 66 = updated_at, col 67 = 除外
 
-function extractCellValue(cell) {
-  if (!cell || cell.v === null || cell.v === undefined) {
-    return null;
-  }
-  const v = cell.v;
-  if (typeof v === 'string' && /^Date\(\d+,\d+,\d+/.test(v)) {
-    const m = v.match(/Date\((\d+),(\d+),(\d+)/);
-    if (m) return new Date(Number(m[1]), Number(m[2]), Number(m[3])).toISOString().split('T')[0];
-  }
-  return v;
-}
-
-function parseGvizResponse(text) {
-  const match = text.match(/google\.visualization\.Query\.setResponse\((.+)\);?\s*$/s);
-  if (!match) {
-    throw new Error('GViz JSONレスポンスのパースに失敗しました');
-  }
-  return JSON.parse(match[1]);
-}
-
-function convertRow(cells) {
-  const obj = {};
+function convertRow(cells: (GVizCell | null)[]): Song {
+  const obj: Record<string, unknown> = {};
 
   // フラットカラム
   for (const [col, key] of Object.entries(FLAT_COLUMNS)) {
-    let val = extractCellValue(cells[col] ?? null);
+    let val = extractCellValue(cells[Number(col)] ?? null);
     if (key === 'stars' && typeof val === 'string') {
       val = val.length;
     }
@@ -94,31 +103,30 @@ function convertRow(cells) {
 
   // ネストグループ
   for (const [startCol, groupKey] of Object.entries(NESTED_GROUPS)) {
-    const group = {};
+    const group: Record<string, number> = {};
     const start = Number(startCol);
     SUB_KEYS.forEach((subKey, i) => {
-      group[subKey] = extractCellValue(cells[start + i] ?? null) ?? 0;
+      group[subKey] = (extractCellValue(cells[start + i] ?? null) as number) ?? 0;
     });
     obj[groupKey] = group;
   }
 
   // 合計カラム
   for (const [col, key] of Object.entries(TOTAL_COLUMNS)) {
-    obj[key] = extractCellValue(cells[col] ?? null);
+    obj[key] = extractCellValue(cells[Number(col)] ?? null);
   }
 
   // データ更新日
   obj.updated_at = extractCellValue(cells[66] ?? null);
 
-  return obj;
+  return obj as unknown as Song;
 }
 
 /**
  * 楽曲データをGoogle Spreadsheetから取得してネスト構造のJSON配列で返す
- * @returns {Promise<Object[]>} 楽曲データ配列
  */
-export async function fetchSongsJson() {
-  const url = `https://docs.google.com/spreadsheets/d/${SONGS_SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${SONGS_GID}`;
+export async function fetchSongsJson(): Promise<Song[]> {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${SONGS_GID}`;
 
   const response = await fetch(url);
   if (!response.ok) {
