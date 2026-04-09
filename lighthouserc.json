@@ -3,9 +3,9 @@
     "collect": {
       "staticDistDir": "./dist",
       "url": [
-        "http://localhost/i7/",
-        "http://localhost/i7/cards/",
-        "http://localhost/i7/songs/"
+        "http://localhost/",
+        "http://localhost/cards/",
+        "http://localhost/songs/"
       ]
     },
     "assert": {
