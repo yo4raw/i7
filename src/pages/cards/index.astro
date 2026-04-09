@@ -85,7 +85,7 @@ const base = import.meta.env.BASE_URL;
             <th class="px-3 py-2 w-28 text-center">所持数</th>
           </tr>
         </thead>
-        <tbody id="table-body" class="divide-y divide-gray-100">
+        <tbody id="table-body">
         </tbody>
       </table>
     </div>
@@ -200,6 +200,7 @@ const base = import.meta.env.BASE_URL;
 
     const attrBg: Record<string, string> = { Shout: 'rgba(239,68,68,0.06)', Beat: 'rgba(34,197,94,0.06)', Melody: 'rgba(59,130,246,0.06)' };
     const attrBgHover: Record<string, string> = { Shout: 'rgba(239,68,68,0.12)', Beat: 'rgba(34,197,94,0.12)', Melody: 'rgba(59,130,246,0.12)' };
+    const attrBorderColor: Record<string, string> = { Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6' };
 
     function rowBg(attrColor: string, thumbUrl: string): string {
       return `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.55)), linear-gradient(${attrColor || 'transparent'}, ${attrColor || 'transparent'}), url(${thumbUrl}) no-repeat right 25% / 50% auto`;
@@ -211,7 +212,8 @@ const base = import.meta.env.BASE_URL;
       const thumbUrl = `${THUMB_URL}/${card.ID}.png`;
       const defaultBg = rowBg(bg, thumbUrl);
       const hoverBg = rowBg(bgH, thumbUrl);
-      return `<tr class="cursor-pointer" style="background:${defaultBg}" onmouseenter="this.style.background='${hoverBg}'" onmouseleave="this.style.background='${defaultBg}'" onclick="location.href='${base}cards/${card.ID}/'">
+      const borderColor = attrBorderColor[card.attribute] || 'transparent';
+      return `<tr class="cursor-pointer" style="border-top:2px solid ${borderColor};background:${defaultBg}" onmouseenter="this.style.background='${hoverBg}'" onmouseleave="this.style.background='${defaultBg}'" onclick="location.href='${base}cards/${card.ID}/'">
         <td class="px-3 py-2">${imgTag(card.ID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
         <td class="px-3 py-2" data-filter-cardname="${(card.cardname || '').replace(/"/g, '&quot;')}" onclick="event.stopPropagation()"><span class="text-indigo-600 hover:underline cursor-pointer">${card.cardname || ''}</span></td>
@@ -231,7 +233,8 @@ const base = import.meta.env.BASE_URL;
       const bg = attrBg[card.attribute] || 'transparent';
       const thumbUrl = `${THUMB_URL}/${card.ID}.png`;
       const mobileBg = `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${bg}, ${bg}), url(${thumbUrl}) no-repeat right 25% / auto 500%`;
-      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="background:${mobileBg}">
+      const borderColor = attrBorderColor[card.attribute] || 'transparent';
+      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid ${borderColor};background:${mobileBg}">
         <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
           <div class="flex-shrink-0">${imgTag(card.ID)}</div>
           <div class="flex-1 min-w-0">
