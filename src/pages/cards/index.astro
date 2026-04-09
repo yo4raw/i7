@@ -171,6 +171,16 @@ const base = import.meta.env.BASE_URL;
       return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${c[a] || 'bg-gray-300'}">${a || '?'}</span>`;
     }
 
+    function statsPct(s: number, b: number, m: number): { sPct: number; bPct: number; mPct: number } {
+      const total = s + b + m;
+      if (!total) return { sPct: 0, bPct: 0, mPct: 0 };
+      return {
+        sPct: Math.round((s / total) * 100),
+        bPct: Math.round((b / total) * 100),
+        mPct: Math.round((m / total) * 100),
+      };
+    }
+
     function statsPie(s: number, b: number, m: number): string {
       const total = s + b + m;
       if (!total) return '<span class="text-gray-400 text-xs">-</span>';
@@ -179,9 +189,7 @@ const base = import.meta.env.BASE_URL;
       const sLen = (s / total) * c;
       const bLen = (b / total) * c;
       const mLen = (m / total) * c;
-      const sPct = Math.round((s / total) * 100);
-      const bPct = Math.round((b / total) * 100);
-      const mPct = Math.round((m / total) * 100);
+      const { sPct, bPct, mPct } = statsPct(s, b, m);
       return `<svg viewBox="0 0 36 36" class="w-10 h-10" title="S:${sPct}% B:${bPct}% M:${mPct}%">
         <circle cx="18" cy="18" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="5"/>
         <circle cx="18" cy="18" r="${r}" fill="none" stroke="#ef4444" stroke-width="5"
@@ -213,6 +221,7 @@ const base = import.meta.env.BASE_URL;
       const defaultBg = rowBg(bg, thumbUrl);
       const hoverBg = rowBg(bgH, thumbUrl);
       const borderColor = attrBorderColor[card.attribute] || 'transparent';
+      const pct = statsPct(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0);
       return `<tr class="cursor-pointer" style="border-top:2px solid ${borderColor};background:${defaultBg}" onmouseenter="this.style.background='${hoverBg}'" onmouseleave="this.style.background='${defaultBg}'" onclick="location.href='${base}cards/${card.ID}/'">
         <td class="px-3 py-2">${imgTag(card.ID)}</td>
         <td class="px-3 py-2">${card.ID}</td>
@@ -221,9 +230,9 @@ const base = import.meta.env.BASE_URL;
         <td class="px-3 py-2">${rarityBadge(card.rarity)}</td>
         <td class="px-3 py-2">${attrBadge(card.attribute)}</td>
         <td class="px-3 py-2">${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}</td>
-        <td class="px-3 py-2 text-right">${(card.shout_max || 0).toLocaleString()}</td>
-        <td class="px-3 py-2 text-right">${(card.beat_max || 0).toLocaleString()}</td>
-        <td class="px-3 py-2 text-right">${(card.melody_max || 0).toLocaleString()}</td>
+        <td class="px-3 py-2 text-right">${(card.shout_max || 0).toLocaleString()}<div class="text-xs text-gray-400">${pct.sPct}%</div></td>
+        <td class="px-3 py-2 text-right">${(card.beat_max || 0).toLocaleString()}<div class="text-xs text-gray-400">${pct.bPct}%</div></td>
+        <td class="px-3 py-2 text-right">${(card.melody_max || 0).toLocaleString()}<div class="text-xs text-gray-400">${pct.mPct}%</div></td>
         <td class="px-3 py-2 text-xs">${card.ap_skill_type || ''}</td>
         <td class="px-3 py-2">${countControl(card.ID)}</td>
       </tr>`;
@@ -234,6 +243,7 @@ const base = import.meta.env.BASE_URL;
       const thumbUrl = `${THUMB_URL}/${card.ID}.png`;
       const mobileBg = `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${bg}, ${bg}), url(${thumbUrl}) no-repeat right 25% / auto 500%`;
       const borderColor = attrBorderColor[card.attribute] || 'transparent';
+      const pct = statsPct(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0);
       return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid ${borderColor};background:${mobileBg}">
         <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
           <div class="flex-shrink-0">${imgTag(card.ID)}</div>
@@ -244,9 +254,9 @@ const base = import.meta.env.BASE_URL;
             <div class="flex items-center gap-2 mt-1">
               ${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}
               <div class="flex gap-2 text-xs">
-                <span class="text-red-500">S:${card.shout_max || 0}</span>
-                <span class="text-green-500">B:${card.beat_max || 0}</span>
-                <span class="text-blue-500">M:${card.melody_max || 0}</span>
+                <span class="text-red-500">S:${card.shout_max || 0} <span class="text-gray-400">${pct.sPct}%</span></span>
+                <span class="text-green-500">B:${card.beat_max || 0} <span class="text-gray-400">${pct.bPct}%</span></span>
+                <span class="text-blue-500">M:${card.melody_max || 0} <span class="text-gray-400">${pct.mPct}%</span></span>
               </div>
             </div>
           </div>
