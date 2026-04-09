@@ -1,12 +1,12 @@
 import { SPREADSHEET_ID, extractCellValue, parseGvizResponse, type GVizCell } from './gviz.ts';
 
 export interface SongNoteGroup {
-  shout_white: number;
-  shout_color: number;
-  beat_white: number;
-  beat_color: number;
-  melody_white: number;
-  melody_color: number;
+  shout_white: number; //shout属性値 * 0.025
+  shout_color: number; //shout属性値 * 0.03
+  beat_white: number; //beat属性値 * 0.025
+  beat_color: number; //beat属性値 * 0.03
+  melody_white: number; //melody属性値 * 0.025
+  melody_color: number; //melody属性値 * 0.03
 }
 
 export interface Song {
@@ -22,14 +22,14 @@ export interface Song {
   melody_ratio: number | null;
   notes_count: number | null;
   duration: number | null;
-  notes_20: SongNoteGroup;
-  light_2: SongNoteGroup;
-  light_3: SongNoteGroup;
-  light_4: SongNoteGroup;
-  light_5: SongNoteGroup;
-  light_6: SongNoteGroup;
-  chorus_light_5: SongNoteGroup;
-  chorus_light_6: SongNoteGroup;
+  notes_20: SongNoteGroup; //属性値結果 * 1.0
+  light_2: SongNoteGroup; //属性値結果 * 1.1
+  light_3: SongNoteGroup; //属性値結果 * 1.2
+  light_4: SongNoteGroup; //属性値結果 * 1.3
+  light_5: SongNoteGroup; //属性値結果 * 1.4
+  light_6: SongNoteGroup; //属性値結果 * 1.5
+  chorus_light_5: SongNoteGroup; //属性値結果 * 2.6
+  chorus_light_6: SongNoteGroup; //属性値結果 * 3
   total_shout_white: number | null;
   total_shout_color: number | null;
   total_beat_white: number | null;
@@ -62,7 +62,7 @@ const FLAT_COLUMNS: Record<number, string> = {
 const NESTED_GROUPS: Record<number, string> = {
   12: 'notes_20',
   18: 'light_2',
-  24: 'light_3',
+  24: 'light_3', 
   30: 'light_4',
   36: 'light_5',
   42: 'light_6',
