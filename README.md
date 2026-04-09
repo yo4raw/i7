@@ -30,4 +30,4 @@ npm run preview # ビルドプレビュー
 
 ## デプロイ
 
-`main` ブランチへの push で GitHub Actions により自動デプロイされます。
+バージョンタグ（`v1.0.0` 等）の push で GitHub Actions により自動デプロイされます。データ鮮度のため6時間ごとに自動リビルドも行われます。

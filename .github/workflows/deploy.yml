@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    tags: ['v*']
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
@@ -20,7 +20,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve ref
+        id: resolve-ref
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            LATEST_TAG=$(git ls-remote --tags --sort=-v:refname "${{ github.server_url }}/${{ github.repository }}" 'v*' | head -1 | sed 's/.*refs\/tags\///')
+            if [ -z "$LATEST_TAG" ]; then
+              echo "ref=main" >> "$GITHUB_OUTPUT"
+            else
+              echo "ref=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve-ref.outputs.ref || github.ref }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
