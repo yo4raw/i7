@@ -38,6 +38,7 @@ const base = import.meta.env.BASE_URL;
             <th class="px-3 py-2 text-right">Shout</th>
             <th class="px-3 py-2 text-right">Beat</th>
             <th class="px-3 py-2 text-right">Melody</th>
+            <th class="px-3 py-2">スキル</th>
             <th class="px-3 py-2 w-28 text-center">所持数</th>
           </tr>
         </thead>
@@ -55,139 +56,19 @@ const base = import.meta.env.BASE_URL;
   </script>
 
   <script>
+    import {
+      initRenderer, type CardListItem,
+      loadCounts, getCount, setCount,
+      renderTableRow, renderMobileCard, bindCountEvents,
+    } from '../../lib/cardListRenderer';
+
     const base = (window as any).__BASE_URL__ || '/i7/';
     const THUMB_URL = (window as any).__CARD_THUMB_BASE_URL__;
 
-    interface Card {
-      ID: number;
-      cardID: number;
-      cardname: string;
-      name: string;
-      rarity: string;
-      attribute: string;
-      shout_max: number;
-      beat_max: number;
-      melody_max: number;
-      ap_skill_type: string | null;
-      [key: string]: any;
-    }
+    initRenderer({ base, thumbUrl: THUMB_URL });
 
-    const allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    const allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     const $ = (id: string) => document.getElementById(id)!;
-
-    // localStorage管理（カード一覧と共有）
-    const STORAGE_KEY = 'i7_card_counts';
-    function loadCounts(): Record<string, number> {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
-    }
-    function saveCounts(counts: Record<string, number>) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
-    }
-    function getCount(cardId: number): number {
-      return loadCounts()[String(cardId)] || 0;
-    }
-    function setCount(cardId: number, value: number) {
-      const counts = loadCounts();
-      const v = Math.max(0, value);
-      if (v === 0) { delete counts[String(cardId)]; } else { counts[String(cardId)] = v; }
-      saveCounts(counts);
-    }
-
-    function countControl(cardId: number): string {
-      const count = getCount(cardId);
-      return `<div class="flex items-center justify-center gap-1" onclick="event.stopPropagation()">
-        <button data-count-btn="${cardId}" data-delta="-1"
-          class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none">−</button>
-        <input type="number" data-count-input="${cardId}" value="${count}" min="0"
-          class="w-10 h-6 text-center text-sm border border-gray-300 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-        <button data-count-btn="${cardId}" data-delta="1"
-          class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none">+</button>
-      </div>`;
-    }
-
-    function rarityBadge(r: string): string {
-      const c: Record<string, string> = { UR: 'bg-amber-500', SSR: 'bg-purple-500', SR: 'bg-sky-400', R: 'bg-gray-400', GROUP: 'bg-pink-400' };
-      return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${c[r] || 'bg-gray-300'}">${r}</span>`;
-    }
-
-    function attrBadge(a: string): string {
-      const c: Record<string, string> = { Shout: 'bg-red-500', Beat: 'bg-green-500', Melody: 'bg-blue-500' };
-      return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${c[a] || 'bg-gray-300'}">${a || '?'}</span>`;
-    }
-
-    function statsPie(s: number, b: number, m: number): string {
-      const total = s + b + m;
-      if (!total) return '<span class="text-gray-400 text-xs">-</span>';
-      const r = 15.9155;
-      const c = 2 * Math.PI * r;
-      const sLen = (s / total) * c;
-      const bLen = (b / total) * c;
-      const mLen = (m / total) * c;
-      return `<svg viewBox="0 0 36 36" class="w-10 h-10">
-        <circle cx="18" cy="18" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="5"/>
-        <circle cx="18" cy="18" r="${r}" fill="none" stroke="#ef4444" stroke-width="5"
-          stroke-dasharray="${sLen} ${c - sLen}" stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
-        <circle cx="18" cy="18" r="${r}" fill="none" stroke="#22c55e" stroke-width="5"
-          stroke-dasharray="${bLen} ${c - bLen}" stroke-dashoffset="${-sLen}" transform="rotate(-90 18 18)"/>
-        <circle cx="18" cy="18" r="${r}" fill="none" stroke="#3b82f6" stroke-width="5"
-          stroke-dasharray="${mLen} ${c - mLen}" stroke-dashoffset="${-(sLen + bLen)}" transform="rotate(-90 18 18)"/>
-      </svg>`;
-    }
-
-    function imgTag(id: number): string {
-      return `<img src="${THUMB_URL}/${id}.png" alt="" class="w-12 h-auto rounded"
-        onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />`;
-    }
-
-    const attrBg: Record<string, string> = { Shout: 'rgba(239,68,68,0.06)', Beat: 'rgba(34,197,94,0.06)', Melody: 'rgba(59,130,246,0.06)' };
-    const attrBgHover: Record<string, string> = { Shout: 'rgba(239,68,68,0.12)', Beat: 'rgba(34,197,94,0.12)', Melody: 'rgba(59,130,246,0.12)' };
-    const attrBorderColor: Record<string, string> = { Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6' };
-
-    function renderTableRow(card: Card): string {
-      const bg = attrBg[card.attribute] || '';
-      const bgH = attrBgHover[card.attribute] || 'rgba(0,0,0,0.02)';
-      const borderColor = attrBorderColor[card.attribute] || 'transparent';
-      return `<tr class="cursor-pointer" style="border-top:2px solid ${borderColor};background:${bg}" onmouseenter="this.style.background='${bgH}'" onmouseleave="this.style.background='${bg}'" onclick="location.href='${base}cards/${card.ID}/'">
-        <td class="px-3 py-2">${imgTag(card.ID)}</td>
-        <td class="px-3 py-2">${card.ID}</td>
-        <td class="px-3 py-2 font-medium">${card.cardname || ''}</td>
-        <td class="px-3 py-2">${card.name || ''}</td>
-        <td class="px-3 py-2">${rarityBadge(card.rarity)}</td>
-        <td class="px-3 py-2">${attrBadge(card.attribute)}</td>
-        <td class="px-3 py-2">${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}</td>
-        <td class="px-3 py-2 text-right">${(card.shout_max || 0).toLocaleString()}</td>
-        <td class="px-3 py-2 text-right">${(card.beat_max || 0).toLocaleString()}</td>
-        <td class="px-3 py-2 text-right">${(card.melody_max || 0).toLocaleString()}</td>
-        <td class="px-3 py-2">${countControl(card.ID)}</td>
-      </tr>`;
-    }
-
-    function renderMobileCard(card: Card): string {
-      const bg = attrBg[card.attribute] || '';
-      const borderColor = attrBorderColor[card.attribute] || 'transparent';
-      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid ${borderColor};background:${bg}">
-        <div class="flex gap-3" onclick="location.href='${base}cards/${card.ID}/'" style="cursor:pointer">
-          <div class="flex-shrink-0">${imgTag(card.ID)}</div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
-            <p class="font-medium text-sm truncate">${card.cardname || ''}</p>
-            <p class="text-xs text-gray-500">${card.name || ''}</p>
-            <div class="flex items-center gap-2 mt-1">
-              ${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}
-              <div class="flex gap-2 text-xs">
-                <span class="text-red-500">S:${card.shout_max || 0}</span>
-                <span class="text-green-500">B:${card.beat_max || 0}</span>
-                <span class="text-blue-500">M:${card.melody_max || 0}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="mt-2 flex items-center justify-between border-t pt-2">
-          <span class="text-xs text-gray-500">所持数</span>
-          ${countControl(card.ID)}
-        </div>
-      </div>`;
-    }
 
     function render() {
       const counts = loadCounts();
@@ -208,39 +89,12 @@ const base = import.meta.env.BASE_URL;
       $('total-count').textContent = `所持種類: ${owned.length}種`;
       $('total-cards').textContent = `合計枚数: ${totalOwned}枚`;
 
-      $('table-body').innerHTML = owned.map(renderTableRow).join('');
-      $('mobile-cards').innerHTML = owned.map(renderMobileCard).join('');
+      $('table-body').innerHTML = owned.map(c => renderTableRow(c)).join('');
+      $('mobile-cards').innerHTML = owned.map(c => renderMobileCard(c)).join('');
 
-      // 所持数ボタン・入力イベント（変更後に再描画）
-      document.querySelectorAll<HTMLButtonElement>('button[data-count-btn]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const cardId = Number(btn.dataset.countBtn);
-          const delta = Number(btn.dataset.delta);
-          const newVal = Math.max(0, getCount(cardId) + delta);
-          setCount(cardId, newVal);
-          if (newVal === 0) {
-            render(); // 0になったら一覧から消す
-          } else {
-            document.querySelectorAll<HTMLInputElement>(`input[data-count-input="${cardId}"]`).forEach(inp => {
-              inp.value = String(newVal);
-            });
-          }
-        });
-      });
-      document.querySelectorAll<HTMLInputElement>('input[data-count-input]').forEach(inp => {
-        inp.addEventListener('change', (e) => {
-          e.stopPropagation();
-          const cardId = Number(inp.dataset.countInput);
-          const val = Math.max(0, Number(inp.value) || 0);
-          setCount(cardId, val);
-          if (val === 0) {
-            render();
-          } else {
-            inp.value = String(val);
-          }
-        });
-        inp.addEventListener('click', (e) => e.stopPropagation());
+      // 所持数ボタン・入力イベント（0になったら一覧から消して再描画）
+      bindCountEvents((_cardId, newValue) => {
+        if (newValue === 0) render();
       });
     }
 
