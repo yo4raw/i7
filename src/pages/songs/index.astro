@@ -84,25 +84,12 @@ const base = import.meta.env.BASE_URL;
 
   <script>
     import { attrDonutSvg } from '../../lib/donutChart';
+    import { ATTR_HEX } from '../../lib/constants';
+    import type { Song } from '../../lib/data/fetchSongsJson';
 
     const base = (window as any).__BASE_URL__ || '/i7/';
 
-    interface Song {
-      id: number;
-      category: string;
-      artist: string;
-      song_name: string;
-      difficulty: string;
-      stars: number;
-      notes_count: number;
-      duration: number;
-      shout_ratio: number;
-      beat_ratio: number;
-      melody_ratio: number;
-      [key: string]: any;
-    }
-
-    const allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
+    const allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!) as Song[];
     let filtered: Song[] = [];
 
     const $ = (id: string) => document.getElementById(id)!;
@@ -116,9 +103,9 @@ const base = import.meta.env.BASE_URL;
       return `<div class="flex items-center gap-2">
         ${attrDonutSvg(sr, br, mr, { sizeClass: 'w-10 h-10 flex-shrink-0' })}
         <div class="text-[10px] text-gray-500 leading-tight">
-          <span class="text-red-500">S:${sPct}%</span>
-          <span class="text-green-500">B:${bPct}%</span>
-          <span class="text-blue-500">M:${mPct}%</span>
+          <span style="color:${ATTR_HEX.Shout}">S:${sPct}%</span>
+          <span style="color:${ATTR_HEX.Beat}">B:${bPct}%</span>
+          <span style="color:${ATTR_HEX.Melody}">M:${mPct}%</span>
         </div>
       </div>`;
     }

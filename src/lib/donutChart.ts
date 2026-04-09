@@ -4,6 +4,8 @@
  * カード一覧・カード詳細・楽曲一覧・楽曲詳細で共用する。
  */
 
+import { ATTR_HEX } from './constants';
+
 export interface DonutSegment {
   value: number;
   color: string;
@@ -81,8 +83,8 @@ export function attrDonutSvg(
   opts: DonutChartOptions = {}
 ): string {
   return donutChartSvg([
-    { value: shout, color: '#ef4444', label: 'S' },
-    { value: beat,  color: '#22c55e', label: 'B' },
-    { value: melody, color: '#3b82f6', label: 'M' },
+    { value: shout, color: ATTR_HEX.Shout, label: 'S' },
+    { value: beat,  color: ATTR_HEX.Beat,  label: 'B' },
+    { value: melody, color: ATTR_HEX.Melody, label: 'M' },
   ], { showTitle: true, ...opts });
 }

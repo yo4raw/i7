@@ -6,7 +6,7 @@
  *   initRenderer({ base: '/i7/', thumbUrl: 'https://...' });
  */
 
-import { RARITY_BADGE_CLASSES } from './constants';
+import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_BORDER_COLOR } from './constants';
 import { attrDonutSvg } from './donutChart';
 
 // --- 設定 ---
@@ -77,8 +77,7 @@ export function rarityBadge(r: string): string {
 }
 
 export function attrBadge(a: string): string {
-  const c: Record<string, string> = { Shout: 'bg-red-500', Beat: 'bg-green-500', Melody: 'bg-blue-500' };
-  return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${c[a] || 'bg-gray-300'}">${a || '?'}</span>`;
+  return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${ATTR_BADGE_BG[a] || 'bg-gray-300'}">${a || '?'}</span>`;
 }
 
 export function statsPct(s: number, b: number, m: number): { sPct: number; bPct: number; mPct: number } {
@@ -102,9 +101,9 @@ export function imgTag(cardID: number): string {
 
 // --- 行スタイル定数 ---
 
-export const attrBg: Record<string, string> = { Shout: 'rgba(239,68,68,0.06)', Beat: 'rgba(34,197,94,0.06)', Melody: 'rgba(59,130,246,0.06)' };
-export const attrBgHover: Record<string, string> = { Shout: 'rgba(239,68,68,0.12)', Beat: 'rgba(34,197,94,0.12)', Melody: 'rgba(59,130,246,0.12)' };
-export const attrBorderColor: Record<string, string> = { Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6' };
+export const attrBg = ATTR_BG;
+export const attrBgHover = ATTR_BG_HOVER;
+export const attrBorderColor = ATTR_BORDER_COLOR;
 
 export function rowBg(attrColor: string, thumbUrl: string): string {
   return `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.55)), linear-gradient(${attrColor || 'transparent'}, ${attrColor || 'transparent'}), url(${thumbUrl}) no-repeat right 25% / 50% auto`;

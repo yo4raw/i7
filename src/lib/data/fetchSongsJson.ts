@@ -1,4 +1,4 @@
-import { SPREADSHEET_ID, extractCellValue, parseGvizResponse, type GVizCell } from './gviz.ts';
+import { SPREADSHEET_ID, extractCellValue, fetchSheetRaw, type GVizCell } from './gviz.ts';
 
 export interface SongNoteGroup {
   shout_white: number; //shout属性値 * 0.025
@@ -126,16 +126,7 @@ function convertRow(cells: (GVizCell | null)[]): Song {
  * 楽曲データをGoogle Spreadsheetから取得してネスト構造のJSON配列で返す
  */
 export async function fetchSongsJson(): Promise<Song[]> {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${SONGS_GID}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`スプレッドシートの取得に失敗: ${response.status} ${response.statusText}`);
-  }
-
-  const text = await response.text();
-  const gvizData = parseGvizResponse(text);
-  const table = gvizData.table;
+  const table = await fetchSheetRaw(SPREADSHEET_ID, SONGS_GID);
 
   return table.rows
     .map((row) => convertRow(row.c || []))
