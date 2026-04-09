@@ -6,7 +6,7 @@ export const CHARACTERS = [
   '御堂虎於'
 ] as const;
 
-export const RARITIES = ['UR', 'SSR', 'SR', 'R'] as const;
+export const RARITIES = ['UR', 'SSR', 'SR', 'R', 'N'] as const;
 
 export const ATTRIBUTES = [
   { value: 1, label: 'Shout', color: 'red' },
