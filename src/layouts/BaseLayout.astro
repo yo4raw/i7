@@ -63,6 +63,7 @@ const base = import.meta.env.BASE_URL;
         mobileNav?.classList.toggle('hidden');
         mobileNav?.classList.toggle('flex');
       });
+      document.addEventListener('contextmenu', (e) => e.preventDefault());
     </script>
   </body>
 </html>
