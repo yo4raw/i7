@@ -58,7 +58,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト。
 
 ### Deployment
 
-GitHub Pages via `.github/workflows/deploy.yml`. タグ push (`v*`) でデプロイ、6時間ごとの cron で最新タグから再ビルド（データ鮮度維持）。`workflow_dispatch` で手動デプロイも可能。Site is deployed at `https://yo4raw.github.io/i7/` — the `base: '/i7'` in `astro.config.mjs` must stay in sync.
+GitHub Pages via `.github/workflows/deploy.yml`. タグ push (`v*`) で `release.yml` が GitHub Release を作成し、`deploy.yml` を `workflow_dispatch` 経由で起動してデプロイする。6時間ごとの cron でも最新タグから再ビルド（データ鮮度維持）。Site is deployed at `https://yo4raw.github.io/i7/` — the `base: '/i7'` in `astro.config.mjs` must stay in sync.
 
 リリース手順: `git tag v1.x.x && git push origin v1.x.x`
 
