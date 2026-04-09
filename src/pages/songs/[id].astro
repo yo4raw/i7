@@ -173,43 +173,4 @@ const infoRows = [
       </div>
     </section>
   )}
-
-  <!-- 合計ノート数 -->
-  {(song.total_shout_white || song.total_beat_white || song.total_melody_white) && (
-    <section class="bg-white rounded-lg shadow p-6 mb-6">
-      <h2 class="text-lg font-semibold mb-4">合計ノート数</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="bg-gray-50 text-left text-xs text-gray-500">
-              <th class="px-3 py-2">属性</th>
-              <th class="px-3 py-2 text-right">白ノート</th>
-              <th class="px-3 py-2 text-right">色ノート</th>
-              <th class="px-3 py-2 text-right font-semibold">合計</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-medium text-red-500">Shout</td>
-              <td class="px-3 py-2 text-right">{Math.round(song.total_shout_white || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right">{Math.round(song.total_shout_color || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right font-semibold">{Math.round((song.total_shout_white || 0) + (song.total_shout_color || 0)).toLocaleString()}</td>
-            </tr>
-            <tr class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-medium text-green-500">Beat</td>
-              <td class="px-3 py-2 text-right">{Math.round(song.total_beat_white || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right">{Math.round(song.total_beat_color || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right font-semibold">{Math.round((song.total_beat_white || 0) + (song.total_beat_color || 0)).toLocaleString()}</td>
-            </tr>
-            <tr class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-medium text-blue-500">Melody</td>
-              <td class="px-3 py-2 text-right">{Math.round(song.total_melody_white || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right">{Math.round(song.total_melody_color || 0).toLocaleString()}</td>
-              <td class="px-3 py-2 text-right font-semibold">{Math.round((song.total_melody_white || 0) + (song.total_melody_color || 0)).toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  )}
 </BaseLayout>
