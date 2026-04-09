@@ -56,7 +56,8 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 ## Workflow
 
 作業完了後は以下を自動で行うこと:
-1. `git commit` — 変更内容をコミット
-2. `git push` — リモートにプッシュ
-3. Playwright MCP で `npm run preview` のローカルサーバーにアクセスし、画面表示を確認する
-   - スクリーンショットは `tmp/` ディレクトリを作成してその下に保存する
+
+1. `npm run build && npm run preview` でローカルプレビューサーバーを起動する
+2. Playwright MCP でプレビューサーバー（`http://localhost:4321/i7/`）にアクセスし、変更箇所の画面表示を確認する
+3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
+4. ユーザーの確認が取れたら `git commit` → `git push` を行う
