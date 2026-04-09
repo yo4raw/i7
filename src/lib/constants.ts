@@ -33,6 +33,12 @@ export const ATTRIBUTE_BADGE_CLASSES: Record<number, string> = {
   3: 'bg-blue-500',   // Melody
 };
 
+/** レアリティ別バッジ背景色（Tailwindクラス） */
+export const RARITY_BADGE_CLASSES: Record<string, string> = {
+  UR: 'bg-amber-500', SSR: 'bg-purple-500', SR: 'bg-sky-400',
+  R: 'bg-gray-400', N: 'bg-gray-300', GROUP: 'bg-pink-400',
+};
+
 export const CARD_IMAGE_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/cards';
 export const CARD_THUMB_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/th_cards';
 

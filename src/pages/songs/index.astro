@@ -83,6 +83,8 @@ const base = import.meta.env.BASE_URL;
   </script>
 
   <script>
+    import { attrDonutSvg } from '../../lib/donutChart';
+
     const base = (window as any).__BASE_URL__ || '/i7/';
 
     interface Song {
@@ -111,21 +113,8 @@ const base = import.meta.env.BASE_URL;
       const sPct = Math.round(sr * 100);
       const bPct = Math.round(br * 100);
       const mPct = Math.round(mr * 100);
-      const r = 15.9155;
-      const c = 2 * Math.PI * r;
-      const sLen = (sr / total) * c;
-      const bLen = (br / total) * c;
-      const mLen = (mr / total) * c;
       return `<div class="flex items-center gap-2">
-        <svg viewBox="0 0 36 36" class="w-10 h-10 flex-shrink-0">
-          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="5"/>
-          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#ef4444" stroke-width="5"
-            stroke-dasharray="${sLen} ${c - sLen}" stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
-          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#22c55e" stroke-width="5"
-            stroke-dasharray="${bLen} ${c - bLen}" stroke-dashoffset="${-sLen}" transform="rotate(-90 18 18)"/>
-          <circle cx="18" cy="18" r="${r}" fill="none" stroke="#3b82f6" stroke-width="5"
-            stroke-dasharray="${mLen} ${c - mLen}" stroke-dashoffset="${-(sLen + bLen)}" transform="rotate(-90 18 18)"/>
-        </svg>
+        ${attrDonutSvg(sr, br, mr, { sizeClass: 'w-10 h-10 flex-shrink-0' })}
         <div class="text-[10px] text-gray-500 leading-tight">
           <span class="text-red-500">S:${sPct}%</span>
           <span class="text-green-500">B:${bPct}%</span>

@@ -6,6 +6,9 @@
  *   initRenderer({ base: '/i7/', thumbUrl: 'https://...' });
  */
 
+import { RARITY_BADGE_CLASSES } from './constants';
+import { attrDonutSvg } from './donutChart';
+
 // --- 設定 ---
 
 let _base = '/i7/';
@@ -70,8 +73,7 @@ export function countControl(cardId: number): string {
 }
 
 export function rarityBadge(r: string): string {
-  const c: Record<string, string> = { UR: 'bg-amber-500', SSR: 'bg-purple-500', SR: 'bg-sky-400', R: 'bg-gray-400', GROUP: 'bg-pink-400' };
-  return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${c[r] || 'bg-gray-300'}">${r}</span>`;
+  return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded ${RARITY_BADGE_CLASSES[r] || 'bg-gray-300'}">${r}</span>`;
 }
 
 export function attrBadge(a: string): string {
@@ -90,23 +92,7 @@ export function statsPct(s: number, b: number, m: number): { sPct: number; bPct:
 }
 
 export function statsPie(s: number, b: number, m: number): string {
-  const total = s + b + m;
-  if (!total) return '<span class="text-gray-400 text-xs">-</span>';
-  const r = 15.9155;
-  const c = 2 * Math.PI * r;
-  const sLen = (s / total) * c;
-  const bLen = (b / total) * c;
-  const mLen = (m / total) * c;
-  const { sPct, bPct, mPct } = statsPct(s, b, m);
-  return `<svg viewBox="0 0 36 36" class="w-10 h-10" title="S:${sPct}% B:${bPct}% M:${mPct}%">
-    <circle cx="18" cy="18" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="5"/>
-    <circle cx="18" cy="18" r="${r}" fill="none" stroke="#ef4444" stroke-width="5"
-      stroke-dasharray="${sLen} ${c - sLen}" stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
-    <circle cx="18" cy="18" r="${r}" fill="none" stroke="#22c55e" stroke-width="5"
-      stroke-dasharray="${bLen} ${c - bLen}" stroke-dashoffset="${-sLen}" transform="rotate(-90 18 18)"/>
-    <circle cx="18" cy="18" r="${r}" fill="none" stroke="#3b82f6" stroke-width="5"
-      stroke-dasharray="${mLen} ${c - mLen}" stroke-dashoffset="${-(sLen + bLen)}" transform="rotate(-90 18 18)"/>
-  </svg>`;
+  return attrDonutSvg(s, b, m);
 }
 
 export function imgTag(cardID: number): string {
