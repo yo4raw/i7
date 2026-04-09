@@ -22,29 +22,25 @@ const base = import.meta.env.BASE_URL;
       </div>
       <div>
         <label for="search-rarity" class="block text-xs font-medium text-gray-500 mb-1">レアリティ</label>
-        <select id="search-rarity" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <option value="">すべて</option>
+        <select id="search-rarity" multiple class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]">
           {RARITIES.map(r => <option value={r}>{r}</option>)}
         </select>
       </div>
       <div>
         <label for="search-attribute" class="block text-xs font-medium text-gray-500 mb-1">属性</label>
-        <select id="search-attribute" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <option value="">すべて</option>
+        <select id="search-attribute" multiple class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]">
           {ATTRIBUTES.map(a => <option value={a.label}>{a.label}</option>)}
         </select>
       </div>
       <div>
         <label for="search-character" class="block text-xs font-medium text-gray-500 mb-1">キャラクター</label>
-        <select id="search-character" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <option value="">すべて</option>
+        <select id="search-character" multiple class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]">
           {CHARACTERS.map(c => <option value={c}>{c}</option>)}
         </select>
       </div>
       <div>
         <label for="search-skill" class="block text-xs font-medium text-gray-500 mb-1">スキルタイプ</label>
-        <select id="search-skill" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <option value="">すべて</option>
+        <select id="search-skill" multiple class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]">
           {skillTypes.map(s => <option value={s}>{s}</option>)}
         </select>
       </div>
@@ -351,21 +347,25 @@ const base = import.meta.env.BASE_URL;
       });
     }
 
+    function getSelectedValues(el: HTMLSelectElement): string[] {
+      return Array.from(el.selectedOptions).map(o => o.value);
+    }
+
     function applyFilters() {
       const text = ($('search-text') as HTMLInputElement).value.toLowerCase();
-      const rarity = ($('search-rarity') as HTMLSelectElement).value;
-      const attribute = ($('search-attribute') as HTMLSelectElement).value;
-      const character = ($('search-character') as HTMLSelectElement).value;
-      const skillType = ($('search-skill') as HTMLSelectElement).value;
+      const rarities = getSelectedValues($('search-rarity') as HTMLSelectElement);
+      const attributes = getSelectedValues($('search-attribute') as HTMLSelectElement);
+      const characters = getSelectedValues($('search-character') as HTMLSelectElement);
+      const skillTypes = getSelectedValues($('search-skill') as HTMLSelectElement);
       const sortBy = ($('sort-by') as HTMLSelectElement).value;
 
       filtered = allCards.filter(card => {
         if (text && !(card.cardname || '').toLowerCase().includes(text) &&
             !(card.name || '').toLowerCase().includes(text)) return false;
-        if (rarity && card.rarity !== rarity) return false;
-        if (attribute && card.attribute !== attribute) return false;
-        if (character && card.name !== character) return false;
-        if (skillType && card.ap_skill_type !== skillType) return false;
+        if (rarities.length && !rarities.includes(card.rarity)) return false;
+        if (attributes.length && !attributes.includes(card.attribute)) return false;
+        if (characters.length && !characters.includes(card.name)) return false;
+        if (skillTypes.length && !skillTypes.includes(card.ap_skill_type || '')) return false;
         return true;
       });
 
@@ -395,30 +395,36 @@ const base = import.meta.env.BASE_URL;
     function updateUrlParams() {
       const params = new URLSearchParams();
       const text = ($('search-text') as HTMLInputElement).value;
-      const rarity = ($('search-rarity') as HTMLSelectElement).value;
-      const attribute = ($('search-attribute') as HTMLSelectElement).value;
-      const character = ($('search-character') as HTMLSelectElement).value;
-      const skillType = ($('search-skill') as HTMLSelectElement).value;
+      const rarities = getSelectedValues($('search-rarity') as HTMLSelectElement);
+      const attributes = getSelectedValues($('search-attribute') as HTMLSelectElement);
+      const characters = getSelectedValues($('search-character') as HTMLSelectElement);
+      const skillTypes = getSelectedValues($('search-skill') as HTMLSelectElement);
       const sortBy = ($('sort-by') as HTMLSelectElement).value;
 
       if (text) params.set('q', text);
-      if (rarity) params.set('rarity', rarity);
-      if (attribute) params.set('attr', attribute);
-      if (character) params.set('char', character);
-      if (skillType) params.set('skill', skillType);
+      if (rarities.length) params.set('rarity', rarities.join(','));
+      if (attributes.length) params.set('attr', attributes.join(','));
+      if (characters.length) params.set('char', characters.join(','));
+      if (skillTypes.length) params.set('skill', skillTypes.join(','));
       if (sortBy !== 'id-desc') params.set('sort', sortBy);
 
       const qs = params.toString();
       history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
     }
 
+    function restoreMultiSelect(el: HTMLSelectElement, csv: string | null) {
+      if (!csv) return;
+      const values = csv.split(',');
+      Array.from(el.options).forEach(o => { o.selected = values.includes(o.value); });
+    }
+
     function restoreFromUrl() {
       const params = new URLSearchParams(location.search);
       if (params.get('q')) ($('search-text') as HTMLInputElement).value = params.get('q')!;
-      if (params.get('rarity')) ($('search-rarity') as HTMLSelectElement).value = params.get('rarity')!;
-      if (params.get('attr')) ($('search-attribute') as HTMLSelectElement).value = params.get('attr')!;
-      if (params.get('char')) ($('search-character') as HTMLSelectElement).value = params.get('char')!;
-      if (params.get('skill')) ($('search-skill') as HTMLSelectElement).value = params.get('skill')!;
+      restoreMultiSelect($('search-rarity') as HTMLSelectElement, params.get('rarity'));
+      restoreMultiSelect($('search-attribute') as HTMLSelectElement, params.get('attr'));
+      restoreMultiSelect($('search-character') as HTMLSelectElement, params.get('char'));
+      restoreMultiSelect($('search-skill') as HTMLSelectElement, params.get('skill'));
       if (params.get('sort')) ($('sort-by') as HTMLSelectElement).value = params.get('sort')!;
     }
 
@@ -440,8 +446,10 @@ const base = import.meta.env.BASE_URL;
     }
     $('btn-reset').addEventListener('click', () => {
       ($('search-text') as HTMLInputElement).value = '';
-      ['search-rarity', 'search-attribute', 'search-character', 'search-skill'].forEach(id =>
-        ($(id) as HTMLSelectElement).value = '');
+      ['search-rarity', 'search-attribute', 'search-character', 'search-skill'].forEach(id => {
+        const sel = $(id) as HTMLSelectElement;
+        Array.from(sel.options).forEach(o => { o.selected = false; });
+      });
       ($('sort-by') as HTMLSelectElement).value = 'id-desc';
       applyFilters();
     });
