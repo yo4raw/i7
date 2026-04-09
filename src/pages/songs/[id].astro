@@ -27,16 +27,16 @@ const sLen = totalRatio ? (sr / totalRatio) * c : 0;
 const bLen = totalRatio ? (br / totalRatio) * c : 0;
 const mLen = totalRatio ? (mr / totalRatio) * c : 0;
 
-// ノート内訳データ
+// ノート内訳データ（ライト倍率付き）
 const NOTE_GROUPS = [
-  { key: 'notes_20', label: 'Notes 2.0' },
-  { key: 'light_2', label: 'Light 2' },
-  { key: 'light_3', label: 'Light 3' },
-  { key: 'light_4', label: 'Light 4' },
-  { key: 'light_5', label: 'Light 5' },
-  { key: 'light_6', label: 'Light 6' },
-  { key: 'chorus_light_5', label: 'Chorus Light 5' },
-  { key: 'chorus_light_6', label: 'Chorus Light 6' },
+  { key: 'notes_20', label: 'Notes 2.0', mult: 1.0 },
+  { key: 'light_2', label: 'Light 2', mult: 1.1 },
+  { key: 'light_3', label: 'Light 3', mult: 1.2 },
+  { key: 'light_4', label: 'Light 4', mult: 1.3 },
+  { key: 'light_5', label: 'Light 5', mult: 1.4 },
+  { key: 'light_6', label: 'Light 6', mult: 1.5 },
+  { key: 'chorus_light_5', label: 'Chorus Light 5', mult: 2.6 },
+  { key: 'chorus_light_6', label: 'Chorus Light 6', mult: 3.0 },
 ];
 
 const hasNoteData = NOTE_GROUPS.some(g => {
@@ -121,12 +121,14 @@ const infoRows = [
   <!-- ノート内訳 -->
   {hasNoteData && (
     <section class="bg-white rounded-lg shadow p-6 mb-6">
-      <h2 class="text-lg font-semibold mb-4">ノート内訳</h2>
+      <h2 class="text-lg font-semibold mb-2">ノート内訳</h2>
+      <p class="text-xs text-gray-500 mb-4">白ノート: 属性値×2.5% / 色ノート: 属性値×3.0%</p>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-gray-50 text-left text-xs text-gray-500">
               <th class="px-3 py-2">レベル</th>
+              <th class="px-3 py-2 text-right">倍率</th>
               <th class="px-3 py-2 text-right text-red-500">S白</th>
               <th class="px-3 py-2 text-right text-red-500">S色</th>
               <th class="px-3 py-2 text-right text-green-500">B白</th>
@@ -137,29 +139,48 @@ const infoRows = [
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            {NOTE_GROUPS.map(g => {
-              const group = song[g.key] || {};
-              const sw = group.shout_white || 0;
-              const sc = group.shout_color || 0;
-              const bw = group.beat_white || 0;
-              const bc = group.beat_color || 0;
-              const mw = group.melody_white || 0;
-              const mc = group.melody_color || 0;
-              const total = sw + sc + bw + bc + mw + mc;
-              if (total === 0) return null;
-              return (
-                <tr class="hover:bg-gray-50">
-                  <td class="px-3 py-2 font-medium">{g.label}</td>
-                  <td class="px-3 py-2 text-right">{sw || '-'}</td>
-                  <td class="px-3 py-2 text-right">{sc || '-'}</td>
-                  <td class="px-3 py-2 text-right">{bw || '-'}</td>
-                  <td class="px-3 py-2 text-right">{bc || '-'}</td>
-                  <td class="px-3 py-2 text-right">{mw || '-'}</td>
-                  <td class="px-3 py-2 text-right">{mc || '-'}</td>
-                  <td class="px-3 py-2 text-right font-semibold">{total}</td>
+            {(() => {
+              let sumSw = 0, sumSc = 0, sumBw = 0, sumBc = 0, sumMw = 0, sumMc = 0;
+              const rows = NOTE_GROUPS.map(g => {
+                const group = song[g.key] || {};
+                const sw = group.shout_white || 0;
+                const sc = group.shout_color || 0;
+                const bw = group.beat_white || 0;
+                const bc = group.beat_color || 0;
+                const mw = group.melody_white || 0;
+                const mc = group.melody_color || 0;
+                const total = sw + sc + bw + bc + mw + mc;
+                if (total === 0) return null;
+                sumSw += sw; sumSc += sc; sumBw += bw; sumBc += bc; sumMw += mw; sumMc += mc;
+                return (
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 font-medium">{g.label}</td>
+                    <td class="px-3 py-2 text-right text-indigo-600 font-mono">×{g.mult.toFixed(1)}</td>
+                    <td class="px-3 py-2 text-right">{sw || '-'}</td>
+                    <td class="px-3 py-2 text-right">{sc || '-'}</td>
+                    <td class="px-3 py-2 text-right">{bw || '-'}</td>
+                    <td class="px-3 py-2 text-right">{bc || '-'}</td>
+                    <td class="px-3 py-2 text-right">{mw || '-'}</td>
+                    <td class="px-3 py-2 text-right">{mc || '-'}</td>
+                    <td class="px-3 py-2 text-right font-semibold">{total}</td>
+                  </tr>
+                );
+              });
+              const grandTotal = sumSw + sumSc + sumBw + sumBc + sumMw + sumMc;
+              return [...rows, grandTotal > 0 && (
+                <tr class="bg-gray-50 font-semibold">
+                  <td class="px-3 py-2">合計</td>
+                  <td class="px-3 py-2"></td>
+                  <td class="px-3 py-2 text-right">{sumSw}</td>
+                  <td class="px-3 py-2 text-right">{sumSc}</td>
+                  <td class="px-3 py-2 text-right">{sumBw}</td>
+                  <td class="px-3 py-2 text-right">{sumBc}</td>
+                  <td class="px-3 py-2 text-right">{sumMw}</td>
+                  <td class="px-3 py-2 text-right">{sumMc}</td>
+                  <td class="px-3 py-2 text-right">{grandTotal}</td>
                 </tr>
-              );
-            })}
+              )];
+            })()}
           </tbody>
         </table>
       </div>
