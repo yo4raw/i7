@@ -14,16 +14,27 @@ No test runner or linter is configured.
 
 ## Architecture
 
-Astro 6 static site for an IDOLiSH7 card database. Data is fetched at build time from Google Sheets via the GViz API and pre-rendered into static HTML. The card list page embeds card data as JSON for client-side filtering/sorting.
+IDOLiSH7 カードデータベースの Astro 6 静的サイト。
 
-### Data Flow
+### 設計原則: 完全静的サイト
 
-Google Sheets (GViz JSON API) → `src/lib/data/fetch*.js` → Astro frontmatter (build time) → static HTML
+- サーバーサイド処理を持たない完全な静的サイトとして動作する
+- スコア計算・フィルタリング・ソート等すべてのロジックはクライアントサイド JavaScript で実行する
+- 各種マスターデータ（カード・楽曲・装備など）の JSON フェッチもクライアントサイドで行う
+- バックエンド API やサーバーサイドランタイムへの依存を導入してはならない
+- 例外: TypeScript 等の altJS 言語のビルド（コンパイル）のみサーバーサイド（ビルド時）に行ってよい。コンパイル後の JavaScript の実行はすべてクライアント端末上で行う
 
-Three data fetchers in `src/lib/data/` parse GViz JSONP responses from a single Google Spreadsheet (`1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4`) with different GIDs:
-- **fetchCardsJson.js** (GID 480354522) — card stats, skills, metadata
-- **fetchSongsJson.js** (GID 1083871743) — song data with complex nested attribute groups (8 groups × 6 sub-columns)
-- **fetchFixedBroachsJson.js** (GID 1087762308) — equipment data linked to cards
+### Data Source
+
+マスターデータは Google Spreadsheet (`1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4`) から GViz JSON API 経由でクライアントサイドでフェッチする。
+
+| データ | GID | フェッチャー |
+|--------|-----|-------------|
+| カード（ステータス・スキル・メタデータ） | 480354522 | `fetchCardsJson.js` |
+| 楽曲（8属性グループ × 6サブカラム） | 1083871743 | `fetchSongsJson.js` |
+| 装備（カード紐付き） | 1087762308 | `fetchFixedBroachsJson.js` |
+
+フェッチャーは `src/lib/data/` に配置。
 
 ### Game Attributes
 
