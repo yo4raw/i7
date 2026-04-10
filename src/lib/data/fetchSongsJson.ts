@@ -23,10 +23,10 @@ export interface Song {
   notes_count: number | null;
   duration: number | null;
   notes_20: SongNoteGroup; //属性値結果 * 1.0
-  light_2: SongNoteGroup; //属性値結果 * 1.1
-  light_3: SongNoteGroup; //属性値結果 * 1.2
-  light_4: SongNoteGroup; //属性値結果 * 1.3
-  light_5: SongNoteGroup; //属性値結果 * 1.4
+  light_2: SongNoteGroup; //属性値結果 * 1.0
+  light_3: SongNoteGroup; //属性値結果 * 1.1
+  light_4: SongNoteGroup; //属性値結果 * 1.2
+  light_5: SongNoteGroup; //属性値結果 * 1.3
   light_6: SongNoteGroup; //属性値結果 * 1.5
   chorus_light_5: SongNoteGroup; //属性値結果 * 2.6
   chorus_light_6: SongNoteGroup; //属性値結果 * 3
