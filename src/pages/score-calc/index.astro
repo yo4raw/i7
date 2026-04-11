@@ -232,6 +232,7 @@ const base = import.meta.env.BASE_URL;
         <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
           スコア計算
         </button>
+        <p id="calc-disabled-reason" class="text-xs text-center text-amber-600"></p>
         <div id="progress-container" class="hidden">
           <div class="w-full bg-gray-200 rounded-full h-2">
             <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
@@ -560,6 +561,7 @@ const base = import.meta.env.BASE_URL;
 
     // --- スコア計算 ---
     function recalculate() {
+      updateCalcButton();
       const filledCards = deck.filter(c => c !== null);
       if (!selectedSong || filledCards.length === 0) {
         $('score-breakdown').classList.add('hidden');
@@ -722,8 +724,22 @@ const base = import.meta.env.BASE_URL;
     // --- 計算ボタン状態 ---
     function updateCalcButton() {
       const btn = $('btn-calculate') as HTMLButtonElement;
+      const reason = $('calc-disabled-reason');
       const hasCards = deck.some(c => c !== null);
-      btn.disabled = !selectedSong || !hasCards;
+
+      if (!selectedSong && !hasCards) {
+        btn.disabled = true;
+        reason.textContent = '楽曲を選択し、カードを1枚以上配置してください';
+      } else if (!selectedSong) {
+        btn.disabled = true;
+        reason.textContent = '楽曲を選択してください';
+      } else if (!hasCards) {
+        btn.disabled = true;
+        reason.textContent = 'カードを1枚以上配置してください';
+      } else {
+        btn.disabled = false;
+        reason.textContent = '';
+      }
     }
 
     // --- 状態保存/復元 ---
