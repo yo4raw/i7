@@ -6,7 +6,7 @@
  *   initRenderer({ base: '/i7/', thumbUrl: 'https://...' });
  */
 
-import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_BORDER_COLOR } from './constants';
+import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from './constants';
 import { attrDonutSvg } from './donutChart';
 
 // --- 設定 ---
@@ -103,7 +103,7 @@ export function imgTag(cardID: number): string {
 
 export const attrBg = ATTR_BG;
 export const attrBgHover = ATTR_BG_HOVER;
-export const attrBorderColor = ATTR_BORDER_COLOR;
+export const attrBorderColor = ATTR_HEX;
 
 export function rowBg(attrColor: string, thumbUrl: string): string {
   return `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.55)), linear-gradient(${attrColor || 'transparent'}, ${attrColor || 'transparent'}), url(${thumbUrl}) no-repeat right 25% / 50% auto`;

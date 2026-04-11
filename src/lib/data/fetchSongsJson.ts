@@ -123,6 +123,13 @@ function convertRow(cells: (GVizCell | null)[]): Song {
 }
 
 /**
+ * 有効な楽曲データのみに絞り込む（カテゴリ・アーティスト・ノーツ数がすべて存在するもの）
+ */
+export function filterValidSongs(songs: Song[]): Song[] {
+  return songs.filter(s => s.category && s.artist && s.notes_count);
+}
+
+/**
  * 楽曲データをGoogle Spreadsheetから取得してネスト構造のJSON配列で返す
  */
 export async function fetchSongsJson(): Promise<Song[]> {

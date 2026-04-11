@@ -71,17 +71,7 @@ export async function fetchSheetRaw(spreadsheetId: string, gid: number): Promise
  * GViz JSON経由でスプレッドシートデータを取得し、クリーンなJSON配列に変換する
  */
 export async function fetchSheetAsJson(spreadsheetId: string, gid: number): Promise<Record<string, string | number | boolean | null>[]> {
-  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`スプレッドシートの取得に失敗: ${response.status} ${response.statusText}`);
-  }
-
-  const text = await response.text();
-  const gvizData = parseGvizResponse(text);
-  const table = gvizData.table;
-
+  const table = await fetchSheetRaw(spreadsheetId, gid);
   const headers = table.cols.map((col, i) => col.label || `column_${i}`);
 
   return table.rows.map((row) => {

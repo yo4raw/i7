@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchSongsJson } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 import { attrDonutSvg } from '../../lib/donutChart';
 
 export async function getStaticPaths() {
-  const allSongs = (await fetchSongsJson() as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
+  const allSongs = filterValidSongs(await fetchSongsJson());
   return allSongs.map((song: any) => ({
     params: { id: String(song.id) },
     props: { song },

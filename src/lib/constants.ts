@@ -20,20 +20,7 @@ export const ATTRIBUTE_MAP: Record<number, string> = {
   3: 'Melody',
 };
 
-/** 属性色: Shout=赤, Beat=緑, Melody=青（属性番号キー） */
-export const ATTRIBUTE_COLORS: Record<number, string> = {
-  1: '#ef4444',  // red - Shout
-  2: '#22c55e',  // green - Beat
-  3: '#3b82f6',  // blue - Melody
-};
-
-export const ATTRIBUTE_BADGE_CLASSES: Record<number, string> = {
-  1: 'bg-red-500',    // Shout
-  2: 'bg-green-500',  // Beat
-  3: 'bg-blue-500',   // Melody
-};
-
-/** 属性色: 属性名キー（クライアントサイドJS用） */
+/** 属性色: 属性名キー */
 export const ATTR_HEX: Record<string, string> = {
   Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6',
 };
@@ -48,10 +35,6 @@ export const ATTR_BG: Record<string, string> = {
 
 export const ATTR_BG_HOVER: Record<string, string> = {
   Shout: 'rgba(239,68,68,0.12)', Beat: 'rgba(34,197,94,0.12)', Melody: 'rgba(59,130,246,0.12)',
-};
-
-export const ATTR_BORDER_COLOR: Record<string, string> = {
-  Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6',
 };
 
 /** レアリティ別バッジ背景色（Tailwindクラス） */

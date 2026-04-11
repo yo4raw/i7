@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { fetchSongsJson } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { CARD_THUMB_BASE_URL } from '../../lib/constants';
 
@@ -11,7 +11,7 @@ const [allCards, allSongsRaw, allBroachs] = await Promise.all([
   fetchFixedBroachsJson(),
 ]);
 
-const allSongs = (allSongsRaw as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
+const allSongs = filterValidSongs(allSongsRaw);
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -838,7 +838,7 @@ const base = import.meta.env.BASE_URL;
     // クライアントサイドデータリフレッシュ
     import { refreshData } from '../../lib/data/clientRefresh';
     import { fetchCardsJson } from '../../lib/data/fetchCardsJson';
-    import { fetchSongsJson } from '../../lib/data/fetchSongsJson';
+    import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson';
     import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson';
 
     refreshData('cards', fetchCardsJson, (fresh) => {
@@ -848,10 +848,7 @@ const base = import.meta.env.BASE_URL;
       recalculate();
     });
 
-    refreshData('songs', async () => {
-      const raw = await fetchSongsJson();
-      return (raw as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
-    }, (fresh) => {
+    refreshData('songs', async () => filterValidSongs(await fetchSongsJson()), (fresh) => {
       allSongs = fresh as Song[];
       if (selectedSong) {
         selectedSong = allSongs.find(s => s.id === selectedSong!.id) || null;

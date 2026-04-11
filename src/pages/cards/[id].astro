@@ -2,10 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
-import { CARD_IMAGE_BASE_URL, ATTRIBUTE_COLORS, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
+import { CARD_IMAGE_BASE_URL, ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
 import { attrDonutSvg } from '../../lib/donutChart';
-
-const ATTR_COLORS = ATTRIBUTE_COLORS;
 
 export async function getStaticPaths() {
   const [cards, broachs] = await Promise.all([fetchCardsJson(), fetchFixedBroachsJson()]);
@@ -31,9 +29,9 @@ const infoRows = [
 ].filter(r => r.value != null && r.value !== '');
 
 const stats = [
-  { label: 'Shout', min: card.shout_min || 0, max: card.shout_max || 0, color: ATTR_COLORS[1] },
-  { label: 'Beat', min: card.beat_min || 0, max: card.beat_max || 0, color: ATTR_COLORS[2] },
-  { label: 'Melody', min: card.melody_min || 0, max: card.melody_max || 0, color: ATTR_COLORS[3] },
+  { label: 'Shout', min: card.shout_min || 0, max: card.shout_max || 0, color: ATTR_HEX.Shout },
+  { label: 'Beat', min: card.beat_min || 0, max: card.beat_max || 0, color: ATTR_HEX.Beat },
+  { label: 'Melody', min: card.melody_min || 0, max: card.melody_max || 0, color: ATTR_HEX.Melody },
 ];
 
 const apSkillLevels = [];
