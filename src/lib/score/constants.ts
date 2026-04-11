@@ -12,6 +12,6 @@ export const LIGHT_MULTIPLIER: Record<string, number> = {
 };
 
 export const SHRINK_MULTIPLIER = 1.6;
-export const MC_ITERATIONS = 1000;
+export const MC_ITERATIONS = 5000;
 export const MC_CHUNK_SIZE = 50;
 export const CENTER_FRIEND_BONUS_RATE = 10;
