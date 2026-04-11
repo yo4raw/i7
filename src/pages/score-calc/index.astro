@@ -1,0 +1,812 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
+import { fetchSongsJson } from '../../lib/data/fetchSongsJson.ts';
+import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
+import { CARD_THUMB_BASE_URL } from '../../lib/constants';
+
+const [allCards, allSongsRaw, allBroachs] = await Promise.all([
+  fetchCardsJson(),
+  fetchSongsJson(),
+  fetchFixedBroachsJson(),
+]);
+
+const allSongs = (allSongsRaw as any[]).filter((s: any) => s.category && s.artist && s.notes_count);
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="スコア計算">
+  <h1 class="text-2xl font-bold mb-6">スコア計算</h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <!-- 左カラム: 楽曲 + オプション + 結果 -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- 楽曲選択 -->
+      <section class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">楽曲</h2>
+        <select id="song-select" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">楽曲を選択</option>
+        </select>
+        <div id="song-info" class="mt-3 hidden">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr><td class="text-gray-500 pr-2 py-1 w-24">楽曲種類</td><td id="song-type" class="py-1 font-medium"></td></tr>
+              <tr><td class="text-gray-500 pr-2 py-1">曲名</td><td id="song-name-val" class="py-1 font-medium"></td></tr>
+              <tr><td class="text-gray-500 pr-2 py-1">アーティスト</td><td id="song-artist" class="py-1 font-medium"></td></tr>
+              <tr><td class="text-gray-500 pr-2 py-1">ノーツ数</td><td id="song-notes" class="py-1 font-medium"></td></tr>
+              <tr><td class="text-gray-500 pr-2 py-1">秒数</td><td id="song-duration-val" class="py-1 font-medium"></td></tr>
+            </tbody>
+          </table>
+          <div class="mt-3 flex items-center gap-4">
+            <div id="song-chart" class="flex-shrink-0"></div>
+            <div id="song-ratios" class="text-xs space-y-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 楽曲属性面積値 -->
+      <section id="area-values-section" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">楽曲属性面積値</h2>
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="text-gray-500">
+              <th class="text-left py-1">属性</th>
+              <th class="text-right py-1">白ノート</th>
+              <th class="text-right py-1">色ノート</th>
+              <th class="text-right py-1">合計</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="py-1 text-red-500 font-medium">Shout</td><td id="area-s-white" class="text-right py-1"></td><td id="area-s-color" class="text-right py-1"></td><td id="area-s-total" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class="py-1 text-green-500 font-medium">Beat</td><td id="area-b-white" class="text-right py-1"></td><td id="area-b-color" class="text-right py-1"></td><td id="area-b-total" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class="py-1 text-blue-500 font-medium">Melody</td><td id="area-m-white" class="text-right py-1"></td><td id="area-m-color" class="text-right py-1"></td><td id="area-m-total" class="text-right py-1 font-bold"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- スキルオプション -->
+      <section class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">スキルオプション</h2>
+        <div class="space-y-2 text-sm">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="opt-scoreup-full" class="rounded" />
+            <span>スコアアップフル発動</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="opt-shrink-full" class="rounded" />
+            <span>判定縮小フル発動</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- スコア内訳 -->
+      <section id="score-breakdown" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">スコア内訳</h2>
+        <table class="w-full text-sm">
+          <tbody>
+            <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
+            <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
+            <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
+            <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class="text-right py-1 text-red-500"></td></tr>
+            <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class="text-right py-1 text-green-500"></td></tr>
+            <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class="text-right py-1 text-blue-500"></td></tr>
+          </tbody>
+        </table>
+        <div class="mt-4 border-t pt-3">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">期待最低値（スキル全不発）</span>
+            <span id="score-min" class="font-medium"></span>
+          </div>
+          <div class="flex justify-between text-sm mt-1">
+            <span class="text-gray-500">期待最高値（スキル全発動）</span>
+            <span id="score-max" class="font-medium"></span>
+          </div>
+        </div>
+        <div class="mt-4 bg-indigo-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-500">MC平均スコア</div>
+          <div id="final-result" class="text-2xl font-bold text-indigo-700">---</div>
+        </div>
+      </section>
+
+      <!-- MC結果 -->
+      <section id="mc-results" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">シミュレーション結果</h2>
+        <table class="w-full text-sm">
+          <tbody>
+            <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">MC 最小</td><td id="mc-min" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">MC 平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class="text-gray-500 py-1">MC 中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">MC 最大</td><td id="mc-max" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
+            <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">試行回数</td><td id="mc-iterations" class="text-right py-1"></td></tr>
+          </tbody>
+        </table>
+        <div id="histogram-container" class="mt-4"></div>
+      </section>
+
+      <!-- スキル発動統計 -->
+      <section id="skill-stats" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">スキル発動統計</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-gray-500 border-b">
+                <th class="text-left py-1">カード名</th>
+                <th class="text-left py-1">スキル</th>
+                <th class="text-right py-1">発動率</th>
+                <th class="text-right py-1">平均発動</th>
+                <th class="text-right py-1">スコア寄与</th>
+              </tr>
+            </thead>
+            <tbody id="skill-stats-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- 右カラム: デッキ -->
+    <div class="lg:col-span-3 space-y-4">
+
+      <!-- デッキスロット -->
+      <section class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">デッキ編成</h2>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="deck-slots">
+          <div class="deck-slot" data-slot="0">
+            <div class="text-[10px] text-center text-indigo-600 font-bold mb-1">センター</div>
+            <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="0">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] text-gray-400 mt-1">選択</span>
+            </div>
+          </div>
+          <div class="deck-slot" data-slot="1">
+            <div class="text-[10px] text-center text-gray-500 mb-1">メンバー2</div>
+            <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="1">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] text-gray-400 mt-1">選択</span>
+            </div>
+          </div>
+          <div class="deck-slot" data-slot="2">
+            <div class="text-[10px] text-center text-gray-500 mb-1">メンバー3</div>
+            <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="2">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] text-gray-400 mt-1">選択</span>
+            </div>
+          </div>
+          <div class="deck-slot" data-slot="3">
+            <div class="text-[10px] text-center text-gray-500 mb-1">メンバー4</div>
+            <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="3">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] text-gray-400 mt-1">選択</span>
+            </div>
+          </div>
+          <div class="deck-slot" data-slot="4">
+            <div class="text-[10px] text-center text-gray-500 mb-1">メンバー5</div>
+            <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="4">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] text-gray-400 mt-1">選択</span>
+            </div>
+          </div>
+          <div class="deck-slot" data-slot="5">
+            <div class="text-[10px] text-center text-amber-600 font-bold mb-1">フレンド</div>
+            <div class="slot-content border-2 border-dashed border-amber-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-colors" data-slot-btn="5">
+              <svg class="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] text-amber-400 mt-1">選択</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- カード詳細テーブル -->
+      <section id="card-detail-section" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">カード詳細</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-gray-500 border-b">
+                <th class="text-left py-1 px-1">スロット</th>
+                <th class="text-left py-1 px-1">カード名</th>
+                <th class="text-right py-1 px-1 text-red-500">Shout</th>
+                <th class="text-right py-1 px-1 text-green-500">Beat</th>
+                <th class="text-right py-1 px-1 text-blue-500">Melody</th>
+                <th class="text-right py-1 px-1">ブローチS</th>
+                <th class="text-right py-1 px-1">ブローチB</th>
+                <th class="text-right py-1 px-1">ブローチM</th>
+                <th class="text-left py-1 px-1">スキル</th>
+                <th class="text-right py-1 px-1">カウント</th>
+                <th class="text-right py-1 px-1">確率</th>
+                <th class="text-right py-1 px-1">スコアアップ</th>
+              </tr>
+            </thead>
+            <tbody id="card-detail-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 計算ボタン -->
+      <div class="space-y-2">
+        <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          スコア計算
+        </button>
+        <div id="progress-container" class="hidden">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- カード選択モーダル -->
+  <div id="card-picker-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" id="modal-backdrop"></div>
+    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-lg shadow-xl max-h-[85vh] flex flex-col mx-4 sm:mx-auto">
+      <div class="p-4 border-b flex-shrink-0">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-gray-700">カード選択 - <span id="modal-slot-label"></span></h3>
+          <button id="modal-close-x" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <input type="text" id="modal-search" placeholder="カード名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <select id="modal-rarity" class="border border-gray-300 rounded px-2 py-1.5 text-sm">
+            <option value="">レアリティ</option>
+            <option value="UR">UR</option>
+            <option value="SSR">SSR</option>
+            <option value="SR">SR</option>
+            <option value="R">R</option>
+          </select>
+          <select id="modal-attribute" class="border border-gray-300 rounded px-2 py-1.5 text-sm">
+            <option value="">属性</option>
+            <option value="Shout">Shout</option>
+            <option value="Beat">Beat</option>
+            <option value="Melody">Melody</option>
+          </select>
+        </div>
+        <div class="mt-2 flex items-center gap-3">
+          <label class="flex items-center gap-1 text-xs">
+            <input type="checkbox" id="modal-owned-only" checked />
+            <span>所持カードのみ</span>
+          </label>
+          <span id="modal-result-count" class="text-xs text-gray-500"></span>
+        </div>
+      </div>
+      <div id="modal-card-list" class="overflow-y-auto flex-1 p-2"></div>
+      <div class="p-3 border-t flex justify-between flex-shrink-0">
+        <button id="modal-clear" class="text-sm text-red-500 hover:underline">枠をクリア</button>
+        <button id="modal-close" class="px-4 py-1.5 bg-gray-200 rounded text-sm hover:bg-gray-300">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
+  <script type="application/json" id="song-data" set:html={JSON.stringify(allSongs)}></script>
+  <script type="application/json" id="broach-data" set:html={JSON.stringify(allBroachs)}></script>
+  <script define:vars={{ base, CARD_THUMB_BASE_URL }}>
+    window.__BASE_URL__ = base;
+    window.__CARD_THUMB_BASE_URL__ = CARD_THUMB_BASE_URL;
+  </script>
+
+  <script>
+    import type { Card } from '../../lib/data/fetchCardsJson';
+    import type { Song } from '../../lib/data/fetchSongsJson';
+    import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
+    import type { ComputedTeam, SimulationResult } from '../../lib/score/types';
+    import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes } from '../../lib/score/engine';
+    import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
+    import { renderHistogramSvg } from '../../lib/score/histogram';
+    import { attrDonutSvg } from '../../lib/donutChart';
+    import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTRIBUTE_MAP } from '../../lib/constants';
+    import { loadCounts } from '../../lib/cardListRenderer';
+
+    const thumbUrl = (window as any).__CARD_THUMB_BASE_URL__ || '';
+
+    const allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    const allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
+    const allBroachs: FixedBroach[] = JSON.parse(document.getElementById('broach-data')!.textContent!);
+
+    const $ = (id: string) => document.getElementById(id)!;
+
+    // --- 状態 ---
+    let selectedSong: Song | null = null;
+    let deck: (Card | null)[] = [null, null, null, null, null, null];
+    let activeModalSlot = -1;
+    let simulationResult: SimulationResult | null = null;
+
+    const SLOT_LABELS = ['センター', 'メンバー2', 'メンバー3', 'メンバー4', 'メンバー5', 'フレンド'];
+
+    // --- 属性正規化 ---
+    function normalizeAttr(attr: string | number | null): string {
+      if (typeof attr === 'number') return ATTRIBUTE_MAP[attr] || 'Shout';
+      const num = Number(attr);
+      if (!isNaN(num) && ATTRIBUTE_MAP[num]) return ATTRIBUTE_MAP[num];
+      return attr as string || 'Shout';
+    }
+
+    // --- 楽曲選択 ---
+    function initSongSelect() {
+      const sel = $('song-select') as HTMLSelectElement;
+      // カテゴリ別にグルーピング
+      const groups = new Map<string, Song[]>();
+      for (const s of allSongs) {
+        const cat = s.category || 'その他';
+        if (!groups.has(cat)) groups.set(cat, []);
+        groups.get(cat)!.push(s);
+      }
+      for (const [cat, songs] of groups) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = cat;
+        for (const s of songs) {
+          const opt = document.createElement('option');
+          opt.value = String(s.id);
+          opt.textContent = `${s.song_name} (${s.difficulty || ''})`;
+          optgroup.appendChild(opt);
+        }
+        sel.appendChild(optgroup);
+      }
+      sel.addEventListener('change', () => {
+        const id = Number(sel.value);
+        selectedSong = allSongs.find(s => s.id === id) || null;
+        renderSongInfo();
+        recalculate();
+        saveState();
+      });
+    }
+
+    function renderSongInfo() {
+      const info = $('song-info');
+      if (!selectedSong) {
+        info.classList.add('hidden');
+        $('area-values-section').classList.add('hidden');
+        return;
+      }
+      info.classList.remove('hidden');
+      $('song-type').textContent = selectedSong.song_type || '-';
+      $('song-name-val').textContent = selectedSong.song_name || '-';
+      $('song-artist').textContent = selectedSong.artist || '-';
+      $('song-notes').textContent = (selectedSong.notes_count || 0).toLocaleString();
+      $('song-duration-val').textContent = `${selectedSong.duration || '-'}秒`;
+
+      const sr = selectedSong.shout_ratio || 0;
+      const br = selectedSong.beat_ratio || 0;
+      const mr = selectedSong.melody_ratio || 0;
+      $('song-chart').innerHTML = attrDonutSvg(sr, br, mr, { sizeClass: 'w-20 h-20' });
+      $('song-ratios').innerHTML = `
+        <div style="color:${ATTR_HEX.Shout}">Shout: ${Math.round(sr * 100)}%</div>
+        <div style="color:${ATTR_HEX.Beat}">Beat: ${Math.round(br * 100)}%</div>
+        <div style="color:${ATTR_HEX.Melody}">Melody: ${Math.round(mr * 100)}%</div>
+      `;
+    }
+
+    // --- デッキスロット表示 ---
+    function renderDeckSlots() {
+      for (let i = 0; i < 6; i++) {
+        const card = deck[i];
+        const container = document.querySelector(`[data-slot-btn="${i}"]`) as HTMLElement;
+        if (!container) continue;
+
+        if (!card) {
+          const isFriend = i === 5;
+          container.className = `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-indigo-50'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
+          container.innerHTML = `
+            <svg class="w-8 h-8 ${isFriend ? 'text-amber-300' : 'text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="text-[10px] ${isFriend ? 'text-amber-400' : 'text-gray-400'} mt-1">選択</span>`;
+          continue;
+        }
+
+        const attr = normalizeAttr(card.attribute);
+        const attrColor = ATTR_HEX[attr] || '#6b7280';
+        const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
+        const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
+
+        container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
+        container.style.borderColor = attrColor;
+        container.innerHTML = `
+          <img src="${thumbUrl}/${card.ID}.png" alt="" class="w-full max-w-[60px] h-auto rounded mb-1"
+            onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
+          <div class="flex gap-0.5 mb-1">
+            <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
+            <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBgClass}">${attr}</span>
+          </div>
+          <div class="text-[9px] text-gray-600 text-center truncate w-full" title="${card.cardname || ''}">${card.cardname || ''}</div>
+          <div class="text-[8px] text-gray-400 text-center">${card.name || ''}</div>`;
+      }
+
+      renderCardDetailTable();
+      updateCalcButton();
+    }
+
+    function renderCardDetailTable() {
+      const filledCards = deck.filter(c => c !== null);
+      if (filledCards.length === 0) {
+        $('card-detail-section').classList.add('hidden');
+        return;
+      }
+      $('card-detail-section').classList.remove('hidden');
+
+      const rows = deck.map((card, i) => {
+        if (!card) return '';
+        const attr = normalizeAttr(card.attribute);
+        const broachs = i < 5 ? allBroachs.filter(b => b.card_id === card.cardID) : [];
+        const bS = broachs.reduce((s, b) => s + (b.shout || 0), 0);
+        const bB = broachs.reduce((s, b) => s + (b.beat || 0), 0);
+        const bM = broachs.reduce((s, b) => s + (b.melody || 0), 0);
+        const skillType = card.ap_skill_type || '-';
+        const count = card.ap_skill_5_count ?? '-';
+        const per = card.ap_skill_5_per != null ? `${card.ap_skill_5_per}%` : '-';
+        const value = card.ap_skill_5_value != null ? card.ap_skill_5_value.toLocaleString() : '-';
+
+        return `<tr class="border-t">
+          <td class="py-1 px-1 text-[10px] ${i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}">${SLOT_LABELS[i]}</td>
+          <td class="py-1 px-1">${card.cardname || ''}</td>
+          <td class="py-1 px-1 text-right text-red-500">${(card.shout_max || 0).toLocaleString()}</td>
+          <td class="py-1 px-1 text-right text-green-500">${(card.beat_max || 0).toLocaleString()}</td>
+          <td class="py-1 px-1 text-right text-blue-500">${(card.melody_max || 0).toLocaleString()}</td>
+          <td class="py-1 px-1 text-right">${bS || '-'}</td>
+          <td class="py-1 px-1 text-right">${bB || '-'}</td>
+          <td class="py-1 px-1 text-right">${bM || '-'}</td>
+          <td class="py-1 px-1">${skillType}</td>
+          <td class="py-1 px-1 text-right">${count}</td>
+          <td class="py-1 px-1 text-right">${per}</td>
+          <td class="py-1 px-1 text-right">${value}</td>
+        </tr>`;
+      }).join('');
+
+      $('card-detail-body').innerHTML = rows;
+    }
+
+    // --- カード選択モーダル ---
+    function openCardPicker(slotIndex: number) {
+      activeModalSlot = slotIndex;
+      $('modal-slot-label').textContent = SLOT_LABELS[slotIndex];
+
+      // フレンドスロットは所持フィルタOFF
+      const ownedCheckbox = $('modal-owned-only') as HTMLInputElement;
+      if (slotIndex === 5) {
+        ownedCheckbox.checked = false;
+      } else {
+        ownedCheckbox.checked = true;
+      }
+
+      // フィルタリセット
+      ($('modal-search') as HTMLInputElement).value = '';
+      ($('modal-rarity') as HTMLSelectElement).value = '';
+      ($('modal-attribute') as HTMLSelectElement).value = '';
+
+      renderModalCards();
+      $('card-picker-modal').classList.remove('hidden');
+      ($('modal-search') as HTMLInputElement).focus();
+    }
+
+    function closeCardPicker() {
+      $('card-picker-modal').classList.add('hidden');
+      activeModalSlot = -1;
+    }
+
+    function renderModalCards() {
+      const text = ($('modal-search') as HTMLInputElement).value.toLowerCase();
+      const rarity = ($('modal-rarity') as HTMLSelectElement).value;
+      const attribute = ($('modal-attribute') as HTMLSelectElement).value;
+      const ownedOnly = ($('modal-owned-only') as HTMLInputElement).checked;
+      const counts = loadCounts();
+
+      // デッキに既に入っているカードIDを除外
+      const usedIds = new Set(deck.filter(c => c !== null).map(c => c!.ID));
+      // 現在編集中のスロットのカードは除外しない
+      if (deck[activeModalSlot]) usedIds.delete(deck[activeModalSlot]!.ID);
+
+      let filtered = allCards.filter(card => {
+        if (usedIds.has(card.ID!)) return false;
+        if (ownedOnly && !(counts[String(card.ID)] >= 1)) return false;
+        if (text) {
+          const name = (card.cardname || '').toLowerCase();
+          const charName = (card.name || '').toLowerCase();
+          if (!name.includes(text) && !charName.includes(text)) return false;
+        }
+        if (rarity && card.rarity !== rarity) return false;
+        if (attribute && normalizeAttr(card.attribute) !== attribute) return false;
+        return true;
+      });
+
+      // ID降順（新しい順）
+      filtered.sort((a, b) => (b.ID || 0) - (a.ID || 0));
+
+      $('modal-result-count').textContent = `${filtered.length}件`;
+
+      const html = filtered.slice(0, 200).map(card => {
+        const attr = normalizeAttr(card.attribute);
+        const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
+        const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
+        const total = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
+
+        return `<div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border-b border-gray-100" data-pick-card="${card.ID}">
+          <img src="${thumbUrl}/${card.ID}.png" alt="" class="w-10 h-auto rounded flex-shrink-0"
+            onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1">
+              <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
+              <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBgClass}">${attr}</span>
+              <span class="text-xs font-medium truncate">${card.cardname || ''}</span>
+            </div>
+            <div class="text-[10px] text-gray-500">${card.name || ''} | 合計: ${total.toLocaleString()} | ${card.ap_skill_type || '-'}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      $('modal-card-list').innerHTML = html || '<p class="text-sm text-gray-400 text-center py-8">該当するカードがありません</p>';
+
+      // カード選択イベント
+      document.querySelectorAll('[data-pick-card]').forEach(el => {
+        el.addEventListener('click', () => {
+          const cardId = Number((el as HTMLElement).dataset.pickCard);
+          const card = allCards.find(c => c.ID === cardId);
+          if (card && activeModalSlot >= 0) {
+            deck[activeModalSlot] = card;
+            closeCardPicker();
+            renderDeckSlots();
+            recalculate();
+            saveState();
+          }
+        });
+      });
+    }
+
+    // --- スコア計算 ---
+    function recalculate() {
+      const filledCards = deck.filter(c => c !== null);
+      if (!selectedSong || filledCards.length === 0) {
+        $('score-breakdown').classList.add('hidden');
+        $('area-values-section').classList.add('hidden');
+        $('mc-results').classList.add('hidden');
+        $('skill-stats').classList.add('hidden');
+        $('final-result').textContent = '---';
+        simulationResult = null;
+        return;
+      }
+
+      const team = computeTeam(deck, allBroachs, selectedSong);
+      const notes = flattenNotes(selectedSong, 42);
+
+      // スコア内訳表示
+      $('score-breakdown').classList.remove('hidden');
+      const rawTotal = team.rawShout + team.rawBeat + team.rawMelody;
+      const broachTotal = team.broachShout + team.broachBeat + team.broachMelody;
+      const teamTotal = team.Shout + team.Beat + team.Melody;
+      const bonusTotal = teamTotal - rawTotal - broachTotal;
+
+      $('stat-base').textContent = rawTotal.toLocaleString();
+      $('stat-broach').textContent = broachTotal > 0 ? `+${broachTotal.toLocaleString()}` : '-';
+      $('stat-bonus').textContent = bonusTotal > 0 ? `+${bonusTotal.toLocaleString()}` : '-';
+      $('stat-team-total').textContent = teamTotal.toLocaleString();
+      $('stat-team-s').textContent = team.Shout.toLocaleString();
+      $('stat-team-b').textContent = team.Beat.toLocaleString();
+      $('stat-team-m').textContent = team.Melody.toLocaleString();
+
+      // 確定スコア
+      const minScore = calcMinScore(team, notes);
+      const maxScore = calcMaxScore(team, notes);
+      $('score-min').textContent = minScore.toLocaleString();
+      $('score-max').textContent = maxScore.toLocaleString();
+
+      // 楽曲属性面積値
+      renderAreaValues(team, selectedSong);
+
+      // MC結果はリセット
+      $('mc-results').classList.add('hidden');
+      $('skill-stats').classList.add('hidden');
+      $('final-result').textContent = '---';
+      simulationResult = null;
+    }
+
+    function renderAreaValues(team: ComputedTeam, song: Song) {
+      $('area-values-section').classList.remove('hidden');
+
+      // 各属性の面積値 = チームアピール値 × ノート係数 × ノート数
+      const calcArea = (attrVal: number, totalWhite: number, totalColor: number) => {
+        const white = Math.floor(attrVal * NOTE_RATE.white * totalWhite);
+        const color = Math.floor(attrVal * NOTE_RATE.color * totalColor);
+        return { white, color, total: white + color };
+      };
+
+      // 楽曲全体のライト倍率加重ノート数を計算
+      let sWhiteWeighted = 0, sColorWeighted = 0;
+      let bWhiteWeighted = 0, bColorWeighted = 0;
+      let mWhiteWeighted = 0, mColorWeighted = 0;
+
+      for (const [groupKey, mult] of Object.entries(LIGHT_MULTIPLIER)) {
+        const g = song[groupKey] as any;
+        if (!g) continue;
+        sWhiteWeighted += (g.shout_white || 0) * mult;
+        sColorWeighted += (g.shout_color || 0) * mult;
+        bWhiteWeighted += (g.beat_white || 0) * mult;
+        bColorWeighted += (g.beat_color || 0) * mult;
+        mWhiteWeighted += (g.melody_white || 0) * mult;
+        mColorWeighted += (g.melody_color || 0) * mult;
+      }
+
+      const sArea = { white: Math.floor(team.Shout * NOTE_RATE.white * sWhiteWeighted), color: Math.floor(team.Shout * NOTE_RATE.color * sColorWeighted) };
+      const bArea = { white: Math.floor(team.Beat * NOTE_RATE.white * bWhiteWeighted), color: Math.floor(team.Beat * NOTE_RATE.color * bColorWeighted) };
+      const mArea = { white: Math.floor(team.Melody * NOTE_RATE.white * mWhiteWeighted), color: Math.floor(team.Melody * NOTE_RATE.color * mColorWeighted) };
+
+      $('area-s-white').textContent = sArea.white.toLocaleString();
+      $('area-s-color').textContent = sArea.color.toLocaleString();
+      $('area-s-total').textContent = (sArea.white + sArea.color).toLocaleString();
+      $('area-b-white').textContent = bArea.white.toLocaleString();
+      $('area-b-color').textContent = bArea.color.toLocaleString();
+      $('area-b-total').textContent = (bArea.white + bArea.color).toLocaleString();
+      $('area-m-white').textContent = mArea.white.toLocaleString();
+      $('area-m-color').textContent = mArea.color.toLocaleString();
+      $('area-m-total').textContent = (mArea.white + mArea.color).toLocaleString();
+    }
+
+    // --- MC実行 ---
+    async function runMC() {
+      if (!selectedSong || deck.filter(c => c !== null).length === 0) return;
+
+      const btn = $('btn-calculate') as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = '計算中...';
+      $('progress-container').classList.remove('hidden');
+
+      const team = computeTeam(deck, allBroachs, selectedSong);
+      const notes = flattenNotes(selectedSong, 42);
+
+      // スキルオプションの適用
+      const forceScoreUp = ($('opt-scoreup-full') as HTMLInputElement).checked;
+      const forceShrink = ($('opt-shrink-full') as HTMLInputElement).checked;
+
+      // フル発動の場合はper=100にオーバーライド
+      if (forceScoreUp || forceShrink) {
+        for (const dc of team.cards) {
+          if (!dc.skill) continue;
+          if (forceScoreUp && (dc.skill.skillType === 'scoreUp' || dc.skill.skillType === 'timerScoreUp')) {
+            dc.skill.per = 100;
+          }
+          if (forceShrink && dc.skill.isShrink) {
+            dc.skill.per = 100;
+          }
+        }
+      }
+
+      const result = await runSimulation(team, notes, MC_ITERATIONS, (pct) => {
+        const percent = Math.round(pct * 100);
+        ($('progress-bar') as HTMLElement).style.width = `${percent}%`;
+        $('progress-text').textContent = `計算中... ${percent}%`;
+      });
+
+      simulationResult = result;
+
+      // 結果表示
+      $('final-result').textContent = result.mean.toLocaleString();
+
+      $('mc-results').classList.remove('hidden');
+      $('mc-min-bound').textContent = result.minScore.toLocaleString();
+      $('mc-min').textContent = result.mcMin.toLocaleString();
+      $('mc-mean').textContent = result.mean.toLocaleString();
+      $('mc-median').textContent = result.median.toLocaleString();
+      $('mc-max').textContent = result.mcMax.toLocaleString();
+      $('mc-max-bound').textContent = result.maxScore.toLocaleString();
+      $('mc-stddev').textContent = result.stddev.toLocaleString();
+      $('mc-p90').textContent = result.p90.toLocaleString();
+      $('mc-iterations').textContent = MC_ITERATIONS.toLocaleString();
+
+      // ヒストグラム
+      $('histogram-container').innerHTML = renderHistogramSvg(result.scores, result.minScore, result.maxScore, result.mean);
+
+      // スキル発動統計
+      if (result.cardStats.length > 0) {
+        $('skill-stats').classList.remove('hidden');
+        $('skill-stats-body').innerHTML = result.cardStats.map(cs => `
+          <tr class="border-t">
+            <td class="py-1">${cs.cardname}</td>
+            <td class="py-1">${cs.skillType}</td>
+            <td class="py-1 text-right">${cs.theoreticalRate}%</td>
+            <td class="py-1 text-right">${cs.avgActivations.toFixed(1)}回</td>
+            <td class="py-1 text-right">+${Math.round(cs.avgScoreContribution).toLocaleString()}</td>
+          </tr>`).join('');
+      }
+
+      // UI復元
+      btn.disabled = false;
+      btn.textContent = 'スコア計算';
+      $('progress-container').classList.add('hidden');
+    }
+
+    // --- 計算ボタン状態 ---
+    function updateCalcButton() {
+      const btn = $('btn-calculate') as HTMLButtonElement;
+      const hasCards = deck.some(c => c !== null);
+      btn.disabled = !selectedSong || !hasCards;
+    }
+
+    // --- 状態保存/復元 ---
+    function saveState() {
+      const state = {
+        songId: selectedSong?.id ?? null,
+        deckIds: deck.map(c => c?.ID ?? null),
+      };
+      try { localStorage.setItem('i7_score_calc_state', JSON.stringify(state)); } catch {}
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem('i7_score_calc_state');
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (state.songId != null) {
+          const song = allSongs.find(s => s.id === state.songId);
+          if (song) {
+            selectedSong = song;
+            ($('song-select') as HTMLSelectElement).value = String(song.id);
+            renderSongInfo();
+          }
+        }
+        if (Array.isArray(state.deckIds)) {
+          for (let i = 0; i < 6; i++) {
+            const id = state.deckIds[i];
+            if (id != null) {
+              deck[i] = allCards.find(c => c.ID === id) || null;
+            }
+          }
+          renderDeckSlots();
+          recalculate();
+        }
+      } catch {}
+    }
+
+    // --- イベント登録 ---
+    function init() {
+      initSongSelect();
+
+      // デッキスロットクリック
+      document.querySelectorAll('[data-slot-btn]').forEach(el => {
+        el.addEventListener('click', () => {
+          const slot = Number((el as HTMLElement).dataset.slotBtn);
+          openCardPicker(slot);
+        });
+      });
+
+      // モーダル
+      $('modal-backdrop').addEventListener('click', closeCardPicker);
+      $('modal-close').addEventListener('click', closeCardPicker);
+      $('modal-close-x').addEventListener('click', closeCardPicker);
+      $('modal-clear').addEventListener('click', () => {
+        if (activeModalSlot >= 0) {
+          deck[activeModalSlot] = null;
+          closeCardPicker();
+          renderDeckSlots();
+          recalculate();
+          saveState();
+        }
+      });
+
+      // モーダルフィルタ
+      let modalDebounce: ReturnType<typeof setTimeout>;
+      $('modal-search').addEventListener('input', () => {
+        clearTimeout(modalDebounce);
+        modalDebounce = setTimeout(renderModalCards, 200);
+      });
+      for (const id of ['modal-rarity', 'modal-attribute']) {
+        $(id).addEventListener('change', renderModalCards);
+      }
+      $('modal-owned-only').addEventListener('change', renderModalCards);
+
+      // 計算ボタン
+      $('btn-calculate').addEventListener('click', runMC);
+
+      // スキルオプション変更時に再計算
+      $('opt-scoreup-full').addEventListener('change', recalculate);
+      $('opt-shrink-full').addEventListener('change', recalculate);
+
+      // 状態復元
+      restoreState();
+      updateCalcButton();
+    }
+
+    init();
+  </script>
+</BaseLayout>
