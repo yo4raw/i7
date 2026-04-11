@@ -116,7 +116,7 @@ const base = import.meta.env.BASE_URL;
 
     const renderOpts = { enableNameFilter: true };
 
-    const allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    let allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     let filtered: CardListItem[] = [];
     let currentPage = 1;
 
@@ -293,5 +293,13 @@ const base = import.meta.env.BASE_URL;
     // URLからフィルタ復元して初期表示
     restoreFromUrl();
     applyFilters();
+
+    // クライアントサイドデータリフレッシュ
+    import { refreshData } from '../../lib/data/clientRefresh';
+    import { fetchCardsJson } from '../../lib/data/fetchCardsJson';
+    refreshData('cards', fetchCardsJson, (fresh) => {
+      allCards = fresh as CardListItem[];
+      applyFilters();
+    });
   </script>
 </BaseLayout>

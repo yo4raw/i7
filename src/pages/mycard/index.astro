@@ -67,7 +67,7 @@ const base = import.meta.env.BASE_URL;
 
     initRenderer({ base, thumbUrl: THUMB_URL });
 
-    const allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    let allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     const $ = (id: string) => document.getElementById(id)!;
 
     function render() {
@@ -99,5 +99,13 @@ const base = import.meta.env.BASE_URL;
     }
 
     render();
+
+    // クライアントサイドデータリフレッシュ
+    import { refreshData } from '../../lib/data/clientRefresh';
+    import { fetchCardsJson } from '../../lib/data/fetchCardsJson';
+    refreshData('cards', fetchCardsJson, (fresh) => {
+      allCards = fresh as CardListItem[];
+      render();
+    });
   </script>
 </BaseLayout>
