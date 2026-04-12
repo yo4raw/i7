@@ -32,6 +32,7 @@ export interface DeckCard {
   broachBeat: number;
   broachMelody: number;
   slotIndex: number;
+  bonusMultiplier: number;
 }
 
 export interface ComputedTeam {

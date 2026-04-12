@@ -8,7 +8,9 @@ import type {
 import {
   NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
   MC_CHUNK_SIZE, CENTER_FRIEND_BONUS_RATE,
+  EVENT_BONUS_MULTIPLIER,
 } from './constants';
+import type { EventBonusTier } from './constants';
 import { XorShift128Plus } from './rng';
 import { flattenNotes } from './noteFlattener';
 import { ATTRIBUTE_MAP } from '../constants';
@@ -58,6 +60,8 @@ export function computeTeam(
   deck: (Card | null)[],
   allBroachs: FixedBroach[],
   song: Song,
+  bonusTiers?: EventBonusTier[],
+  trainedFlags?: boolean[],
 ): ComputedTeam {
   const cards: DeckCard[] = [];
 
@@ -72,9 +76,17 @@ export function computeTeam(
     const card = deck[i];
     if (!card) continue;
 
-    const s = card.shout_max || 0;
-    const b = card.beat_max || 0;
-    const m = card.melody_max || 0;
+    const bonusTier = bonusTiers?.[i] || 'none';
+    const bonusMult = EVENT_BONUS_MULTIPLIER[bonusTier];
+    const trained = trainedFlags?.[i] ?? true;
+
+    const baseShout = trained ? (card.shout_max || 0) : (card.shout_min || 0);
+    const baseBeat = trained ? (card.beat_max || 0) : (card.beat_min || 0);
+    const baseMelody = trained ? (card.melody_max || 0) : (card.melody_min || 0);
+
+    const s = Math.floor(baseShout * bonusMult);
+    const b = Math.floor(baseBeat * bonusMult);
+    const m = Math.floor(baseMelody * bonusMult);
     rawShout += s;
     rawBeat += b;
     rawMelody += m;
@@ -108,6 +120,7 @@ export function computeTeam(
       broachBeat: bBeat,
       broachMelody: bMelody,
       slotIndex: i,
+      bonusMultiplier: bonusMult,
     });
   }
 

@@ -15,3 +15,12 @@ export const SHRINK_MULTIPLIER = 1.6;
 export const MC_ITERATIONS = 5000;
 export const MC_CHUNK_SIZE = 50;
 export const CENTER_FRIEND_BONUS_RATE = 10;
+
+export type EventBonusTier = 'none' | 'bronze' | 'silver' | 'gold';
+
+export const EVENT_BONUS_MULTIPLIER: Record<EventBonusTier, number> = {
+  none: 1.0,
+  bronze: 1.5,
+  silver: 2.0,
+  gold: 3.0,
+};
