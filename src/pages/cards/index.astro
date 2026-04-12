@@ -89,8 +89,17 @@ const base = import.meta.env.BASE_URL;
     <div id="mobile-cards" class="md:hidden space-y-3"></div>
   </div>
 
-  <!-- ページネーション -->
-  <div id="pagination" class="mt-6 flex flex-wrap items-center justify-center gap-2"></div>
+  <!-- 無限スクロール sentinel -->
+  <div id="scroll-sentinel" class="mt-6 flex justify-center py-8">
+    <span id="loading-indicator" class="text-sm text-gray-400">
+      <svg class="animate-spin inline-block h-4 w-4 mr-1 align-text-bottom text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      読み込み中…
+    </span>
+    <span id="end-indicator" class="hidden text-sm text-gray-400">すべてのカードを表示しました</span>
+  </div>
 
   <!-- ビルド時に埋め込んだカードデータ -->
   <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
@@ -104,8 +113,8 @@ const base = import.meta.env.BASE_URL;
   <script>
     import {
       initRenderer, type CardListItem,
-      loadCounts, getCount, setCount,
-      renderTableRow, renderMobileCard, bindCountEvents,
+      getCount, setCount,
+      renderTableRow, renderMobileCard,
     } from '../../lib/cardListRenderer';
 
     const base = (window as any).__BASE_URL__ || '/i7/';
@@ -118,70 +127,104 @@ const base = import.meta.env.BASE_URL;
 
     let allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     let filtered: CardListItem[] = [];
-    let currentPage = 1;
+    let loadedPages = 0;
+    let hasMore = true;
+    let isLoading = false;
+    let currentVisiblePage = 1;
+    let initialTargetPage = 1;
+    let scrollObserver: IntersectionObserver | null = null;
+    let scrollRafId = 0;
 
     const $ = (id: string) => document.getElementById(id)!;
 
-    function renderPage() {
-      const start = (currentPage - 1) * PAGE_SIZE;
+    /* ---------- リスト操作 ---------- */
+
+    function clearList() {
+      $('table-body').innerHTML = '';
+      $('mobile-cards').innerHTML = '';
+      loadedPages = 0;
+      hasMore = true;
+      currentVisiblePage = 1;
+    }
+
+    function loadNextPage(): boolean {
+      if (!hasMore || isLoading) return false;
+      isLoading = true;
+
+      loadedPages++;
+      const start = (loadedPages - 1) * PAGE_SIZE;
       const page = filtered.slice(start, start + PAGE_SIZE);
 
-      // htmx.swap でDOM更新
-      const tableHtml = page.map(c => renderTableRow(c, renderOpts)).join('');
-      const mobileHtml = page.map(c => renderMobileCard(c, renderOpts)).join('');
-
-      if (typeof (window as any).htmx !== 'undefined') {
-        (window as any).htmx.swap($('table-body'), tableHtml, { swapStyle: 'innerHTML' });
-        (window as any).htmx.swap($('mobile-cards'), mobileHtml, { swapStyle: 'innerHTML' });
-      } else {
-        $('table-body').innerHTML = tableHtml;
-        $('mobile-cards').innerHTML = mobileHtml;
+      if (page.length === 0) {
+        loadedPages--;
+        hasMore = false;
+        isLoading = false;
+        updateLoadingState();
+        return false;
       }
 
-      // ページネーション
-      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-      let pagHtml = '';
-      const btn = (p: number, label: string, active: boolean) =>
-        `<button data-page="${p}" class="px-3 py-1 rounded text-sm ${active ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}">${label}</button>`;
+      // ページ境界マーカー（スクロール位置 → URL 追跡用）
+      const markerTr = `<tr data-page-marker="${loadedPages}" aria-hidden="true" style="height:0"><td colspan="12" style="height:0;padding:0;border:0"></td></tr>`;
+      const markerDiv = `<div data-page-marker="${loadedPages}" aria-hidden="true"></div>`;
 
-      if (currentPage > 1) pagHtml += btn(currentPage - 1, '&laquo; 前', false);
-      for (let p = 1; p <= totalPages; p++) {
-        if (totalPages <= 7 || p <= 2 || p >= totalPages - 1 || Math.abs(p - currentPage) <= 1) {
-          pagHtml += btn(p, String(p), p === currentPage);
-        } else if (p === 3 && currentPage > 4) {
-          pagHtml += '<span class="px-2 text-gray-400">...</span>';
-        } else if (p === totalPages - 2 && currentPage < totalPages - 3) {
-          pagHtml += '<span class="px-2 text-gray-400">...</span>';
-        }
-      }
-      if (currentPage < totalPages) pagHtml += btn(currentPage + 1, '次 &raquo;', false);
+      const tableHtml = markerTr + page.map(c => renderTableRow(c, renderOpts)).join('');
+      const mobileHtml = markerDiv + page.map(c => renderMobileCard(c, renderOpts)).join('');
 
-      const pagEl = $('pagination');
-      pagEl.innerHTML = pagHtml;
-      pagEl.querySelectorAll('button[data-page]').forEach(b => {
-        b.addEventListener('click', () => {
-          currentPage = Number((b as HTMLElement).dataset.page);
-          renderPage();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-      });
+      $('table-body').insertAdjacentHTML('beforeend', tableHtml);
+      $('mobile-cards').insertAdjacentHTML('beforeend', mobileHtml);
 
-      $('result-count').textContent = `${filtered.length}件中 ${start + 1}~${Math.min(start + PAGE_SIZE, filtered.length)}件を表示`;
+      hasMore = page.length === PAGE_SIZE;
+      isLoading = false;
 
-      // カード名クリック → 同名カードでフィルタ
-      document.querySelectorAll<HTMLElement>('[data-filter-cardname]').forEach(el => {
-        el.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const name = el.dataset.filterCardname || '';
-          ($('search-text') as HTMLInputElement).value = name;
-          applyFilters();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-      });
-
-      bindCountEvents();
+      updateResultCount();
+      updateLoadingState();
+      return hasMore;
     }
+
+    function updateResultCount() {
+      const loaded = Math.min(loadedPages * PAGE_SIZE, filtered.length);
+      $('result-count').textContent = filtered.length === loaded
+        ? `全${filtered.length}件を表示`
+        : `${filtered.length}件中 ${loaded}件を表示`;
+    }
+
+    function updateLoadingState() {
+      $('loading-indicator').classList.toggle('hidden', !hasMore);
+      $('end-indicator').classList.toggle('hidden', hasMore || filtered.length === 0);
+    }
+
+    /* ---------- IntersectionObserver: 次ページ読み込み ---------- */
+
+    function setupScrollObserver() {
+      scrollObserver?.disconnect();
+      scrollObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          loadNextPage();
+        }
+      }, { rootMargin: '400px' });
+      scrollObserver.observe($('scroll-sentinel'));
+    }
+
+    /* ---------- スクロール位置 → URL ページ番号追跡 ---------- */
+
+    function onScroll() {
+      cancelAnimationFrame(scrollRafId);
+      scrollRafId = requestAnimationFrame(() => {
+        const markers = document.querySelectorAll<HTMLElement>('[data-page-marker]');
+        let page = 1;
+        for (const marker of markers) {
+          if (marker.getBoundingClientRect().top <= window.innerHeight * 0.5) {
+            page = Number(marker.dataset.pageMarker);
+          }
+        }
+        if (page !== currentVisiblePage) {
+          currentVisiblePage = page;
+          updateUrlParams();
+        }
+      });
+    }
+
+    /* ---------- フィルタ / ソート ---------- */
 
     function getSelectedValues(el: HTMLSelectElement): string[] {
       return Array.from(el.selectedOptions).map(o => o.value);
@@ -223,10 +266,26 @@ const base = import.meta.env.BASE_URL;
           filtered.sort((a, b) => b.ID - a.ID);
       }
 
-      currentPage = 1;
-      renderPage();
+      clearList();
+
+      // 初回ロード時: URL の page 指定分まで読み込む
+      const pagesToLoad = initialTargetPage;
+      initialTargetPage = 1;
+
+      for (let i = 0; i < pagesToLoad; i++) {
+        if (!loadNextPage()) break;
+      }
+
+      // URL の page 値を維持
+      if (pagesToLoad > 1) {
+        currentVisiblePage = Math.min(pagesToLoad, loadedPages);
+      }
+
+      setupScrollObserver();
       updateUrlParams();
     }
+
+    /* ---------- URL パラメータ管理 ---------- */
 
     function updateUrlParams() {
       const params = new URLSearchParams();
@@ -243,6 +302,7 @@ const base = import.meta.env.BASE_URL;
       if (characters.length) params.set('char', characters.join(','));
       if (skillTypes.length) params.set('skill', skillTypes.join(','));
       if (sortBy !== 'id-desc') params.set('sort', sortBy);
+      if (currentVisiblePage > 1) params.set('page', String(currentVisiblePage));
 
       const qs = params.toString();
       history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
@@ -262,16 +322,68 @@ const base = import.meta.env.BASE_URL;
       restoreMultiSelect($('search-character') as HTMLSelectElement, params.get('char'));
       restoreMultiSelect($('search-skill') as HTMLSelectElement, params.get('skill'));
       if (params.get('sort')) ($('sort-by') as HTMLSelectElement).value = params.get('sort')!;
+      const pageParam = params.get('page');
+      initialTargetPage = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : 1;
     }
 
-    // htmxイベントによるフィルタトリガー
+    /* ---------- イベント委譲（ページ追加時に再バインド不要） ---------- */
+
+    $('card-list').addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+
+      // 所持数 +/- ボタン
+      const btn = target.closest<HTMLElement>('button[data-count-btn]');
+      if (btn) {
+        e.stopPropagation();
+        const cardId = Number(btn.dataset.countBtn);
+        const delta = Number(btn.dataset.delta);
+        const newVal = Math.max(0, getCount(cardId) + delta);
+        setCount(cardId, newVal);
+        document.querySelectorAll<HTMLInputElement>(`input[data-count-input="${cardId}"]`).forEach(inp => {
+          inp.value = String(newVal);
+        });
+        return;
+      }
+
+      // 所持数入力欄クリック（行遷移を防止）
+      if (target.closest('input[data-count-input]')) {
+        e.stopPropagation();
+        return;
+      }
+
+      // カード名クリック → 同名カードでフィルタ
+      const nameEl = target.closest<HTMLElement>('[data-filter-cardname]');
+      if (nameEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        ($('search-text') as HTMLInputElement).value = nameEl.dataset.filterCardname || '';
+        applyFilters();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }, { capture: true });
+
+    $('card-list').addEventListener('change', (e) => {
+      const inp = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-count-input]');
+      if (inp) {
+        e.stopPropagation();
+        const cardId = Number(inp.dataset.countInput);
+        const val = Math.max(0, Number(inp.value) || 0);
+        setCount(cardId, val);
+        inp.value = String(val);
+      }
+    });
+
+    /* ---------- htmx イベント ---------- */
+
     document.body.addEventListener('htmx:trigger', (e: any) => {
       if (e.detail?.name === 'filter-cards') {
         applyFilters();
       }
     });
 
-    // フィルタ入力のイベント登録
+    /* ---------- フィルタ入力イベント ---------- */
+
     let debounceTimer: ReturnType<typeof setTimeout>;
     $('search-text').addEventListener('input', () => {
       clearTimeout(debounceTimer);
@@ -290,11 +402,17 @@ const base = import.meta.env.BASE_URL;
       applyFilters();
     });
 
-    // URLからフィルタ復元して初期表示
+    /* ---------- スクロール位置追跡 ---------- */
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    /* ---------- 初期化 ---------- */
+
     restoreFromUrl();
     applyFilters();
 
-    // クライアントサイドデータリフレッシュ
+    /* ---------- クライアントサイドデータリフレッシュ ---------- */
+
     import { refreshData } from '../../lib/data/clientRefresh';
     import { fetchCardsJson } from '../../lib/data/fetchCardsJson';
     refreshData('cards', fetchCardsJson, (fresh) => {
