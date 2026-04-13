@@ -7,14 +7,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev      # Start dev server
 npm run build    # Build static site to dist/
-npm run preview  # Preview production build
+npm run preview  # Build + Wrangler local preview (http://localhost:4321)
+npm run test     # Run Playwright E2E tests
+npm run test:ui  # Run Playwright tests with UI
+npm run deploy   # Build + deploy to Cloudflare Pages
 ```
 
-No test runner or linter is configured.
+Node.js 22 required (`.nvmrc`)。Playwright E2E テストが `tests/` に配置されている。
 
 ## Architecture
 
-IDOLiSH7 カードデータベースの Astro 6 静的サイト。
+IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Pages / GitHub Pages 両対応）。
 
 ### 設計原則: 完全静的サイト
 
@@ -30,11 +33,11 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト。
 
 | データ | GID | フェッチャー |
 |--------|-----|-------------|
-| カード（ステータス・スキル・メタデータ） | 480354522 | `fetchCardsJson.js` |
-| 楽曲（8属性グループ × 6サブカラム） | 1083871743 | `fetchSongsJson.js` |
-| 装備（カード紐付き） | 1087762308 | `fetchFixedBroachsJson.js` |
+| カード（ステータス・スキル・メタデータ） | 480354522 | `fetchCardsJson.ts` |
+| 楽曲（8属性グループ × 6サブカラム） | 1083871743 | `fetchSongsJson.ts` |
+| 装備（カード紐付き） | 1087762308 | `fetchFixedBroachsJson.ts` |
 
-フェッチャーは `src/lib/data/` に配置。
+フェッチャーは `src/lib/data/` に配置。GViz API の共通処理は `gviz.ts`、クライアント側の自動リフレッシュは `clientRefresh.ts`。
 
 ### Game Attributes
 
@@ -66,23 +69,72 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト。
 - `CARD_IMAGE_BASE_URL` — `import.meta.env.BASE_URL` ベースの相対パス
 - `CARD_THUMB_BASE_URL` — 同上
 
+### Client-Side Modules
+
+| モジュール | 役割 |
+|-----------|------|
+| `src/lib/cardListRenderer.ts` | カード一覧のフィルタリング・ソート・ページネーション・所持数管理 |
+| `src/lib/donutChart.ts` | 属性比率のドーナツチャート描画 |
+| `src/lib/score/` | スコア計算エンジン（モンテカルロシミュレーション） |
+
+スコア計算エンジンの主要コンポーネント:
+
+| ファイル | 役割 |
+|---------|------|
+| `engine.ts` | チーム構成・シミュレーション実行（`runSimulation`, `computeTeam`） |
+| `types.ts` | 型定義 |
+| `constants.ts` | スコア計算用定数 |
+| `rng.ts` | 乱数生成 |
+| `noteFlattener.ts` | ノーツ展開 |
+| `histogram.ts` | スコア分布のヒストグラム描画 |
+
 ### Page Patterns
 
-- **Home, Songs, Card Detail**: Fully pre-rendered at build time (zero client-side JS)
-- **Card List**: Initial data embedded as JSON, client-side JS handles filtering/sorting/pagination with htmx for DOM updates
-- **Card Detail**: Dynamic routes via `src/pages/cards/[id].astro` with `getStaticPaths()`
+| ページ | ルート | 描画方式 |
+|--------|--------|----------|
+| ホーム | `src/pages/index.astro` | ビルド時プリレンダリング |
+| カード一覧 | `src/pages/cards/index.astro` | ビルド時 + クライアント JS（フィルタ/ソート/ページネーション） |
+| カード詳細 | `src/pages/cards/[id].astro` | `getStaticPaths()` による動的ルート |
+| 楽曲一覧 | `src/pages/songs/index.astro` | ビルド時プリレンダリング |
+| 楽曲詳細 | `src/pages/songs/[id].astro` | `getStaticPaths()` による動的ルート |
+| 所持カード | `src/pages/mycard/index.astro` | ビルド時 + クライアント JS（localStorage ベースの所持数管理） |
+| スコア計算 | `src/pages/score-calc/index.astro` | ビルド時 + クライアント JS（モンテカルロシミュレーション） |
 
 ### Deployment
 
-GitHub Pages via `.github/workflows/deploy.yml`. タグ push (`v*`) で `release.yml` が GitHub Release を作成し、`deploy.yml` を `workflow_dispatch` 経由で起動してデプロイする。6時間ごとの cron でも最新タグから再ビルド（データ鮮度維持）。Site is deployed at `https://yo4raw.github.io/i7/` — the `base: '/i7'` in `astro.config.mjs` must stay in sync.
+`astro.config.mjs` の `DEPLOY_TARGET` 環境変数でデプロイ先を切り替える:
+
+| ターゲット | URL | `base` |
+|-----------|-----|--------|
+| `github`（デフォルト） | `https://yo4raw.github.io/i7/` | `/i7/` |
+| `cloudflare` | `https://i7.pages.dev/` | `/` |
+
+**GitHub Pages**: `.github/workflows/deploy.yml` でデプロイ。タグ push (`v*`) で `release.yml` が GitHub Release を作成し、`deploy.yml` を `workflow_dispatch` 経由で起動。6時間ごとの cron でも最新タグから再ビルド（データ鮮度維持）。
+
+**Cloudflare Pages**: `wrangler.jsonc` で設定。`npm run deploy` で手動デプロイ。`@astrojs/cloudflare` アダプターを使用。
 
 リリース手順: `git tag v1.x.x && git push origin v1.x.x`
 
-PR 時には CI（ビルドチェック）と Lighthouse CI が自動実行される。
+**CI**: PR 時にビルドチェック（`.github/workflows/ci.yml`）と Lighthouse CI（`lighthouse.yml`）が自動実行される。画像パス（`public/assets/cards/**`, `public/assets/th_cards/**`）の変更は CI スキップ。
 
 ### Styling
 
 Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astrojs/tailwind` integration). Custom theme colors defined in `src/styles/global.css` via `@theme` block.
+
+### Testing
+
+Playwright E2E テストが `tests/` に配置。`playwright.config.ts` で設定。
+
+| テスト | 対象ページ |
+|--------|-----------|
+| `home.test.ts` | ホームページ |
+| `card-list.test.ts` | カード一覧 |
+| `card-detail.test.ts` | カード詳細 |
+| `song-list.test.ts` | 楽曲一覧 |
+| `song-detail.test.ts` | 楽曲詳細 |
+| `mycard.test.ts` | 所持カード |
+
+テスト実行時は `npm run preview`（ビルド + Wrangler ローカルサーバー）が自動起動される。
 
 ## MCP Server Usage
 
