@@ -1,6 +1,8 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 
+import cloudflare from '@astrojs/cloudflare';
+
 // デプロイ先を DEPLOY_TARGET で切り替え（未指定は GitHub Pages 互換）
 //   - github    : https://yo4raw.github.io/i7/
 //   - cloudflare : https://<project>.pages.dev/
@@ -13,7 +15,10 @@ const siteConfig = deployTarget === 'cloudflare'
 export default defineConfig({
   ...siteConfig,
   output: 'static',
+
   vite: {
     plugins: [tailwindcss()],
   },
+
+  adapter: cloudflare(),
 });
