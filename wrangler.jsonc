@@ -1,5 +1,5 @@
 {
-	"compatibility_date": "2026-04-12",
+	"compatibility_date": "2026-04-13",
 	"compatibility_flags": ["global_fetch_strictly_public"],
 	"name": "i7-card-database",
 	"main": "@astrojs/cloudflare/entrypoints/server",
