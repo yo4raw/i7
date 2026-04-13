@@ -7,7 +7,7 @@ import type {
 } from './types';
 import {
   NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
-  MC_CHUNK_SIZE, CENTER_FRIEND_BONUS_RATE,
+  MC_CHUNK_SIZE, CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
   EVENT_BONUS_MULTIPLIER,
 } from './constants';
 import type { EventBonusTier } from './constants';
@@ -55,6 +55,15 @@ function parseSkill(card: Card, slotIndex: number): CardSkill | null {
   };
 }
 
+/** センタースキルの増加率を解析する */
+function parseCenterSkillRate(ctSkill: string | null): number {
+  if (!ctSkill) return 0;
+  for (const [keyword, rate] of Object.entries(CENTER_SKILL_RATES)) {
+    if (ctSkill.includes(keyword)) return rate;
+  }
+  return DEFAULT_CENTER_SKILL_RATE;
+}
+
 /** チームアピール値を計算する */
 export function computeTeam(
   deck: (Card | null)[],
@@ -84,9 +93,9 @@ export function computeTeam(
     const baseBeat = trained ? (card.beat_max || 0) : (card.beat_min || 0);
     const baseMelody = trained ? (card.melody_max || 0) : (card.melody_min || 0);
 
-    const s = Math.floor(baseShout * bonusMult);
-    const b = Math.floor(baseBeat * bonusMult);
-    const m = Math.floor(baseMelody * bonusMult);
+    const s = Math.round(baseShout * bonusMult);
+    const b = Math.round(baseBeat * bonusMult);
+    const m = Math.round(baseMelody * bonusMult);
     rawShout += s;
     rawBeat += b;
     rawMelody += m;
@@ -124,17 +133,19 @@ export function computeTeam(
     });
   }
 
-  // センター/フレンド同属性ボーナス
+  // センター/フレンドのセンタースキルボーナス
   let shoutRate = 0, beatRate = 0, melodyRate = 0;
   const centerAttr = deck[0] ? normalizeAttribute(deck[0].attribute) : null;
   const friendAttr = deck[5] ? normalizeAttribute(deck[5].attribute) : null;
+  const centerRate = deck[0] ? parseCenterSkillRate(deck[0].ct_skill) : 0;
+  const friendRate = deck[5] ? parseCenterSkillRate(deck[5].ct_skill) : 0;
 
-  if (centerAttr === 'Shout') shoutRate += CENTER_FRIEND_BONUS_RATE;
-  if (centerAttr === 'Beat') beatRate += CENTER_FRIEND_BONUS_RATE;
-  if (centerAttr === 'Melody') melodyRate += CENTER_FRIEND_BONUS_RATE;
-  if (friendAttr === 'Shout') shoutRate += CENTER_FRIEND_BONUS_RATE;
-  if (friendAttr === 'Beat') beatRate += CENTER_FRIEND_BONUS_RATE;
-  if (friendAttr === 'Melody') melodyRate += CENTER_FRIEND_BONUS_RATE;
+  if (centerAttr === 'Shout') shoutRate += centerRate;
+  if (centerAttr === 'Beat') beatRate += centerRate;
+  if (centerAttr === 'Melody') melodyRate += centerRate;
+  if (friendAttr === 'Shout') shoutRate += friendRate;
+  if (friendAttr === 'Beat') beatRate += friendRate;
+  if (friendAttr === 'Melody') melodyRate += friendRate;
 
   const teamShout = Math.floor((rawShout + broachShoutTotal) * (100 + shoutRate) / 100);
   const teamBeat = Math.floor((rawBeat + broachBeatTotal) * (100 + beatRate) / 100);
