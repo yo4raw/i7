@@ -100,6 +100,7 @@ export function resolveDeckBroachs(
   deck: (Card | null)[],
   allBroachs: FixedBroach[],
   song: Song,
+  selectedBroachIds?: (number | null)[],
 ): Map<number, ResolvedBroach[]> {
   const result = new Map<number, ResolvedBroach[]>();
 
@@ -119,7 +120,15 @@ export function resolveDeckBroachs(
     const card = deck[i];
     if (!card || card.rarity !== 'UR') continue;
 
-    const cardBroachs = allBroachs.filter(br => br.card_id === card.cardID);
+    let cardBroachs = allBroachs.filter(br => br.card_id === card.cardID);
+    if (selectedBroachIds) {
+      const selectedId = selectedBroachIds[i];
+      if (selectedId != null) {
+        cardBroachs = cardBroachs.filter(br => br.id === selectedId);
+      } else {
+        cardBroachs = [];
+      }
+    }
     for (const broach of cardBroachs) {
       const conditionMet = checkBroachCondition(broach, deck, song);
       pending.push({ slotIndex: i, broach, conditionMet });
