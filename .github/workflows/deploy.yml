@@ -28,7 +28,7 @@ jobs:
             echo "ref=$LATEST_TAG" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ steps.resolve-ref.outputs.ref }}
 
