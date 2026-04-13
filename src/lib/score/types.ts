@@ -1,4 +1,15 @@
+import { ATTRIBUTE_MAP } from '../constants';
+
 export type AttributeName = 'Shout' | 'Beat' | 'Melody';
+
+/** Card.attribute を AttributeName に正規化 */
+export function normalizeAttribute(attr: string | number | null): AttributeName {
+  if (typeof attr === 'number') return (ATTRIBUTE_MAP[attr] as AttributeName) || 'Shout';
+  if (attr === 'Shout' || attr === 'Beat' || attr === 'Melody') return attr;
+  const num = Number(attr);
+  if (!isNaN(num) && ATTRIBUTE_MAP[num]) return ATTRIBUTE_MAP[num] as AttributeName;
+  return 'Shout';
+}
 
 export interface FlatNote {
   attribute: AttributeName;
@@ -47,6 +58,7 @@ export interface ComputedTeam {
   broachShout: number;
   broachBeat: number;
   broachMelody: number;
+  broachScoreBonus: number;
 }
 
 export interface SimulationResult {

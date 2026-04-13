@@ -1,9 +1,10 @@
 import type { Card } from '../data/fetchCardsJson';
 import type { FixedBroach } from '../data/fetchFixedBroachsJson';
 import type { Song } from '../data/fetchSongsJson';
-import type {
-  AttributeName, FlatNote, CardSkill, DeckCard,
-  ComputedTeam, SimulationResult, CardSkillStats, ScoreOptions,
+import {
+  normalizeAttribute,
+  type AttributeName, type FlatNote, type CardSkill, type DeckCard,
+  type ComputedTeam, type SimulationResult, type CardSkillStats, type ScoreOptions,
 } from './types';
 import {
   NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
@@ -14,17 +15,7 @@ import {
 import type { EventBonusTier } from './constants';
 import { XorShift128Plus } from './rng';
 import { flattenNotes } from './noteFlattener';
-import { ATTRIBUTE_MAP } from '../constants';
-
-/** Card.attribute を AttributeName に正規化 */
-function normalizeAttribute(attr: string | number | null): AttributeName {
-  if (typeof attr === 'number') return (ATTRIBUTE_MAP[attr] as AttributeName) || 'Shout';
-  if (attr === 'Shout' || attr === 'Beat' || attr === 'Melody') return attr;
-  // 数値文字列のケース
-  const num = Number(attr);
-  if (!isNaN(num) && ATTRIBUTE_MAP[num]) return ATTRIBUTE_MAP[num] as AttributeName;
-  return 'Shout';
-}
+import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
 
 /** カードからLv5のスキル情報を解析する */
 function parseSkill(card: Card, slotIndex: number): CardSkill | null {
@@ -82,6 +73,10 @@ export function computeTeam(
   let broachBeatTotal = 0;
   let broachMelodyTotal = 0;
 
+  // ブローチ条件判定（デッキ全体）
+  const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, song);
+  const broachScoreBonus = calcBroachScoreBonus(resolvedBroachs);
+
   for (let i = 0; i < 6; i++) {
     const card = deck[i];
     if (!card) continue;
@@ -101,14 +96,17 @@ export function computeTeam(
     rawBeat += b;
     rawMelody += m;
 
-    // ブローチ加算（スロット0-4のみ）
+    // ブローチ加算（スロット0-4のみ、条件判定済み）
     let bShout = 0, bBeat = 0, bMelody = 0;
     if (i < 5) {
-      const cardBroachs = allBroachs.filter(br => br.card_id === card.cardID);
-      for (const br of cardBroachs) {
-        bShout += br.shout || 0;
-        bBeat += br.beat || 0;
-        bMelody += br.melody || 0;
+      const slotBroachs = resolvedBroachs.get(i) ?? [];
+      for (const rb of slotBroachs) {
+        if (!rb.active) continue;
+        // 種類9（スコアUP）はステータスではなくスコア直接加算なのでここではスキップ
+        if (rb.broach.broach_type === 9) continue;
+        bShout += rb.broach.shout || 0;
+        bBeat += rb.broach.beat || 0;
+        bMelody += rb.broach.melody || 0;
       }
       broachShoutTotal += bShout;
       broachBeatTotal += bBeat;
@@ -162,6 +160,7 @@ export function computeTeam(
     broachShout: broachShoutTotal,
     broachBeat: broachBeatTotal,
     broachMelody: broachMelodyTotal,
+    broachScoreBonus,
   };
 }
 
@@ -173,7 +172,7 @@ export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
   for (const note of notes) {
     total += team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group] * assistMult;
   }
-  return Math.floor(Math.floor(total) * badgeMult);
+  return Math.floor(Math.floor(total) * badgeMult) + team.broachScoreBonus;
 }
 
 /** スキル全発動の最高スコア */
@@ -240,7 +239,7 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
     total += assistedBase + shrinkExtra + scoreUpSum;
   }
 
-  return Math.floor(Math.floor(total) * badgeMult);
+  return Math.floor(Math.floor(total) * badgeMult) + team.broachScoreBonus;
 }
 
 interface RunOnceResult {
@@ -340,7 +339,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
     }
   }
 
-  return { score: Math.floor(Math.floor(totalScore) * badgeMult), activations, contributions };
+  return { score: Math.floor(Math.floor(totalScore) * badgeMult) + team.broachScoreBonus, activations, contributions };
 }
 
 /** MC シミュレーション実行（チャンク分割） */

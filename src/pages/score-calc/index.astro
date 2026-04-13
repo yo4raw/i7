@@ -109,6 +109,7 @@ const base = import.meta.env.BASE_URL;
           <tbody>
             <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
             <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
+            <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
             <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
             <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
             <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class="text-right py-1 text-red-500"></td></tr>
@@ -322,6 +323,7 @@ const base = import.meta.env.BASE_URL;
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
     import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes } from '../../lib/score/engine';
+    import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
     import type { EventBonusTier } from '../../lib/score/constants';
     import { renderHistogramSvg } from '../../lib/score/histogram';
@@ -547,14 +549,21 @@ const base = import.meta.env.BASE_URL;
         gold: 'text-yellow-600 font-bold',
       };
 
+      // ブローチ条件判定（デッキ・楽曲に依存）
+      const dummySong = selectedSong || { song_name: '' } as any;
+      const resolvedMap = resolveDeckBroachs(deck, allBroachs, dummySong);
+
       const rows = DISPLAY_ORDER.map(i => {
         const card = deck[i];
         if (!card) return '';
         const attr = normalizeAttr(card.attribute);
-        const broachs = i < 5 ? allBroachs.filter(b => b.card_id === card.cardID) : [];
-        const bS = broachs.reduce((s, b) => s + (b.shout || 0), 0);
-        const bB = broachs.reduce((s, b) => s + (b.beat || 0), 0);
-        const bM = broachs.reduce((s, b) => s + (b.melody || 0), 0);
+        const slotBroachs = resolvedMap.get(i) ?? [];
+        const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
+        const bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0), 0);
+        const bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0), 0);
+        const bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0), 0);
+        const hasInactive = slotBroachs.some(rb => !rb.active);
+        const broachClass = hasInactive ? 'text-gray-300' : '';
         const skillType = card.ap_skill_type || '-';
         const count = card.ap_skill_5_count ?? '-';
         const per = card.ap_skill_5_per != null ? `${card.ap_skill_5_per}%` : '-';
@@ -580,9 +589,9 @@ const base = import.meta.env.BASE_URL;
           <td class="py-1 px-1 text-right text-red-500">${statShout.toLocaleString()}</td>
           <td class="py-1 px-1 text-right text-green-500">${statBeat.toLocaleString()}</td>
           <td class="py-1 px-1 text-right text-blue-500">${statMelody.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right">${bS || '-'}</td>
-          <td class="py-1 px-1 text-right">${bB || '-'}</td>
-          <td class="py-1 px-1 text-right">${bM || '-'}</td>
+          <td class="py-1 px-1 text-right ${broachClass}" title="${slotBroachs.map(rb => `${rb.broach.condition || ''}${rb.active ? '✓' : '✗'}`).join(', ')}">${bS || '-'}</td>
+          <td class="py-1 px-1 text-right ${broachClass}" title="${slotBroachs.map(rb => `${rb.broach.condition || ''}${rb.active ? '✓' : '✗'}`).join(', ')}">${bB || '-'}</td>
+          <td class="py-1 px-1 text-right ${broachClass}" title="${slotBroachs.map(rb => `${rb.broach.condition || ''}${rb.active ? '✓' : '✗'}`).join(', ')}">${bM || '-'}</td>
           <td class="py-1 px-1">${skillType}</td>
           <td class="py-1 px-1 text-right">${count}</td>
           <td class="py-1 px-1 text-right">${per}</td>
@@ -715,6 +724,12 @@ const base = import.meta.env.BASE_URL;
 
       $('stat-base').textContent = rawTotal.toLocaleString();
       $('stat-broach').textContent = broachTotal > 0 ? `+${broachTotal.toLocaleString()}` : '-';
+      if (team.broachScoreBonus > 0) {
+        $('stat-broach-score-row').classList.remove('hidden');
+        $('stat-broach-score').textContent = `+${team.broachScoreBonus.toLocaleString()}`;
+      } else {
+        $('stat-broach-score-row').classList.add('hidden');
+      }
       $('stat-bonus').textContent = bonusTotal > 0 ? `+${bonusTotal.toLocaleString()}` : '-';
       $('stat-team-total').textContent = teamTotal.toLocaleString();
       $('stat-team-s').textContent = team.Shout.toLocaleString();

@@ -70,9 +70,15 @@ export async function fetchSheetRaw(spreadsheetId: string, gid: number): Promise
 /**
  * GViz JSON経由でスプレッドシートデータを取得し、クリーンなJSON配列に変換する
  */
-export async function fetchSheetAsJson(spreadsheetId: string, gid: number): Promise<Record<string, string | number | boolean | null>[]> {
+export async function fetchSheetAsJson(
+  spreadsheetId: string,
+  gid: number,
+  headerOverrides?: Record<number, string>,
+): Promise<Record<string, string | number | boolean | null>[]> {
   const table = await fetchSheetRaw(spreadsheetId, gid);
-  const headers = table.cols.map((col, i) => col.label || `column_${i}`);
+  const headers = table.cols.map((col, i) =>
+    headerOverrides?.[i] ?? (col.label || `column_${i}`),
+  );
 
   return table.rows.map((row) => {
     const obj: Record<string, string | number | boolean | null> = {};
