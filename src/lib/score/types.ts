@@ -62,6 +62,11 @@ export interface SimulationResult {
   cardStats: CardSkillStats[];
 }
 
+export interface ScoreOptions {
+  scoreUpAssist: boolean;
+  scoreUpBadge: boolean;
+}
+
 export interface CardSkillStats {
   cardIndex: number;
   cardname: string;
