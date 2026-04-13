@@ -1,0 +1,130 @@
+name: Fetch thumbnail card images
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch-th-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch thumbnail card images
+        id: fetch
+        shell: bash
+        run: |
+          # Build the list of card IDs from public/assets/cards/
+          CARD_IDS=$(ls public/assets/cards/*.png \
+            | xargs -n1 basename \
+            | sed 's/\.png$//' \
+            | grep -E '^[0-9]+$' \
+            | sort -n)
+
+          CARD_COUNT=$(echo "$CARD_IDS" | wc -l | tr -d ' ')
+          echo "Cards in public/assets/cards/: $CARD_COUNT"
+
+          # Build the list of thumbnail IDs already present
+          TH_IDS=""
+          TH_COUNT=0
+          if ls public/assets/th_cards/*.png &>/dev/null; then
+            TH_IDS=$(ls public/assets/th_cards/*.png \
+              | xargs -n1 basename \
+              | sed 's/\.png$//' \
+              | grep -E '^[0-9]+$' \
+              | sort -n)
+            TH_COUNT=$(echo "$TH_IDS" | wc -l | tr -d ' ')
+          fi
+          echo "Thumbnails in public/assets/th_cards/: $TH_COUNT"
+
+          # Determine which IDs need thumbnails
+          if [ "$TH_COUNT" -eq 0 ]; then
+            # Backfill mode: all card IDs in descending order (newest first)
+            MISSING_IDS=$(echo "$CARD_IDS" | sort -rn)
+            MODE="backfill"
+          else
+            # Sync mode: backfill missing thumbnails for existing cards (newest first)
+            MISSING_IDS=$(comm -23 <(echo "$CARD_IDS" | sort) <(echo "$TH_IDS" | sort) | sort -rn)
+
+            MODE="sync"
+          fi
+
+          MISSING_COUNT=$(echo "$MISSING_IDS" | grep -c -E '^[0-9]+$' || true)
+          echo "Mode: $MODE"
+          echo "IDs to fetch (total): $MISSING_COUNT"
+
+          # Limit batch size to 1000 per run
+          BATCH_LIMIT=1000
+          if [ "$MISSING_COUNT" -gt "$BATCH_LIMIT" ]; then
+            MISSING_IDS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$')
+            MISSING_IDS=$(echo "$MISSING_IDS" | head -n "$BATCH_LIMIT")
+            MISSING_COUNT=$BATCH_LIMIT
+            echo "Batch limited to: $BATCH_LIMIT"
+          fi
+          echo "IDs to fetch (this run): $MISSING_COUNT"
+
+          if [ "$MISSING_COUNT" -eq 0 ]; then
+            echo "downloaded=0" >> "$GITHUB_OUTPUT"
+            echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Fetch thumbnails in parallel
+          fetch_thumbnail() {
+            local ID=$1
+            local URL="https://i7.step-on-dream.net/img/cards/th/${ID}.png"
+            local DEST="public/assets/th_cards/${ID}.png"
+
+            HTTP_CODE=$(curl -s -o "$DEST" -w "%{http_code}" --connect-timeout 10 --max-time 30 "$URL" || true)
+            HTTP_CODE=${HTTP_CODE:-000}
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              FILE_TYPE=$(file --brief --mime-type "$DEST")
+              if [ "$FILE_TYPE" = "image/png" ]; then
+                echo "OK:${ID}"
+              else
+                rm -f "$DEST"
+                echo "SKIP:${ID}"
+              fi
+            else
+              rm -f "$DEST"
+              echo "FAIL:${ID}"
+            fi
+          }
+          export -f fetch_thumbnail
+
+          RESULTS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$' \
+            | xargs -P 10 -I {} bash -c 'fetch_thumbnail "$@"' _ {} || true)
+
+          DOWNLOADED=$(echo "$RESULTS" | grep -c "^OK:" || true)
+          NEW_IDS=$(echo "$RESULTS" | grep "^OK:" | sed 's/^OK://' | sort -n | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g' || true)
+
+          echo "Total downloaded: $DOWNLOADED"
+          echo "downloaded=$DOWNLOADED" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "new_ids=$NEW_IDS" >> "$GITHUB_OUTPUT"
+          echo "missing_count=$MISSING_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.fetch.outputs.downloaded != '0'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Add thumbnail card images (${{ steps.fetch.outputs.downloaded }} files)"
+          branch: auto/add-th-cards-${{ github.run_id }}
+          delete-branch: true
+          title: "Add ${{ steps.fetch.outputs.downloaded }} thumbnail card image(s)"
+          body: |
+            ## Summary
+            Automatically fetched thumbnail card images from the source server.
+
+            - **Mode**: ${{ steps.fetch.outputs.mode }}
+            - **IDs attempted**: ${{ steps.fetch.outputs.missing_count }}
+            - **Successfully downloaded**: ${{ steps.fetch.outputs.downloaded }}
+            - **New thumbnail IDs**: ${{ steps.fetch.outputs.new_ids }}
+
+            > Thumbnails are stored in `public/assets/th_cards/` and sourced from `cards/th/{id}.png`.
