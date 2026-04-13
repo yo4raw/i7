@@ -135,10 +135,10 @@ const baseScore = team[note.attribute] * NOTE_RATE[note.type];
 | グループキー | 名称 | ライト倍率 |
 |-------------|------|-----------|
 | `notes_20` | Notes 2.0 | ×1.0 |
-| `light_2` | Light 2 | ×1.1 |
-| `light_3` | Light 3 | ×1.2 |
-| `light_4` | Light 4 | ×1.3 |
-| `light_5` | Light 5 | ×1.4 |
+| `light_2` | Light 2 | ×1.0 |
+| `light_3` | Light 3 | ×1.1 |
+| `light_4` | Light 4 | ×1.2 |
+| `light_5` | Light 5 | ×1.3 |
 | `light_6` | Light 6 | ×1.5 |
 | `chorus_light_5` | Chorus Light 5 | ×2.6 |
 | `chorus_light_6` | Chorus Light 6 | ×3.0 |
@@ -146,10 +146,10 @@ const baseScore = team[note.attribute] * NOTE_RATE[note.type];
 ```typescript
 const LIGHT_MULTIPLIER: Record<string, number> = {
   notes_20: 1.0,
-  light_2: 1.1,
-  light_3: 1.2,
-  light_4: 1.3,
-  light_5: 1.4,
+  light_2: 1.0,
+  light_3: 1.1,
+  light_4: 1.2,
+  light_5: 1.3,
   light_6: 1.5,
   chorus_light_5: 2.6,
   chorus_light_6: 3.0,

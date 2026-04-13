@@ -2,9 +2,9 @@ export const NOTE_RATE = { white: 0.025, color: 0.030 } as const;
 
 export const LIGHT_MULTIPLIER: Record<string, number> = {
   notes_20: 1.0,
-  light_2: 1.1,
-  light_3: 1.2,
-  light_4: 1.3,
+  light_2: 1.0,
+  light_3: 1.1,
+  light_4: 1.2,
   light_5: 1.3,
   light_6: 1.5,
   chorus_light_5: 2.6,
@@ -26,7 +26,7 @@ export type EventBonusTier = 'none' | 'bronze' | 'silver' | 'gold';
 
 export const EVENT_BONUS_MULTIPLIER: Record<EventBonusTier, number> = {
   none: 1.0,
-  bronze: 1.5,
-  silver: 2.0,
-  gold: 2.2,
+  bronze: 2.0,
+  silver: 2.2,
+  gold: 2.4,
 };
