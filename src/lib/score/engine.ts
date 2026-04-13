@@ -197,10 +197,10 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[]): number {
   // 通常スキル: 全タイミングで必ず発動
   let total = 0;
   const counters = team.cards.map(() => 0);
+  const shrinkEndNotes = team.cards.map(() => 0);
 
   for (let n = 0; n < N; n++) {
     const note = notes[n];
-    let shrinkActive = false;
     let scoreUpSum = timerBonus[n];
 
     for (let c = 0; c < team.cards.length; c++) {
@@ -211,9 +211,22 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[]): number {
       counters[c]++;
       if (counters[c] >= skill.count) {
         counters[c] = 0;
-        if (skill.isShrink) shrinkActive = true;
-        else scoreUpSum += skill.value;
+        if (skill.isShrink) {
+          const noteTime = n / N * team.songDuration;
+          const endNote = Math.min(
+            Math.floor(((noteTime + skill.spTime) / team.songDuration) * N),
+            N,
+          );
+          shrinkEndNotes[c] = Math.max(shrinkEndNotes[c], endNote);
+        } else {
+          scoreUpSum += skill.value;
+        }
       }
+    }
+
+    let shrinkActive = false;
+    for (let c = 0; c < team.cards.length; c++) {
+      if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
     }
 
     const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
@@ -261,11 +274,10 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus): R
   // Phase 2: ノート順処理
   let totalScore = 0;
   const counters = new Array<number>(cardCount).fill(0);
+  const shrinkEndNotes = new Array<number>(cardCount).fill(0);
 
   for (let n = 0; n < N; n++) {
     const note = notes[n];
-    let shrinkActive = false;
-    let shrinkCardIdx = -1;
     let scoreUpSum = timerBonus[n];
 
     for (let c = 0; c < cardCount; c++) {
@@ -279,8 +291,12 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus): R
         if (rng.next() * 100 < skill.per) {
           activations[c]++;
           if (skill.isShrink) {
-            shrinkActive = true;
-            shrinkCardIdx = c;
+            const noteTime = n / N * team.songDuration;
+            const endNote = Math.min(
+              Math.floor(((noteTime + skill.spTime) / team.songDuration) * N),
+              N,
+            );
+            shrinkEndNotes[c] = Math.max(shrinkEndNotes[c], endNote);
           } else {
             scoreUpSum += skill.value;
             contributions[c] += skill.value;
@@ -289,14 +305,29 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus): R
       }
     }
 
+    // 判定縮小スキルのアクティブ判定（spTime 持続時間ベース）
+    let shrinkActive = false;
+    for (let c = 0; c < cardCount; c++) {
+      if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
+    }
+
     const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
     const shrinkMult = shrinkActive ? SHRINK_MULTIPLIER : 1.0;
     const noteScore = base * shrinkMult + scoreUpSum;
     totalScore += noteScore;
 
-    // 判定縮小スキルのスコア寄与 = base * (1.6 - 1.0)
-    if (shrinkActive && shrinkCardIdx >= 0) {
-      contributions[shrinkCardIdx] += base * (SHRINK_MULTIPLIER - 1.0);
+    // 判定縮小スキルのスコア寄与を発動中のカードに按分
+    if (shrinkActive) {
+      const extra = base * (SHRINK_MULTIPLIER - 1.0);
+      let activeShrinkCount = 0;
+      for (let c = 0; c < cardCount; c++) {
+        if (shrinkEndNotes[c] > n) activeShrinkCount++;
+      }
+      for (let c = 0; c < cardCount; c++) {
+        if (shrinkEndNotes[c] > n) {
+          contributions[c] += extra / activeShrinkCount;
+        }
+      }
     }
   }
 
