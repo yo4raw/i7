@@ -21,7 +21,7 @@ https://yo4raw.github.io/i7/
 - [Tailwind CSS](https://tailwindcss.com/) 4 - ユーティリティファーストCSS
 - [htmx](https://htmx.org/) - 軽量なクライアントサイドインタラクション
 - Google Sheets (GViz API) - データソース
-- GitHub Pages / Cloudflare Pages - ホスティング
+- GitHub Pages - ホスティング
 - [Playwright](https://playwright.dev/) - E2E テスト
 
 ## 開発
@@ -30,15 +30,12 @@ https://yo4raw.github.io/i7/
 npm install     # 依存関係のインストール
 npm run dev     # 開発サーバー起動
 npm run build   # 本番ビルド
-npm run preview # ビルド + Wrangler ローカルプレビュー
+npm run preview # ビルド + ローカルプレビュー
 npm run test    # Playwright E2E テスト実行
-npm run deploy  # Cloudflare Pages へデプロイ
 ```
 
 Node.js 22 が必要です（`.nvmrc` 参照）。
 
 ## デプロイ
 
-**GitHub Pages**: バージョンタグ（`v1.0.0` 等）の push で GitHub Actions により自動デプロイされます。データ鮮度のため6時間ごとに自動リビルドも行われます。
-
-**Cloudflare Pages**: `npm run deploy` で手動デプロイ。`DEPLOY_TARGET=cloudflare` を設定して使用します。
+バージョンタグ（`v1.0.0` 等）の push で GitHub Actions により GitHub Pages へ自動デプロイされます。データ鮮度のため6時間ごとに自動リビルドも行われます。
