@@ -5,11 +5,14 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "npm run build && ln -sfn . dist/i7 && npx serve dist -l 4321",
+    "preview": "npm run build && wrangler dev",
     "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "generate-types": "wrangler types",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^13.1.8",
     "@tailwindcss/vite": "^4.2.2",
     "astro": "^6.1.5",
     "htmx.org": "^2.0.8",
@@ -17,7 +20,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "serve": "^14.2.6"
+    "serve": "^14.2.6",
+    "wrangler": "^4.81.1"
   },
   "overrides": {
     "vite": "^7"
