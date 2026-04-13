@@ -3,10 +3,11 @@ import type { FixedBroach } from '../data/fetchFixedBroachsJson';
 import type { Song } from '../data/fetchSongsJson';
 import type {
   AttributeName, FlatNote, CardSkill, DeckCard,
-  ComputedTeam, SimulationResult, CardSkillStats,
+  ComputedTeam, SimulationResult, CardSkillStats, ScoreOptions,
 } from './types';
 import {
   NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
+  SCOREUP_ASSIST_MULTIPLIER, SCOREUP_BADGE_RATE,
   MC_CHUNK_SIZE, CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
   EVENT_BONUS_MULTIPLIER,
 } from './constants';
@@ -165,16 +166,20 @@ export function computeTeam(
 }
 
 /** スキル全不発の最低スコア */
-export function calcMinScore(team: ComputedTeam, notes: FlatNote[]): number {
+export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
+  const assistMult = options?.scoreUpAssist ? SCOREUP_ASSIST_MULTIPLIER : 1.0;
+  const badgeMult = options?.scoreUpBadge ? (1 + SCOREUP_BADGE_RATE) : 1.0;
   let total = 0;
   for (const note of notes) {
-    total += team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
+    total += team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group] * assistMult;
   }
-  return Math.floor(total);
+  return Math.floor(Math.floor(total) * badgeMult);
 }
 
 /** スキル全発動の最高スコア */
-export function calcMaxScore(team: ComputedTeam, notes: FlatNote[]): number {
+export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
+  const assistMult = options?.scoreUpAssist ? SCOREUP_ASSIST_MULTIPLIER : 1.0;
+  const badgeMult = options?.scoreUpBadge ? (1 + SCOREUP_BADGE_RATE) : 1.0;
   const N = notes.length;
 
   // タイマースキル: 全タイミングで必ず発動
@@ -230,11 +235,12 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[]): number {
     }
 
     const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
-    const shrinkMult = shrinkActive ? SHRINK_MULTIPLIER : 1.0;
-    total += base * shrinkMult + scoreUpSum;
+    const assistedBase = base * assistMult;
+    const shrinkExtra = shrinkActive ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
+    total += assistedBase + shrinkExtra + scoreUpSum;
   }
 
-  return Math.floor(total);
+  return Math.floor(Math.floor(total) * badgeMult);
 }
 
 interface RunOnceResult {
@@ -244,7 +250,9 @@ interface RunOnceResult {
 }
 
 /** MC 1回分の実行 */
-function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus): RunOnceResult {
+function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, options?: ScoreOptions): RunOnceResult {
+  const assistMult = options?.scoreUpAssist ? SCOREUP_ASSIST_MULTIPLIER : 1.0;
+  const badgeMult = options?.scoreUpBadge ? (1 + SCOREUP_BADGE_RATE) : 1.0;
   const N = notes.length;
   const cardCount = team.cards.length;
   const activations = new Array<number>(cardCount).fill(0);
@@ -312,8 +320,9 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus): R
     }
 
     const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
-    const shrinkMult = shrinkActive ? SHRINK_MULTIPLIER : 1.0;
-    const noteScore = base * shrinkMult + scoreUpSum;
+    const assistedBase = base * assistMult;
+    const shrinkExtra = shrinkActive ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
+    const noteScore = assistedBase + shrinkExtra + scoreUpSum;
     totalScore += noteScore;
 
     // 判定縮小スキルのスコア寄与を発動中のカードに按分
@@ -331,7 +340,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus): R
     }
   }
 
-  return { score: Math.floor(totalScore), activations, contributions };
+  return { score: Math.floor(Math.floor(totalScore) * badgeMult), activations, contributions };
 }
 
 /** MC シミュレーション実行（チャンク分割） */
@@ -341,9 +350,10 @@ export async function runSimulation(
   iterations: number,
   onProgress?: (pct: number) => void,
   seed?: number,
+  options?: ScoreOptions,
 ): Promise<SimulationResult> {
-  const minScore = calcMinScore(team, notes);
-  const maxScore = calcMaxScore(team, notes);
+  const minScore = calcMinScore(team, notes, options);
+  const maxScore = calcMaxScore(team, notes, options);
 
   const rng = new XorShift128Plus(seed ?? Date.now());
   const scores: number[] = [];
@@ -354,7 +364,7 @@ export async function runSimulation(
   for (let i = 0; i < iterations; i += MC_CHUNK_SIZE) {
     const end = Math.min(i + MC_CHUNK_SIZE, iterations);
     for (let j = i; j < end; j++) {
-      const result = runOnce(team, notes, rng);
+      const result = runOnce(team, notes, rng, options);
       scores.push(result.score);
       for (let c = 0; c < cardCount; c++) {
         totalActivations[c] += result.activations[c];

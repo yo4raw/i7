@@ -12,6 +12,8 @@ export const LIGHT_MULTIPLIER: Record<string, number> = {
 };
 
 export const SHRINK_MULTIPLIER = 1.6;
+export const SCOREUP_ASSIST_MULTIPLIER = 1.2;
+export const SCOREUP_BADGE_RATE = 0.15;
 export const MC_ITERATIONS = 5000;
 export const MC_CHUNK_SIZE = 50;
 /** センタースキル増加量パターン（キーワード → 増加率%） */
