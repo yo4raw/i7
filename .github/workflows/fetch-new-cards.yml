@@ -1,0 +1,119 @@
+name: Fetch new card images
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch new card images
+        id: fetch
+        shell: bash
+        run: |
+          EXISTING_IDS=$(ls public/assets/cards/*.png \
+            | xargs -n1 basename \
+            | sed 's/\.png$//' \
+            | grep -E '^[0-9]+$' \
+            | sort -n)
+
+          MIN_ID=$(echo "$EXISTING_IDS" | head -1)
+          MAX_ID=$(echo "$EXISTING_IDS" | tail -1)
+          EXISTING_COUNT=$(echo "$EXISTING_IDS" | wc -l | tr -d ' ')
+          echo "Current range: $MIN_ID ~ $MAX_ID ($EXISTING_COUNT files)"
+
+          # 1. Forward scan (highest priority: max+1 ~ max+500)
+          SCAN_IDS=$(seq $((MAX_ID + 1)) $((MAX_ID + 500)))
+
+          # 2. Gap fill (descending = newest gaps first)
+          FULL_RANGE=$(seq $MIN_ID $MAX_ID)
+          GAP_IDS=$(comm -23 <(echo "$FULL_RANGE" | sort) <(echo "$EXISTING_IDS" | sort) | sort -rn)
+
+          GAP_COUNT=$(echo "$GAP_IDS" | grep -c -E '^[0-9]+$' || true)
+          echo "Gaps in existing range: $GAP_COUNT"
+
+          # 3. Combine: scan IDs first, then gap IDs (deduplicated)
+          MISSING_IDS=$(printf '%s\n%s' "$SCAN_IDS" "$GAP_IDS" | awk 'NF && !seen[$0]++')
+
+          MISSING_COUNT=$(echo "$MISSING_IDS" | grep -c -E '^[0-9]+$' || true)
+          echo "IDs to fetch (total): $MISSING_COUNT"
+
+          # Limit batch size to 500 per run
+          BATCH_LIMIT=500
+          if [ "$MISSING_COUNT" -gt "$BATCH_LIMIT" ]; then
+            MISSING_IDS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$')
+            MISSING_IDS=$(echo "$MISSING_IDS" | head -n "$BATCH_LIMIT")
+            MISSING_COUNT=$BATCH_LIMIT
+            echo "Batch limited to: $BATCH_LIMIT"
+          fi
+          echo "IDs to fetch (this run): $MISSING_COUNT"
+
+          if [ "$MISSING_COUNT" -eq 0 ]; then
+            echo "downloaded=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mkdir -p public/assets/cards
+
+          fetch_card() {
+            local ID=$1
+            local URL="https://i7.step-on-dream.net/img/cards/${ID}.png"
+            local DEST="public/assets/cards/${ID}.png"
+
+            HTTP_CODE=$(curl -s -o "$DEST" -w "%{http_code}" --connect-timeout 10 --max-time 30 "$URL" || true)
+            HTTP_CODE=${HTTP_CODE:-000}
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              FILE_TYPE=$(file --brief --mime-type "$DEST")
+              if [ "$FILE_TYPE" = "image/png" ]; then
+                echo "OK:${ID}"
+              else
+                rm -f "$DEST"
+                echo "SKIP:${ID}"
+              fi
+            else
+              rm -f "$DEST"
+              echo "FAIL:${ID}"
+            fi
+          }
+          export -f fetch_card
+
+          RESULTS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$' \
+            | xargs -P 10 -I {} bash -c 'fetch_card "$@"' _ {} || true)
+
+          DOWNLOADED=$(echo "$RESULTS" | grep -c "^OK:" || true)
+          NEW_IDS=$(echo "$RESULTS" | grep "^OK:" | sed 's/^OK://' | sort -n | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g' || true)
+
+          echo "Total new images downloaded: $DOWNLOADED"
+          echo "downloaded=$DOWNLOADED" >> "$GITHUB_OUTPUT"
+          echo "max_id=$MAX_ID" >> "$GITHUB_OUTPUT"
+          echo "new_end=$((MAX_ID + 500))" >> "$GITHUB_OUTPUT"
+          echo "gap_count=$GAP_COUNT" >> "$GITHUB_OUTPUT"
+          echo "new_ids=${NEW_IDS}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.fetch.outputs.downloaded != '0'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: public/assets/cards/
+          commit-message: "Add card images: ${{ steps.fetch.outputs.new_ids }}"
+          branch: auto/add-cards-${{ github.run_id }}
+          delete-branch: true
+          title: "Add ${{ steps.fetch.outputs.downloaded }} new card image(s)"
+          body: |
+            ## Summary
+            Automatically fetched new card images from the source server.
+
+            - **Previous max ID**: ${{ steps.fetch.outputs.max_id }}
+            - **Scanned range**: ${{ steps.fetch.outputs.max_id }}+1 ~ ${{ steps.fetch.outputs.new_end }}
+            - **Gaps checked**: ${{ steps.fetch.outputs.gap_count }}
+            - **New images**: ${{ steps.fetch.outputs.new_ids }}
+            - **Count**: ${{ steps.fetch.outputs.downloaded }}

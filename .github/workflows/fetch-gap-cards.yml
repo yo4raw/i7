@@ -1,0 +1,112 @@
+name: Fetch gap card images
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch-gap-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch gap card images
+        id: fetch
+        shell: bash
+        run: |
+          set -e -o pipefail
+
+          EXISTING_IDS=$(ls public/assets/cards/*.png \
+            | xargs -n1 basename \
+            | sed 's/\.png$//' \
+            | grep -E '^[0-9]+$' \
+            | sort -n)
+
+          MAX_ID=$(echo "$EXISTING_IDS" | tail -1)
+          EXISTING_COUNT=$(echo "$EXISTING_IDS" | wc -l | tr -d ' ')
+          echo "Max ID: $MAX_ID ($EXISTING_COUNT files)"
+
+          # Full range from max down to 1, find gaps
+          FULL_RANGE=$(seq 1 "$MAX_ID" | sort -n)
+          GAP_IDS=$(comm -23 <(echo "$FULL_RANGE") <(echo "$EXISTING_IDS") | sort -rn || true)
+
+          GAP_COUNT=$(echo "$GAP_IDS" | grep -c -E '^[0-9]+$' || true)
+          echo "Gaps found (max→1): $GAP_COUNT"
+
+          if [ "$GAP_COUNT" -eq 0 ]; then
+            echo "downloaded=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Limit batch size to 500 per run (newest first)
+          BATCH_LIMIT=500
+          FETCH_IDS="$GAP_IDS"
+          if [ "$GAP_COUNT" -gt "$BATCH_LIMIT" ]; then
+            FETCH_IDS=$(echo "$GAP_IDS" | head -n "$BATCH_LIMIT")
+            echo "Batch limited to: $BATCH_LIMIT (of $GAP_COUNT gaps)"
+          fi
+
+          FETCH_COUNT=$(echo "$FETCH_IDS" | grep -c -E '^[0-9]+$' || true)
+          echo "IDs to fetch (this run): $FETCH_COUNT"
+
+          mkdir -p public/assets/cards
+
+          fetch_card() {
+            local ID=$1
+            local URL="https://i7.step-on-dream.net/img/cards/${ID}.png"
+            local DEST="public/assets/cards/${ID}.png"
+
+            HTTP_CODE=$(curl -s -o "$DEST" -w "%{http_code}" --connect-timeout 10 --max-time 30 "$URL" || true)
+            HTTP_CODE=${HTTP_CODE:-000}
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              FILE_TYPE=$(file --brief --mime-type "$DEST")
+              if [ "$FILE_TYPE" = "image/png" ]; then
+                echo "OK:${ID}"
+              else
+                rm -f "$DEST"
+                echo "SKIP:${ID}"
+              fi
+            else
+              rm -f "$DEST"
+              echo "FAIL:${ID}"
+            fi
+          }
+          export -f fetch_card
+
+          RESULTS=$(echo "$FETCH_IDS" | grep -E '^[0-9]+$' \
+            | xargs -P 10 -I {} bash -c 'fetch_card "$@"' _ {} || true)
+
+          DOWNLOADED=$(echo "$RESULTS" | grep -c "^OK:" || true)
+          NEW_IDS=$(echo "$RESULTS" | grep "^OK:" | sed 's/^OK://' | sort -n | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g' || true)
+
+          echo "Total new images downloaded: $DOWNLOADED"
+          echo "downloaded=$DOWNLOADED" >> "$GITHUB_OUTPUT"
+          echo "gap_count=$GAP_COUNT" >> "$GITHUB_OUTPUT"
+          echo "fetch_count=$FETCH_COUNT" >> "$GITHUB_OUTPUT"
+          echo "new_ids=${NEW_IDS}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.fetch.outputs.downloaded != '0'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: public/assets/cards/
+          commit-message: "Add gap card images: ${{ steps.fetch.outputs.new_ids }}"
+          branch: auto/add-gap-cards-${{ github.run_id }}
+          delete-branch: true
+          title: "Fill ${{ steps.fetch.outputs.downloaded }} gap card image(s)"
+          body: |
+            ## Summary
+            Automatically fetched gap card images by scanning from max ID down to 1.
+
+            - **Total gaps detected**: ${{ steps.fetch.outputs.gap_count }}
+            - **IDs attempted (this run)**: ${{ steps.fetch.outputs.fetch_count }}
+            - **Successfully downloaded**: ${{ steps.fetch.outputs.downloaded }}
+            - **New card IDs**: ${{ steps.fetch.outputs.new_ids }}
+
+            > Scans descending from the highest existing ID to 1, fetching any missing IDs. Batch limited to 500 per run.

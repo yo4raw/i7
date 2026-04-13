@@ -4,6 +4,12 @@
 /favicon.svg
   Cache-Control: public, max-age=86400
 
+/assets/cards/*
+  Cache-Control: public, max-age=604800, immutable
+
+/assets/th_cards/*
+  Cache-Control: public, max-age=604800, immutable
+
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

@@ -3,6 +3,9 @@ name: Lighthouse CI
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'public/assets/cards/**'
+      - 'public/assets/th_cards/**'
   workflow_dispatch:
 
 jobs:

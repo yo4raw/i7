@@ -44,11 +44,27 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト。
 | Beat（ビート） | 🟢 緑 |
 | Melody（メロディ） | 🔵 青 |
 
+### Card Images
+
+カード画像は `public/assets/` に配置（ビルド時に `dist/assets/` へコピー）。
+
+| 種別 | ディレクトリ | URL パターン |
+|------|-------------|-------------|
+| フルサイズ画像 | `public/assets/cards/` | `{BASE_URL}assets/cards/{cardID}.png` |
+| サムネイル画像 | `public/assets/th_cards/` | `{BASE_URL}assets/th_cards/{cardID}.png` |
+
+画像はゲームサーバー (`i7.step-on-dream.net`) から GitHub Actions の cron ワークフローで自動取得され、PR として追加される:
+
+| ワークフロー | スケジュール (UTC) | 内容 |
+|-------------|-------------------|------|
+| `fetch-new-cards.yml` | 03:00 | 新規カード画像の前方スキャン + ギャップ埋め |
+| `fetch-new-th-cards.yml` | 04:00 | サムネイル画像のバックフィル・同期 |
+| `fetch-gap-cards.yml` | 05:00 | カード ID ギャップの補完 |
+
 ### Key Constants (`src/lib/constants.ts`)
 
-- `CARD_IMAGE_BASE_URL` — full card images (`/i7_assets/assets/cards/{cardID}.png`)
-- `CARD_THUMB_BASE_URL` — thumbnails for list views (`/i7_assets/assets/th_cards/{cardID}.png`)
-- Card images are hosted on a separate GitHub Pages repo (`yo4raw.github.io/i7_assets/`)
+- `CARD_IMAGE_BASE_URL` — `import.meta.env.BASE_URL` ベースの相対パス
+- `CARD_THUMB_BASE_URL` — 同上
 
 ### Page Patterns
 

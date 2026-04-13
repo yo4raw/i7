@@ -43,7 +43,8 @@ export const RARITY_BADGE_CLASSES: Record<string, string> = {
   R: 'bg-gray-400', N: 'bg-gray-300', GROUP: 'bg-pink-400',
 };
 
-export const CARD_IMAGE_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/cards';
-export const CARD_THUMB_BASE_URL = 'https://yo4raw.github.io/i7_assets/assets/th_cards';
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+export const CARD_IMAGE_BASE_URL = `${BASE}/assets/cards`;
+export const CARD_THUMB_BASE_URL = `${BASE}/assets/th_cards`;
 
 export const PAGE_SIZE = 100;
