@@ -63,6 +63,7 @@ export function computeTeam(
   song: Song,
   bonusTiers?: EventBonusTier[],
   trainedFlags?: boolean[],
+  selectedBroachIds?: (number | null)[],
 ): ComputedTeam {
   const cards: DeckCard[] = [];
 
@@ -74,7 +75,7 @@ export function computeTeam(
   let broachMelodyTotal = 0;
 
   // ブローチ条件判定（デッキ全体）
-  const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, song);
+  const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, song, selectedBroachIds);
   const broachScoreBonus = calcBroachScoreBonus(resolvedBroachs);
 
   for (let i = 0; i < 6; i++) {

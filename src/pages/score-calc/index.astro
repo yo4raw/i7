@@ -457,6 +457,27 @@ const base = import.meta.env.BASE_URL;
 
         const currentTier = deckBonusTiers[i];
         const trainedChecked = deckTrained[i];
+
+        // 固定ブローチ表示（読み取り専用）
+        const cardBroachs = (i < 5 && card.rarity === 'UR')
+          ? allBroachs.filter(br => br.card_id === card.cardID)
+          : [];
+        let broachLabelHtml = '';
+        if (cardBroachs.length > 0) {
+          broachLabelHtml = cardBroachs.map(br => {
+            const stats: string[] = [];
+            if (br.shout) stats.push(`S+${br.shout}`);
+            if (br.beat) stats.push(`B+${br.beat}`);
+            if (br.melody) stats.push(`M+${br.melody}`);
+            if (br.score) stats.push(`スコア+${br.score}`);
+            const statStr = stats.join('/');
+            const label = br.condition
+              ? `${br.condition}${statStr ? ' ' + statStr : ''}`
+              : statStr || `ブローチ#${br.id}`;
+            return `<div class="mt-1 w-full text-[8px] bg-purple-50 border border-purple-200 rounded px-1 py-0.5 text-purple-700 truncate text-center" title="${label}">🔮 ${label}</div>`;
+          }).join('');
+        }
+
         container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
         container.style.borderColor = attrColor;
         container.innerHTML = `
@@ -477,7 +498,7 @@ const base = import.meta.env.BASE_URL;
             <option value="bronze"${currentTier === 'bronze' ? ' selected' : ''}>銅特効</option>
             <option value="silver"${currentTier === 'silver' ? ' selected' : ''}>銀特効</option>
             <option value="gold"${currentTier === 'gold' ? ' selected' : ''}>金特効</option>
-          </select>`;
+          </select>${broachLabelHtml}`;
       }
 
       // 特効セレクターのイベント登録
