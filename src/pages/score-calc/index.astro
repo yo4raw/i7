@@ -42,6 +42,9 @@ const base = import.meta.env.BASE_URL;
             <div id="song-chart" class="flex-shrink-0"></div>
             <div id="song-ratios" class="text-xs space-y-1"></div>
           </div>
+          <div class="mt-2 text-right">
+            <a id="song-detail-anchor" href="#" class="text-xs text-indigo-600 hover:underline">楽曲詳細を見る →</a>
+          </div>
         </div>
       </section>
 
@@ -413,6 +416,9 @@ const base = import.meta.env.BASE_URL;
         <div style="color:${ATTR_HEX.Beat}">Beat: ${Math.round(br * 100)}%</div>
         <div style="color:${ATTR_HEX.Melody}">Melody: ${Math.round(mr * 100)}%</div>
       `;
+
+      const anchor = $('song-detail-anchor') as HTMLAnchorElement;
+      anchor.href = `${(window as any).__BASE_URL__}songs/${selectedSong.id}/`;
     }
 
     // --- デッキスロット表示 ---
