@@ -19,10 +19,11 @@ const BROACH_TYPE = {
   SCORE_UP: 9,
 } as const;
 
-/** デッキ6枚全員が指定グループと同一か判定 */
-function isAllSameGroup(deck: (Card | null)[], group: string): boolean {
-  for (const card of deck) {
-    if (!card) return false;
+/** 自カード(スロット0-4)に指定グループ以外のカードが含まれていないか判定。空スロット・フレンド枠は無視。 */
+function hasNoOtherGroup(deck: (Card | null)[], group: string): boolean {
+  for (let i = 0; i < 5; i++) {
+    const card = deck[i];
+    if (!card) continue;
     if (card.groupname !== group) return false;
   }
   return true;
@@ -64,7 +65,7 @@ function checkBroachCondition(
       return true;
 
     case BROACH_TYPE.GROUP:
-      return broach.group != null && isAllSameGroup(deck, broach.group);
+      return broach.group != null && hasNoOtherGroup(deck, broach.group);
 
     case BROACH_TYPE.IDOL_ATTR_COUNT: {
       if (!broach.idol || !broach.attribute) return false;
