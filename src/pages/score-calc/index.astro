@@ -383,11 +383,40 @@ const base = import.meta.env.BASE_URL;
     }
 
     // --- 楽曲選択 ---
+    const SELECTED_SONGS_KEY = 'i7_selected_songs';
+
+    function getSelectedSongIds(): Set<number> {
+      try {
+        const raw = localStorage.getItem(SELECTED_SONGS_KEY);
+        if (raw) return new Set(JSON.parse(raw));
+      } catch {}
+      return new Set();
+    }
+
     function rebuildSongSelect() {
       const sel = $('song-select') as HTMLSelectElement;
-      // 既存のoptgroupを削除（最初の「楽曲を選択」optionは残す）
+      // 既存のoptgroup/optionを削除（最初の「楽曲を選択」optionは残す）
       while (sel.children.length > 1) sel.removeChild(sel.lastChild!);
-      // カテゴリ別にグルーピング
+
+      const pickedIds = getSelectedSongIds();
+      const pickedSongs = allSongs
+        .filter(s => s.id != null && pickedIds.has(s.id))
+        .sort((a, b) => (a.duration || 0) - (b.duration || 0));
+
+      if (pickedSongs.length > 0) {
+        // 曲一覧で選択された曲を秒数順で表示
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = `選択中の曲（${pickedSongs.length}曲・秒数順）`;
+        for (const s of pickedSongs) {
+          const opt = document.createElement('option');
+          opt.value = String(s.id);
+          opt.textContent = `${s.song_name} (${s.difficulty || ''}) - ${s.duration || '?'}秒`;
+          optgroup.appendChild(opt);
+        }
+        sel.appendChild(optgroup);
+      }
+
+      // 全曲をカテゴリ別に表示（フォールバック）
       const groups = new Map<string, Song[]>();
       for (const s of allSongs) {
         const cat = s.category || 'その他';
