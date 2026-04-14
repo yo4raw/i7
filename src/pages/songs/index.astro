@@ -84,10 +84,11 @@ const base = import.meta.env.BASE_URL;
 
   <script>
     import { attrDonutSvg } from '../../lib/donutChart';
-    import { ATTR_HEX } from '../../lib/constants';
+    import { ATTR_HEX, SONG_IMAGE_BASE_URL } from '../../lib/constants';
     import type { Song } from '../../lib/data/fetchSongsJson';
 
     const base = (window as any).__BASE_URL__ || '/i7/';
+    const songImgBase = SONG_IMAGE_BASE_URL;
 
     let allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!) as Song[];
     let filtered: Song[] = [];
@@ -115,8 +116,42 @@ const base = import.meta.env.BASE_URL;
       return `<div class="text-amber-400">${'★'.repeat(n)}${'☆'.repeat(Math.max(0, 5 - n))}</div>`;
     }
 
+    /** 属性比率から主属性の薄い背景色を返す */
+    function dominantAttrBg(sr: number, br: number, mr: number): string {
+      if (!sr && !br && !mr) return 'transparent';
+      if (sr >= br && sr >= mr) return 'rgba(239,68,68,0.06)';
+      if (br >= sr && br >= mr) return 'rgba(34,197,94,0.06)';
+      return 'rgba(59,130,246,0.06)';
+    }
+    function dominantAttrBgHover(sr: number, br: number, mr: number): string {
+      if (!sr && !br && !mr) return 'rgba(0,0,0,0.04)';
+      if (sr >= br && sr >= mr) return 'rgba(239,68,68,0.12)';
+      if (br >= sr && br >= mr) return 'rgba(34,197,94,0.12)';
+      return 'rgba(59,130,246,0.12)';
+    }
+    function dominantAttrBorder(sr: number, br: number, mr: number): string {
+      if (!sr && !br && !mr) return 'transparent';
+      if (sr >= br && sr >= mr) return ATTR_HEX.Shout;
+      if (br >= sr && br >= mr) return ATTR_HEX.Beat;
+      return ATTR_HEX.Melody;
+    }
+
+    function songRowBg(attrColor: string, imgUrl: string): string {
+      return `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.55)), linear-gradient(${attrColor}, ${attrColor}), url(${imgUrl}) no-repeat right 25% / 50% auto`;
+    }
+
     function renderTableRow(song: Song): string {
-      return `<tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='${base}songs/${song.id}/'">
+      const sr = song.shout_ratio || 0;
+      const br = song.beat_ratio || 0;
+      const mr = song.melody_ratio || 0;
+      const bg = dominantAttrBg(sr, br, mr);
+      const bgH = dominantAttrBgHover(sr, br, mr);
+      const borderColor = dominantAttrBorder(sr, br, mr);
+      const imgUrl = `${songImgBase}/${song.id}.png`;
+      const defaultBg = songRowBg(bg, imgUrl);
+      const hoverBg = songRowBg(bgH, imgUrl);
+
+      return `<tr class="cursor-pointer" style="border-top:2px solid ${borderColor};background:${defaultBg}" onmouseenter="this.style.background='${hoverBg}'" onmouseleave="this.style.background='${defaultBg}'" onclick="location.href='${base}songs/${song.id}/'">
         <td class="px-3 py-2 text-xs">${song.category || ''}</td>
         <td class="px-3 py-2 font-medium"><a href="${base}songs/${song.id}/" class="text-indigo-600 hover:underline">${song.song_name || ''}</a></td>
         <td class="px-3 py-2">${song.artist || ''}</td>
@@ -131,7 +166,15 @@ const base = import.meta.env.BASE_URL;
     }
 
     function renderMobileCard(song: Song): string {
-      return `<a href="${base}songs/${song.id}/" class="block bg-white rounded-lg shadow p-3 hover:shadow-md transition-shadow">
+      const sr = song.shout_ratio || 0;
+      const br = song.beat_ratio || 0;
+      const mr = song.melody_ratio || 0;
+      const bg = dominantAttrBg(sr, br, mr);
+      const borderColor = dominantAttrBorder(sr, br, mr);
+      const imgUrl = `${songImgBase}/${song.id}.png`;
+      const mobileBg = `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${bg}, ${bg}), url(${imgUrl}) no-repeat right 25% / auto 500%`;
+
+      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid ${borderColor};background:${mobileBg}" onclick="location.href='${base}songs/${song.id}/'" role="link" tabindex="0">
         <p class="font-medium text-sm text-indigo-600">${song.song_name || ''}</p>
         <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
         <div class="flex gap-3 mt-1 text-xs text-gray-600">
@@ -140,7 +183,7 @@ const base = import.meta.env.BASE_URL;
           <span>${song.duration || '-'}秒</span>
         </div>
         <div class="mt-2">${statsPie(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</div>
-      </a>`;
+      </div>`;
     }
 
     function render() {
