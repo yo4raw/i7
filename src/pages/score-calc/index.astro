@@ -339,6 +339,7 @@ const base = import.meta.env.BASE_URL;
     import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTRIBUTE_MAP } from '../../lib/constants';
     import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
     import { loadCounts } from '../../lib/cardListRenderer';
+    import { loadRabbitNotes } from '../../lib/data/rabbitNote';
 
     const thumbUrl = (window as any).__CARD_THUMB_BASE_URL__ || '';
 
@@ -826,7 +827,7 @@ const base = import.meta.env.BASE_URL;
         return;
       }
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels);
+      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
       const notes = flattenNotes(selectedSong, 42);
 
       // スコア内訳表示
@@ -922,7 +923,7 @@ const base = import.meta.env.BASE_URL;
       btn.textContent = '計算中...';
       $('progress-container').classList.remove('hidden');
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels);
+      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
       const notes = flattenNotes(selectedSong, 42);
 
       // スキルオプションの適用

@@ -18,6 +18,7 @@ import { XorShift128Plus } from './rng';
 import { flattenNotes } from './noteFlattener';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
+import type { RabbitNoteMap } from '../data/rabbitNote';
 
 /** カードからスキル情報を解析する */
 function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5 = 5): CardSkill | null {
@@ -69,6 +70,7 @@ export function computeTeam(
   selectedBroachIds?: (number | null)[],
   sharedBroachSelections?: number[][],
   skillLevels?: (1 | 2 | 3 | 4 | 5)[],
+  rabbitNotes?: RabbitNoteMap,
 ): ComputedTeam {
   const cards: DeckCard[] = [];
 
@@ -95,9 +97,11 @@ export function computeTeam(
     const baseBeat = trained ? (card.beat_max || 0) : (card.beat_min || 0);
     const baseMelody = trained ? (card.melody_max || 0) : (card.melody_min || 0);
 
-    const s = Math.round(baseShout * bonusMult);
-    const b = Math.round(baseBeat * bonusMult);
-    const m = Math.round(baseMelody * bonusMult);
+    // ラビットノート加算（イベントボーナス倍率適用前）
+    const rn = rabbitNotes?.[card.name || ''];
+    const s = Math.round((baseShout + (rn?.shout || 0)) * bonusMult);
+    const b = Math.round((baseBeat + (rn?.beat || 0)) * bonusMult);
+    const m = Math.round((baseMelody + (rn?.melody || 0)) * bonusMult);
     rawShout += s;
     rawBeat += b;
     rawMelody += m;
