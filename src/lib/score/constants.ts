@@ -24,11 +24,5 @@ export const CENTER_SKILL_RATES: Record<string, number> = {
 };
 export const DEFAULT_CENTER_SKILL_RATE = 10;
 
-export type EventBonusTier = 'none' | 'bronze' | 'silver' | 'gold';
-
-export const EVENT_BONUS_MULTIPLIER: Record<EventBonusTier, number> = {
-  none: 1.0,
-  bronze: 2.0,
-  silver: 2.2,
-  gold: 2.4,
-};
+export { EVENT_BONUS_MULTIPLIER } from '../data/eventBonusTiers';
+export type { EventBonusTier } from '../data/eventBonusTiers';
