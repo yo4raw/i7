@@ -56,15 +56,35 @@ export function parseGvizResponse(text: string): GVizResponse {
 
 /**
  * GViz JSON 経由で生のテーブルデータを取得する（カラムマッピングは呼び出し側で行う）
+ * フェッチ失敗時はリトライし、空データの場合はエラーをスローする。
  */
-export async function fetchSheetRaw(spreadsheetId: string, gid: number): Promise<GVizTable> {
+export async function fetchSheetRaw(spreadsheetId: string, gid: number, maxRetries = 2): Promise<GVizTable> {
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`スプレッドシートの取得に失敗: ${response.status} ${response.statusText}`);
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`スプレッドシートの取得に失敗: ${response.status} ${response.statusText}`);
+      }
+      const text = await response.text();
+      const table = parseGvizResponse(text).table;
+      if (table.rows.length === 0) {
+        throw new Error(`スプレッドシートのデータが空です (gid=${gid})`);
+      }
+      return table;
+    } catch (e) {
+      lastError = e as Error;
+      if (attempt < maxRetries) {
+        console.warn(`[gviz] フェッチ試行 ${attempt + 1}/${maxRetries + 1} 失敗 (gid=${gid}): ${lastError.message}`);
+      }
+    }
   }
-  const text = await response.text();
-  return parseGvizResponse(text).table;
+  throw lastError!;
 }
 
 /**

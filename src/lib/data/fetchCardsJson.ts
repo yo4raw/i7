@@ -75,11 +75,16 @@ const SKILL_TYPE_NORMALIZE: Record<string, string> = {
   '判定領域を': '判定縮小スコアアップ',
 };
 
+const MIN_EXPECTED_CARDS = 100;
+
 /**
  * カードデータをGoogle Spreadsheetから取得してクリーンなJSON配列で返す
  */
 export async function fetchCardsJson(): Promise<Card[]> {
   const rows = await fetchSheetAsJson(SPREADSHEET_ID, CARDS_GID);
+  if (rows.length < MIN_EXPECTED_CARDS) {
+    throw new Error(`カードデータが不足しています: ${rows.length}件 (最低${MIN_EXPECTED_CARDS}件を期待)`);
+  }
   return rows.map((row) => {
     const raw = row.ap_skill_type;
     if (typeof raw === 'string' && raw in SKILL_TYPE_NORMALIZE) {
