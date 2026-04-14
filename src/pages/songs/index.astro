@@ -45,6 +45,8 @@ const base = import.meta.env.BASE_URL;
           <option value="notes-asc">ノーツ数（少ない順）</option>
           <option value="stars-desc">難易度（高い順）</option>
           <option value="stars-asc">難易度（低い順）</option>
+          <option value="duration-desc">秒数（長い順）</option>
+          <option value="duration-asc">秒数（短い順）</option>
         </select>
       </div>
     </div>
@@ -221,6 +223,12 @@ const base = import.meta.env.BASE_URL;
           break;
         case 'stars-asc':
           filtered.sort((a, b) => (a.stars || 0) - (b.stars || 0));
+          break;
+        case 'duration-desc':
+          filtered.sort((a, b) => (b.duration || 0) - (a.duration || 0));
+          break;
+        case 'duration-asc':
+          filtered.sort((a, b) => (a.duration || 0) - (b.duration || 0));
           break;
       }
 
