@@ -1,4 +1,5 @@
 import type { Card } from '../data/fetchCardsJson';
+import { getApSkillLevel } from '../data/fetchCardsJson';
 import type { FixedBroach } from '../data/fetchFixedBroachsJson';
 import type { Song } from '../data/fetchSongsJson';
 import {
@@ -18,14 +19,15 @@ import { flattenNotes } from './noteFlattener';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
 
-/** カードからLv5のスキル情報を解析する */
-function parseSkill(card: Card, slotIndex: number): CardSkill | null {
+/** カードからスキル情報を解析する */
+function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5 = 5): CardSkill | null {
   const type = card.ap_skill_type;
   if (!type || type === 'MISS→Good') return null;
 
-  const count = card.ap_skill_5_count;
-  const per = card.ap_skill_5_per;
-  const value = card.ap_skill_5_value;
+  const sl = getApSkillLevel(card, skillLevel);
+  const count = sl.count;
+  const per = sl.per;
+  const value = sl.value;
 
   if (count == null || per == null) return null;
 
@@ -66,6 +68,7 @@ export function computeTeam(
   trainedFlags?: boolean[],
   selectedBroachIds?: (number | null)[],
   sharedBroachSelections?: number[][],
+  skillLevels?: (1 | 2 | 3 | 4 | 5)[],
 ): ComputedTeam {
   const cards: DeckCard[] = [];
 
@@ -139,7 +142,7 @@ export function computeTeam(
       shout_max: s,
       beat_max: b,
       melody_max: m,
-      skill: parseSkill(card, i),
+      skill: parseSkill(card, i, skillLevels?.[i] ?? 5),
       broachShout: bShout,
       broachBeat: bBeat,
       broachMelody: bMelody,
