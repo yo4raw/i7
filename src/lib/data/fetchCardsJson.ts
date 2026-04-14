@@ -90,9 +90,9 @@ export async function fetchCardsJson(): Promise<Card[]> {
     if (typeof raw === 'string' && raw in SKILL_TYPE_NORMALIZE) {
       row.ap_skill_type = SKILL_TYPE_NORMALIZE[raw];
     }
-    // スコアアップ＋タイマーを区別して表示
-    if (row.ap_skill_type === 'スコアアップ' && row.ap_skill_req === 'タイマー') {
-      row.ap_skill_type = 'スコアアップ（タイマー）';
+    // スコアアップ系は発動条件を括弧付きで表示（例: スコアアップ（タイマー）、スコアアップ（コンポ））
+    if (row.ap_skill_type === 'スコアアップ' && row.ap_skill_req) {
+      row.ap_skill_type = `スコアアップ（${row.ap_skill_req}）`;
     }
     return row as unknown as Card;
   });
