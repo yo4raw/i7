@@ -53,6 +53,7 @@ const base = import.meta.env.BASE_URL;
     <div class="mt-3 flex items-center gap-3">
       <button id="btn-reset" class="text-sm text-indigo-600 hover:underline">条件リセット</button>
       <span id="result-count" class="text-sm text-gray-500">{allSongs.length}曲を表示</span>
+      <span id="selected-count" class="text-sm text-indigo-600 font-medium"></span>
     </div>
   </div>
 
@@ -63,6 +64,7 @@ const base = import.meta.env.BASE_URL;
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+            <th class="px-2 py-2 w-8"><input type="checkbox" id="select-all" class="accent-indigo-500 cursor-pointer" title="すべて選択/解除" /></th>
             <th class="px-3 py-2">グループ</th>
             <th class="px-3 py-2">曲名</th>
             <th class="px-3 py-2">アーティスト</th>
@@ -91,11 +93,48 @@ const base = import.meta.env.BASE_URL;
 
     const base = (window as any).__BASE_URL__ || '/i7/';
     const songImgBase = SONG_IMAGE_BASE_URL;
+    const SELECTED_SONGS_KEY = 'i7_selected_songs';
+    const $ = (id: string) => document.getElementById(id)!;
 
     let allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!) as Song[];
     let filtered: Song[] = [];
 
-    const $ = (id: string) => document.getElementById(id)!;
+    // 選択済み曲IDセット（localStorageに永続化）
+    let selectedSongIds: Set<number> = new Set();
+    try {
+      const raw = localStorage.getItem(SELECTED_SONGS_KEY);
+      if (raw) selectedSongIds = new Set(JSON.parse(raw));
+    } catch {}
+
+    function saveSelectedSongs() {
+      try { localStorage.setItem(SELECTED_SONGS_KEY, JSON.stringify([...selectedSongIds])); } catch {}
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      const el = $('selected-count');
+      el.textContent = selectedSongIds.size > 0 ? `${selectedSongIds.size}曲を選択中` : '';
+    }
+
+    function toggleSong(id: number, checked: boolean) {
+      if (checked) selectedSongIds.add(id);
+      else selectedSongIds.delete(id);
+      saveSelectedSongs();
+      updateSelectAllState();
+    }
+
+    function updateSelectAllState() {
+      const selectAll = $('select-all') as HTMLInputElement;
+      const visibleIds = filtered.map(s => s.id).filter((id): id is number => id != null);
+      if (visibleIds.length === 0) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        return;
+      }
+      const checkedCount = visibleIds.filter(id => selectedSongIds.has(id)).length;
+      selectAll.checked = checkedCount === visibleIds.length;
+      selectAll.indeterminate = checkedCount > 0 && checkedCount < visibleIds.length;
+    }
 
     function statsPie(sr: number, br: number, mr: number): string {
       const total = sr + br + mr;
@@ -153,7 +192,9 @@ const base = import.meta.env.BASE_URL;
       const defaultBg = songRowBg(bg, imgUrl);
       const hoverBg = songRowBg(bgH, imgUrl);
 
-      return `<tr class="cursor-pointer" style="border-top:2px solid ${borderColor};background:${defaultBg}" onmouseenter="this.style.background='${hoverBg}'" onmouseleave="this.style.background='${defaultBg}'" onclick="location.href='${base}songs/${song.id}/'">
+      const checked = song.id != null && selectedSongIds.has(song.id) ? 'checked' : '';
+      return `<tr class="cursor-pointer" style="border-top:2px solid ${borderColor};background:${defaultBg}" onmouseenter="this.style.background='${hoverBg}'" onmouseleave="this.style.background='${defaultBg}'" onclick="if(!event.target.closest('.song-check'))location.href='${base}songs/${song.id}/'">
+        <td class="px-2 py-2 song-check"><input type="checkbox" class="accent-indigo-500 cursor-pointer" data-song-id="${song.id}" ${checked} /></td>
         <td class="px-3 py-2 text-xs">${song.category || ''}</td>
         <td class="px-3 py-2 font-medium"><a href="${base}songs/${song.id}/" class="text-indigo-600 hover:underline">${song.song_name || ''}</a></td>
         <td class="px-3 py-2">${song.artist || ''}</td>
@@ -176,7 +217,11 @@ const base = import.meta.env.BASE_URL;
       const imgUrl = `${songImgBase}/${song.id}.png`;
       const mobileBg = `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${bg}, ${bg}), url(${imgUrl}) no-repeat right 25% / auto 500%`;
 
-      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid ${borderColor};background:${mobileBg}" onclick="location.href='${base}songs/${song.id}/'" role="link" tabindex="0">
+      const mobileChecked = song.id != null && selectedSongIds.has(song.id) ? 'checked' : '';
+      return `<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid ${borderColor};background:${mobileBg}" onclick="if(!event.target.closest('.song-check'))location.href='${base}songs/${song.id}/'" role="link" tabindex="0">
+        <div class="flex items-start gap-2">
+          <div class="song-check pt-0.5"><input type="checkbox" class="accent-indigo-500 cursor-pointer" data-song-id="${song.id}" ${mobileChecked} /></div>
+          <div class="flex-1">
         <p class="font-medium text-sm text-indigo-600">${song.song_name || ''}</p>
         <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
         <div class="flex gap-3 mt-1 text-xs text-gray-600">
@@ -185,6 +230,8 @@ const base = import.meta.env.BASE_URL;
           <span>${song.duration || '-'}秒</span>
         </div>
         <div class="mt-2">${statsPie(song.shout_ratio || 0, song.beat_ratio || 0, song.melody_ratio || 0)}</div>
+          </div>
+        </div>
       </div>`;
     }
 
@@ -192,6 +239,8 @@ const base = import.meta.env.BASE_URL;
       $('table-body').innerHTML = filtered.map(renderTableRow).join('');
       $('mobile-cards').innerHTML = filtered.map(renderMobileCard).join('');
       $('result-count').textContent = `${filtered.length}曲を表示`;
+      updateSelectAllState();
+      updateSelectedCount();
     }
 
     function applyFilters() {
@@ -259,6 +308,31 @@ const base = import.meta.env.BASE_URL;
       if (params.get('stars')) ($('search-stars') as HTMLSelectElement).value = params.get('stars')!;
       if (params.get('sort')) ($('sort-by') as HTMLSelectElement).value = params.get('sort')!;
     }
+
+    // チェックボックスイベント（イベントデリゲーション）
+    document.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.type === 'checkbox' && target.dataset.songId) {
+        toggleSong(Number(target.dataset.songId), target.checked);
+      }
+    });
+
+    // 全選択/解除
+    $('select-all').addEventListener('change', (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      for (const song of filtered) {
+        if (song.id != null) {
+          if (checked) selectedSongIds.add(song.id);
+          else selectedSongIds.delete(song.id);
+        }
+      }
+      saveSelectedSongs();
+      // 表示中のチェックボックスを更新
+      document.querySelectorAll<HTMLInputElement>('[data-song-id]').forEach(cb => {
+        const id = Number(cb.dataset.songId);
+        cb.checked = selectedSongIds.has(id);
+      });
+    });
 
     // イベント登録
     let debounceTimer: ReturnType<typeof setTimeout>;
