@@ -372,7 +372,7 @@ const base = import.meta.env.BASE_URL;
     // --- 共有ブローチバリデーション ---
     function validateSharedBroachs(slotIndex: number) {
       const card = deck[slotIndex];
-      if (!card || card.rarity !== 'UR' || slotIndex >= 5) {
+      if (!card || card.rarity !== 'UR') {
         deckSharedBroachs[slotIndex] = [];
         return;
       }
@@ -482,7 +482,7 @@ const base = import.meta.env.BASE_URL;
         const currentSkillLv = deckSkillLevels[i];
 
         // 固定ブローチ表示（読み取り専用）
-        const cardBroachs = (i < 5 && card.rarity === 'UR')
+        const cardBroachs = card.rarity === 'UR'
           ? allBroachs.filter(br => br.card_id === card.cardID)
           : [];
         let broachLabelHtml = '';
@@ -501,9 +501,9 @@ const base = import.meta.env.BASE_URL;
           }).join('');
         }
 
-        // 共有ブローチセレクター（URカード、スロット0-4のみ）
+        // 共有ブローチセレクター（URカード）
         let sharedBroachHtml = '';
-        if (i < 5 && card.rarity === 'UR') {
+        if (card.rarity === 'UR') {
           const hasFixed = cardBroachs.length > 0;
           const maxShared = hasFixed ? 1 : 2;
           for (let s = 0; s < maxShared; s++) {

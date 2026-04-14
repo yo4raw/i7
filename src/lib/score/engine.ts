@@ -102,35 +102,33 @@ export function computeTeam(
     rawBeat += b;
     rawMelody += m;
 
-    // ブローチ加算（スロット0-4のみ、条件判定済み）
+    // ブローチ加算（条件判定済み）
     let bShout = 0, bBeat = 0, bMelody = 0;
-    if (i < 5) {
-      const slotBroachs = resolvedBroachs.get(i) ?? [];
-      for (const rb of slotBroachs) {
-        if (!rb.active) continue;
-        // 種類9（スコアUP）はステータスではなくスコア直接加算なのでここではスキップ
-        if (rb.broach.broach_type === 9) continue;
-        bShout += rb.broach.shout || 0;
-        bBeat += rb.broach.beat || 0;
-        bMelody += rb.broach.melody || 0;
-      }
-      // 共有ブローチ加算
-      if (sharedBroachSelections?.[i]) {
-        for (const sbId of sharedBroachSelections[i]) {
-          if (!sbId) continue;
-          const sb = SHARED_BROACHS.find(s => s.id === sbId);
-          if (sb) {
-            bShout += sb.shout;
-            bBeat += sb.beat;
-            bMelody += sb.melody;
-          }
+    const slotBroachs = resolvedBroachs.get(i) ?? [];
+    for (const rb of slotBroachs) {
+      if (!rb.active) continue;
+      // 種類9（スコアUP）はステータスではなくスコア直接加算なのでここではスキップ
+      if (rb.broach.broach_type === 9) continue;
+      bShout += rb.broach.shout || 0;
+      bBeat += rb.broach.beat || 0;
+      bMelody += rb.broach.melody || 0;
+    }
+    // 共有ブローチ加算
+    if (sharedBroachSelections?.[i]) {
+      for (const sbId of sharedBroachSelections[i]) {
+        if (!sbId) continue;
+        const sb = SHARED_BROACHS.find(s => s.id === sbId);
+        if (sb) {
+          bShout += sb.shout;
+          bBeat += sb.beat;
+          bMelody += sb.melody;
         }
       }
-
-      broachShoutTotal += bShout;
-      broachBeatTotal += bBeat;
-      broachMelodyTotal += bMelody;
     }
+
+    broachShoutTotal += bShout;
+    broachBeatTotal += bBeat;
+    broachMelodyTotal += bMelody;
 
     cards.push({
       cardId: card.ID || 0,
