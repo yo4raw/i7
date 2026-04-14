@@ -756,13 +756,7 @@ const base = import.meta.env.BASE_URL;
       const ownedOnly = ($('modal-owned-only') as HTMLInputElement).checked;
       const counts = loadCounts();
 
-      // デッキに既に入っているカードIDを除外
-      const usedIds = new Set(deck.filter(c => c !== null).map(c => c!.ID));
-      // 現在編集中のスロットのカードは除外しない
-      if (deck[activeModalSlot]) usedIds.delete(deck[activeModalSlot]!.ID);
-
       let filtered = allCards.filter(card => {
-        if (usedIds.has(card.ID!)) return false;
         if (ownedOnly && !(counts[String(card.ID)] >= 1)) return false;
         if (text) {
           const name = (card.cardname || '').toLowerCase();
