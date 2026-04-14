@@ -16,6 +16,7 @@ import type { EventBonusTier } from './constants';
 import { XorShift128Plus } from './rng';
 import { flattenNotes } from './noteFlattener';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
+import { SHARED_BROACHS } from '../data/sharedBroachs';
 
 /** カードからLv5のスキル情報を解析する */
 function parseSkill(card: Card, slotIndex: number): CardSkill | null {
@@ -64,6 +65,7 @@ export function computeTeam(
   bonusTiers?: EventBonusTier[],
   trainedFlags?: boolean[],
   selectedBroachIds?: (number | null)[],
+  sharedBroachSelections?: number[][],
 ): ComputedTeam {
   const cards: DeckCard[] = [];
 
@@ -109,6 +111,19 @@ export function computeTeam(
         bBeat += rb.broach.beat || 0;
         bMelody += rb.broach.melody || 0;
       }
+      // 共有ブローチ加算
+      if (sharedBroachSelections?.[i]) {
+        for (const sbId of sharedBroachSelections[i]) {
+          if (!sbId) continue;
+          const sb = SHARED_BROACHS.find(s => s.id === sbId);
+          if (sb) {
+            bShout += sb.shout;
+            bBeat += sb.beat;
+            bMelody += sb.melody;
+          }
+        }
+      }
+
       broachShoutTotal += bShout;
       broachBeatTotal += bBeat;
       broachMelodyTotal += bMelody;

@@ -329,6 +329,7 @@ const base = import.meta.env.BASE_URL;
     import { renderHistogramSvg } from '../../lib/score/histogram';
     import { attrDonutSvg } from '../../lib/donutChart';
     import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTRIBUTE_MAP } from '../../lib/constants';
+    import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
     import { loadCounts } from '../../lib/cardListRenderer';
 
     const thumbUrl = (window as any).__CARD_THUMB_BASE_URL__ || '';
@@ -344,6 +345,7 @@ const base = import.meta.env.BASE_URL;
     let deck: (Card | null)[] = [null, null, null, null, null, null];
     let deckBonusTiers: EventBonusTier[] = ['none', 'none', 'none', 'none', 'none', 'none'];
     let deckTrained: boolean[] = [true, true, true, true, true, true];
+    let deckSharedBroachs: number[][] = [[], [], [], [], [], []];
     let activeModalSlot = -1;
     let simulationResult: SimulationResult | null = null;
 
@@ -357,6 +359,18 @@ const base = import.meta.env.BASE_URL;
       const num = Number(attr);
       if (!isNaN(num) && ATTRIBUTE_MAP[num]) return ATTRIBUTE_MAP[num];
       return attr as string || 'Shout';
+    }
+
+    // --- 共有ブローチバリデーション ---
+    function validateSharedBroachs(slotIndex: number) {
+      const card = deck[slotIndex];
+      if (!card || card.rarity !== 'UR' || slotIndex >= 5) {
+        deckSharedBroachs[slotIndex] = [];
+        return;
+      }
+      const hasFixed = allBroachs.some(br => br.card_id === card.cardID);
+      const maxShared = hasFixed ? 1 : 2;
+      deckSharedBroachs[slotIndex] = deckSharedBroachs[slotIndex].slice(0, maxShared);
     }
 
     // --- 楽曲選択 ---
@@ -478,6 +492,33 @@ const base = import.meta.env.BASE_URL;
           }).join('');
         }
 
+        // 共有ブローチセレクター（URカード、スロット0-4のみ）
+        let sharedBroachHtml = '';
+        if (i < 5 && card.rarity === 'UR') {
+          const hasFixed = cardBroachs.length > 0;
+          const maxShared = hasFixed ? 1 : 2;
+          for (let s = 0; s < maxShared; s++) {
+            const currentVal = deckSharedBroachs[i]?.[s] ?? 0;
+            // 同一スロット内の重複防止: もう一方のスロットで選択中のIDを除外
+            const otherIdx = s === 0 ? 1 : 0;
+            const otherId = maxShared > 1 ? (deckSharedBroachs[i]?.[otherIdx] ?? 0) : 0;
+            const options = SHARED_BROACHS.filter(sb => sb.id !== otherId || sb.id === currentVal).map(sb => {
+              const sel = sb.id === currentVal ? ' selected' : '';
+              const stats: string[] = [];
+              if (sb.shout) stats.push(`S+${sb.shout}`);
+              if (sb.beat) stats.push(`B+${sb.beat}`);
+              if (sb.melody) stats.push(`M+${sb.melody}`);
+              return `<option value="${sb.id}"${sel}>${sb.name} (${stats.join('/')})</option>`;
+            }).join('');
+            sharedBroachHtml += `
+              <select class="shared-broach-select mt-1 w-full text-[8px] border border-purple-300 rounded px-0.5 py-0.5 bg-purple-50 text-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-400"
+                      data-broach-slot="${i}" data-broach-idx="${s}">
+                <option value="0">共有ブローチ${maxShared > 1 ? (s + 1) : ''}を選択</option>
+                ${options}
+              </select>`;
+          }
+        }
+
         container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
         container.style.borderColor = attrColor;
         container.innerHTML = `
@@ -498,7 +539,7 @@ const base = import.meta.env.BASE_URL;
             <option value="bronze"${currentTier === 'bronze' ? ' selected' : ''}>銅特効</option>
             <option value="silver"${currentTier === 'silver' ? ' selected' : ''}>銀特効</option>
             <option value="gold"${currentTier === 'gold' ? ' selected' : ''}>金特効</option>
-          </select>${broachLabelHtml}`;
+          </select>${broachLabelHtml}${sharedBroachHtml}`;
       }
 
       // 特効セレクターのイベント登録
@@ -526,6 +567,23 @@ const base = import.meta.env.BASE_URL;
           const slot = Number(chk.dataset.trainedSlot);
           deckTrained[slot] = chk.checked;
           renderCardDetailTable();
+          recalculate();
+          saveState();
+        });
+      });
+
+      // 共有ブローチセレクターのイベント登録
+      document.querySelectorAll('.shared-broach-select').forEach(el => {
+        el.addEventListener('click', (e) => e.stopPropagation());
+        el.addEventListener('change', (e) => {
+          const sel = e.target as HTMLSelectElement;
+          const slot = Number(sel.dataset.broachSlot);
+          const idx = Number(sel.dataset.broachIdx);
+          const val = Number(sel.value);
+          if (!deckSharedBroachs[slot]) deckSharedBroachs[slot] = [];
+          while (deckSharedBroachs[slot].length <= idx) deckSharedBroachs[slot].push(0);
+          deckSharedBroachs[slot][idx] = val;
+          renderDeckSlots();
           recalculate();
           saveState();
         });
@@ -580,9 +638,17 @@ const base = import.meta.env.BASE_URL;
         const attr = normalizeAttr(card.attribute);
         const slotBroachs = resolvedMap.get(i) ?? [];
         const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
-        const bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0), 0);
-        const bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0), 0);
-        const bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0), 0);
+        let bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0), 0);
+        let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0), 0);
+        let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0), 0);
+        // 共有ブローチのステータスも加算
+        if (i < 5 && card.rarity === 'UR') {
+          for (const sbId of (deckSharedBroachs[i] || [])) {
+            if (!sbId) continue;
+            const sb = SHARED_BROACHS.find(s => s.id === sbId);
+            if (sb) { bS += sb.shout; bB += sb.beat; bM += sb.melody; }
+          }
+        }
         const hasInactive = slotBroachs.some(rb => !rb.active);
         const broachClass = hasInactive ? 'text-gray-300' : '';
         const skillType = card.ap_skill_type || '-';
@@ -710,6 +776,7 @@ const base = import.meta.env.BASE_URL;
           const card = allCards.find(c => c.ID === cardId);
           if (card && activeModalSlot >= 0) {
             deck[activeModalSlot] = card;
+            validateSharedBroachs(activeModalSlot);
             closeCardPicker();
             renderDeckSlots();
             recalculate();
@@ -733,7 +800,7 @@ const base = import.meta.env.BASE_URL;
         return;
       }
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained);
+      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs);
       const notes = flattenNotes(selectedSong, 42);
 
       // スコア内訳表示
@@ -829,7 +896,7 @@ const base = import.meta.env.BASE_URL;
       btn.textContent = '計算中...';
       $('progress-container').classList.remove('hidden');
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained);
+      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs);
       const notes = flattenNotes(selectedSong, 42);
 
       // スキルオプションの適用
@@ -929,6 +996,7 @@ const base = import.meta.env.BASE_URL;
         deckIds: deck.map(c => c?.ID ?? null),
         bonusTiers: deckBonusTiers,
         trained: deckTrained,
+        sharedBroachs: deckSharedBroachs,
       };
       try { localStorage.setItem('i7_score_calc_state', JSON.stringify(state)); } catch {}
     }
@@ -956,12 +1024,21 @@ const base = import.meta.env.BASE_URL;
             deckTrained[i] = state.trained[i] !== false;
           }
         }
+        if (Array.isArray(state.sharedBroachs)) {
+          for (let i = 0; i < 6; i++) {
+            deckSharedBroachs[i] = Array.isArray(state.sharedBroachs[i]) ? state.sharedBroachs[i] : [];
+          }
+        }
         if (Array.isArray(state.deckIds)) {
           for (let i = 0; i < 6; i++) {
             const id = state.deckIds[i];
             if (id != null) {
               deck[i] = allCards.find(c => c.ID === id) || null;
             }
+          }
+          // デッキ復元後に共有ブローチのバリデーション
+          for (let i = 0; i < 6; i++) {
+            validateSharedBroachs(i);
           }
           renderDeckSlots();
           recalculate();
@@ -990,6 +1067,7 @@ const base = import.meta.env.BASE_URL;
           deck[activeModalSlot] = null;
           deckBonusTiers[activeModalSlot] = 'none';
           deckTrained[activeModalSlot] = true;
+          deckSharedBroachs[activeModalSlot] = [];
           closeCardPicker();
           renderDeckSlots();
           recalculate();
