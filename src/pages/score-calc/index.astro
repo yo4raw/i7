@@ -318,7 +318,7 @@ const base = import.meta.env.BASE_URL;
   </script>
 
   <script>
-    import type { Card } from '../../lib/data/fetchCardsJson';
+    import { getApSkillLevel, type Card } from '../../lib/data/fetchCardsJson';
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
@@ -346,6 +346,7 @@ const base = import.meta.env.BASE_URL;
     let deckBonusTiers: EventBonusTier[] = ['none', 'none', 'none', 'none', 'none', 'none'];
     let deckTrained: boolean[] = [true, true, true, true, true, true];
     let deckSharedBroachs: number[][] = [[], [], [], [], [], []];
+    let deckSkillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     let activeModalSlot = -1;
     let simulationResult: SimulationResult | null = null;
 
@@ -471,6 +472,7 @@ const base = import.meta.env.BASE_URL;
 
         const currentTier = deckBonusTiers[i];
         const trainedChecked = deckTrained[i];
+        const currentSkillLv = deckSkillLevels[i];
 
         // 固定ブローチ表示（読み取り専用）
         const cardBroachs = (i < 5 && card.rarity === 'UR')
@@ -539,6 +541,9 @@ const base = import.meta.env.BASE_URL;
             <option value="bronze"${currentTier === 'bronze' ? ' selected' : ''}>銅特効</option>
             <option value="silver"${currentTier === 'silver' ? ' selected' : ''}>銀特効</option>
             <option value="gold"${currentTier === 'gold' ? ' selected' : ''}>金特効</option>
+          </select>
+          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot="${i}">
+            ${[1, 2, 3, 4, 5].map(lv => `<option value="${lv}"${currentSkillLv === lv ? ' selected' : ''}>スキルLv${lv}</option>`).join('')}
           </select>${broachLabelHtml}${sharedBroachHtml}`;
       }
 
@@ -566,6 +571,19 @@ const base = import.meta.env.BASE_URL;
           const chk = e.target as HTMLInputElement;
           const slot = Number(chk.dataset.trainedSlot);
           deckTrained[slot] = chk.checked;
+          renderCardDetailTable();
+          recalculate();
+          saveState();
+        });
+      });
+
+      // スキルレベルセレクターのイベント登録
+      document.querySelectorAll('.skill-level-select').forEach(el => {
+        el.addEventListener('click', (e) => e.stopPropagation());
+        el.addEventListener('change', (e) => {
+          const sel = e.target as HTMLSelectElement;
+          const slot = Number(sel.dataset.skillSlot);
+          deckSkillLevels[slot] = Number(sel.value) as 1 | 2 | 3 | 4 | 5;
           renderCardDetailTable();
           recalculate();
           saveState();
@@ -652,9 +670,10 @@ const base = import.meta.env.BASE_URL;
         const hasInactive = slotBroachs.some(rb => !rb.active);
         const broachClass = hasInactive ? 'text-gray-300' : '';
         const skillType = card.ap_skill_type || '-';
-        const count = card.ap_skill_5_count ?? '-';
-        const per = card.ap_skill_5_per != null ? `${card.ap_skill_5_per}%` : '-';
-        const value = card.ap_skill_5_value != null ? card.ap_skill_5_value.toLocaleString() : '-';
+        const sl = getApSkillLevel(card, deckSkillLevels[i]);
+        const count = sl.count ?? '-';
+        const per = sl.per != null ? `${sl.per}%` : '-';
+        const value = sl.value != null ? sl.value.toLocaleString() : '-';
         const tier = deckBonusTiers[i];
         const bonusLabel = BONUS_LABEL[tier];
         const bonusClass = BONUS_CLASS[tier];
@@ -800,7 +819,7 @@ const base = import.meta.env.BASE_URL;
         return;
       }
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs);
+      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels);
       const notes = flattenNotes(selectedSong, 42);
 
       // スコア内訳表示
@@ -896,7 +915,7 @@ const base = import.meta.env.BASE_URL;
       btn.textContent = '計算中...';
       $('progress-container').classList.remove('hidden');
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs);
+      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels);
       const notes = flattenNotes(selectedSong, 42);
 
       // スキルオプションの適用
@@ -997,6 +1016,7 @@ const base = import.meta.env.BASE_URL;
         bonusTiers: deckBonusTiers,
         trained: deckTrained,
         sharedBroachs: deckSharedBroachs,
+        skillLevels: deckSkillLevels,
       };
       try { localStorage.setItem('i7_score_calc_state', JSON.stringify(state)); } catch {}
     }
@@ -1027,6 +1047,12 @@ const base = import.meta.env.BASE_URL;
         if (Array.isArray(state.sharedBroachs)) {
           for (let i = 0; i < 6; i++) {
             deckSharedBroachs[i] = Array.isArray(state.sharedBroachs[i]) ? state.sharedBroachs[i] : [];
+          }
+        }
+        if (Array.isArray(state.skillLevels)) {
+          for (let i = 0; i < 6; i++) {
+            const lv = state.skillLevels[i];
+            deckSkillLevels[i] = (lv >= 1 && lv <= 5) ? lv : 5;
           }
         }
         if (Array.isArray(state.deckIds)) {
