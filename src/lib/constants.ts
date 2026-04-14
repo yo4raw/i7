@@ -2,8 +2,16 @@ export const CHARACTERS = [
   '和泉一織', '二階堂大和', '和泉三月', '四葉環',
   '逢坂壮五', '六弥ナギ', '七瀬陸',
   '八乙女楽', '九条天', '十龍之介',
+  '百', '千',
   '亥清悠', '狗丸トウマ', '棗巳波',
   '御堂虎於'
+] as const;
+
+export const CHARACTER_GROUPS = [
+  { name: 'IDOLiSH7', members: ['和泉一織', '二階堂大和', '和泉三月', '四葉環', '逢坂壮五', '六弥ナギ', '七瀬陸'] },
+  { name: 'TRIGGER', members: ['八乙女楽', '九条天', '十龍之介'] },
+  { name: 'Re:vale', members: ['百', '千'] },
+  { name: 'ŹOOĻ', members: ['亥清悠', '狗丸トウマ', '棗巳波', '御堂虎於'] },
 ] as const;
 
 export const RARITIES = ['UR', 'SSR', 'SR', 'R', 'N'] as const;
