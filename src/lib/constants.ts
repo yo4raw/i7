@@ -46,5 +46,6 @@ export const RARITY_BADGE_CLASSES: Record<string, string> = {
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 export const CARD_IMAGE_BASE_URL = `${BASE}/assets/cards`;
 export const CARD_THUMB_BASE_URL = `${BASE}/assets/th_cards`;
+export const SONG_IMAGE_BASE_URL = `${BASE}/assets/songs`;
 
 export const PAGE_SIZE = 100;
