@@ -538,10 +538,7 @@ const base = import.meta.env.BASE_URL;
           const maxShared = hasFixed ? 1 : 2;
           for (let s = 0; s < maxShared; s++) {
             const currentVal = deckSharedBroachs[i]?.[s] ?? 0;
-            // 同一スロット内の重複防止: もう一方のスロットで選択中のIDを除外
-            const otherIdx = s === 0 ? 1 : 0;
-            const otherId = maxShared > 1 ? (deckSharedBroachs[i]?.[otherIdx] ?? 0) : 0;
-            const options = SHARED_BROACHS.filter(sb => sb.id !== otherId || sb.id === currentVal).map(sb => {
+            const options = SHARED_BROACHS.map(sb => {
               const sel = sb.id === currentVal ? ' selected' : '';
               const stats: string[] = [];
               if (sb.shout) stats.push(`S+${sb.shout}`);
