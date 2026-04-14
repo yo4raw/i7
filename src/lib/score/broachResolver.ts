@@ -94,7 +94,7 @@ function checkBroachCondition(
 /**
  * デッキ全体のブローチを条件判定して返す。
  * デッキ内発動上限（種類6/7）も処理する。
- * @returns key = slotIndex (0-4), value = ResolvedBroach[]
+ * @returns key = slotIndex (0-5), value = ResolvedBroach[]
  */
 export function resolveDeckBroachs(
   deck: (Card | null)[],
@@ -116,7 +116,7 @@ export function resolveDeckBroachs(
   }
   const pending: PendingBroach[] = [];
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const card = deck[i];
     if (!card || card.rarity !== 'UR') continue;
 
