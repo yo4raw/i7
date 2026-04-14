@@ -332,7 +332,8 @@ const base = import.meta.env.BASE_URL;
     import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
-    import type { EventBonusTier } from '../../lib/score/constants';
+    import { EVENT_BONUS_TIERS, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
+    import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
     import { renderHistogramSvg } from '../../lib/score/histogram';
     import { attrDonutSvg } from '../../lib/donutChart';
     import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTRIBUTE_MAP } from '../../lib/constants';
@@ -544,10 +545,7 @@ const base = import.meta.env.BASE_URL;
             <span>特訓済</span>
           </label>
           <select class="bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-bonus-slot="${i}">
-            <option value="none"${currentTier === 'none' ? ' selected' : ''}>特効なし</option>
-            <option value="bronze"${currentTier === 'bronze' ? ' selected' : ''}>銅特効</option>
-            <option value="silver"${currentTier === 'silver' ? ' selected' : ''}>銀特効</option>
-            <option value="gold"${currentTier === 'gold' ? ' selected' : ''}>金特効</option>
+            ${EVENT_BONUS_TIERS.map(t => `<option value="${t.key}"${currentTier === t.key ? ' selected' : ''}>${t.optionLabel}</option>`).join('')}
           </select>
           <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot="${i}">
             ${[1, 2, 3, 4, 5].map(lv => `<option value="${lv}"${currentSkillLv === lv ? ' selected' : ''}>スキルLv${lv}</option>`).join('')}
@@ -620,15 +618,10 @@ const base = import.meta.env.BASE_URL;
 
     function applyBonusTierStyle(sel: HTMLSelectElement) {
       const tier = sel.value as EventBonusTier;
-      sel.classList.remove('bg-yellow-100', 'text-yellow-800', 'border-yellow-400',
-                           'bg-gray-200', 'text-gray-700', 'border-gray-400',
-                           'bg-amber-100', 'text-amber-800', 'border-amber-400');
-      if (tier === 'gold') {
-        sel.classList.add('bg-yellow-100', 'text-yellow-800', 'border-yellow-400');
-      } else if (tier === 'silver') {
-        sel.classList.add('bg-gray-200', 'text-gray-700', 'border-gray-400');
-      } else if (tier === 'bronze') {
-        sel.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-400');
+      sel.classList.remove(...ALL_SELECT_CLASSES);
+      const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
+      if (def && def.selectClasses.length > 0) {
+        sel.classList.add(...def.selectClasses);
       }
     }
 
@@ -639,19 +632,6 @@ const base = import.meta.env.BASE_URL;
         return;
       }
       $('card-detail-section').classList.remove('hidden');
-
-      const BONUS_LABEL: Record<EventBonusTier, string> = {
-        none: '-',
-        bronze: '銅',
-        silver: '銀',
-        gold: '金',
-      };
-      const BONUS_CLASS: Record<EventBonusTier, string> = {
-        none: 'text-gray-400',
-        bronze: 'text-amber-700 font-bold',
-        silver: 'text-gray-500 font-bold',
-        gold: 'text-yellow-600 font-bold',
-      };
 
       // ブローチ条件判定（デッキ・楽曲に依存）
       const dummySong = selectedSong || { song_name: '' } as any;
