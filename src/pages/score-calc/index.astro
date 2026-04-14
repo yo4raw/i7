@@ -177,7 +177,14 @@ const base = import.meta.env.BASE_URL;
 
       <!-- デッキスロット -->
       <section class="bg-white rounded-lg shadow p-4">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">デッキ編成</h2>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-gray-700">デッキ編成</h2>
+          <div class="relative flex gap-2">
+            <button id="btn-save-deck" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors">保存</button>
+            <button id="btn-load-deck" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">読込</button>
+            <div id="load-deck-dropdown" class="hidden absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
+          </div>
+        </div>
         <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="deck-slots">
           <div class="deck-slot" data-slot="1">
             <div class="text-[10px] text-center text-gray-500 mb-1">メンバー1</div>
@@ -1009,67 +1016,175 @@ const base = import.meta.env.BASE_URL;
     }
 
     // --- 状態保存/復元 ---
-    function saveState() {
-      const state = {
+    function buildStateObject() {
+      return {
         songId: selectedSong?.id ?? null,
         deckIds: deck.map(c => c?.ID ?? null),
-        bonusTiers: deckBonusTiers,
-        trained: deckTrained,
-        sharedBroachs: deckSharedBroachs,
-        skillLevels: deckSkillLevels,
+        bonusTiers: [...deckBonusTiers],
+        trained: [...deckTrained],
+        sharedBroachs: deckSharedBroachs.map(a => [...a]),
+        skillLevels: [...deckSkillLevels],
       };
-      try { localStorage.setItem('i7_score_calc_state', JSON.stringify(state)); } catch {}
+    }
+
+    function applyState(state: any) {
+      if (state.songId != null) {
+        const song = allSongs.find(s => s.id === state.songId);
+        if (song) {
+          selectedSong = song;
+          ($('song-select') as HTMLSelectElement).value = String(song.id);
+          renderSongInfo();
+        }
+      } else {
+        selectedSong = null;
+        ($('song-select') as HTMLSelectElement).value = '';
+        renderSongInfo();
+      }
+      if (Array.isArray(state.bonusTiers)) {
+        for (let i = 0; i < 6; i++) {
+          deckBonusTiers[i] = state.bonusTiers[i] || 'none';
+        }
+      }
+      if (Array.isArray(state.trained)) {
+        for (let i = 0; i < 6; i++) {
+          deckTrained[i] = state.trained[i] !== false;
+        }
+      }
+      if (Array.isArray(state.sharedBroachs)) {
+        for (let i = 0; i < 6; i++) {
+          deckSharedBroachs[i] = Array.isArray(state.sharedBroachs[i]) ? state.sharedBroachs[i] : [];
+        }
+      }
+      if (Array.isArray(state.skillLevels)) {
+        for (let i = 0; i < 6; i++) {
+          const lv = state.skillLevels[i];
+          deckSkillLevels[i] = (lv >= 1 && lv <= 5) ? lv : 5;
+        }
+      }
+      // デッキカードをリセットしてから復元
+      deck = [null, null, null, null, null, null];
+      if (Array.isArray(state.deckIds)) {
+        for (let i = 0; i < 6; i++) {
+          const id = state.deckIds[i];
+          if (id != null) {
+            deck[i] = allCards.find(c => c.ID === id) || null;
+          }
+        }
+      }
+      for (let i = 0; i < 6; i++) {
+        validateSharedBroachs(i);
+      }
+      renderDeckSlots();
+      recalculate();
+    }
+
+    function saveState() {
+      try { localStorage.setItem('i7_score_calc_state', JSON.stringify(buildStateObject())); } catch {}
     }
 
     function restoreState() {
       try {
         const raw = localStorage.getItem('i7_score_calc_state');
         if (!raw) return;
-        const state = JSON.parse(raw);
-        if (state.songId != null) {
-          const song = allSongs.find(s => s.id === state.songId);
-          if (song) {
-            selectedSong = song;
-            ($('song-select') as HTMLSelectElement).value = String(song.id);
-            renderSongInfo();
-          }
-        }
-        if (Array.isArray(state.bonusTiers)) {
-          for (let i = 0; i < 6; i++) {
-            deckBonusTiers[i] = state.bonusTiers[i] || 'none';
-          }
-        }
-        if (Array.isArray(state.trained)) {
-          for (let i = 0; i < 6; i++) {
-            deckTrained[i] = state.trained[i] !== false;
-          }
-        }
-        if (Array.isArray(state.sharedBroachs)) {
-          for (let i = 0; i < 6; i++) {
-            deckSharedBroachs[i] = Array.isArray(state.sharedBroachs[i]) ? state.sharedBroachs[i] : [];
-          }
-        }
-        if (Array.isArray(state.skillLevels)) {
-          for (let i = 0; i < 6; i++) {
-            const lv = state.skillLevels[i];
-            deckSkillLevels[i] = (lv >= 1 && lv <= 5) ? lv : 5;
-          }
-        }
-        if (Array.isArray(state.deckIds)) {
-          for (let i = 0; i < 6; i++) {
-            const id = state.deckIds[i];
-            if (id != null) {
-              deck[i] = allCards.find(c => c.ID === id) || null;
-            }
-          }
-          // デッキ復元後に共有ブローチのバリデーション
-          for (let i = 0; i < 6; i++) {
-            validateSharedBroachs(i);
-          }
-          renderDeckSlots();
-          recalculate();
-        }
+        applyState(JSON.parse(raw));
       } catch {}
+    }
+
+    // --- デッキ保存/読込 ---
+    const SAVED_DECKS_KEY = 'i7_saved_decks';
+
+    interface SavedDeck {
+      id: string;
+      name: string;
+      createdAt: number;
+      updatedAt: number;
+      state: ReturnType<typeof buildStateObject>;
+    }
+
+    function loadSavedDecks(): SavedDeck[] {
+      try { return JSON.parse(localStorage.getItem(SAVED_DECKS_KEY) || '[]'); } catch { return []; }
+    }
+
+    function writeSavedDecks(decks: SavedDeck[]) {
+      try { localStorage.setItem(SAVED_DECKS_KEY, JSON.stringify(decks)); } catch {}
+    }
+
+    function saveDeck() {
+      const hasCards = deck.some(c => c !== null);
+      if (!hasCards) { alert('デッキにカードを1枚以上セットしてください'); return; }
+
+      const existing = loadSavedDecks();
+      const defaultName = `デッキ ${existing.length + 1}`;
+      const name = prompt('デッキ名を入力してください', defaultName);
+      if (!name) return;
+
+      const now = Date.now();
+      const newDeck: SavedDeck = {
+        id: now.toString(36),
+        name: name.trim() || defaultName,
+        createdAt: now,
+        updatedAt: now,
+        state: buildStateObject(),
+      };
+      existing.push(newDeck);
+      writeSavedDecks(existing);
+
+      const btn = $('btn-save-deck');
+      const orig = btn.textContent;
+      btn.textContent = '保存しました';
+      btn.classList.add('bg-green-100', 'text-green-700');
+      btn.classList.remove('bg-indigo-100', 'text-indigo-700');
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.classList.remove('bg-green-100', 'text-green-700');
+        btn.classList.add('bg-indigo-100', 'text-indigo-700');
+      }, 1500);
+    }
+
+    function showLoadDropdown() {
+      const dropdown = $('load-deck-dropdown');
+      const isVisible = !dropdown.classList.contains('hidden');
+      if (isVisible) { hideLoadDropdown(); return; }
+
+      const decks = loadSavedDecks();
+      if (decks.length === 0) {
+        dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">保存されたデッキがありません</div>';
+      } else {
+        const items = decks.slice().reverse().map(d => {
+          const date = new Date(d.updatedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const cardCount = (d.state.deckIds || []).filter((id: number | null) => id != null).length;
+          return `<div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0" data-deck-id="${d.id}">
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-medium text-gray-700 truncate">${d.name}</div>
+              <div class="text-[10px] text-gray-400">${date} / ${cardCount}枚</div>
+            </div>
+          </div>`;
+        }).join('');
+        dropdown.innerHTML = items + `<a href="${(window as any).__BASE_URL__}decks/" class="block text-center text-[10px] text-indigo-500 hover:text-indigo-700 py-2 border-t border-gray-100">デッキ管理ページ →</a>`;
+      }
+
+      dropdown.classList.remove('hidden');
+
+      // クリックイベント
+      dropdown.querySelectorAll('.load-deck-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const deckId = (el as HTMLElement).dataset.deckId!;
+          loadDeck(deckId);
+        });
+      });
+    }
+
+    function hideLoadDropdown() {
+      $('load-deck-dropdown').classList.add('hidden');
+    }
+
+    function loadDeck(deckId: string) {
+      const decks = loadSavedDecks();
+      const target = decks.find(d => d.id === deckId);
+      if (!target) return;
+      applyState(target.state);
+      saveState();
+      hideLoadDropdown();
     }
 
     // --- イベント登録 ---
@@ -1111,6 +1226,18 @@ const base = import.meta.env.BASE_URL;
         $(id).addEventListener('change', renderModalCards);
       }
       $('modal-owned-only').addEventListener('change', renderModalCards);
+
+      // デッキ保存/読込
+      $('btn-save-deck').addEventListener('click', saveDeck);
+      $('btn-load-deck').addEventListener('click', showLoadDropdown);
+      document.addEventListener('click', (e) => {
+        const dropdown = $('load-deck-dropdown');
+        if (!dropdown.classList.contains('hidden') &&
+            !(e.target as HTMLElement).closest('#load-deck-dropdown') &&
+            !(e.target as HTMLElement).closest('#btn-load-deck')) {
+          hideLoadDropdown();
+        }
+      });
 
       // 計算ボタン
       $('btn-calculate').addEventListener('click', runMC);
