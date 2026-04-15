@@ -52,7 +52,7 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
 }
 
 /** センタースキルの増加率を解析する */
-function parseCenterSkillRate(ctSkill: string | null): number {
+export function parseCenterSkillRate(ctSkill: string | null): number {
   if (!ctSkill) return 0;
   for (const [keyword, rate] of Object.entries(CENTER_SKILL_RATES)) {
     if (ctSkill.includes(keyword)) return rate;
