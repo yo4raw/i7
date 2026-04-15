@@ -193,7 +193,7 @@ const otherSkills = [
               <span class="text-blue-500">Beat: {b.beat ?? '-'}</span>
               <span class="text-green-500">Melody: {b.melody ?? '-'}</span>
             </div>
-            {b.broach_type && <p class="text-xs text-gray-500 mt-1">種類: {b.broach_type}</p>}
+            {b.condition && <p class="text-xs text-gray-500 mt-1">条件: {b.condition}{b.group ? `（${b.group}）` : ''}</p>}
           </div>
         ))}
       </div>
