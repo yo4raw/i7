@@ -1,4 +1,5 @@
 import { SPREADSHEET_ID, fetchSheetAsJson } from './gviz.ts';
+import { CHARACTER_GROUPS } from '../constants';
 
 /** APスキル1レベル分のパラメータ */
 export interface ApSkillLevel {
@@ -93,6 +94,15 @@ export async function fetchCardsJson(): Promise<Card[]> {
     // スコアアップ系は発動条件を括弧付きで表示（例: スコアアップ（タイマー）、スコアアップ（コンポ））
     if (row.ap_skill_type === 'スコアアップ' && row.ap_skill_req) {
       row.ap_skill_type = `スコアアップ（${row.ap_skill_req}）`;
+    }
+    // groupname が null の場合、キャラクター名からグループを解決
+    if (!row.groupname && row.name) {
+      for (const group of CHARACTER_GROUPS) {
+        if ((group.members as readonly string[]).includes(row.name as string)) {
+          row.groupname = group.name;
+          break;
+        }
+      }
     }
     return row as unknown as Card;
   });
