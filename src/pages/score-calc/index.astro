@@ -258,6 +258,7 @@ const base = import.meta.env.BASE_URL;
             <tbody id="card-detail-body"></tbody>
           </table>
         </div>
+        <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
       </section>
 
       <!-- 計算ボタン -->
@@ -490,6 +491,10 @@ const base = import.meta.env.BASE_URL;
 
     // --- デッキスロット表示 ---
     function renderDeckSlots() {
+      // ブローチ条件判定（デッキ全体で1回だけ実行）
+      const slotDummySong = selectedSong || { song_name: '' } as any;
+      const slotResolvedMap = resolveDeckBroachs(deck, allBroachs, slotDummySong);
+
       for (let i = 0; i < 6; i++) {
         const card = deck[i];
         const container = document.querySelector(`[data-slot-btn="${i}"]`) as HTMLElement;
@@ -513,10 +518,11 @@ const base = import.meta.env.BASE_URL;
         const trainedChecked = deckTrained[i];
         const currentSkillLv = deckSkillLevels[i];
 
-        // 固定ブローチ表示（読み取り専用）
+        // 固定ブローチ表示（条件判定付き）
         const cardBroachs = card.rarity === 'UR'
           ? allBroachs.filter(br => br.card_id === card.cardID)
           : [];
+        const slotResolved = slotResolvedMap.get(i) ?? [];
         let broachLabelHtml = '';
         if (cardBroachs.length > 0) {
           broachLabelHtml = cardBroachs.map(br => {
@@ -529,7 +535,18 @@ const base = import.meta.env.BASE_URL;
             const label = br.condition
               ? `${br.condition}${statStr ? ' ' + statStr : ''}`
               : statStr || `ブローチ#${br.id}`;
-            return `<div class="mt-1 w-full text-[8px] bg-purple-50 border border-purple-200 rounded px-1 py-0.5 text-purple-700 truncate text-center" title="${label}">🔮 ${label}</div>`;
+
+            const isAutoOnly = br.broach_type === 8;
+            const resolved = slotResolved.find(rb => rb.broach.id === br.id);
+            const isActive = resolved?.active ?? false;
+
+            if (isAutoOnly) {
+              return `<div class="mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center line-through" title="${label}（オート専用・計算対象外）">🔮 ${label}（オート専用）</div>`;
+            } else if (isActive) {
+              return `<div class="mt-1 w-full text-[8px] bg-purple-50 border border-purple-200 rounded px-1 py-0.5 text-purple-700 truncate text-center" title="${label}">🔮 ${label}</div>`;
+            } else {
+              return `<div class="mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center" title="${label}（条件未達）">🔮 ${label}</div>`;
+            }
           }).join('');
         }
 
@@ -682,8 +699,6 @@ const base = import.meta.env.BASE_URL;
             if (sb) { bS += sb.shout; bB += sb.beat; bM += sb.melody; }
           }
         }
-        const hasInactive = slotBroachs.some(rb => !rb.active);
-        const broachClass = hasInactive ? 'text-gray-300' : '';
         const skillType = card.ap_skill_type || '-';
         const sl = getApSkillLevel(card, deckSkillLevels[i]);
         const count = sl.count ?? '-';
@@ -710,9 +725,9 @@ const base = import.meta.env.BASE_URL;
           <td class="py-1 px-1 text-right text-red-500">${statShout.toLocaleString()}</td>
           <td class="py-1 px-1 text-right text-green-500">${statBeat.toLocaleString()}</td>
           <td class="py-1 px-1 text-right text-blue-500">${statMelody.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right ${broachClass}" title="${slotBroachs.map(rb => `${rb.broach.condition || ''}${rb.active ? '✓' : '✗'}`).join(', ')}">${bS || '-'}</td>
-          <td class="py-1 px-1 text-right ${broachClass}" title="${slotBroachs.map(rb => `${rb.broach.condition || ''}${rb.active ? '✓' : '✗'}`).join(', ')}">${bB || '-'}</td>
-          <td class="py-1 px-1 text-right ${broachClass}" title="${slotBroachs.map(rb => `${rb.broach.condition || ''}${rb.active ? '✓' : '✗'}`).join(', ')}">${bM || '-'}</td>
+          <td class="py-1 px-1 text-right">${bS || '-'}</td>
+          <td class="py-1 px-1 text-right">${bB || '-'}</td>
+          <td class="py-1 px-1 text-right">${bM || '-'}</td>
           <td class="py-1 px-1">${skillType}</td>
           <td class="py-1 px-1 text-right">${count}</td>
           <td class="py-1 px-1 text-right">${per}</td>
