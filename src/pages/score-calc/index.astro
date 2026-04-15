@@ -334,7 +334,7 @@ const base = import.meta.env.BASE_URL;
     import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
-    import { EVENT_BONUS_TIERS, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
+    import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
     import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
     import { renderHistogramSvg } from '../../lib/score/histogram';
     import { attrDonutSvg } from '../../lib/donutChart';
@@ -682,6 +682,7 @@ const base = import.meta.env.BASE_URL;
       const dummySong = selectedSong || { song_name: '' } as any;
       const resolvedMap = resolveDeckBroachs(deck, allBroachs, dummySong);
 
+      const rnMap = loadRabbitNotes();
       const rows = DISPLAY_ORDER.map(i => {
         const card = deck[i];
         if (!card) return '';
@@ -710,9 +711,11 @@ const base = import.meta.env.BASE_URL;
         const trained = deckTrained[i];
         const trainedLabel = trained ? '済' : '未';
         const trainedClass = trained ? 'text-indigo-600 font-bold' : 'text-gray-400';
-        const statShout = trained ? (card.shout_max || 0) : (card.shout_min || 0);
-        const statBeat = trained ? (card.beat_max || 0) : (card.beat_min || 0);
-        const statMelody = trained ? (card.melody_max || 0) : (card.melody_min || 0);
+        const rn = rnMap[card.name || ''];
+        const bonusMult = EVENT_BONUS_MULTIPLIER[tier];
+        const statShout = Math.round(((trained ? (card.shout_max || 0) : (card.shout_min || 0)) + (rn?.shout || 0)) * bonusMult);
+        const statBeat = Math.round(((trained ? (card.beat_max || 0) : (card.beat_min || 0)) + (rn?.beat || 0)) * bonusMult);
+        const statMelody = Math.round(((trained ? (card.melody_max || 0) : (card.melody_min || 0)) + (rn?.melody || 0)) * bonusMult);
 
         return `<tr class="border-t">
           <td class="py-1 px-1 text-[10px] ${i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}">${SLOT_LABELS[i]}</td>
