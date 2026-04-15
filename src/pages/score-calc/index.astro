@@ -256,6 +256,7 @@ const base = import.meta.env.BASE_URL;
               </tr>
             </thead>
             <tbody id="card-detail-body"></tbody>
+            <tfoot id="card-detail-foot"></tfoot>
           </table>
         </div>
         <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
@@ -683,6 +684,8 @@ const base = import.meta.env.BASE_URL;
       const resolvedMap = resolveDeckBroachs(deck, allBroachs, dummySong);
 
       const rnMap = loadRabbitNotes();
+      let totalShout = 0, totalBeat = 0, totalMelody = 0;
+      let totalBS = 0, totalBB = 0, totalBM = 0;
       const rows = DISPLAY_ORDER.map(i => {
         const card = deck[i];
         if (!card) return '';
@@ -717,6 +720,13 @@ const base = import.meta.env.BASE_URL;
         const statBeat = Math.round(((trained ? (card.beat_max || 0) : (card.beat_min || 0)) + (rn?.beat || 0)) * bonusMult);
         const statMelody = Math.round(((trained ? (card.melody_max || 0) : (card.melody_min || 0)) + (rn?.melody || 0)) * bonusMult);
 
+        totalShout += statShout;
+        totalBeat += statBeat;
+        totalMelody += statMelody;
+        totalBS += bS;
+        totalBB += bB;
+        totalBM += bM;
+
         return `<tr class="border-t">
           <td class="py-1 px-1 text-[10px] ${i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}">${SLOT_LABELS[i]}</td>
           <td class="py-1 px-1">
@@ -739,6 +749,16 @@ const base = import.meta.env.BASE_URL;
       }).join('');
 
       $('card-detail-body').innerHTML = rows;
+      $('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
+        <td colspan="4" class="py-1 px-1 text-right text-gray-700">合計</td>
+        <td class="py-1 px-1 text-right text-red-500">${totalShout.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right text-green-500">${totalBeat.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right text-blue-500">${totalMelody.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right">${totalBS || '-'}</td>
+        <td class="py-1 px-1 text-right">${totalBB || '-'}</td>
+        <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
+        <td colspan="4"></td>
+      </tr>`;
     }
 
     // --- カード選択モーダル ---
