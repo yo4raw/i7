@@ -332,7 +332,7 @@ const base = import.meta.env.BASE_URL;
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
-    import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes } from '../../lib/score/engine';
+    import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes, parseCenterSkillRate } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
     import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
@@ -749,6 +749,35 @@ const base = import.meta.env.BASE_URL;
       }).join('');
 
       $('card-detail-body').innerHTML = rows;
+      // センタースキルによる加算値を計算
+      const centerCard = deck[0];
+      const friendCard = deck[5];
+      const centerRate = centerCard ? parseCenterSkillRate(centerCard.ct_skill) : 0;
+      const friendRate = friendCard ? parseCenterSkillRate(friendCard.ct_skill) : 0;
+      const centerAttr = centerCard ? normalizeAttr(centerCard.attribute) : null;
+      const friendAttr = friendCard ? normalizeAttr(friendCard.attribute) : null;
+
+      let shoutRate = 0, beatRate = 0, melodyRate = 0;
+      if (centerAttr === 'Shout') shoutRate += centerRate;
+      if (centerAttr === 'Beat') beatRate += centerRate;
+      if (centerAttr === 'Melody') melodyRate += centerRate;
+      if (friendAttr === 'Shout') shoutRate += friendRate;
+      if (friendAttr === 'Beat') beatRate += friendRate;
+      if (friendAttr === 'Melody') melodyRate += friendRate;
+
+      const baseShout = totalShout + totalBS;
+      const baseBeat = totalBeat + totalBB;
+      const baseMelody = totalMelody + totalBM;
+      const csShout = Math.floor(baseShout * (100 + shoutRate) / 100) - baseShout;
+      const csBeat = Math.floor(baseBeat * (100 + beatRate) / 100) - baseBeat;
+      const csMelody = Math.floor(baseMelody * (100 + melodyRate) / 100) - baseMelody;
+
+      const hasCenter = shoutRate > 0 || beatRate > 0 || melodyRate > 0;
+      const centerSkillLabels: string[] = [];
+      if (centerCard && centerRate > 0) centerSkillLabels.push(`自分+${centerRate}%`);
+      if (friendCard && friendRate > 0) centerSkillLabels.push(`フレンド+${friendRate}%`);
+      const centerSkillLabel = centerSkillLabels.join(' / ');
+
       $('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
         <td colspan="4" class="py-1 px-1 text-right text-gray-700">合計</td>
         <td class="py-1 px-1 text-right text-red-500">${totalShout.toLocaleString()}</td>
@@ -758,7 +787,14 @@ const base = import.meta.env.BASE_URL;
         <td class="py-1 px-1 text-right">${totalBB || '-'}</td>
         <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
         <td colspan="4"></td>
-      </tr>`;
+      </tr>${hasCenter ? `<tr class="font-bold text-xs text-purple-600">
+        <td colspan="4" class="py-1 px-1 text-right">センタースキル (${centerSkillLabel})</td>
+        <td class="py-1 px-1 text-right">${csShout > 0 ? `+${csShout.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${csBeat > 0 ? `+${csBeat.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${csMelody > 0 ? `+${csMelody.toLocaleString()}` : '-'}</td>
+        <td colspan="3"></td>
+        <td colspan="4"></td>
+      </tr>` : ''}`;
     }
 
     // --- カード選択モーダル ---
