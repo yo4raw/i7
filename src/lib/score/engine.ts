@@ -256,7 +256,7 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
 
     const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
     const assistedBase = base * assistMult;
-    const shrinkExtra = shrinkActive ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
+    const shrinkExtra = (shrinkActive && note.group !== 'notes_20') ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
     total += assistedBase + shrinkExtra + scoreUpSum;
   }
 
@@ -341,12 +341,12 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
 
     const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
     const assistedBase = base * assistMult;
-    const shrinkExtra = shrinkActive ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
+    const shrinkExtra = (shrinkActive && note.group !== 'notes_20') ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
     const noteScore = assistedBase + shrinkExtra + scoreUpSum;
     totalScore += noteScore;
 
-    // 判定縮小スキルのスコア寄与を発動中のカードに按分
-    if (shrinkActive) {
+    // 判定縮小スキルのスコア寄与を発動中のカードに按分（notes_20は対象外）
+    if (shrinkActive && note.group !== 'notes_20') {
       const extra = base * (SHRINK_MULTIPLIER - 1.0);
       let activeShrinkCount = 0;
       for (let c = 0; c < cardCount; c++) {
