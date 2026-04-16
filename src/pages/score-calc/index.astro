@@ -101,6 +101,9 @@ const base = import.meta.env.BASE_URL;
             <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
             <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
             <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
+            <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class="text-right py-1 text-red-500 text-xs"></td></tr>
+            <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class="text-right py-1 text-green-500 text-xs"></td></tr>
+            <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class="text-right py-1 text-blue-500 text-xs"></td></tr>
             <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
             <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class="text-right py-1 text-red-500"></td></tr>
             <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class="text-right py-1 text-green-500"></td></tr>
@@ -806,7 +809,7 @@ const base = import.meta.env.BASE_URL;
         <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
         <td colspan="4"></td>
       </tr>${hasCenter ? `<tr class="font-bold text-xs text-purple-600">
-        <td colspan="4" class="py-1 px-1 text-right">センタースキル (${centerSkillLabel})</td>
+        <td colspan="4" class="py-1 px-1 text-right">センター/フレンドボーナス (${centerSkillLabel})</td>
         <td class="py-1 px-1 text-right">${csShout > 0 ? `+${csShout.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${csBeat > 0 ? `+${csBeat.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${csMelody > 0 ? `+${csMelody.toLocaleString()}` : '-'}</td>
@@ -941,6 +944,40 @@ const base = import.meta.env.BASE_URL;
         $('stat-broach-score-row').classList.add('hidden');
       }
       $('stat-bonus').textContent = bonusTotal > 0 ? `+${bonusTotal.toLocaleString()}` : '-';
+
+      // センター/フレンドボーナスの属性別内訳
+      {
+        const cCard = deck[0];
+        const fCard = deck[5];
+        const cRate = cCard ? getCenterSkillRate(cCard.rarity) : 0;
+        const fRate = fCard ? getCenterSkillRate(fCard.rarity) : 0;
+        const cAttr = cCard ? normalizeAttr(cCard.attribute) : null;
+        const fAttr = fCard ? normalizeAttr(fCard.attribute) : null;
+        let sRate = 0, bRate = 0, mRate = 0;
+        if (cAttr === 'Shout') sRate += cRate;
+        if (cAttr === 'Beat') bRate += cRate;
+        if (cAttr === 'Melody') mRate += cRate;
+        if (fAttr === 'Shout') sRate += fRate;
+        if (fAttr === 'Beat') bRate += fRate;
+        if (fAttr === 'Melody') mRate += fRate;
+        const showAttr = (attr: string, rate: number, bonus: number) => {
+          const rowEl = $(`stat-bonus-${attr}-row`);
+          if (rate > 0) {
+            rowEl.classList.remove('hidden');
+            $(`stat-bonus-${attr}-rate`).textContent = `+${rate}%`;
+            $(`stat-bonus-${attr}`).textContent = `+${bonus.toLocaleString()}`;
+          } else {
+            rowEl.classList.add('hidden');
+          }
+        };
+        const sBonus = team.Shout - team.rawShout - team.broachShout;
+        const bBonus = team.Beat - team.rawBeat - team.broachBeat;
+        const mBonus = team.Melody - team.rawMelody - team.broachMelody;
+        showAttr('s', sRate, sBonus);
+        showAttr('b', bRate, bBonus);
+        showAttr('m', mRate, mBonus);
+      }
+
       $('stat-team-total').textContent = teamTotal.toLocaleString();
       $('stat-team-s').textContent = team.Shout.toLocaleString();
       $('stat-team-b').textContent = team.Beat.toLocaleString();
