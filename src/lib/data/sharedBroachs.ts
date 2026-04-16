@@ -32,7 +32,7 @@ export const SHARED_BROACHS: SharedBroach[] = [
   { id: 21, name: 'Melody700', shout: 0, beat: 0, melody: 700 },
   { id: 22, name: 'Melody500', shout: 0, beat: 0, melody: 500 },
   { id: 23, name: 'Melody400', shout: 0, beat: 0, melody: 400 },
-  { id: 24, name: '共通Shout+300', shout: 300, beat: 0, melody: 0, targetAttribute: 'Shout' },
-  { id: 25, name: '共通Beat+300', shout: 0, beat: 300, melody: 0, targetAttribute: 'Beat' },
-  { id: 26, name: '共通Melody+300', shout: 0, beat: 0, melody: 300, targetAttribute: 'Melody' },
+  { id: 24, name: 'S属性枚数分Shout+300', shout: 300, beat: 0, melody: 0, targetAttribute: 'Shout' },
+  { id: 25, name: 'B属性枚数分Beat+300', shout: 0, beat: 300, melody: 0, targetAttribute: 'Beat' },
+  { id: 26, name: 'M属性枚数分Melody+300', shout: 0, beat: 0, melody: 300, targetAttribute: 'Melody' },
 ];
