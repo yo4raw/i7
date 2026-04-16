@@ -51,13 +51,10 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
   };
 }
 
-/** センタースキルの増加率を解析する */
-export function parseCenterSkillRate(ctSkill: string | null): number {
-  if (!ctSkill) return 0;
-  for (const [keyword, rate] of Object.entries(CENTER_SKILL_RATES)) {
-    if (ctSkill.includes(keyword)) return rate;
-  }
-  return DEFAULT_CENTER_SKILL_RATE;
+/** レアリティからセンタースキル増加率を取得する */
+export function getCenterSkillRate(rarity: string | null): number {
+  if (!rarity) return 0;
+  return CENTER_SKILL_RATES[rarity] ?? DEFAULT_CENTER_SKILL_RATE;
 }
 
 /** チームアピール値を計算する */
@@ -172,8 +169,8 @@ export function computeTeam(
   let shoutRate = 0, beatRate = 0, melodyRate = 0;
   const centerAttr = deck[0] ? normalizeAttribute(deck[0].attribute) : null;
   const friendAttr = deck[5] ? normalizeAttribute(deck[5].attribute) : null;
-  const centerRate = deck[0] ? parseCenterSkillRate(deck[0].ct_skill) : 0;
-  const friendRate = deck[5] ? parseCenterSkillRate(deck[5].ct_skill) : 0;
+  const centerRate = deck[0] ? getCenterSkillRate(deck[0].rarity) : 0;
+  const friendRate = deck[5] ? getCenterSkillRate(deck[5].rarity) : 0;
 
   if (centerAttr === 'Shout') shoutRate += centerRate;
   if (centerAttr === 'Beat') beatRate += centerRate;
@@ -197,6 +194,87 @@ export function computeTeam(
     broachBeat: broachBeatTotal,
     broachMelody: broachMelodyTotal,
     broachScoreBonus,
+  };
+}
+
+/** 縮小カバー率を計算する（100%発動 + 確率考慮の期待値） */
+export function calcShrinkCoverage(team: ComputedTeam, notesCount: number, offsetSeconds: number = 0): {
+  coverageRate: number;
+  coveredSeconds: number;
+  expectedCoverageRate: number;
+  expectedCoveredSeconds: number;
+  effectiveSeconds: number;
+} | null {
+  const shrinkCards = team.cards.filter(dc => dc.skill?.isShrink && dc.skill.count > 0);
+  if (shrinkCards.length === 0) return null;
+
+  const zero = { coverageRate: 0, coveredSeconds: 0, expectedCoverageRate: 0, expectedCoveredSeconds: 0, effectiveSeconds: 0 };
+  const effectiveSeconds = team.songDuration - offsetSeconds;
+  if (effectiveSeconds <= 0) return zero;
+  if (notesCount <= 0) return { ...zero, effectiveSeconds };
+
+  // 全縮小カードの発動区間を収集（確率付き）
+  const intervals: { start: number; end: number; prob: number }[] = [];
+  for (const dc of shrinkCards) {
+    const skill = dc.skill!;
+    const prob = skill.per / 100;
+    const numActivations = Math.floor(notesCount / skill.count);
+    for (let k = 1; k <= numActivations; k++) {
+      const noteIndex = k * skill.count - 1;
+      const activationTime = noteIndex / notesCount * team.songDuration;
+      const start = Math.max(activationTime, offsetSeconds);
+      const end = Math.min(activationTime + skill.value, team.songDuration);
+      if (start < end) intervals.push({ start, end, prob });
+    }
+  }
+
+  if (intervals.length === 0) return { ...zero, effectiveSeconds };
+
+  // --- 100%発動: 区間マージ ---
+  const sorted = [...intervals].sort((a, b) => a.start - b.start);
+  const merged: [number, number][] = [[sorted[0].start, sorted[0].end]];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    if (sorted[i].start <= last[1]) {
+      last[1] = Math.max(last[1], sorted[i].end);
+    } else {
+      merged.push([sorted[i].start, sorted[i].end]);
+    }
+  }
+  const coveredSeconds = merged.reduce((sum, [s, e]) => sum + (e - s), 0);
+
+  // --- 期待値: 各時間セグメントで「少なくとも1つ発動中」の確率を積分 ---
+  // イベント収集（全区間の開始・終了時刻）
+  const times = new Set<number>();
+  for (const iv of intervals) {
+    times.add(iv.start);
+    times.add(iv.end);
+  }
+  const sortedTimes = [...times].sort((a, b) => a - b);
+
+  let expectedCoveredSeconds = 0;
+  for (let i = 0; i < sortedTimes.length - 1; i++) {
+    const segStart = sortedTimes[i];
+    const segEnd = sortedTimes[i + 1];
+    const segLen = segEnd - segStart;
+    if (segLen <= 0) continue;
+
+    // このセグメントをカバーする全区間の「不発動確率」の積
+    let probNone = 1;
+    for (const iv of intervals) {
+      if (iv.start <= segStart && iv.end >= segEnd) {
+        probNone *= (1 - iv.prob);
+      }
+    }
+    expectedCoveredSeconds += segLen * (1 - probNone);
+  }
+
+  return {
+    coverageRate: coveredSeconds / effectiveSeconds,
+    coveredSeconds,
+    expectedCoverageRate: expectedCoveredSeconds / effectiveSeconds,
+    expectedCoveredSeconds,
+    effectiveSeconds,
   };
 }
 
@@ -253,8 +331,9 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
         counters[c] = 0;
         if (skill.isShrink) {
           const noteTime = n / N * team.songDuration;
+          const shrinkDuration = skill.value;
           const endNote = Math.min(
-            Math.floor(((noteTime + skill.spTime) / team.songDuration) * N),
+            Math.floor(((noteTime + shrinkDuration) / team.songDuration) * N),
             N,
           );
           shrinkEndNotes[c] = Math.max(shrinkEndNotes[c], endNote);
@@ -335,8 +414,9 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
           activations[c]++;
           if (skill.isShrink) {
             const noteTime = n / N * team.songDuration;
+            const shrinkDuration = skill.value;
             const endNote = Math.min(
-              Math.floor(((noteTime + skill.spTime) / team.songDuration) * N),
+              Math.floor(((noteTime + shrinkDuration) / team.songDuration) * N),
               N,
             );
             shrinkEndNotes[c] = Math.max(shrinkEndNotes[c], endNote);

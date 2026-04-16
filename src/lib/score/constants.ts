@@ -16,13 +16,12 @@ export const SCOREUP_ASSIST_MULTIPLIER = 1.2;
 export const SCOREUP_BADGE_RATE = 0.15;
 export const MC_ITERATIONS = 5000;
 export const MC_CHUNK_SIZE = 50;
-/** センタースキル増加量パターン（キーワード → 増加率%） */
+/** センタースキル増加率（レアリティ → 増加率%） */
 export const CENTER_SKILL_RATES: Record<string, number> = {
-  'かなり': 10,
-  'やや': 7,
-  '大きく': 6,
+  'UR': 10,
+  'SSR': 7,
 };
-export const DEFAULT_CENTER_SKILL_RATE = 10;
+export const DEFAULT_CENTER_SKILL_RATE = 6;
 
 export { EVENT_BONUS_MULTIPLIER } from '../data/eventBonusTiers';
 export type { EventBonusTier } from '../data/eventBonusTiers';

@@ -116,6 +116,18 @@ const base = import.meta.env.BASE_URL;
             <span class="text-gray-500">理論最高値（スキル全発動）</span>
             <span id="score-max" class="font-medium"></span>
           </div>
+          <div id="shrink-coverage-row" class="flex items-center justify-between text-sm mt-1 hidden">
+            <span class="text-gray-500">縮小カバー率（100%発動時）</span>
+            <span class="flex items-center gap-1">
+              <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
+              <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs text-right" />
+              <span class="text-gray-400 text-xs">秒除外</span>
+            </span>
+          </div>
+          <div id="shrink-expected-row" class="flex justify-between text-sm mt-1 hidden">
+            <span class="text-gray-500">縮小カバー率（期待値）</span>
+            <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
+          </div>
         </div>
         <div class="mt-4 bg-indigo-50 rounded-lg p-3 text-center">
           <div class="text-xs text-gray-500">MC平均スコア</div>
@@ -322,7 +334,7 @@ const base = import.meta.env.BASE_URL;
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
-    import { computeTeam, calcMinScore, calcMaxScore, runSimulation, flattenNotes, parseCenterSkillRate } from '../../lib/score/engine';
+    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, runSimulation, flattenNotes, getCenterSkillRate } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
     import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
@@ -758,8 +770,8 @@ const base = import.meta.env.BASE_URL;
       // センタースキルによる加算値を計算
       const centerCard = deck[0];
       const friendCard = deck[5];
-      const centerRate = centerCard ? parseCenterSkillRate(centerCard.ct_skill) : 0;
-      const friendRate = friendCard ? parseCenterSkillRate(friendCard.ct_skill) : 0;
+      const centerRate = centerCard ? getCenterSkillRate(centerCard.rarity) : 0;
+      const friendRate = friendCard ? getCenterSkillRate(friendCard.rarity) : 0;
       const centerAttr = centerCard ? normalizeAttr(centerCard.attribute) : null;
       const friendAttr = friendCard ? normalizeAttr(friendCard.attribute) : null;
 
@@ -903,6 +915,8 @@ const base = import.meta.env.BASE_URL;
         $('area-values-section').classList.add('hidden');
         $('mc-results').classList.add('hidden');
         $('skill-stats').classList.add('hidden');
+        $('shrink-coverage-row').classList.add('hidden');
+        $('shrink-expected-row').classList.add('hidden');
         $('final-result').textContent = '---';
         simulationResult = null;
         return;
@@ -944,6 +958,9 @@ const base = import.meta.env.BASE_URL;
       $('score-min').textContent = minScore.toLocaleString();
       $('score-max').textContent = maxScore.toLocaleString();
 
+      // 縮小カバー率
+      updateShrinkCoverage(team, selectedSong);
+
       // 楽曲属性面積値
       renderAreaValues(team, selectedSong);
 
@@ -952,6 +969,22 @@ const base = import.meta.env.BASE_URL;
       $('skill-stats').classList.add('hidden');
       $('final-result').textContent = '---';
       simulationResult = null;
+    }
+
+    function updateShrinkCoverage(team: ComputedTeam, song: Song) {
+      const offset = Number(($('shrink-offset-input') as HTMLInputElement).value) || 0;
+      const shrinkCoverage = calcShrinkCoverage(team, song.notes_count || 0, offset);
+      if (shrinkCoverage) {
+        $('shrink-coverage-row').classList.remove('hidden');
+        $('shrink-expected-row').classList.remove('hidden');
+        const pct = (shrinkCoverage.coverageRate * 100).toFixed(1);
+        $('shrink-coverage-val').textContent = `${pct}%（${shrinkCoverage.coveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
+        const expPct = (shrinkCoverage.expectedCoverageRate * 100).toFixed(1);
+        $('shrink-expected-val').textContent = `${expPct}%（${shrinkCoverage.expectedCoveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
+      } else {
+        $('shrink-coverage-row').classList.add('hidden');
+        $('shrink-expected-row').classList.add('hidden');
+      }
     }
 
     function renderAreaValues(team: ComputedTeam, song: Song) {
@@ -1310,6 +1343,13 @@ const base = import.meta.env.BASE_URL;
       // スキルオプション変更時に再計算
       $('opt-scoreup-assist').addEventListener('change', recalculate);
       $('opt-scoreup-badge').addEventListener('change', recalculate);
+
+      // 縮小カバー率の除外秒数変更時に再計算
+      $('shrink-offset-input').addEventListener('input', () => {
+        if (!selectedSong || deck.filter(c => c !== null).length === 0) return;
+        const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
+        updateShrinkCoverage(team, selectedSong);
+      });
 
       // 状態復元
       restoreState();
