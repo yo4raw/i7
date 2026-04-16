@@ -112,7 +112,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.fetch.outputs.downloaded != '0'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "Add thumbnail card images (${{ steps.fetch.outputs.downloaded }} files)"
           branch: auto/add-th-cards-${{ github.run_id }}
