@@ -564,7 +564,9 @@ const base = import.meta.env.BASE_URL;
               if (sb.shout) stats.push(`S+${sb.shout}`);
               if (sb.beat) stats.push(`B+${sb.beat}`);
               if (sb.melody) stats.push(`M+${sb.melody}`);
-              return `<option value="${sb.id}"${sel}>${sb.name} (${stats.join('/')})</option>`;
+              const cond = sb.targetAttribute ? `${sb.targetAttribute}属性` : '';
+              const label = cond ? `${sb.name} (${cond} ${stats.join('/')})` : `${sb.name} (${stats.join('/')})`;
+              return `<option value="${sb.id}"${sel}>${label}</option>`;
             }).join('');
             sharedBroachHtml += `
               <select class="shared-broach-select mt-1 w-full text-[8px] border border-purple-300 rounded px-0.5 py-0.5 bg-purple-50 text-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-400"
@@ -683,6 +685,14 @@ const base = import.meta.env.BASE_URL;
       const dummySong = selectedSong || { song_name: '' } as any;
       const resolvedMap = resolveDeckBroachs(deck, allBroachs, dummySong);
 
+      // 条件付き共有ブローチ用: デッキ内の属性別カード枚数
+      const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
+      for (const c of deck) {
+        if (!c) continue;
+        const a = normalizeAttr(c.attribute);
+        if (a in attrCounts) attrCounts[a]++;
+      }
+
       const rnMap = loadRabbitNotes();
       let totalShout = 0, totalBeat = 0, totalMelody = 0;
       let totalBS = 0, totalBB = 0, totalBM = 0;
@@ -696,11 +706,17 @@ const base = import.meta.env.BASE_URL;
         let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0), 0);
         let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0), 0);
         // 共有ブローチのステータスも加算
-        if (i < 5 && card.rarity === 'UR') {
+        if (card.rarity === 'UR') {
           for (const sbId of (deckSharedBroachs[i] || [])) {
             if (!sbId) continue;
             const sb = SHARED_BROACHS.find(s => s.id === sbId);
-            if (sb) { bS += sb.shout; bB += sb.beat; bM += sb.melody; }
+            if (!sb) continue;
+            if (sb.targetAttribute) {
+              const count = attrCounts[sb.targetAttribute] || 0;
+              bS += sb.shout * count; bB += sb.beat * count; bM += sb.melody * count;
+            } else {
+              bS += sb.shout; bB += sb.beat; bM += sb.melody;
+            }
           }
         }
         const skillType = card.ap_skill_type || '-';

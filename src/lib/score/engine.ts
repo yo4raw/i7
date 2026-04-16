@@ -85,6 +85,14 @@ export function computeTeam(
   const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, song, selectedBroachIds);
   const broachScoreBonus = calcBroachScoreBonus(resolvedBroachs);
 
+  // 条件付き共有ブローチ用: デッキ内の属性別カード枚数をカウント
+  const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
+  for (const c of deck) {
+    if (!c) continue;
+    const a = normalizeAttribute(c.attribute);
+    if (a in attrCounts) attrCounts[a]++;
+  }
+
   for (let i = 0; i < 6; i++) {
     const card = deck[i];
     if (!card) continue;
@@ -122,7 +130,14 @@ export function computeTeam(
       for (const sbId of sharedBroachSelections[i]) {
         if (!sbId) continue;
         const sb = SHARED_BROACHS.find(s => s.id === sbId);
-        if (sb) {
+        if (!sb) continue;
+        if (sb.targetAttribute) {
+          // 条件付き: 対象属性のカード枚数 × ブローチ値を装着カードに加算
+          const count = attrCounts[sb.targetAttribute] || 0;
+          bShout += sb.shout * count;
+          bBeat += sb.beat * count;
+          bMelody += sb.melody * count;
+        } else {
           bShout += sb.shout;
           bBeat += sb.beat;
           bMelody += sb.melody;
