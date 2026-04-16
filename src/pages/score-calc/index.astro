@@ -257,6 +257,7 @@ const base = import.meta.env.BASE_URL;
                 <th class="text-right py-1 px-1">カウント</th>
                 <th class="text-right py-1 px-1">確率</th>
                 <th class="text-right py-1 px-1">スコアアップ</th>
+                <th class="text-right py-1 px-1">効果率</th>
               </tr>
             </thead>
             <tbody id="card-detail-body"></tbody>
@@ -729,6 +730,7 @@ const base = import.meta.env.BASE_URL;
         const count = sl.count ?? '-';
         const per = sl.per != null ? `${sl.per}%` : '-';
         const value = sl.value != null ? sl.value.toLocaleString() : '-';
+        const rate = sl.rate != null ? `${sl.rate}%` : '-';
         const tier = deckBonusTiers[i];
         const bonusLabel = BONUS_LABEL[tier];
         const bonusClass = BONUS_CLASS[tier];
@@ -766,6 +768,7 @@ const base = import.meta.env.BASE_URL;
           <td class="py-1 px-1 text-right">${count}</td>
           <td class="py-1 px-1 text-right">${per}</td>
           <td class="py-1 px-1 text-right">${value}</td>
+          <td class="py-1 px-1 text-right">${rate}</td>
         </tr>`;
       }).join('');
 
