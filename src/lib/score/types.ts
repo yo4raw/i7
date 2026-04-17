@@ -20,6 +20,8 @@ export interface FlatNote {
 export interface CardSkill {
   cardIndex: number;
   skillType: 'scoreUp' | 'timerScoreUp' | 'shrink' | 'none';
+  /** 表示用スキル種別（正規化後の ap_skill_type をそのまま保持） */
+  originalType: string | null;
   count: number;
   per: number;
   value: number;
