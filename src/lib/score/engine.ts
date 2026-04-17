@@ -119,9 +119,10 @@ export function computeTeam(
       if (!rb.active) continue;
       // 種類9（スコアUP）はステータスではなくスコア直接加算なのでここではスキップ
       if (rb.broach.broach_type === 9) continue;
-      bShout += rb.broach.shout || 0;
-      bBeat += rb.broach.beat || 0;
-      bMelody += rb.broach.melody || 0;
+      const mult = rb.multiplier ?? 1;
+      bShout += (rb.broach.shout || 0) * mult;
+      bBeat += (rb.broach.beat || 0) * mult;
+      bMelody += (rb.broach.melody || 0) * mult;
     }
     // 共有ブローチ加算
     if (sharedBroachSelections?.[i]) {

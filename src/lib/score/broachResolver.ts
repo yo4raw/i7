@@ -6,6 +6,11 @@ import { normalizeAttribute, type AttributeName } from './types';
 export interface ResolvedBroach {
   broach: FixedBroach;
   active: boolean;
+  /**
+   * 効果値倍率。デッキ依存で加算値がスケールするブローチ（種類5: アイドル属性指定カウント）
+   * ではデッキ内の対象カード枚数を格納する。通常ブローチでは常に 1。
+   */
+  multiplier: number;
 }
 
 /** ブローチ種類定数 */
@@ -164,8 +169,14 @@ export function resolveDeckBroachs(
       }
     }
 
+    // 効果値倍率の算出（種類5: アイドル属性指定カウントのみデッキ依存でスケール）
+    let multiplier = 1;
+    if (active && type === BROACH_TYPE.IDOL_ATTR_COUNT && p.broach.idol && p.broach.attribute) {
+      multiplier = countIdolAttrMatch(deck, p.broach.idol, p.broach.attribute);
+    }
+
     const slot = result.get(p.slotIndex) ?? [];
-    slot.push({ broach: p.broach, active });
+    slot.push({ broach: p.broach, active, multiplier });
     result.set(p.slotIndex, slot);
   }
 
