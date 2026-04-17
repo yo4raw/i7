@@ -392,6 +392,12 @@ const base = import.meta.env.BASE_URL;
         }
         return `${req ?? ''}${c}回毎に${p}％の確率で${v}秒間判定領域を縮小してスコアを${mult}倍に`;
       }
+      if (skillType === 'BAD以上をPerfectに変更') {
+        if (req === 'タイマー') {
+          return `${c}秒毎に${p}％の確率で${v}秒間BAD以上をPerfectに`;
+        }
+        return `${req ?? ''}${c}回毎に${p}％の確率で${v}秒間BAD以上をPerfectに`;
+      }
       if (skillType.startsWith('スコアアップ（')) {
         return `${req ?? ''}${c}回毎に${p}％の確率でスコア${v}UP`;
       }
