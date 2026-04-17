@@ -270,10 +270,7 @@ const base = import.meta.env.BASE_URL;
                 <th class="text-right py-1 px-1">ブローチB</th>
                 <th class="text-right py-1 px-1">ブローチM</th>
                 <th class="text-left py-1 px-1">スキル</th>
-                <th class="text-right py-1 px-1">カウント</th>
-                <th class="text-right py-1 px-1">確率</th>
-                <th class="text-right py-1 px-1">スコアアップ</th>
-                <th class="text-right py-1 px-1">効果率</th>
+                <th class="text-left py-1 px-1">効果</th>
               </tr>
             </thead>
             <tbody id="card-detail-body"></tbody>
@@ -373,6 +370,30 @@ const base = import.meta.env.BASE_URL;
     let allBroachs: FixedBroach[] = JSON.parse(document.getElementById('broach-data')!.textContent!);
 
     const $ = (id: string) => document.getElementById(id)!;
+
+    /** スキル種別・発動条件・レベル別数値から表示文を生成 */
+    function formatSkillEffect(
+      skillType: string | null,
+      req: string | null,
+      sl: { count: number | null; per: number | null; value: number | null; rate: number | null }
+    ): string {
+      if (!skillType || sl.count == null || sl.per == null || sl.value == null) return '-';
+      const c = sl.count;
+      const p = sl.per;
+      const v = sl.value;
+      if (skillType === 'スコアアップ（タイマー）') {
+        return `${c}秒毎に${p}％の確率でスコア${v}UP`;
+      }
+      if (skillType === '判定縮小スコアアップ') {
+        if (sl.rate == null) return '-';
+        const mult = sl.rate >= 10 ? sl.rate / 100 : sl.rate;
+        return `${req ?? ''}${c}回毎に${p}％の確率で${v}秒間判定領域を縮小してスコアを${mult}倍に`;
+      }
+      if (skillType.startsWith('スコアアップ（')) {
+        return `${req ?? ''}${c}回毎に${p}％の確率でスコア${v}UP`;
+      }
+      return '-';
+    }
 
     // --- 状態 ---
     let selectedSong: Song | null = null;
@@ -743,10 +764,7 @@ const base = import.meta.env.BASE_URL;
         }
         const skillType = card.ap_skill_type || '-';
         const sl = getApSkillLevel(card, deckSkillLevels[i]);
-        const count = sl.count ?? '-';
-        const per = sl.per != null ? `${sl.per}%` : '-';
-        const value = sl.value != null ? sl.value.toLocaleString() : '-';
-        const rate = sl.rate != null ? `${sl.rate}%` : '-';
+        const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl);
         const tier = deckBonusTiers[i];
         const bonusLabel = BONUS_LABEL[tier];
         const bonusClass = BONUS_CLASS[tier];
@@ -781,10 +799,7 @@ const base = import.meta.env.BASE_URL;
           <td class="py-1 px-1 text-right">${bB || '-'}</td>
           <td class="py-1 px-1 text-right">${bM || '-'}</td>
           <td class="py-1 px-1">${skillType}</td>
-          <td class="py-1 px-1 text-right">${count}</td>
-          <td class="py-1 px-1 text-right">${per}</td>
-          <td class="py-1 px-1 text-right">${value}</td>
-          <td class="py-1 px-1 text-right">${rate}</td>
+          <td class="py-1 px-1">${skillEffect}</td>
         </tr>`;
       }).join('');
 
@@ -826,14 +841,14 @@ const base = import.meta.env.BASE_URL;
         <td class="py-1 px-1 text-right">${totalBS || '-'}</td>
         <td class="py-1 px-1 text-right">${totalBB || '-'}</td>
         <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
-        <td colspan="4"></td>
+        <td colspan="2"></td>
       </tr>${hasCenter ? `<tr class="font-bold text-xs text-purple-600">
         <td colspan="4" class="py-1 px-1 text-right">センター/フレンドボーナス (${centerSkillLabel})</td>
         <td class="py-1 px-1 text-right">${csShout > 0 ? `+${csShout.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${csBeat > 0 ? `+${csBeat.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${csMelody > 0 ? `+${csMelody.toLocaleString()}` : '-'}</td>
         <td colspan="3"></td>
-        <td colspan="4"></td>
+        <td colspan="2"></td>
       </tr>` : ''}`;
     }
 
