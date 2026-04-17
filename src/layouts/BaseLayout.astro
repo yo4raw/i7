@@ -1,4 +1,5 @@
 ---
+import { execSync } from 'node:child_process';
 import '../styles/global.css';
 
 interface Props {
@@ -7,6 +8,14 @@ interface Props {
 
 const { title } = Astro.props;
 const base = import.meta.env.BASE_URL;
+
+let version = 'dev';
+try {
+  version = execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim();
+} catch {
+  // git 未使用環境やタグ不在時はフォールバック
+}
+const repoUrl = 'https://github.com/yo4raw/i7';
 ---
 
 <!doctype html>
@@ -62,8 +71,11 @@ const base = import.meta.env.BASE_URL;
     <main class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
       <slot />
     </main>
-    <footer class="text-xs text-gray-500 text-center py-3 px-4">
-      Special thanks to <a href="https://x.com/megoonarite" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@megoonarite</a> and <a href="https://x.com/miyaaaaaki_i7" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@miyaaaaaki_i7</a> / created by <a href="https://x.com/yo4raw_i7" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@yo4raw_i7</a>
+    <footer class="text-xs text-gray-500 py-3 px-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+      <span class="text-center">
+        Special thanks to <a href="https://x.com/megoonarite" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@megoonarite</a> and <a href="https://x.com/miyaaaaaki_i7" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@miyaaaaaki_i7</a> / created by <a href="https://x.com/yo4raw_i7" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@yo4raw_i7</a>
+      </span>
+      <a href={`${repoUrl}/releases/tag/${version}`} target="_blank" rel="noopener noreferrer" class="ml-auto text-gray-400 hover:text-indigo-600 hover:underline">{version}</a>
     </footer>
     <script>
       const toggle = document.getElementById('menu-toggle');
