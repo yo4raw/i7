@@ -547,19 +547,24 @@ const base = import.meta.env.BASE_URL;
         let broachLabelHtml = '';
         if (cardBroachs.length > 0) {
           broachLabelHtml = cardBroachs.map(br => {
-            const stats: string[] = [];
-            if (br.shout) stats.push(`S+${br.shout}`);
-            if (br.beat) stats.push(`B+${br.beat}`);
-            if (br.melody) stats.push(`M+${br.melody}`);
-            if (br.score) stats.push(`スコア+${br.score}`);
-            const statStr = stats.join('/');
-            const label = br.condition
-              ? `${br.condition}${statStr ? ' ' + statStr : ''}`
-              : statStr || `ブローチ#${br.id}`;
-
-            const isAutoOnly = br.broach_type === 8;
             const resolved = slotResolved.find(rb => rb.broach.id === br.id);
             const isActive = resolved?.active ?? false;
+            const mult = (isActive ? resolved?.multiplier : 1) ?? 1;
+
+            const stats: string[] = [];
+            if (br.shout) stats.push(`S+${(br.shout * mult).toLocaleString()}`);
+            if (br.beat) stats.push(`B+${(br.beat * mult).toLocaleString()}`);
+            if (br.melody) stats.push(`M+${(br.melody * mult).toLocaleString()}`);
+            if (br.score) stats.push(`スコア+${br.score}`);
+            const statStr = stats.join('/');
+            const baseLabel = br.condition
+              ? `${br.condition}${statStr ? ' ' + statStr : ''}`
+              : statStr || `ブローチ#${br.id}`;
+            const label = br.broach_type === 5 && isActive && mult > 1
+              ? `${baseLabel}（${mult}枚）`
+              : baseLabel;
+
+            const isAutoOnly = br.broach_type === 8;
 
             if (isAutoOnly) {
               return `<div class="mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center line-through" title="${label}（オート専用・計算対象外）">🔮 ${label}（オート専用）</div>`;
@@ -722,9 +727,9 @@ const base = import.meta.env.BASE_URL;
         const attr = normalizeAttr(card.attribute);
         const slotBroachs = resolvedMap.get(i) ?? [];
         const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
-        let bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0), 0);
-        let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0), 0);
-        let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0), 0);
+        let bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0) * (rb.multiplier ?? 1), 0);
+        let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0) * (rb.multiplier ?? 1), 0);
+        let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0) * (rb.multiplier ?? 1), 0);
         // 共有ブローチのステータスも加算
         if (card.rarity === 'UR') {
           for (const sbId of (deckSharedBroachs[i] || [])) {
