@@ -384,7 +384,7 @@ const base = import.meta.env.BASE_URL;
       if (skillType === 'スコアアップ（タイマー）') {
         return `${c}秒毎に${p}％の確率でスコア${v}UP`;
       }
-      if (skillType === '判定縮小スコアアップ') {
+      if (skillType === '判定縮小スコアアップ' || skillType.startsWith('判定縮小（')) {
         if (sl.rate == null) return '-';
         const mult = sl.rate >= 10 ? sl.rate / 100 : sl.rate;
         return `${req ?? ''}${c}回毎に${p}％の確率で${v}秒間判定領域を縮小してスコアを${mult}倍に`;

@@ -33,7 +33,7 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
   if (count == null || per == null) return null;
 
   const isTimer = type === 'スコアアップ（タイマー）';
-  const isShrink = type === '判定縮小スコアアップ';
+  const isShrink = type === '判定縮小スコアアップ' || type.startsWith('判定縮小（');
 
   let skillType: CardSkill['skillType'] = 'scoreUp';
   if (isTimer) skillType = 'timerScoreUp';
@@ -42,6 +42,7 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
   return {
     cardIndex: slotIndex,
     skillType,
+    originalType: type,
     count: count || 0,
     per: per || 0,
     value: value || 0,
@@ -606,9 +607,11 @@ export async function runSimulation(
       return {
         cardIndex: dc.slotIndex,
         cardname: dc.cardname,
-        skillType: dc.skill!.skillType === 'timerScoreUp' ? 'スコアアップ（タイマー）'
+        skillType: dc.skill!.originalType ?? (
+          dc.skill!.skillType === 'timerScoreUp' ? 'スコアアップ（タイマー）'
           : dc.skill!.isShrink ? '判定縮小スコアアップ'
-          : 'スコアアップ',
+          : 'スコアアップ'
+        ),
         avgActivations: totalActivations[c] / iterations,
         theoreticalRate: dc.skill!.per,
         avgScoreContribution: totalContributions[c] / iterations,
