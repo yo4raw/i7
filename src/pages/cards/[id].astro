@@ -4,6 +4,7 @@ import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { CARD_IMAGE_BASE_URL, ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
 import { attrDonutSvg } from '../../lib/donutChart';
+import { formatSkillEffect } from '../../lib/score/skillFormatter';
 
 export async function getStaticPaths() {
   const [cards, broachs] = await Promise.all([fetchCardsJson(), fetchFixedBroachsJson()]);
@@ -155,21 +156,15 @@ const otherSkills = [
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-gray-50 text-left">
-                <th class="px-3 py-2">Lv</th>
-                <th class="px-3 py-2">発動回数</th>
-                <th class="px-3 py-2">発動確率</th>
-                <th class="px-3 py-2">効果値</th>
-                <th class="px-3 py-2">効果率</th>
+                <th class="px-3 py-2 w-16">Lv</th>
+                <th class="px-3 py-2">効果</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               {apSkillLevels.map(lv => (
                 <tr>
                   <td class="px-3 py-2">Lv{lv.lv}</td>
-                  <td class="px-3 py-2">{lv.count ?? '-'}</td>
-                  <td class="px-3 py-2">{lv.per != null ? lv.per + '%' : '-'}</td>
-                  <td class="px-3 py-2">{lv.value ?? '-'}</td>
-                  <td class="px-3 py-2">{lv.rate ?? '-'}</td>
+                  <td class="px-3 py-2">{formatSkillEffect(card.ap_skill_type, card.ap_skill_req, { count: lv.count, per: lv.per, value: lv.value, rate: lv.rate })}</td>
                 </tr>
               ))}
             </tbody>
