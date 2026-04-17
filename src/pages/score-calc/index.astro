@@ -348,6 +348,7 @@ const base = import.meta.env.BASE_URL;
 
   <script>
     import { getApSkillLevel, type Card } from '../../lib/data/fetchCardsJson';
+    import { formatSkillEffect } from '../../lib/score/skillFormatter';
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
@@ -370,39 +371,6 @@ const base = import.meta.env.BASE_URL;
     let allBroachs: FixedBroach[] = JSON.parse(document.getElementById('broach-data')!.textContent!);
 
     const $ = (id: string) => document.getElementById(id)!;
-
-    /** スキル種別・発動条件・レベル別数値から表示文を生成 */
-    function formatSkillEffect(
-      skillType: string | null,
-      req: string | null,
-      sl: { count: number | null; per: number | null; value: number | null; rate: number | null }
-    ): string {
-      if (!skillType || sl.count == null || sl.per == null || sl.value == null) return '-';
-      const c = sl.count;
-      const p = sl.per;
-      const v = sl.value;
-      if (skillType === 'スコアアップ（タイマー）') {
-        return `${c}秒毎に${p}％の確率でスコア${v}UP`;
-      }
-      if (skillType === '判定縮小スコアアップ' || skillType.startsWith('判定縮小（')) {
-        if (sl.rate == null) return '-';
-        const mult = sl.rate >= 10 ? sl.rate / 100 : sl.rate;
-        if (skillType === '判定縮小（タイマー）') {
-          return `${c}秒毎に${p}％の確率で${v}秒間判定領域を縮小してスコアを${mult}倍に`;
-        }
-        return `${req ?? ''}${c}回毎に${p}％の確率で${v}秒間判定領域を縮小してスコアを${mult}倍に`;
-      }
-      if (skillType === 'BAD以上をPerfectに変更') {
-        if (req === 'タイマー') {
-          return `${c}秒毎に${p}％の確率で${v}秒間BAD以上をPerfectに`;
-        }
-        return `${req ?? ''}${c}回毎に${p}％の確率で${v}秒間BAD以上をPerfectに`;
-      }
-      if (skillType.startsWith('スコアアップ（')) {
-        return `${req ?? ''}${c}回毎に${p}％の確率でスコア${v}UP`;
-      }
-      return '-';
-    }
 
     // --- 状態 ---
     let selectedSong: Song | null = null;
