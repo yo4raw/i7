@@ -32,14 +32,15 @@ const base = import.meta.env.BASE_URL;
   <script>
     import type { Card } from '../../lib/data/fetchCardsJson';
     import type { Song } from '../../lib/data/fetchSongsJson';
-    import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTRIBUTE_MAP } from '../../lib/constants';
+    import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
+    import { normalizeAttribute } from '../../lib/score/types';
+    import { STORAGE_KEYS, loadJson, saveJson } from '../../lib/storage';
+    import { cardThumbUrl } from '../../lib/ui';
 
     const allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     const allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
-    const thumbUrl = (window as any).__CARD_THUMB_BASE_URL__ || '';
     const base = (window as any).__BASE_URL__ || '/';
 
-    const SAVED_DECKS_KEY = 'i7_saved_decks';
     const SLOT_LABELS = ['センター', 'メンバー1', 'メンバー2', 'メンバー3', 'メンバー4', 'フレンド'];
     const DISPLAY_ORDER = [1, 2, 0, 3, 4, 5];
 
@@ -59,18 +60,11 @@ const base = import.meta.env.BASE_URL;
     }
 
     function loadSavedDecks(): SavedDeck[] {
-      try { return JSON.parse(localStorage.getItem(SAVED_DECKS_KEY) || '[]'); } catch { return []; }
+      return loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, []);
     }
 
     function writeSavedDecks(decks: SavedDeck[]) {
-      try { localStorage.setItem(SAVED_DECKS_KEY, JSON.stringify(decks)); } catch {}
-    }
-
-    function normalizeAttr(attr: string | number | null): string {
-      if (typeof attr === 'number') return ATTRIBUTE_MAP[attr] || 'Shout';
-      const num = Number(attr);
-      if (!isNaN(num) && ATTRIBUTE_MAP[num]) return ATTRIBUTE_MAP[num];
-      return attr as string || 'Shout';
+      saveJson(STORAGE_KEYS.SAVED_DECKS, decks);
     }
 
     function render() {
@@ -111,13 +105,13 @@ const base = import.meta.env.BASE_URL;
             </div>`;
           }
 
-          const attr = normalizeAttr(card.attribute);
+          const attr = normalizeAttribute(card.attribute);
           const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
           const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
 
           return `<div class="flex flex-col items-center">
             <div class="text-[9px] ${labelClass} mb-0.5">${label}</div>
-            <img src="${thumbUrl}/${card.ID}.png" alt="" class="w-10 h-auto rounded"
+            <img src="${cardThumbUrl(card.ID!)}" alt="" class="w-10 h-auto rounded"
               onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
             <div class="flex gap-0.5 mt-0.5">
               <span class="px-0.5 py-px text-[7px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
@@ -174,7 +168,7 @@ const base = import.meta.env.BASE_URL;
       const decks = loadSavedDecks();
       const target = decks.find(d => d.id === deckId);
       if (!target) return;
-      try { localStorage.setItem('i7_score_calc_state', JSON.stringify(target.state)); } catch {}
+      saveJson(STORAGE_KEYS.SCORE_CALC_STATE, target.state);
       window.location.href = base + 'score-calc/';
     }
 

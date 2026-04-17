@@ -1,8 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
-import { SONG_IMAGE_BASE_URL } from '../../lib/constants';
+import { ATTR_BADGE_BG } from '../../lib/constants';
 import { attrDonutSvg } from '../../lib/donutChart';
+import { ATTR_TEXT_CLASS, songImageUrl, starsText } from '../../lib/ui';
 
 export async function getStaticPaths() {
   const allSongs = filterValidSongs(await fetchSongsJson());
@@ -48,7 +49,7 @@ const infoRows = [
   { label: 'グループ', value: song.category },
   { label: 'アーティスト', value: song.artist },
   { label: '楽曲タイプ', value: song.song_type },
-  { label: '難易度', value: song.difficulty ? `${song.difficulty}${song.stars ? ' ' + '★'.repeat(song.stars) + '☆'.repeat(Math.max(0, 5 - song.stars)) : ''}` : null },
+  { label: '難易度', value: song.difficulty ? `${song.difficulty}${song.stars ? ' ' + starsText(song.stars) : ''}` : null },
   { label: 'ノーツ数', value: song.notes_count?.toLocaleString() },
   { label: '秒数', value: song.duration ? `${song.duration}秒` : null },
   { label: '更新日', value: song.updated_at },
@@ -64,7 +65,7 @@ const infoRows = [
   <div class="bg-white rounded-lg shadow p-6 mb-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="md:col-span-1">
-        <img src={`${SONG_IMAGE_BASE_URL}/${song.id}.png`} alt={song.song_name || ''}
+        <img src={songImageUrl(song.id)} alt={song.song_name || ''}
              class="w-full rounded-lg shadow-md bg-gray-200"
              loading="lazy"
              onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22><rect width=%22200%22 height=%22200%22 fill=%22%23e5e7eb%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2216%22>No Image</text></svg>'" />
@@ -73,7 +74,7 @@ const infoRows = [
         <h1 class="text-2xl font-bold mb-1">{song.song_name}</h1>
         <p class="text-gray-500 mb-4">{song.artist} / {song.category}</p>
         {song.stars && (
-          <p class="text-amber-400 text-lg mb-4">{'★'.repeat(song.stars)}{'☆'.repeat(Math.max(0, 5 - song.stars))}</p>
+          <p class="text-amber-400 text-lg mb-4">{starsText(song.stars)}</p>
         )}
         <table class="w-full text-sm">
           <tbody class="divide-y divide-gray-100">
@@ -96,21 +97,13 @@ const infoRows = [
       <div class="flex flex-col sm:flex-row items-center gap-6">
         <div class="w-36 h-36 flex-shrink-0" set:html={ratioChartHtml} />
         <div class="space-y-2">
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
-            <span class="text-sm font-medium w-16">Shout</span>
-            <span class="text-sm">{sPct}%</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
-            <span class="text-sm font-medium w-16">Beat</span>
-            <span class="text-sm">{bPct}%</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span>
-            <span class="text-sm font-medium w-16">Melody</span>
-            <span class="text-sm">{mPct}%</span>
-          </div>
+          {(['Shout', 'Beat', 'Melody'] as const).map((attr, i) => (
+            <div class="flex items-center gap-2">
+              <span class={`w-3 h-3 rounded-full inline-block ${ATTR_BADGE_BG[attr]}`}></span>
+              <span class="text-sm font-medium w-16">{attr}</span>
+              <span class="text-sm">{[sPct, bPct, mPct][i]}%</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -127,12 +120,12 @@ const infoRows = [
             <tr class="bg-gray-50 text-left text-xs text-gray-500">
               <th class="px-3 py-2">レベル</th>
               <th class="px-3 py-2 text-right">倍率</th>
-              <th class="px-3 py-2 text-right text-red-500">S白</th>
-              <th class="px-3 py-2 text-right text-red-500">S色</th>
-              <th class="px-3 py-2 text-right text-green-500">B白</th>
-              <th class="px-3 py-2 text-right text-green-500">B色</th>
-              <th class="px-3 py-2 text-right text-blue-500">M白</th>
-              <th class="px-3 py-2 text-right text-blue-500">M色</th>
+              <th class={`px-3 py-2 text-right ${ATTR_TEXT_CLASS.Shout}`}>S白</th>
+              <th class={`px-3 py-2 text-right ${ATTR_TEXT_CLASS.Shout}`}>S色</th>
+              <th class={`px-3 py-2 text-right ${ATTR_TEXT_CLASS.Beat}`}>B白</th>
+              <th class={`px-3 py-2 text-right ${ATTR_TEXT_CLASS.Beat}`}>B色</th>
+              <th class={`px-3 py-2 text-right ${ATTR_TEXT_CLASS.Melody}`}>M白</th>
+              <th class={`px-3 py-2 text-right ${ATTR_TEXT_CLASS.Melody}`}>M色</th>
               <th class="px-3 py-2 text-right font-semibold">計</th>
             </tr>
           </thead>

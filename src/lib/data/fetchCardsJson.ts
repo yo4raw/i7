@@ -70,10 +70,21 @@ export interface Card {
 
 const CARDS_GID = 480354522;
 
+/** 正規化後の ap_skill_type の識別子。マジック文字列の集約ポイント */
+export const SKILL_TYPE = {
+  MISS_TO_GOOD: 'MISS→Good',
+  SCOREUP_TIMER: 'スコアアップ（タイマー）',
+  SCOREUP_PREFIX: 'スコアアップ（',
+  SHRINK: '判定縮小スコアアップ',
+  SHRINK_PREFIX: '判定縮小（',
+  SHRINK_TIMER: '判定縮小（タイマー）',
+  BAD_TO_PERFECT: 'BAD以上をPerfectに変更',
+} as const;
+
 /** ap_skill_type の表記揺れを正規化するマップ */
 const SKILL_TYPE_NORMALIZE: Record<string, string> = {
-  'MISS→GOOD': 'MISS→Good',
-  '判定領域を': '判定縮小スコアアップ',
+  'MISS→GOOD': SKILL_TYPE.MISS_TO_GOOD,
+  '判定領域を': SKILL_TYPE.SHRINK,
 };
 
 const MIN_EXPECTED_CARDS = 100;
@@ -96,8 +107,8 @@ export async function fetchCardsJson(): Promise<Card[]> {
       row.ap_skill_type = `スコアアップ（${row.ap_skill_req}）`;
     }
     // 判定縮小系も発動条件を括弧付きで表示（例: 判定縮小（Perfect）、判定縮小（コンボ）、判定縮小（タイマー））
-    if (row.ap_skill_type === '判定縮小スコアアップ' && row.ap_skill_req) {
-      row.ap_skill_type = `判定縮小（${row.ap_skill_req}）`;
+    if (row.ap_skill_type === SKILL_TYPE.SHRINK && row.ap_skill_req) {
+      row.ap_skill_type = `${SKILL_TYPE.SHRINK_PREFIX}${row.ap_skill_req}）`;
     }
     // groupname が null の場合、キャラクター名からグループを解決
     if (!row.groupname && row.name) {

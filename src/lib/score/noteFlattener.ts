@@ -1,13 +1,8 @@
 import type { Song, SongNoteGroup } from '../data/fetchSongsJson';
-import type { FlatNote, AttributeName } from './types';
+import type { FlatNote } from './types';
+import { ATTRS } from '../constants';
 import { LIGHT_MULTIPLIER } from './constants';
 import { XorShift128Plus } from './rng';
-
-const ATTRS: { key: 'shout' | 'beat' | 'melody'; name: AttributeName }[] = [
-  { key: 'shout', name: 'Shout' },
-  { key: 'beat', name: 'Beat' },
-  { key: 'melody', name: 'Melody' },
-];
 
 const TYPES: { suffix: 'white' | 'color'; type: 'white' | 'color' }[] = [
   { suffix: 'white', type: 'white' },

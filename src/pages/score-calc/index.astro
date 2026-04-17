@@ -4,6 +4,7 @@ import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { CARD_THUMB_BASE_URL } from '../../lib/constants';
+import { ATTR_TEXT_CLASS } from '../../lib/ui';
 
 const [allCards, allSongsRaw, allBroachs] = await Promise.all([
   fetchCardsJson(),
@@ -62,9 +63,9 @@ const base = import.meta.env.BASE_URL;
             </tr>
           </thead>
           <tbody>
-            <tr><td class="py-1 text-red-500 font-medium">Shout</td><td id="area-s-white" class="text-right py-1"></td><td id="area-s-color" class="text-right py-1"></td><td id="area-s-total" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="py-1 text-green-500 font-medium">Beat</td><td id="area-b-white" class="text-right py-1"></td><td id="area-b-color" class="text-right py-1"></td><td id="area-b-total" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="py-1 text-blue-500 font-medium">Melody</td><td id="area-m-white" class="text-right py-1"></td><td id="area-m-color" class="text-right py-1"></td><td id="area-m-total" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Shout} font-medium`}>Shout</td><td id="area-s-white" class="text-right py-1"></td><td id="area-s-color" class="text-right py-1"></td><td id="area-s-total" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Beat} font-medium`}>Beat</td><td id="area-b-white" class="text-right py-1"></td><td id="area-b-color" class="text-right py-1"></td><td id="area-b-total" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Melody} font-medium`}>Melody</td><td id="area-m-white" class="text-right py-1"></td><td id="area-m-color" class="text-right py-1"></td><td id="area-m-total" class="text-right py-1 font-bold"></td></tr>
           </tbody>
         </table>
       </section>
@@ -102,13 +103,13 @@ const base = import.meta.env.BASE_URL;
             <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
             <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
             <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
-            <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class="text-right py-1 text-red-500 text-xs"></td></tr>
-            <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class="text-right py-1 text-green-500 text-xs"></td></tr>
-            <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class="text-right py-1 text-blue-500 text-xs"></td></tr>
+            <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout} text-xs`}></td></tr>
+            <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat} text-xs`}></td></tr>
+            <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody} text-xs`}></td></tr>
             <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class="text-right py-1 text-red-500"></td></tr>
-            <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class="text-right py-1 text-green-500"></td></tr>
-            <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class="text-right py-1 text-blue-500"></td></tr>
+            <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout}`}></td></tr>
+            <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat}`}></td></tr>
+            <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody}`}></td></tr>
           </tbody>
         </table>
         <div class="mt-4 border-t pt-3">
@@ -263,9 +264,9 @@ const base = import.meta.env.BASE_URL;
                 <th class="text-left py-1 px-1">カード名</th>
                 <th class="text-center py-1 px-1">特訓</th>
                 <th class="text-center py-1 px-1">特効</th>
-                <th class="text-right py-1 px-1 text-red-500">Shout</th>
-                <th class="text-right py-1 px-1 text-green-500">Beat</th>
-                <th class="text-right py-1 px-1 text-blue-500">Melody</th>
+                <th class={`text-right py-1 px-1 ${ATTR_TEXT_CLASS.Shout}`}>Shout</th>
+                <th class={`text-right py-1 px-1 ${ATTR_TEXT_CLASS.Beat}`}>Beat</th>
+                <th class={`text-right py-1 px-1 ${ATTR_TEXT_CLASS.Melody}`}>Melody</th>
                 <th class="text-right py-1 px-1">ブローチS</th>
                 <th class="text-right py-1 px-1">ブローチB</th>
                 <th class="text-right py-1 px-1">ブローチM</th>
@@ -359,12 +360,13 @@ const base = import.meta.env.BASE_URL;
     import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
     import { renderHistogramSvg } from '../../lib/score/histogram';
     import { attrDonutSvg } from '../../lib/donutChart';
-    import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTRIBUTE_MAP } from '../../lib/constants';
+    import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
+    import { normalizeAttribute } from '../../lib/score/types';
+    import { STORAGE_KEYS, loadJson, saveJson } from '../../lib/storage';
+    import { ATTR_TEXT_CLASS, cardThumbUrl } from '../../lib/ui';
     import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
     import { loadCounts } from '../../lib/cardListRenderer';
     import { loadRabbitNotes } from '../../lib/data/rabbitNote';
-
-    const thumbUrl = (window as any).__CARD_THUMB_BASE_URL__ || '';
 
     let allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     let allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
@@ -386,14 +388,6 @@ const base = import.meta.env.BASE_URL;
     // カード詳細テーブルの表示順（メンバー1, メンバー2, センター, メンバー3, メンバー4, フレンド）
     const DISPLAY_ORDER = [1, 2, 0, 3, 4, 5];
 
-    // --- 属性正規化 ---
-    function normalizeAttr(attr: string | number | null): string {
-      if (typeof attr === 'number') return ATTRIBUTE_MAP[attr] || 'Shout';
-      const num = Number(attr);
-      if (!isNaN(num) && ATTRIBUTE_MAP[num]) return ATTRIBUTE_MAP[num];
-      return attr as string || 'Shout';
-    }
-
     // --- 共有ブローチバリデーション ---
     function validateSharedBroachs(slotIndex: number) {
       const card = deck[slotIndex];
@@ -407,14 +401,8 @@ const base = import.meta.env.BASE_URL;
     }
 
     // --- 楽曲選択 ---
-    const SELECTED_SONGS_KEY = 'i7_selected_songs';
-
     function getSelectedSongIds(): Set<number> {
-      try {
-        const raw = localStorage.getItem(SELECTED_SONGS_KEY);
-        if (raw) return new Set(JSON.parse(raw));
-      } catch {}
-      return new Set();
+      return new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
     }
 
     function rebuildSongSelect() {
@@ -530,7 +518,7 @@ const base = import.meta.env.BASE_URL;
           continue;
         }
 
-        const attr = normalizeAttr(card.attribute);
+        const attr = normalizeAttribute(card.attribute);
         const attrColor = ATTR_HEX[attr] || '#6b7280';
         const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
         const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
@@ -605,7 +593,7 @@ const base = import.meta.env.BASE_URL;
         container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
         container.style.borderColor = attrColor;
         container.innerHTML = `
-          <img src="${thumbUrl}/${card.ID}.png" alt="" class="w-full max-w-[60px] h-auto rounded mb-1"
+          <img src="${cardThumbUrl(card.ID!)}" alt="" class="w-full max-w-[60px] h-auto rounded mb-1"
             onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
           <div class="flex gap-0.5 mb-1">
             <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
@@ -714,7 +702,7 @@ const base = import.meta.env.BASE_URL;
       const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
       for (const c of deck) {
         if (!c) continue;
-        const a = normalizeAttr(c.attribute);
+        const a = normalizeAttribute(c.attribute);
         if (a in attrCounts) attrCounts[a]++;
       }
 
@@ -724,7 +712,7 @@ const base = import.meta.env.BASE_URL;
       const rows = DISPLAY_ORDER.map(i => {
         const card = deck[i];
         if (!card) return '';
-        const attr = normalizeAttr(card.attribute);
+        const attr = normalizeAttribute(card.attribute);
         const slotBroachs = resolvedMap.get(i) ?? [];
         const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
         let bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0) * (rb.multiplier ?? 1), 0);
@@ -774,9 +762,9 @@ const base = import.meta.env.BASE_URL;
           </td>
           <td class="py-1 px-1 text-center ${trainedClass}">${trainedLabel}</td>
           <td class="py-1 px-1 text-center ${bonusClass}">${bonusLabel}</td>
-          <td class="py-1 px-1 text-right text-red-500">${statShout.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right text-green-500">${statBeat.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right text-blue-500">${statMelody.toLocaleString()}</td>
+          <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${statShout.toLocaleString()}</td>
+          <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${statBeat.toLocaleString()}</td>
+          <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${statMelody.toLocaleString()}</td>
           <td class="py-1 px-1 text-right">${bS || '-'}</td>
           <td class="py-1 px-1 text-right">${bB || '-'}</td>
           <td class="py-1 px-1 text-right">${bM || '-'}</td>
@@ -791,8 +779,8 @@ const base = import.meta.env.BASE_URL;
       const friendCard = deck[5];
       const centerRate = centerCard ? getCenterSkillRate(centerCard.rarity) : 0;
       const friendRate = friendCard ? getCenterSkillRate(friendCard.rarity) : 0;
-      const centerAttr = centerCard ? normalizeAttr(centerCard.attribute) : null;
-      const friendAttr = friendCard ? normalizeAttr(friendCard.attribute) : null;
+      const centerAttr = centerCard ? normalizeAttribute(centerCard.attribute) : null;
+      const friendAttr = friendCard ? normalizeAttribute(friendCard.attribute) : null;
 
       let shoutRate = 0, beatRate = 0, melodyRate = 0;
       if (centerAttr === 'Shout') shoutRate += centerRate;
@@ -817,9 +805,9 @@ const base = import.meta.env.BASE_URL;
 
       $('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
         <td colspan="4" class="py-1 px-1 text-right text-gray-700">合計</td>
-        <td class="py-1 px-1 text-right text-red-500">${totalShout.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right text-green-500">${totalBeat.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right text-blue-500">${totalMelody.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${totalShout.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${totalBeat.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${totalMelody.toLocaleString()}</td>
         <td class="py-1 px-1 text-right">${totalBS || '-'}</td>
         <td class="py-1 px-1 text-right">${totalBB || '-'}</td>
         <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
@@ -877,7 +865,7 @@ const base = import.meta.env.BASE_URL;
           if (!name.includes(text) && !charName.includes(text)) return false;
         }
         if (rarity && card.rarity !== rarity) return false;
-        if (attribute && normalizeAttr(card.attribute) !== attribute) return false;
+        if (attribute && normalizeAttribute(card.attribute) !== attribute) return false;
         return true;
       });
 
@@ -887,13 +875,13 @@ const base = import.meta.env.BASE_URL;
       $('modal-result-count').textContent = `${filtered.length}件`;
 
       const html = filtered.slice(0, 200).map(card => {
-        const attr = normalizeAttr(card.attribute);
+        const attr = normalizeAttribute(card.attribute);
         const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
         const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
         const total = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
 
         return `<div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border-b border-gray-100" data-pick-card="${card.ID}">
-          <img src="${thumbUrl}/${card.ID}.png" alt="" class="w-10 h-auto rounded flex-shrink-0"
+          <img src="${cardThumbUrl(card.ID!)}" alt="" class="w-10 h-auto rounded flex-shrink-0"
             onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1">
@@ -968,8 +956,8 @@ const base = import.meta.env.BASE_URL;
         const fCard = deck[5];
         const cRate = cCard ? getCenterSkillRate(cCard.rarity) : 0;
         const fRate = fCard ? getCenterSkillRate(fCard.rarity) : 0;
-        const cAttr = cCard ? normalizeAttr(cCard.attribute) : null;
-        const fAttr = fCard ? normalizeAttr(fCard.attribute) : null;
+        const cAttr = cCard ? normalizeAttribute(cCard.attribute) : null;
+        const fAttr = fCard ? normalizeAttribute(fCard.attribute) : null;
         let sRate = 0, bRate = 0, mRate = 0;
         if (cAttr === 'Shout') sRate += cRate;
         if (cAttr === 'Beat') bRate += cRate;
@@ -1241,20 +1229,15 @@ const base = import.meta.env.BASE_URL;
     }
 
     function saveState() {
-      try { localStorage.setItem('i7_score_calc_state', JSON.stringify(buildStateObject())); } catch {}
+      saveJson(STORAGE_KEYS.SCORE_CALC_STATE, buildStateObject());
     }
 
     function restoreState() {
-      try {
-        const raw = localStorage.getItem('i7_score_calc_state');
-        if (!raw) return;
-        applyState(JSON.parse(raw));
-      } catch {}
+      const state = loadJson<ReturnType<typeof buildStateObject> | null>(STORAGE_KEYS.SCORE_CALC_STATE, null);
+      if (state) applyState(state);
     }
 
     // --- デッキ保存/読込 ---
-    const SAVED_DECKS_KEY = 'i7_saved_decks';
-
     interface SavedDeck {
       id: string;
       name: string;
@@ -1264,11 +1247,11 @@ const base = import.meta.env.BASE_URL;
     }
 
     function loadSavedDecks(): SavedDeck[] {
-      try { return JSON.parse(localStorage.getItem(SAVED_DECKS_KEY) || '[]'); } catch { return []; }
+      return loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, []);
     }
 
     function writeSavedDecks(decks: SavedDeck[]) {
-      try { localStorage.setItem(SAVED_DECKS_KEY, JSON.stringify(decks)); } catch {}
+      saveJson(STORAGE_KEYS.SAVED_DECKS, decks);
     }
 
     function saveDeck() {

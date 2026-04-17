@@ -28,6 +28,13 @@ export const ATTRIBUTE_MAP: Record<number, string> = {
   3: 'Melody',
 };
 
+/** 属性キーと表示名のペア。ノート集計などでループ処理するとき用 */
+export const ATTRS = [
+  { key: 'shout', name: 'Shout' },
+  { key: 'beat', name: 'Beat' },
+  { key: 'melody', name: 'Melody' },
+] as const;
+
 /** 属性色: 属性名キー */
 export const ATTR_HEX: Record<string, string> = {
   Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6',

@@ -88,26 +88,22 @@ const base = import.meta.env.BASE_URL;
 
   <script>
     import { attrDonutSvg } from '../../lib/donutChart';
-    import { ATTR_HEX, SONG_IMAGE_BASE_URL } from '../../lib/constants';
+    import { ATTR_HEX } from '../../lib/constants';
     import type { Song } from '../../lib/data/fetchSongsJson';
+    import { STORAGE_KEYS, loadJson, saveJson } from '../../lib/storage';
+    import { songImageUrl, starsText } from '../../lib/ui';
 
     const base = (window as any).__BASE_URL__ || '/i7/';
-    const songImgBase = SONG_IMAGE_BASE_URL;
-    const SELECTED_SONGS_KEY = 'i7_selected_songs';
     const $ = (id: string) => document.getElementById(id)!;
 
     let allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!) as Song[];
     let filtered: Song[] = [];
 
     // 選択済み曲IDセット（localStorageに永続化）
-    let selectedSongIds: Set<number> = new Set();
-    try {
-      const raw = localStorage.getItem(SELECTED_SONGS_KEY);
-      if (raw) selectedSongIds = new Set(JSON.parse(raw));
-    } catch {}
+    let selectedSongIds: Set<number> = new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
 
     function saveSelectedSongs() {
-      try { localStorage.setItem(SELECTED_SONGS_KEY, JSON.stringify([...selectedSongIds])); } catch {}
+      saveJson(STORAGE_KEYS.SELECTED_SONGS, [...selectedSongIds]);
       updateSelectedCount();
     }
 
@@ -153,8 +149,8 @@ const base = import.meta.env.BASE_URL;
     }
 
     function starsHtml(n: number): string {
-      if (!n) return '';
-      return `<div class="text-amber-400">${'★'.repeat(n)}${'☆'.repeat(Math.max(0, 5 - n))}</div>`;
+      const s = starsText(n);
+      return s ? `<div class="text-amber-400">${s}</div>` : '';
     }
 
     /** 属性比率から主属性の薄い背景色を返す */
@@ -188,7 +184,7 @@ const base = import.meta.env.BASE_URL;
       const bg = dominantAttrBg(sr, br, mr);
       const bgH = dominantAttrBgHover(sr, br, mr);
       const borderColor = dominantAttrBorder(sr, br, mr);
-      const imgUrl = `${songImgBase}/${song.id}.png`;
+      const imgUrl = songImageUrl(song.id!);
       const defaultBg = songRowBg(bg, imgUrl);
       const hoverBg = songRowBg(bgH, imgUrl);
 
@@ -214,7 +210,7 @@ const base = import.meta.env.BASE_URL;
       const mr = song.melody_ratio || 0;
       const bg = dominantAttrBg(sr, br, mr);
       const borderColor = dominantAttrBorder(sr, br, mr);
-      const imgUrl = `${songImgBase}/${song.id}.png`;
+      const imgUrl = songImageUrl(song.id!);
       const mobileBg = `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${bg}, ${bg}), url(${imgUrl}) no-repeat right 25% / auto 500%`;
 
       const mobileChecked = song.id != null && selectedSongIds.has(song.id) ? 'checked' : '';
@@ -225,7 +221,7 @@ const base = import.meta.env.BASE_URL;
         <p class="font-medium text-sm text-indigo-600">${song.song_name || ''}</p>
         <p class="text-xs text-gray-500">${song.artist || ''} / ${song.category || ''}</p>
         <div class="flex gap-3 mt-1 text-xs text-gray-600">
-          <span>${song.difficulty || ''}${song.stars ? ' ' + '★'.repeat(song.stars) + '☆'.repeat(Math.max(0, 5 - song.stars)) : ''}</span>
+          <span>${song.difficulty || ''}${song.stars ? ' ' + starsText(song.stars) : ''}</span>
           <span>Notes: ${(song.notes_count || 0).toLocaleString()}</span>
           <span>${song.duration || '-'}秒</span>
         </div>
