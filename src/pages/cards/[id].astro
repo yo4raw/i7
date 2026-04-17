@@ -2,7 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
-import { CARD_IMAGE_BASE_URL, ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
+import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
+import { ATTR_TEXT_CLASS, cardImageUrl } from '../../lib/ui';
 import { attrDonutSvg } from '../../lib/donutChart';
 import { formatSkillEffect } from '../../lib/score/skillFormatter';
 
@@ -62,7 +63,7 @@ const otherSkills = [
   </div>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <div class="md:col-span-1">
-      <img src={`${CARD_IMAGE_BASE_URL}/${card.ID}.png`} alt={card.cardname || ''}
+      <img src={cardImageUrl(card.ID)} alt={card.cardname || ''}
            class="w-full rounded-lg shadow-md bg-gray-200"
            loading="lazy"
            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 280%22><rect width=%22200%22 height=%22280%22 fill=%22%23e5e7eb%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2216%22>No Image</text></svg>'" />
@@ -184,9 +185,9 @@ const otherSkills = [
           <div class="border rounded p-3">
             <p class="font-medium">{b.card_name || ''} - {b.name || ''}</p>
             <div class="flex gap-4 mt-2 text-sm">
-              <span class="text-red-500">Shout: {b.shout ?? '-'}</span>
-              <span class="text-blue-500">Beat: {b.beat ?? '-'}</span>
-              <span class="text-green-500">Melody: {b.melody ?? '-'}</span>
+              <span class={ATTR_TEXT_CLASS.Shout}>Shout: {b.shout ?? '-'}</span>
+              <span class={ATTR_TEXT_CLASS.Beat}>Beat: {b.beat ?? '-'}</span>
+              <span class={ATTR_TEXT_CLASS.Melody}>Melody: {b.melody ?? '-'}</span>
             </div>
             {b.condition && <p class="text-xs text-gray-500 mt-1">条件: {b.condition}{b.group ? `（${b.group}）` : ''}</p>}
           </div>

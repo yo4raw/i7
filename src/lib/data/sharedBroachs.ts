@@ -1,3 +1,5 @@
+import type { AttributeName } from '../score/types';
+
 export interface SharedBroach {
   id: number;
   name: string;
@@ -5,7 +7,7 @@ export interface SharedBroach {
   beat: number;
   melody: number;
   /** 設定時、カードの属性がこれと一致する場合のみ効果が発動する */
-  targetAttribute?: 'Shout' | 'Beat' | 'Melody';
+  targetAttribute?: AttributeName;
 }
 
 export const SHARED_BROACHS: SharedBroach[] = [

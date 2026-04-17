@@ -7,6 +7,7 @@
  */
 
 import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from './constants';
+import { ATTR_TEXT_CLASS } from './ui';
 import { attrDonutSvg } from './donutChart';
 
 // --- 設定 ---
@@ -37,14 +38,14 @@ export interface CardListItem {
 
 // --- localStorage 所持数管理 ---
 
-const STORAGE_KEY = 'i7_card_counts';
+import { STORAGE_KEYS, loadJson, saveJson } from './storage';
 
 export function loadCounts(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  return loadJson<Record<string, number>>(STORAGE_KEYS.CARD_COUNTS, {});
 }
 
 export function saveCounts(counts: Record<string, number>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
+  saveJson(STORAGE_KEYS.CARD_COUNTS, counts);
 }
 
 export function getCount(cardId: number): number {
@@ -166,9 +167,9 @@ export function renderMobileCard(card: CardListItem, opts: RenderOptions = {}): 
         <div class="flex items-center gap-2 mt-1">
           ${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}
           <div class="flex gap-2 text-xs">
-            <span class="text-red-500">S:${card.shout_max || 0} <span class="text-gray-400">${pct.sPct}%</span></span>
-            <span class="text-green-500">B:${card.beat_max || 0} <span class="text-gray-400">${pct.bPct}%</span></span>
-            <span class="text-blue-500">M:${card.melody_max || 0} <span class="text-gray-400">${pct.mPct}%</span></span>
+            <span class="${ATTR_TEXT_CLASS.Shout}">S:${card.shout_max || 0} <span class="text-gray-400">${pct.sPct}%</span></span>
+            <span class="${ATTR_TEXT_CLASS.Beat}">B:${card.beat_max || 0} <span class="text-gray-400">${pct.bPct}%</span></span>
+            <span class="${ATTR_TEXT_CLASS.Melody}">M:${card.melody_max || 0} <span class="text-gray-400">${pct.mPct}%</span></span>
           </div>
         </div>
       </div>

@@ -17,13 +17,14 @@ import {
 import type { EventBonusTier } from './constants';
 import { XorShift128Plus } from './rng';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
+import { SKILL_TYPE } from '../data/fetchCardsJson';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
 import type { RabbitNoteMap } from '../data/rabbitNote';
 
 /** カードからスキル情報を解析する */
 function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5 = 5): CardSkill | null {
   const type = card.ap_skill_type;
-  if (!type || type === 'MISS→Good') return null;
+  if (!type || type === SKILL_TYPE.MISS_TO_GOOD) return null;
 
   const sl = getApSkillLevel(card, skillLevel);
   const count = sl.count;
@@ -32,8 +33,8 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
 
   if (count == null || per == null) return null;
 
-  const isTimer = type === 'スコアアップ（タイマー）';
-  const isShrink = type === '判定縮小スコアアップ' || type.startsWith('判定縮小（');
+  const isTimer = type === SKILL_TYPE.SCOREUP_TIMER;
+  const isShrink = type === SKILL_TYPE.SHRINK || type.startsWith(SKILL_TYPE.SHRINK_PREFIX);
 
   let skillType: CardSkill['skillType'] = 'scoreUp';
   if (isTimer) skillType = 'timerScoreUp';
@@ -609,8 +610,8 @@ export async function runSimulation(
         cardIndex: dc.slotIndex,
         cardname: dc.cardname,
         skillType: dc.skill!.originalType ?? (
-          dc.skill!.skillType === 'timerScoreUp' ? 'スコアアップ（タイマー）'
-          : dc.skill!.isShrink ? '判定縮小スコアアップ'
+          dc.skill!.skillType === 'timerScoreUp' ? SKILL_TYPE.SCOREUP_TIMER
+          : dc.skill!.isShrink ? SKILL_TYPE.SHRINK
           : 'スコアアップ'
         ),
         avgActivations: totalActivations[c] / iterations,
