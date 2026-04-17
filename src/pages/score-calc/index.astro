@@ -139,20 +139,6 @@ const base = import.meta.env.BASE_URL;
         </div>
       </section>
 
-      <!-- 計算ボタン（デッキ直下） -->
-      <div class="space-y-2">
-        <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-          🧮 スコア計算
-        </button>
-        <p id="calc-disabled-reason" class="text-xs text-center text-amber-600"></p>
-        <div id="progress-container" class="hidden">
-          <div class="w-full bg-gray-200 rounded-full h-2">
-            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
-          </div>
-          <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
-        </div>
-      </div>
-
       <!-- カード詳細テーブル（折りたたみ可、デフォルト開） -->
       <details id="card-detail-section" class="bg-white rounded-lg shadow p-4 hidden group" open>
         <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
@@ -184,6 +170,60 @@ const base = import.meta.env.BASE_URL;
         <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
         <p class="text-xs text-gray-400 mt-2">※ 最初の20ノーツは縮小の計算対象外です</p>
       </details>
+
+      <!-- スコア内訳（計算ボタン押下前に算出） -->
+      <details id="breakdown-section" class="bg-white rounded-lg shadow p-4 group" open>
+        <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
+          <span>📊 内訳</span>
+          <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <section id="score-breakdown" class="hidden">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
+              <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
+              <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
+              <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
+              <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout} text-xs`}></td></tr>
+              <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat} text-xs`}></td></tr>
+              <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody} text-xs`}></td></tr>
+              <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
+              <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout}`}></td></tr>
+              <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat}`}></td></tr>
+              <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody}`}></td></tr>
+            </tbody>
+          </table>
+          <div class="mt-4 border-t pt-3 space-y-1">
+            <div id="shrink-coverage-row" class="flex items-center justify-between text-sm hidden">
+              <span class="text-gray-500">縮小カバー率（100%発動時）</span>
+              <span class="flex items-center gap-1">
+                <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
+                <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs text-right" />
+                <span class="text-gray-400 text-xs">秒除外</span>
+              </span>
+            </div>
+            <div id="shrink-expected-row" class="flex justify-between text-sm hidden">
+              <span class="text-gray-500">縮小カバー率（期待値）</span>
+              <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
+            </div>
+          </div>
+        </section>
+        <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスコア内訳が表示されます</p>
+      </details>
+
+      <!-- シミュレーション計算ボタン -->
+      <div class="space-y-2">
+        <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          🧮 シミュレーション計算
+        </button>
+        <p id="calc-disabled-reason" class="text-xs text-center text-amber-600"></p>
+        <div id="progress-container" class="hidden">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
+        </div>
+      </div>
     </div>
 
     <!-- 右カラム: 結果（ヒーロー + タブ） -->
@@ -212,47 +252,10 @@ const base = import.meta.env.BASE_URL;
       <!-- 結果タブ -->
       <div class="bg-white rounded-lg shadow">
         <div class="flex border-b overflow-x-auto" role="tablist" aria-label="結果タブ">
-          <button type="button" data-tab="breakdown" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">📊 内訳</button>
           <button type="button" data-tab="mc" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎲 MC統計</button>
           <button type="button" data-tab="expected" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">📈 期待値</button>
           <button type="button" data-tab="skills" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">⚡ スキル発動</button>
           <button type="button" data-tab="area" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎵 面積値</button>
-        </div>
-
-        <!-- Tab: 内訳 -->
-        <div id="tab-panel-breakdown" data-tab-panel class="p-4">
-          <section id="score-breakdown" class="hidden">
-            <table class="w-full text-sm">
-              <tbody>
-                <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
-                <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
-                <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
-                <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
-                <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout} text-xs`}></td></tr>
-                <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat} text-xs`}></td></tr>
-                <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody} text-xs`}></td></tr>
-                <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
-                <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout}`}></td></tr>
-                <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat}`}></td></tr>
-                <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody}`}></td></tr>
-              </tbody>
-            </table>
-            <div class="mt-4 border-t pt-3 space-y-1">
-              <div id="shrink-coverage-row" class="flex items-center justify-between text-sm hidden">
-                <span class="text-gray-500">縮小カバー率（100%発動時）</span>
-                <span class="flex items-center gap-1">
-                  <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
-                  <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs text-right" />
-                  <span class="text-gray-400 text-xs">秒除外</span>
-                </span>
-              </div>
-              <div id="shrink-expected-row" class="flex justify-between text-sm hidden">
-                <span class="text-gray-500">縮小カバー率（期待値）</span>
-                <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
-              </div>
-            </div>
-          </section>
-          <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスコア内訳が表示されます</p>
         </div>
 
         <!-- Tab: MC 統計 -->
@@ -1180,7 +1183,7 @@ const base = import.meta.env.BASE_URL;
 
       // UI復元
       btn.disabled = false;
-      btn.textContent = 'スコア計算';
+      btn.textContent = 'シミュレーション計算';
       $('progress-container').classList.add('hidden');
     }
 
@@ -1390,7 +1393,7 @@ const base = import.meta.env.BASE_URL;
         });
       };
       buttons.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab!)));
-      activate('breakdown');
+      activate('mc');
     }
 
     // --- 結果セクション ⇔ プレースホルダー同期 ---
