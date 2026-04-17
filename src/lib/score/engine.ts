@@ -6,16 +6,16 @@ import {
   normalizeAttribute,
   type AttributeName, type FlatNote, type CardSkill, type DeckCard,
   type ComputedTeam, type SimulationResult, type CardSkillStats, type ScoreOptions,
+  type ExpectedScore,
 } from './types';
 import {
   NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
-  SCOREUP_ASSIST_MULTIPLIER, SCOREUP_BADGE_RATE,
+  SCOREUP_ASSIST_MULTIPLIER,
   MC_CHUNK_SIZE, CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
   EVENT_BONUS_MULTIPLIER,
 } from './constants';
 import type { EventBonusTier } from './constants';
 import { XorShift128Plus } from './rng';
-import { flattenNotes } from './noteFlattener';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
 import type { RabbitNoteMap } from '../data/rabbitNote';
@@ -183,10 +183,18 @@ export function computeTeam(
   const teamBeat = Math.floor((rawBeat + broachBeatTotal) * (100 + beatRate) / 100);
   const teamMelody = Math.floor((rawMelody + broachMelodyTotal) * (100 + melodyRate) / 100);
 
+  // スコアアップアシスト適用済み属性値（属性値段階で ×1.2 して floor）
+  const teamShoutAssisted = Math.floor(teamShout * SCOREUP_ASSIST_MULTIPLIER);
+  const teamBeatAssisted = Math.floor(teamBeat * SCOREUP_ASSIST_MULTIPLIER);
+  const teamMelodyAssisted = Math.floor(teamMelody * SCOREUP_ASSIST_MULTIPLIER);
+
   return {
     Shout: teamShout,
     Beat: teamBeat,
     Melody: teamMelody,
+    ShoutAssisted: teamShoutAssisted,
+    BeatAssisted: teamBeatAssisted,
+    MelodyAssisted: teamMelodyAssisted,
     cards,
     songDuration: song.duration || 0,
     rawShout, rawBeat, rawMelody,
@@ -195,6 +203,27 @@ export function computeTeam(
     broachMelody: broachMelodyTotal,
     broachScoreBonus,
   };
+}
+
+/** ScoreOptions.scoreUpBadgeRate からバッジ倍率を計算 */
+function getBadgeMult(options?: ScoreOptions): number {
+  const rate = options?.scoreUpBadgeRate;
+  if (!rate || rate <= 0) return 1.0;
+  return 1 + rate / 100;
+}
+
+/** アシスト ON 時は適用済み、OFF 時は通常の属性値を返す */
+function getAppeal(team: ComputedTeam, attribute: AttributeName, assist: boolean): number {
+  if (!assist) return team[attribute];
+  return attribute === 'Shout' ? team.ShoutAssisted
+    : attribute === 'Beat' ? team.BeatAssisted
+    : team.MelodyAssisted;
+}
+
+/** 1 ノーツのスコアを計算（属性値 → 素点 floor → コンボ倍率 floor） */
+function calcNoteScore(appeal: number, note: FlatNote): number {
+  const rawNote = Math.floor(appeal * NOTE_RATE[note.type]);
+  return Math.floor(rawNote * LIGHT_MULTIPLIER[note.group]);
 }
 
 /** 縮小カバー率を計算する（100%発動 + 確率考慮の期待値） */
@@ -280,19 +309,20 @@ export function calcShrinkCoverage(team: ComputedTeam, notesCount: number, offse
 
 /** スキル全不発の最低スコア */
 export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
-  const assistMult = options?.scoreUpAssist ? SCOREUP_ASSIST_MULTIPLIER : 1.0;
-  const badgeMult = options?.scoreUpBadge ? (1 + SCOREUP_BADGE_RATE) : 1.0;
+  const assist = options?.scoreUpAssist ?? false;
+  const badgeMult = getBadgeMult(options);
   let total = 0;
   for (const note of notes) {
-    total += team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group] * assistMult;
+    const appeal = getAppeal(team, note.attribute, assist);
+    total += calcNoteScore(appeal, note);
   }
-  return Math.floor(Math.floor(total) * badgeMult) + team.broachScoreBonus;
+  return Math.floor(total * badgeMult) + team.broachScoreBonus;
 }
 
 /** スキル全発動の最高スコア */
 export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
-  const assistMult = options?.scoreUpAssist ? SCOREUP_ASSIST_MULTIPLIER : 1.0;
-  const badgeMult = options?.scoreUpBadge ? (1 + SCOREUP_BADGE_RATE) : 1.0;
+  const assist = options?.scoreUpAssist ?? false;
+  const badgeMult = getBadgeMult(options);
   const N = notes.length;
 
   // タイマースキル: 全タイミングで必ず発動
@@ -348,13 +378,71 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
       if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
     }
 
-    const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
-    const assistedBase = base * assistMult;
-    const shrinkExtra = (shrinkActive && note.group !== 'notes_20') ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
-    total += assistedBase + shrinkExtra + scoreUpSum;
+    // アシスト ON 時は適用済み属性値でノーツスコアを計算
+    const appeal = getAppeal(team, note.attribute, assist);
+    const noteScore = calcNoteScore(appeal, note);
+
+    // 縮小 extra は unassisted 属性値で計算（= 外部サイトの ÷1.2 補正と等価）
+    const appealUnassisted = team[note.attribute];
+    const noteScoreUnassisted = calcNoteScore(appealUnassisted, note);
+    const shrinkExtra = (shrinkActive && note.group !== 'notes_20')
+      ? Math.floor(noteScoreUnassisted * (SHRINK_MULTIPLIER - 1.0))
+      : 0;
+
+    total += noteScore + shrinkExtra + scoreUpSum;
   }
 
-  return Math.floor(Math.floor(total) * badgeMult) + team.broachScoreBonus;
+  return Math.floor(total * badgeMult) + team.broachScoreBonus;
+}
+
+/**
+ * 算術期待値によるスコア計算（外部サイト準拠の単純期待値）。
+ * - 属性値による楽曲スコア: スキル全不発時の素点合計（= calcMinScore のベース部分）
+ * - スコアアップ期待値: Σ( (タイマーなら songDuration, 通常なら notesCount) / count × per/100 × value )
+ * - 縮小期待値: baseScore(未アシスト) × (SHRINK_MULTIPLIER - 1) × expectedCoverageRate
+ */
+export function calcExpectedScore(
+  team: ComputedTeam,
+  notes: FlatNote[],
+  notesCount: number,
+  options?: ScoreOptions,
+): ExpectedScore {
+  const assist = options?.scoreUpAssist ?? false;
+  const badgeMult = getBadgeMult(options);
+
+  // 属性値による楽曲スコア（スキル全不発 = calcMinScore の broachScoreBonus・badgeMult 抜き）
+  let baseScore = 0;
+  let baseScoreUnassisted = 0;
+  for (const note of notes) {
+    baseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
+    baseScoreUnassisted += calcNoteScore(team[note.attribute], note);
+  }
+
+  // スコアアップスキル期待値
+  let scoreUpExpected = 0;
+  for (const dc of team.cards) {
+    const skill = dc.skill;
+    if (!skill || skill.isShrink) continue;
+    if (skill.count <= 0) continue;
+    const denom = skill.isTimer ? team.songDuration : notesCount;
+    if (denom <= 0) continue;
+    scoreUpExpected += (denom / skill.count) * (skill.per / 100) * skill.value;
+  }
+  scoreUpExpected = Math.floor(scoreUpExpected);
+
+  // 縮小期待値: 未アシスト楽曲スコア × 縮小追加倍率 × 期待カバー率
+  let shrinkExpected = 0;
+  const coverage = calcShrinkCoverage(team, notesCount, 0);
+  if (coverage && coverage.effectiveSeconds > 0) {
+    shrinkExpected = Math.floor(
+      baseScoreUnassisted * (SHRINK_MULTIPLIER - 1.0) * coverage.expectedCoverageRate,
+    );
+  }
+
+  const liveEndScore = baseScore + scoreUpExpected + shrinkExpected;
+  const finalScore = Math.floor(liveEndScore * badgeMult) + team.broachScoreBonus;
+
+  return { baseScore, scoreUpExpected, shrinkExpected, liveEndScore, finalScore };
 }
 
 interface RunOnceResult {
@@ -365,8 +453,8 @@ interface RunOnceResult {
 
 /** MC 1回分の実行 */
 function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, options?: ScoreOptions): RunOnceResult {
-  const assistMult = options?.scoreUpAssist ? SCOREUP_ASSIST_MULTIPLIER : 1.0;
-  const badgeMult = options?.scoreUpBadge ? (1 + SCOREUP_BADGE_RATE) : 1.0;
+  const assist = options?.scoreUpAssist ?? false;
+  const badgeMult = getBadgeMult(options);
   const N = notes.length;
   const cardCount = team.cards.length;
   const activations = new Array<number>(cardCount).fill(0);
@@ -434,28 +522,37 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
     }
 
-    const base = team[note.attribute] * NOTE_RATE[note.type] * LIGHT_MULTIPLIER[note.group];
-    const assistedBase = base * assistMult;
-    const shrinkExtra = (shrinkActive && note.group !== 'notes_20') ? base * (SHRINK_MULTIPLIER - 1.0) : 0;
-    const noteScore = assistedBase + shrinkExtra + scoreUpSum;
-    totalScore += noteScore;
+    // アシスト ON 時は適用済み属性値でノーツスコアを計算（per-note floor）
+    const appeal = getAppeal(team, note.attribute, assist);
+    const noteScoreBase = calcNoteScore(appeal, note);
+
+    // 縮小 extra は unassisted 属性値で計算（= 外部サイトの ÷1.2 補正と等価）
+    const appealUnassisted = team[note.attribute];
+    const noteScoreUnassisted = calcNoteScore(appealUnassisted, note);
+    const shrinkExtra = (shrinkActive && note.group !== 'notes_20')
+      ? Math.floor(noteScoreUnassisted * (SHRINK_MULTIPLIER - 1.0))
+      : 0;
+
+    totalScore += noteScoreBase + shrinkExtra + scoreUpSum;
 
     // 判定縮小スキルのスコア寄与を発動中のカードに按分（notes_20は対象外）
-    if (shrinkActive && note.group !== 'notes_20') {
-      const extra = base * (SHRINK_MULTIPLIER - 1.0);
+    if (shrinkActive && note.group !== 'notes_20' && shrinkExtra > 0) {
       let activeShrinkCount = 0;
       for (let c = 0; c < cardCount; c++) {
         if (shrinkEndNotes[c] > n) activeShrinkCount++;
       }
-      for (let c = 0; c < cardCount; c++) {
-        if (shrinkEndNotes[c] > n) {
-          contributions[c] += extra / activeShrinkCount;
+      if (activeShrinkCount > 0) {
+        const share = shrinkExtra / activeShrinkCount;
+        for (let c = 0; c < cardCount; c++) {
+          if (shrinkEndNotes[c] > n) {
+            contributions[c] += share;
+          }
         }
       }
     }
   }
 
-  return { score: Math.floor(Math.floor(totalScore) * badgeMult) + team.broachScoreBonus, activations, contributions };
+  return { score: Math.floor(totalScore * badgeMult) + team.broachScoreBonus, activations, contributions };
 }
 
 /** MC シミュレーション実行（チャンク分割） */
@@ -504,7 +601,7 @@ export async function runSimulation(
   // カードごとのスキル発動統計
   const cardStats: CardSkillStats[] = team.cards
     .filter(dc => dc.skill && dc.skill.skillType !== 'none')
-    .map((dc, _, arr) => {
+    .map((dc) => {
       const c = team.cards.indexOf(dc);
       return {
         cardIndex: dc.slotIndex,

@@ -13,7 +13,8 @@ export const LIGHT_MULTIPLIER: Record<string, number> = {
 
 export const SHRINK_MULTIPLIER = 1.6;
 export const SCOREUP_ASSIST_MULTIPLIER = 1.2;
-export const SCOREUP_BADGE_RATE = 0.15;
+/** スコアアップバッジ倍率のデフォルト値（%）。UI 初期値として使用 */
+export const DEFAULT_SCOREUP_BADGE_RATE = 15;
 export const MC_ITERATIONS = 5000;
 export const MC_CHUNK_SIZE = 50;
 /** センタースキル増加率（レアリティ → 増加率%） */
