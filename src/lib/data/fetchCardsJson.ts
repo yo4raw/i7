@@ -95,12 +95,8 @@ export async function fetchCardsJson(): Promise<Card[]> {
     if (row.ap_skill_type === 'スコアアップ' && row.ap_skill_req) {
       row.ap_skill_type = `スコアアップ（${row.ap_skill_req}）`;
     }
-    // 判定縮小系も発動条件を括弧付きで表示（例: 判定縮小（Perfect）、判定縮小（コンボ））
-    // タイマー系は実態が MISS→Perfect 変換で縮小挙動ではないため対象外（スプレッドシートの表記揺れ）
-    if (
-      row.ap_skill_type === '判定縮小スコアアップ' &&
-      (row.ap_skill_req === 'Perfect' || row.ap_skill_req === 'コンボ')
-    ) {
+    // 判定縮小系も発動条件を括弧付きで表示（例: 判定縮小（Perfect）、判定縮小（コンボ）、判定縮小（タイマー））
+    if (row.ap_skill_type === '判定縮小スコアアップ' && row.ap_skill_req) {
       row.ap_skill_type = `判定縮小（${row.ap_skill_req}）`;
     }
     // groupname が null の場合、キャラクター名からグループを解決
