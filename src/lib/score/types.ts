@@ -50,6 +50,10 @@ export interface ComputedTeam {
   Shout: number;
   Beat: number;
   Melody: number;
+  /** スコアアップアシスト適用済み属性値（floor(Shout × 1.2)） */
+  ShoutAssisted: number;
+  BeatAssisted: number;
+  MelodyAssisted: number;
   cards: DeckCard[];
   songDuration: number;
   rawShout: number;
@@ -76,7 +80,8 @@ export interface SimulationResult {
 
 export interface ScoreOptions {
   scoreUpAssist: boolean;
-  scoreUpBadge: boolean;
+  /** スコアアップバッジの倍率（%）。例: 15 → ×1.15。0 / undefined ならバッジなし */
+  scoreUpBadgeRate?: number;
 }
 
 export interface CardSkillStats {
@@ -86,4 +91,18 @@ export interface CardSkillStats {
   avgActivations: number;
   theoreticalRate: number;
   avgScoreContribution: number;
+}
+
+/** 算術期待値計算の結果（外部サイト準拠の単純期待値） */
+export interface ExpectedScore {
+  /** 属性値による楽曲スコア（スキル全不発時の素点合計） */
+  baseScore: number;
+  /** スコアアップスキル期待値の合計 */
+  scoreUpExpected: number;
+  /** 判定縮小スキル期待値 */
+  shrinkExpected: number;
+  /** ライブ終了時スコア（baseScore + scoreUpExpected + shrinkExpected） */
+  liveEndScore: number;
+  /** バッジ適用後の最終リザルト */
+  finalScore: number;
 }

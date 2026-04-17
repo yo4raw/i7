@@ -78,8 +78,9 @@ const base = import.meta.env.BASE_URL;
             <span>SCOREUPアシスト（属性値×1.2）</span>
           </label>
           <label class="flex items-center gap-2">
-            <input type="checkbox" id="opt-scoreup-badge" class="rounded" />
-            <span>SCOREUPバッジ（最終スコア×1.15）</span>
+            <span class="w-48">SCOREUPバッジ倍率（%）</span>
+            <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="0" />
+            <span class="text-xs text-gray-500">0 で未装着、例: 15 → ×1.15</span>
           </label>
         </div>
         <div class="mt-3 pt-3 border-t">
@@ -155,6 +156,21 @@ const base = import.meta.env.BASE_URL;
           </tbody>
         </table>
         <div id="histogram-container" class="mt-4"></div>
+      </section>
+
+      <!-- 算術期待値（参考値） -->
+      <section id="expected-score" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-sm font-bold text-gray-700 mb-1">算術期待値（参考値）</h2>
+        <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（MC の確率的揺れを含まない決定論的な値）</p>
+        <table class="w-full text-sm">
+          <tbody>
+            <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1"></td></tr>
+            <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold"></td></tr>
+          </tbody>
+        </table>
       </section>
 
       <!-- スキル発動統計 -->
@@ -338,7 +354,7 @@ const base = import.meta.env.BASE_URL;
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
-    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, runSimulation, flattenNotes, getCenterSkillRate } from '../../lib/score/engine';
+    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, runSimulation, flattenNotes, getCenterSkillRate } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
     import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
@@ -920,6 +936,7 @@ const base = import.meta.env.BASE_URL;
         $('score-breakdown').classList.add('hidden');
         $('area-values-section').classList.add('hidden');
         $('mc-results').classList.add('hidden');
+        $('expected-score').classList.add('hidden');
         $('skill-stats').classList.add('hidden');
         $('shrink-coverage-row').classList.add('hidden');
         $('shrink-expected-row').classList.add('hidden');
@@ -989,7 +1006,7 @@ const base = import.meta.env.BASE_URL;
       // スコアオプション
       const scoreOptions: ScoreOptions = {
         scoreUpAssist: ($('opt-scoreup-assist') as HTMLInputElement).checked,
-        scoreUpBadge: ($('opt-scoreup-badge') as HTMLInputElement).checked,
+        scoreUpBadgeRate: parseFloat(($('opt-scoreup-badge-rate') as HTMLInputElement).value) || 0,
       };
 
       // 確定スコア
@@ -1006,6 +1023,7 @@ const base = import.meta.env.BASE_URL;
 
       // MC結果はリセット
       $('mc-results').classList.add('hidden');
+      $('expected-score').classList.add('hidden');
       $('skill-stats').classList.add('hidden');
       $('final-result').textContent = '---';
       simulationResult = null;
@@ -1085,7 +1103,7 @@ const base = import.meta.env.BASE_URL;
       // スコアオプション
       const scoreOptions: ScoreOptions = {
         scoreUpAssist: ($('opt-scoreup-assist') as HTMLInputElement).checked,
-        scoreUpBadge: ($('opt-scoreup-badge') as HTMLInputElement).checked,
+        scoreUpBadgeRate: parseFloat(($('opt-scoreup-badge-rate') as HTMLInputElement).value) || 0,
       };
 
       const result = await runSimulation(team, notes, iterations, (pct) => {
@@ -1112,6 +1130,15 @@ const base = import.meta.env.BASE_URL;
 
       // ヒストグラム
       $('histogram-container').innerHTML = renderHistogramSvg(result.scores, result.minScore, result.maxScore, result.mean);
+
+      // 算術期待値（外部サイト準拠）
+      const expected = calcExpectedScore(team, notes, selectedSong.notes_count || notes.length, scoreOptions);
+      $('expected-score').classList.remove('hidden');
+      $('exp-base').textContent = expected.baseScore.toLocaleString();
+      $('exp-scoreup').textContent = expected.scoreUpExpected.toLocaleString();
+      $('exp-shrink').textContent = expected.shrinkExpected.toLocaleString();
+      $('exp-liveend').textContent = expected.liveEndScore.toLocaleString();
+      $('exp-final').textContent = expected.finalScore.toLocaleString();
 
       // スキル発動統計
       if (result.cardStats.length > 0) {
@@ -1382,7 +1409,7 @@ const base = import.meta.env.BASE_URL;
 
       // スキルオプション変更時に再計算
       $('opt-scoreup-assist').addEventListener('change', recalculate);
-      $('opt-scoreup-badge').addEventListener('change', recalculate);
+      $('opt-scoreup-badge-rate').addEventListener('input', recalculate);
 
       // 縮小カバー率の除外秒数変更時に再計算
       $('shrink-offset-input').addEventListener('input', () => {
