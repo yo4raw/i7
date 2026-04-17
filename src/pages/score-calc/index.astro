@@ -17,190 +17,76 @@ const base = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title="スコア計算">
-  <h1 class="text-2xl font-bold mb-6">スコア計算</h1>
+  <h1 class="text-2xl font-bold mb-4">スコア計算</h1>
 
-  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-    <!-- 左カラム: 楽曲 + オプション + 結果 -->
-    <div class="lg:col-span-2 space-y-4">
-
-      <!-- 楽曲選択 -->
-      <section class="bg-white rounded-lg shadow p-4">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">楽曲</h2>
+  <!-- 楽曲サマリーバー（全幅・横長） -->
+  <section class="bg-white rounded-lg shadow p-4 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
+      <div class="min-w-0">
+        <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
         <select id="song-select" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="">楽曲を選択</option>
         </select>
         <div id="song-info" class="mt-3 hidden">
-          <table class="w-full text-sm">
-            <tbody>
-              <tr><td class="text-gray-500 pr-2 py-1 w-24">楽曲種類</td><td id="song-type" class="py-1 font-medium"></td></tr>
-              <tr><td class="text-gray-500 pr-2 py-1">曲名</td><td id="song-name-val" class="py-1 font-medium"></td></tr>
-              <tr><td class="text-gray-500 pr-2 py-1">アーティスト</td><td id="song-artist" class="py-1 font-medium"></td></tr>
-              <tr><td class="text-gray-500 pr-2 py-1">ノーツ数</td><td id="song-notes" class="py-1 font-medium"></td></tr>
-              <tr><td class="text-gray-500 pr-2 py-1">構成</td><td id="song-attr-counts" class="py-1 text-xs"></td></tr>
-              <tr><td class="text-gray-500 pr-2 py-1">秒数</td><td id="song-duration-val" class="py-1 font-medium"></td></tr>
-            </tbody>
-          </table>
-          <div class="mt-3 flex items-center gap-4">
-            <div id="song-chart" class="flex-shrink-0"></div>
-            <div id="song-ratios" class="text-xs space-y-1"></div>
-          </div>
+          <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+            <div><dt class="text-gray-500 text-[10px]">曲名</dt><dd id="song-name-val" class="font-medium truncate"></dd></div>
+            <div><dt class="text-gray-500 text-[10px]">アーティスト</dt><dd id="song-artist" class="font-medium truncate"></dd></div>
+            <div><dt class="text-gray-500 text-[10px]">楽曲種類</dt><dd id="song-type" class="font-medium"></dd></div>
+            <div><dt class="text-gray-500 text-[10px]">ノーツ数</dt><dd id="song-notes" class="font-medium"></dd></div>
+            <div><dt class="text-gray-500 text-[10px]">秒数</dt><dd id="song-duration-val" class="font-medium"></dd></div>
+            <div><dt class="text-gray-500 text-[10px]">構成</dt><dd id="song-attr-counts"></dd></div>
+          </dl>
           <div class="mt-2 text-right">
             <a id="song-detail-anchor" href="#" class="text-xs text-indigo-600 hover:underline">楽曲詳細を見る →</a>
           </div>
         </div>
-      </section>
+      </div>
+      <div id="song-info-chart" class="flex items-center gap-3 md:border-l md:border-gray-200 md:pl-4 md:min-w-[180px]">
+        <div id="song-chart" class="flex-shrink-0"></div>
+        <div id="song-ratios" class="text-[11px] space-y-0.5"></div>
+      </div>
+    </div>
+  </section>
 
-      <!-- 楽曲属性面積値 -->
-      <section id="area-values-section" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">楽曲属性面積値</h2>
-        <table class="w-full text-xs">
-          <thead>
-            <tr class="text-gray-500">
-              <th class="text-left py-1">属性</th>
-              <th class="text-right py-1">白ノート</th>
-              <th class="text-right py-1">色ノート</th>
-              <th class="text-right py-1">合計</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Shout} font-medium`}>Shout</td><td id="area-s-white" class="text-right py-1"></td><td id="area-s-color" class="text-right py-1"></td><td id="area-s-total" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Beat} font-medium`}>Beat</td><td id="area-b-white" class="text-right py-1"></td><td id="area-b-color" class="text-right py-1"></td><td id="area-b-total" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Melody} font-medium`}>Melody</td><td id="area-m-white" class="text-right py-1"></td><td id="area-m-color" class="text-right py-1"></td><td id="area-m-total" class="text-right py-1 font-bold"></td></tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- スキルオプション -->
-      <section class="bg-white rounded-lg shadow p-4">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">スキルオプション</h2>
-        <div class="space-y-2 text-sm">
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="opt-scoreup-assist" class="rounded" />
-            <span>SCOREUPアシスト（属性値×1.2）</span>
-          </label>
-          <label class="flex items-center gap-2">
-            <span class="w-48">SCOREUPバッジ倍率（%）</span>
-            <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="0" />
-            <span class="text-xs text-gray-500">0 で未装着、例: 15 → ×1.15</span>
-          </label>
-        </div>
-        <div class="mt-3 pt-3 border-t">
+  <!-- スキルオプション（折りたたみ可、デフォルト開） -->
+  <details class="bg-white rounded-lg shadow mb-4 group" open>
+    <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
+      <span>⚙️ スキルオプション / シミュレーション設定</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </summary>
+    <div class="px-4 pb-4 border-t border-gray-100 pt-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="opt-scoreup-assist" class="rounded" />
+          <span>SCOREUPアシスト（属性値×1.2）</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="text-xs text-gray-500 whitespace-nowrap">SCOREUPバッジ倍率</span>
+          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="0" />
+          <span class="text-xs text-gray-500">%</span>
+        </label>
+        <div>
           <label for="mc-iterations-select" class="block text-xs font-medium text-gray-500 mb-1">シミュレーション回数</label>
-          <select id="mc-iterations-select" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <select id="mc-iterations-select" class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
             <option value="1000">1,000回</option>
             <option value="5000" selected>5,000回（推奨）</option>
             <option value="10000">10,000回</option>
           </select>
         </div>
-      </section>
-
-      <!-- スコア内訳 -->
-      <section id="score-breakdown" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">スコア内訳</h2>
-        <table class="w-full text-sm">
-          <tbody>
-            <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
-            <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
-            <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
-            <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
-            <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout} text-xs`}></td></tr>
-            <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat} text-xs`}></td></tr>
-            <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody} text-xs`}></td></tr>
-            <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout}`}></td></tr>
-            <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat}`}></td></tr>
-            <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody}`}></td></tr>
-          </tbody>
-        </table>
-        <div class="mt-4 border-t pt-3">
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-500">理論最低値（スキル全不発）</span>
-            <span id="score-min" class="font-medium"></span>
-          </div>
-          <div class="flex justify-between text-sm mt-1">
-            <span class="text-gray-500">理論最高値（スキル全発動）</span>
-            <span id="score-max" class="font-medium"></span>
-          </div>
-          <div id="shrink-coverage-row" class="flex items-center justify-between text-sm mt-1 hidden">
-            <span class="text-gray-500">縮小カバー率（100%発動時）</span>
-            <span class="flex items-center gap-1">
-              <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
-              <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs text-right" />
-              <span class="text-gray-400 text-xs">秒除外</span>
-            </span>
-          </div>
-          <div id="shrink-expected-row" class="flex justify-between text-sm mt-1 hidden">
-            <span class="text-gray-500">縮小カバー率（期待値）</span>
-            <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
-          </div>
-        </div>
-        <div class="mt-4 bg-indigo-50 rounded-lg p-3 text-center">
-          <div class="text-xs text-gray-500">MC平均スコア</div>
-          <div id="final-result" class="text-2xl font-bold text-indigo-700">---</div>
-        </div>
-      </section>
-
-      <!-- MC結果 -->
-      <section id="mc-results" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">シミュレーション結果</h2>
-        <table class="w-full text-sm">
-          <tbody>
-            <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 最小</td><td id="mc-min" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 最大</td><td id="mc-max" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
-            <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">試行回数</td><td id="mc-iterations" class="text-right py-1"></td></tr>
-          </tbody>
-        </table>
-        <div id="histogram-container" class="mt-4"></div>
-      </section>
-
-      <!-- 算術期待値（参考値） -->
-      <section id="expected-score" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-sm font-bold text-gray-700 mb-1">算術期待値（参考値）</h2>
-        <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（MC の確率的揺れを含まない決定論的な値）</p>
-        <table class="w-full text-sm">
-          <tbody>
-            <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1"></td></tr>
-            <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold"></td></tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- スキル発動統計 -->
-      <section id="skill-stats" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">スキル発動統計</h2>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs">
-            <thead>
-              <tr class="text-gray-500 border-b">
-                <th class="text-left py-1">カード名</th>
-                <th class="text-left py-1">スキル</th>
-                <th class="text-right py-1">発動率</th>
-                <th class="text-right py-1">平均発動</th>
-                <th class="text-right py-1">スコア寄与</th>
-              </tr>
-            </thead>
-            <tbody id="skill-stats-body"></tbody>
-          </table>
-        </div>
-      </section>
+      </div>
+      <p class="text-[11px] text-gray-400 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
     </div>
+  </details>
 
-    <!-- 右カラム: デッキ -->
-    <div class="lg:col-span-3 space-y-4">
+  <!-- メイン 2 カラム: 左=デッキ編成 / 右=結果 -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- 左カラム: デッキ編成 + カード詳細 + 計算ボタン -->
+    <div class="space-y-4">
 
       <!-- デッキスロット -->
       <section class="bg-white rounded-lg shadow p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-bold text-gray-700">デッキ編成</h2>
+          <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
           <div class="relative flex gap-2">
             <button id="btn-save-deck" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors">保存</button>
             <button id="btn-load-deck" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">読込</button>
@@ -253,9 +139,26 @@ const base = import.meta.env.BASE_URL;
         </div>
       </section>
 
-      <!-- カード詳細テーブル -->
-      <section id="card-detail-section" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-sm font-bold text-gray-700 mb-3">カード詳細</h2>
+      <!-- 計算ボタン（デッキ直下） -->
+      <div class="space-y-2">
+        <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          🧮 スコア計算
+        </button>
+        <p id="calc-disabled-reason" class="text-xs text-center text-amber-600"></p>
+        <div id="progress-container" class="hidden">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
+        </div>
+      </div>
+
+      <!-- カード詳細テーブル（折りたたみ可、デフォルト開） -->
+      <details id="card-detail-section" class="bg-white rounded-lg shadow p-4 hidden group" open>
+        <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
+          <span>🧾 カード詳細</span>
+          <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
         <div class="overflow-x-auto">
           <table class="w-full text-xs">
             <thead>
@@ -280,19 +183,156 @@ const base = import.meta.env.BASE_URL;
         </div>
         <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
         <p class="text-xs text-gray-400 mt-2">※ 最初の20ノーツは縮小の計算対象外です</p>
+      </details>
+    </div>
+
+    <!-- 右カラム: 結果（ヒーロー + タブ） -->
+    <div class="space-y-4">
+
+      <!-- ヒーローカード: MC 平均スコアを最上位に -->
+      <section class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
+        <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">MC 平均スコア</div>
+        <div id="final-result" class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">---</div>
+        <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div class="text-[10px] text-gray-500">理論最低</div>
+            <div id="score-min" class="text-xs md:text-sm font-bold text-gray-700 mt-0.5">-</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-gray-500">理論最高</div>
+            <div id="score-max" class="text-xs md:text-sm font-bold text-gray-700 mt-0.5">-</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-gray-500">試行回数</div>
+            <div id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700 mt-0.5">-</div>
+          </div>
+        </div>
       </section>
 
-      <!-- 計算ボタン -->
-      <div class="space-y-2">
-        <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-          スコア計算
-        </button>
-        <p id="calc-disabled-reason" class="text-xs text-center text-amber-600"></p>
-        <div id="progress-container" class="hidden">
-          <div class="w-full bg-gray-200 rounded-full h-2">
-            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
-          </div>
-          <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
+      <!-- 結果タブ -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="flex border-b overflow-x-auto" role="tablist" aria-label="結果タブ">
+          <button type="button" data-tab="breakdown" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">📊 内訳</button>
+          <button type="button" data-tab="mc" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎲 MC統計</button>
+          <button type="button" data-tab="expected" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">📈 期待値</button>
+          <button type="button" data-tab="skills" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">⚡ スキル発動</button>
+          <button type="button" data-tab="area" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎵 面積値</button>
+        </div>
+
+        <!-- Tab: 内訳 -->
+        <div id="tab-panel-breakdown" data-tab-panel class="p-4">
+          <section id="score-breakdown" class="hidden">
+            <table class="w-full text-sm">
+              <tbody>
+                <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
+                <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
+                <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
+                <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
+                <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout} text-xs`}></td></tr>
+                <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat} text-xs`}></td></tr>
+                <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody} text-xs`}></td></tr>
+                <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
+                <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout}`}></td></tr>
+                <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat}`}></td></tr>
+                <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody}`}></td></tr>
+              </tbody>
+            </table>
+            <div class="mt-4 border-t pt-3 space-y-1">
+              <div id="shrink-coverage-row" class="flex items-center justify-between text-sm hidden">
+                <span class="text-gray-500">縮小カバー率（100%発動時）</span>
+                <span class="flex items-center gap-1">
+                  <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
+                  <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs text-right" />
+                  <span class="text-gray-400 text-xs">秒除外</span>
+                </span>
+              </div>
+              <div id="shrink-expected-row" class="flex justify-between text-sm hidden">
+                <span class="text-gray-500">縮小カバー率（期待値）</span>
+                <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
+              </div>
+            </div>
+          </section>
+          <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスコア内訳が表示されます</p>
+        </div>
+
+        <!-- Tab: MC 統計 -->
+        <div id="tab-panel-mc" data-tab-panel class="p-4 hidden">
+          <section id="mc-results" class="hidden">
+            <table class="w-full text-sm">
+              <tbody>
+                <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">MC 最小</td><td id="mc-min" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">MC 平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
+                <tr><td class="text-gray-500 py-1">MC 中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">MC 最大</td><td id="mc-max" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
+                <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
+              </tbody>
+            </table>
+            <div id="histogram-container" class="mt-4"></div>
+          </section>
+          <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとシミュレーション結果が表示されます</p>
+        </div>
+
+        <!-- Tab: 算術期待値 -->
+        <div id="tab-panel-expected" data-tab-panel class="p-4 hidden">
+          <section id="expected-score" class="hidden">
+            <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（MC の確率的揺れを含まない決定論的な値）</p>
+            <table class="w-full text-sm">
+              <tbody>
+                <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1"></td></tr>
+                <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1"></td></tr>
+                <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold"></td></tr>
+              </tbody>
+            </table>
+          </section>
+          <p id="expected-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行すると算術期待値が表示されます</p>
+        </div>
+
+        <!-- Tab: スキル発動統計 -->
+        <div id="tab-panel-skills" data-tab-panel class="p-4 hidden">
+          <section id="skill-stats" class="hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="text-gray-500 border-b">
+                    <th class="text-left py-1">カード名</th>
+                    <th class="text-left py-1">スキル</th>
+                    <th class="text-right py-1">発動率</th>
+                    <th class="text-right py-1">平均発動</th>
+                    <th class="text-right py-1">スコア寄与</th>
+                  </tr>
+                </thead>
+                <tbody id="skill-stats-body"></tbody>
+              </table>
+            </div>
+          </section>
+          <p id="skills-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとスキル発動統計が表示されます</p>
+        </div>
+
+        <!-- Tab: 楽曲属性面積値 -->
+        <div id="tab-panel-area" data-tab-panel class="p-4 hidden">
+          <section id="area-values-section" class="hidden">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="text-gray-500">
+                  <th class="text-left py-1">属性</th>
+                  <th class="text-right py-1">白ノート</th>
+                  <th class="text-right py-1">色ノート</th>
+                  <th class="text-right py-1">合計</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Shout} font-medium`}>Shout</td><td id="area-s-white" class="text-right py-1"></td><td id="area-s-color" class="text-right py-1"></td><td id="area-s-total" class="text-right py-1 font-bold"></td></tr>
+                <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Beat} font-medium`}>Beat</td><td id="area-b-white" class="text-right py-1"></td><td id="area-b-color" class="text-right py-1"></td><td id="area-b-total" class="text-right py-1 font-bold"></td></tr>
+                <tr><td class={`py-1 ${ATTR_TEXT_CLASS.Melody} font-medium`}>Melody</td><td id="area-m-white" class="text-right py-1"></td><td id="area-m-color" class="text-right py-1"></td><td id="area-m-total" class="text-right py-1 font-bold"></td></tr>
+              </tbody>
+            </table>
+          </section>
+          <p id="area-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定すると楽曲属性面積値が表示されます</p>
         </div>
       </div>
     </div>
@@ -1332,8 +1372,56 @@ const base = import.meta.env.BASE_URL;
       hideLoadDropdown();
     }
 
+    // --- 結果タブ切替 ---
+    function initResultTabs() {
+      const buttons = document.querySelectorAll<HTMLButtonElement>('[data-tab]');
+      const panels = document.querySelectorAll<HTMLElement>('[data-tab-panel]');
+      const activeClasses = ['border-indigo-500', 'text-indigo-700', 'bg-indigo-50'];
+      const inactiveClasses = ['border-transparent', 'text-gray-500'];
+      const activate = (key: string) => {
+        panels.forEach(p => p.classList.toggle('hidden', p.id !== `tab-panel-${key}`));
+        buttons.forEach(b => {
+          const isActive = b.dataset.tab === key;
+          b.classList.toggle('border-indigo-500', isActive);
+          b.classList.toggle('text-indigo-700', isActive);
+          b.classList.toggle('bg-indigo-50', isActive);
+          b.classList.toggle('border-transparent', !isActive);
+          b.classList.toggle('text-gray-500', !isActive);
+        });
+      };
+      buttons.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab!)));
+      activate('breakdown');
+    }
+
+    // --- 結果セクション ⇔ プレースホルダー同期 ---
+    function initResultPlaceholders() {
+      const pairs: Array<[string, string]> = [
+        ['score-breakdown', 'breakdown-placeholder'],
+        ['mc-results', 'mc-placeholder'],
+        ['expected-score', 'expected-placeholder'],
+        ['skill-stats', 'skills-placeholder'],
+        ['area-values-section', 'area-placeholder'],
+      ];
+      const sync = (sectionId: string, placeholderId: string) => {
+        const s = document.getElementById(sectionId);
+        const p = document.getElementById(placeholderId);
+        if (s && p) p.classList.toggle('hidden', !s.classList.contains('hidden'));
+      };
+      for (const [sec, ph] of pairs) {
+        sync(sec, ph);
+        const s = document.getElementById(sec);
+        if (!s) continue;
+        new MutationObserver(() => sync(sec, ph)).observe(s, {
+          attributes: true,
+          attributeFilter: ['class'],
+        });
+      }
+    }
+
     // --- イベント登録 ---
     function init() {
+      initResultTabs();
+      initResultPlaceholders();
       initSongSelect();
 
       // デッキスロットクリック
