@@ -331,7 +331,7 @@ export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
 export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const N = notes.length;
 
-  // タイマースキル: 全タイミングで必ず発動
+  // タイマースキル: 全タイミングで必ず発動、発動1回につき value 点を起点ノートに加算
   const timerBonus = new Array<number>(N).fill(0);
   for (const dc of team.cards) {
     const skill = dc.skill;
@@ -340,10 +340,9 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
     const maxAct = Math.floor(team.songDuration / skill.count);
     for (let a = 1; a <= maxAct; a++) {
       const t = a * skill.count;
-      const startNote = Math.floor((t / team.songDuration) * N);
-      const endNote = Math.min(Math.floor(((t + skill.spTime) / team.songDuration) * N), N);
-      for (let n = startNote; n < endNote; n++) {
-        timerBonus[n] += skill.value;
+      const noteIndex = Math.min(Math.floor((t / team.songDuration) * N), N - 1);
+      if (noteIndex >= 0) {
+        timerBonus[noteIndex] += skill.value;
       }
     }
   }
@@ -416,7 +415,7 @@ export function calcExpectedScore(
     baseScore += calcNoteScore(team[note.attribute], note);
   }
 
-  // スコアアップスキル期待値
+  // スコアアップスキル期待値: floor(対象量 / count) 回 × 発動確率 × value
   let scoreUpExpected = 0;
   for (const dc of team.cards) {
     const skill = dc.skill;
@@ -424,7 +423,8 @@ export function calcExpectedScore(
     if (skill.count <= 0) continue;
     const denom = skill.isTimer ? team.songDuration : notesCount;
     if (denom <= 0) continue;
-    scoreUpExpected += (denom / skill.count) * (skill.per / 100) * skill.value;
+    const maxActivations = Math.floor(denom / skill.count);
+    scoreUpExpected += maxActivations * (skill.per / 100) * skill.value;
   }
   scoreUpExpected = Math.floor(scoreUpExpected);
 
@@ -464,7 +464,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
   const activations = new Array<number>(cardCount).fill(0);
   const contributions = new Array<number>(cardCount).fill(0);
 
-  // Phase 1: タイマースキル
+  // Phase 1: タイマースキル (1 発動で起点ノートに value 点を 1 回加算)
   const timerBonus = new Array<number>(N).fill(0);
   for (let c = 0; c < cardCount; c++) {
     const skill = team.cards[c].skill;
@@ -475,10 +475,9 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       if (rng.next() * 100 < skill.per) {
         activations[c]++;
         const t = a * skill.count;
-        const startNote = Math.floor((t / team.songDuration) * N);
-        const endNote = Math.min(Math.floor(((t + skill.spTime) / team.songDuration) * N), N);
-        for (let n = startNote; n < endNote; n++) {
-          timerBonus[n] += skill.value;
+        const noteIndex = Math.min(Math.floor((t / team.songDuration) * N), N - 1);
+        if (noteIndex >= 0) {
+          timerBonus[noteIndex] += skill.value;
           contributions[c] += skill.value;
         }
       }
@@ -523,7 +522,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       }
     }
 
-    // 判定縮小スキルのアクティブ判定（spTime 持続時間ベース）
+    // 判定縮小スキルのアクティブ判定（value 秒の持続時間ベース）
     let shrinkActive = false;
     for (let c = 0; c < cardCount; c++) {
       if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
