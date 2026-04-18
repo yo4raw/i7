@@ -12,7 +12,7 @@ import {
   NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
   SCOREUP_ASSIST_MULTIPLIER,
   MC_CHUNK_SIZE, CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
-  EVENT_BONUS_MULTIPLIER,
+  EVENT_BONUS_MULTIPLIER, TRAIN_BONUS,
 } from './constants';
 import type { EventBonusTier } from './constants';
 import { XorShift128Plus } from './rng';
@@ -101,9 +101,15 @@ export function computeTeam(
     const bonusMult = EVENT_BONUS_MULTIPLIER[bonusTier];
     const trained = trainedFlags?.[i] ?? true;
 
-    const baseShout = trained ? (card.shout_max || 0) : (card.shout_min || 0);
-    const baseBeat = trained ? (card.beat_max || 0) : (card.beat_min || 0);
-    const baseMelody = trained ? (card.melody_max || 0) : (card.melody_min || 0);
+    // 未特訓は自属性のみ TRAIN_BONUS を引いた値、他属性と特訓済みは *_max をそのまま使う
+    const cardAttr = normalizeAttribute(card.attribute);
+    const trainBonus = TRAIN_BONUS[card.rarity ?? ''] ?? 0;
+    const shoutMax = card.shout_max || 0;
+    const beatMax = card.beat_max || 0;
+    const melodyMax = card.melody_max || 0;
+    const baseShout = shoutMax - (trained || cardAttr !== 'Shout' ? 0 : trainBonus);
+    const baseBeat = beatMax - (trained || cardAttr !== 'Beat' ? 0 : trainBonus);
+    const baseMelody = melodyMax - (trained || cardAttr !== 'Melody' ? 0 : trainBonus);
 
     // ラビットノート加算（イベントボーナス倍率適用前）
     const rn = rabbitNotes?.[card.name || ''];
