@@ -20,8 +20,8 @@ const MC_ITERATIONS = 100;
 const emptyDeck: (Card | null)[] = [null, null, null, null, null, null];
 const centerDeck: (Card | null)[] = [tenthTamakiMainCard, null, null, null, null, null];
 
-describe('10th Anniversary 四葉環 as center on MONSTER GENERATiON', () => {
-  describe('getCenterSkillRate', () => {
+describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配置した場合', () => {
+  describe('getCenterSkillRate (センタースキル倍率)', () => {
     it('returns 10% for UR rarity (matches CENTER_SKILL_RATES table)', () => {
       expect(getCenterSkillRate('UR')).toBe(CENTER_SKILL_RATES.UR);
       expect(getCenterSkillRate(tenthTamakiMainCard.rarity)).toBe(10);
@@ -32,7 +32,7 @@ describe('10th Anniversary 四葉環 as center on MONSTER GENERATiON', () => {
     });
   });
 
-  describe('computeTeam', () => {
+  describe('computeTeam (チーム属性値の計算)', () => {
     const team = computeTeam(centerDeck, [], monsterGenerationSong);
 
     it('raw attribute values match the trained *_max stats of 10th 環', () => {
@@ -86,7 +86,7 @@ describe('10th Anniversary 四葉環 as center on MONSTER GENERATiON', () => {
     });
   });
 
-  describe('runSimulation (seed-fixed, deterministic)', () => {
+  describe('runSimulation (シード固定の決定論的シミュレーション)', () => {
     const team = computeTeam(centerDeck, [], monsterGenerationSong);
     const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
 
@@ -120,7 +120,7 @@ describe('10th Anniversary 四葉環 as center on MONSTER GENERATiON', () => {
     });
   });
 
-  describe('calcExpectedScore', () => {
+  describe('calcExpectedScore (算術期待値の計算)', () => {
     const team = computeTeam(centerDeck, [], monsterGenerationSong);
     const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
     const notesCount = monsterGenerationSong.notes_count!;
