@@ -58,7 +58,7 @@ const base = import.meta.env.BASE_URL;
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
         <label class="flex items-center gap-2">
           <input type="checkbox" id="opt-scoreup-assist" class="rounded" />
-          <span>SCOREUPアシスト（属性値×1.2）</span>
+          <span>SCOREUPアシスト（最終スコア+12%）</span>
         </label>
         <label class="flex items-center gap-2">
           <span class="text-xs text-gray-500 whitespace-nowrap">SCOREUPバッジ倍率</span>
@@ -1064,7 +1064,13 @@ const base = import.meta.env.BASE_URL;
 
     function updateShrinkCoverage(team: ComputedTeam, song: Song) {
       const offset = Number(($('shrink-offset-input') as HTMLInputElement).value) || 0;
-      const shrinkCoverage = calcShrinkCoverage(team, song.notes_count || 0, offset);
+      const n20 = song.notes_20;
+      const notes20Count = n20
+        ? (n20.shout_white || 0) + (n20.shout_color || 0)
+          + (n20.beat_white || 0) + (n20.beat_color || 0)
+          + (n20.melody_white || 0) + (n20.melody_color || 0)
+        : 0;
+      const shrinkCoverage = calcShrinkCoverage(team, song.notes_count || 0, offset, notes20Count);
       if (shrinkCoverage) {
         $('shrink-coverage-row').classList.remove('hidden');
         $('shrink-expected-row').classList.remove('hidden');
