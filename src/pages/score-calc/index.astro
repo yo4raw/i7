@@ -62,7 +62,7 @@ const base = import.meta.env.BASE_URL;
         </label>
         <label class="flex items-center gap-2">
           <span class="text-xs text-gray-500 whitespace-nowrap">SCOREUPバッジ倍率</span>
-          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="0" />
+          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="15" />
           <span class="text-xs text-gray-500">%</span>
         </label>
         <div>
@@ -79,9 +79,7 @@ const base = import.meta.env.BASE_URL;
   </details>
 
   <!-- メイン 2 カラム: 左=デッキ編成 / 右=結果 -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- 左カラム: デッキ編成 + カード詳細 + 計算ボタン -->
-    <div class="space-y-4">
+  <div class="space-y-4">
 
       <!-- デッキスロット -->
       <section class="bg-white rounded-lg shadow p-4">
@@ -211,6 +209,20 @@ const base = import.meta.env.BASE_URL;
         <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスコア内訳が表示されます</p>
       </details>
 
+      <!-- 理論最低 / 理論最高 (計算ボタン上) -->
+      <section class="bg-white rounded-lg shadow p-4">
+        <div class="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最低</div>
+            <div id="score-min" class="text-base md:text-lg font-bold text-gray-700 mt-1">-</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最高</div>
+            <div id="score-max" class="text-base md:text-lg font-bold text-gray-700 mt-1">-</div>
+          </div>
+        </div>
+      </section>
+
       <!-- シミュレーション計算ボタン -->
       <div class="space-y-2">
         <button id="btn-calculate" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
@@ -224,58 +236,44 @@ const base = import.meta.env.BASE_URL;
           <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
         </div>
       </div>
-    </div>
 
-    <!-- 右カラム: 結果（ヒーロー + タブ） -->
-    <div class="space-y-4">
-
-      <!-- ヒーローカード: MC 平均スコアを最上位に -->
+      <!-- MC 平均スコア (計算ボタン下) -->
       <section class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
         <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">MC 平均スコア</div>
         <div id="final-result" class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">---</div>
-        <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <div class="text-[10px] text-gray-500">理論最低</div>
-            <div id="score-min" class="text-xs md:text-sm font-bold text-gray-700 mt-0.5">-</div>
-          </div>
-          <div>
-            <div class="text-[10px] text-gray-500">理論最高</div>
-            <div id="score-max" class="text-xs md:text-sm font-bold text-gray-700 mt-0.5">-</div>
-          </div>
-          <div>
-            <div class="text-[10px] text-gray-500">試行回数</div>
-            <div id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700 mt-0.5">-</div>
-          </div>
+        <div class="mt-3 text-center">
+          <span class="text-[10px] text-gray-500">試行回数: </span>
+          <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700">-</span>
         </div>
+      </section>
+
+      <!-- MC 統計パネル -->
+      <section class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-sm font-bold text-gray-700 mb-3">🎲 MC 統計</h2>
+        <section id="mc-results" class="hidden">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 py-1">MC 最小</td><td id="mc-min" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 py-1">MC 平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
+              <tr><td class="text-gray-500 py-1">MC 中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 py-1">MC 最大</td><td id="mc-max" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
+              <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
+            </tbody>
+          </table>
+          <div id="histogram-container" class="mt-4"></div>
+        </section>
+        <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとシミュレーション結果が表示されます</p>
       </section>
 
       <!-- 結果タブ -->
       <div class="bg-white rounded-lg shadow">
         <div class="flex border-b overflow-x-auto" role="tablist" aria-label="結果タブ">
-          <button type="button" data-tab="mc" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎲 MC統計</button>
           <button type="button" data-tab="expected" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">📈 期待値</button>
           <button type="button" data-tab="skills" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">⚡ スキル発動</button>
           <button type="button" data-tab="area" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎵 面積値</button>
-        </div>
-
-        <!-- Tab: MC 統計 -->
-        <div id="tab-panel-mc" data-tab-panel class="p-4 hidden">
-          <section id="mc-results" class="hidden">
-            <table class="w-full text-sm">
-              <tbody>
-                <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
-                <tr><td class="text-gray-500 py-1">MC 最小</td><td id="mc-min" class="text-right py-1"></td></tr>
-                <tr><td class="text-gray-500 py-1">MC 平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
-                <tr><td class="text-gray-500 py-1">MC 中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
-                <tr><td class="text-gray-500 py-1">MC 最大</td><td id="mc-max" class="text-right py-1"></td></tr>
-                <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
-                <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
-                <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
-              </tbody>
-            </table>
-            <div id="histogram-container" class="mt-4"></div>
-          </section>
-          <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとシミュレーション結果が表示されます</p>
         </div>
 
         <!-- Tab: 算術期待値 -->
@@ -338,7 +336,6 @@ const base = import.meta.env.BASE_URL;
           <p id="area-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定すると楽曲属性面積値が表示されます</p>
         </div>
       </div>
-    </div>
   </div>
 
   <!-- カード選択モーダル -->
@@ -1414,7 +1411,7 @@ const base = import.meta.env.BASE_URL;
         });
       };
       buttons.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab!)));
-      activate('mc');
+      activate('expected');
     }
 
     // --- 結果セクション ⇔ プレースホルダー同期 ---
