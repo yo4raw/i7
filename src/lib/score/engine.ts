@@ -235,22 +235,48 @@ export function calcShrinkCoverage(
   offsetSeconds: number = 0,
   excludeHeadCount: number = 0,
 ): {
+  /** 区間マージ後のカバー率 (スコア計算対象、最大100%) */
   coverageRate: number;
   coveredSeconds: number;
+  /** 区間マージ前の単純合計カバー率 (100%超表示用、重複区間を含む) */
+  rawCoverageRate: number;
+  rawCoveredSeconds: number;
+  /** 区間重複補正込みの期待カバー率 (シミュレーション/スコア計算用) */
   expectedCoverageRate: number;
   expectedCoveredSeconds: number;
+  /** 単純加算の期待カバー率 (表示用、重複補正なし = Σ 発動回数 × 持続秒 × 確率) */
+  rawExpectedCoverageRate: number;
+  rawExpectedCoveredSeconds: number;
   effectiveSeconds: number;
 } | null {
   const shrinkCards = team.cards.filter(dc => dc.skill?.isShrink && dc.skill.count > 0);
   if (shrinkCards.length === 0) return null;
 
-  const zero = { coverageRate: 0, coveredSeconds: 0, expectedCoverageRate: 0, expectedCoveredSeconds: 0, effectiveSeconds: 0 };
+  const zero = {
+    coverageRate: 0, coveredSeconds: 0,
+    rawCoverageRate: 0, rawCoveredSeconds: 0,
+    expectedCoverageRate: 0, expectedCoveredSeconds: 0,
+    rawExpectedCoverageRate: 0, rawExpectedCoveredSeconds: 0,
+    effectiveSeconds: 0,
+  };
   const effectiveSeconds = team.songDuration - offsetSeconds;
   if (effectiveSeconds <= 0) return zero;
   if (notesCount <= 0) return { ...zero, effectiveSeconds };
 
   // 縮小判定対象ノート数 (notes_20 を除外)
   const eligibleCount = Math.max(0, notesCount - excludeHeadCount);
+
+  // 生の合計時間（区間マージ前、songDuration でのキャップ無し）
+  // 仕様: 各スキルの「発動回数 × 持続秒数」の単純加算。100% 超過分はスコア計算対象外。
+  // 期待値側も「発動回数 × 持続秒数 × 発動確率」の単純加算（重複補正なし）を並行で保持。
+  let rawCoveredSeconds = 0;
+  let rawExpectedCoveredSeconds = 0;
+  for (const dc of shrinkCards) {
+    const skill = dc.skill!;
+    const numActivations = Math.floor(eligibleCount / skill.count);
+    rawCoveredSeconds += numActivations * skill.value;
+    rawExpectedCoveredSeconds += numActivations * skill.value * (skill.per / 100);
+  }
 
   // 全縮小カードの発動区間を収集（確率付き）
   const intervals: { start: number; end: number; prob: number }[] = [];
@@ -268,7 +294,16 @@ export function calcShrinkCoverage(
     }
   }
 
-  if (intervals.length === 0) return { ...zero, effectiveSeconds };
+  if (intervals.length === 0) {
+    return {
+      ...zero,
+      rawCoverageRate: rawCoveredSeconds / effectiveSeconds,
+      rawCoveredSeconds,
+      rawExpectedCoverageRate: rawExpectedCoveredSeconds / effectiveSeconds,
+      rawExpectedCoveredSeconds,
+      effectiveSeconds,
+    };
+  }
 
   // --- 100%発動: 区間マージ ---
   const sorted = [...intervals].sort((a, b) => a.start - b.start);
@@ -312,8 +347,12 @@ export function calcShrinkCoverage(
   return {
     coverageRate: coveredSeconds / effectiveSeconds,
     coveredSeconds,
+    rawCoverageRate: rawCoveredSeconds / effectiveSeconds,
+    rawCoveredSeconds,
     expectedCoverageRate: expectedCoveredSeconds / effectiveSeconds,
     expectedCoveredSeconds,
+    rawExpectedCoverageRate: rawExpectedCoveredSeconds / effectiveSeconds,
+    rawExpectedCoveredSeconds,
     effectiveSeconds,
   };
 }

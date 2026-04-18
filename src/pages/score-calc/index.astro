@@ -1074,10 +1074,20 @@ const base = import.meta.env.BASE_URL;
       if (shrinkCoverage) {
         $('shrink-coverage-row').classList.remove('hidden');
         $('shrink-expected-row').classList.remove('hidden');
-        const pct = (shrinkCoverage.coverageRate * 100).toFixed(1);
-        $('shrink-coverage-val').textContent = `${pct}%（${shrinkCoverage.coveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
-        const expPct = (shrinkCoverage.expectedCoverageRate * 100).toFixed(1);
-        $('shrink-expected-val').textContent = `${expPct}%（${shrinkCoverage.expectedCoveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
+        // 100%発動時は区間マージ前の生の合計を表示 (仕様: 100%超は計算対象外と明記)
+        const rawPct = (shrinkCoverage.rawCoverageRate * 100).toFixed(1);
+        const rawText = `${rawPct}%（${shrinkCoverage.rawCoveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
+        $('shrink-coverage-val').textContent = shrinkCoverage.rawCoverageRate > 1.0
+          ? `${rawText} ※100%超過分は計算対象外`
+          : rawText;
+        // 期待値も単純加算(発動秒 × 確率)を表示。重複区間で補正がかかる場合は注記。
+        const rawExpPct = (shrinkCoverage.rawExpectedCoverageRate * 100).toFixed(1);
+        const rawExpText = `${rawExpPct}%（${shrinkCoverage.rawExpectedCoveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
+        const hasOverlapCorrection =
+          Math.abs(shrinkCoverage.rawExpectedCoverageRate - shrinkCoverage.expectedCoverageRate) > 0.001;
+        $('shrink-expected-val').textContent = hasOverlapCorrection
+          ? `${rawExpText} ※重複区間で確率合成により実効カバー率は低下`
+          : rawExpText;
       } else {
         $('shrink-coverage-row').classList.add('hidden');
         $('shrink-expected-row').classList.add('hidden');
