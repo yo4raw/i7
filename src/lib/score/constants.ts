@@ -12,7 +12,8 @@ export const LIGHT_MULTIPLIER: Record<string, number> = {
 };
 
 export const SHRINK_MULTIPLIER = 1.6;
-export const SCOREUP_ASSIST_MULTIPLIER = 1.2;
+/** スコアアップアシスト適用時の最終スコア加算率 (12%) */
+export const SCOREUP_ASSIST_RATE = 0.12;
 /** スコアアップバッジ倍率のデフォルト値（%）。UI 初期値として使用 */
 export const DEFAULT_SCOREUP_BADGE_RATE = 15;
 export const MC_ITERATIONS = 5000;

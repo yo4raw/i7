@@ -52,10 +52,6 @@ export interface ComputedTeam {
   Shout: number;
   Beat: number;
   Melody: number;
-  /** スコアアップアシスト適用済み属性値（floor(Shout × 1.2)） */
-  ShoutAssisted: number;
-  BeatAssisted: number;
-  MelodyAssisted: number;
   cards: DeckCard[];
   songDuration: number;
   rawShout: number;

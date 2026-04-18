@@ -18,6 +18,7 @@ Thumbs.db
 # editor
 .vscode/
 .idea/
+.serena/
 *.swp
 *.swo
 
