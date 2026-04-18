@@ -11,7 +11,12 @@ import {
   runSimulation,
 } from '../../../src/lib/score/engine';
 import { CENTER_SKILL_RATES, SCOREUP_ASSIST_MULTIPLIER } from '../../../src/lib/score/constants';
-import { monsterGenerationSong, tenthTamakiMainCard } from '../../fixtures';
+import { findCardById, findSongById } from '../../fixtures';
+
+/** 10th Anniversary 四葉環 (UR / Beat / BAD→Perfect スキル) */
+const tenthTamakiMainCard = findCardById(2484);
+/** MONSTER GENERATiON (EXPERT+ / 428 ノーツ) */
+const monsterGenerationSong = findSongById(2);
 
 const FLATTEN_SEED = 42;
 const MC_SEED = 42;
