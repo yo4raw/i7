@@ -143,6 +143,20 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(team.Shout).toBe(3898);
       expect(team.Melody).toBe(4611);
     });
+
+    it('スコア総計は docs/unit-test-case.md の理論値 163,097 と一致する', async () => {
+      const team = computeTeam(centerDeck, tenthTamakiBroachs, monsterGenerationSong);
+      const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
+      const expectedTotal = 163097;
+
+      expect(calcMinScore(team, notes)).toBe(expectedTotal);
+      expect(calcMaxScore(team, notes)).toBe(expectedTotal);
+
+      const result = await runSimulation(team, notes, MC_ITERATIONS, undefined, MC_SEED);
+      expect(result.mcMin).toBe(expectedTotal);
+      expect(result.mcMax).toBe(expectedTotal);
+      expect(result.scores.every((s) => s === expectedTotal)).toBe(true);
+    });
   });
 
   describe('runSimulation (シード固定の決定論的シミュレーション)', () => {
