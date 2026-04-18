@@ -1,0 +1,85 @@
+{
+  "id": 2,
+  "category": "IDOLiSH7",
+  "artist": "IDOLiSH7",
+  "song_name": "MONSTER GENERATiON",
+  "song_type": "イベント楽曲",
+  "difficulty": "EXPERT+",
+  "stars": 3,
+  "shout_ratio": 0.28660846647998683,
+  "beat_ratio": 0.3735793114808104,
+  "melody_ratio": 0.33981222203920275,
+  "notes_count": 428,
+  "duration": 104,
+  "notes_20": {
+    "shout_white": 0,
+    "shout_color": 0,
+    "beat_white": 0,
+    "beat_color": 0,
+    "melody_white": 15,
+    "melody_color": 6
+  },
+  "light_2": {
+    "shout_white": 0,
+    "shout_color": 0,
+    "beat_white": 0,
+    "beat_color": 0,
+    "melody_white": 10,
+    "melody_color": 4
+  },
+  "light_3": {
+    "shout_white": 0,
+    "shout_color": 0,
+    "beat_white": 2,
+    "beat_color": 0,
+    "melody_white": 33,
+    "melody_color": 11
+  },
+  "light_4": {
+    "shout_white": 0,
+    "shout_color": 0,
+    "beat_white": 46,
+    "beat_color": 0,
+    "melody_white": 0,
+    "melody_color": 0
+  },
+  "light_5": {
+    "shout_white": 0,
+    "shout_color": 0,
+    "beat_white": 47,
+    "beat_color": 2,
+    "melody_white": 0,
+    "melody_color": 0
+  },
+  "light_6": {
+    "shout_white": 76,
+    "shout_color": 9,
+    "beat_white": 9,
+    "beat_color": 1,
+    "melody_white": 0,
+    "melody_color": 0
+  },
+  "chorus_light_5": {
+    "shout_white": 0,
+    "shout_color": 0,
+    "beat_white": 0,
+    "beat_color": 0,
+    "melody_white": 0,
+    "melody_color": 0
+  },
+  "chorus_light_6": {
+    "shout_white": 21,
+    "shout_color": 14,
+    "beat_white": 47,
+    "beat_color": 11,
+    "melody_white": 49,
+    "melody_color": 15
+  },
+  "total_shout_white": 442.5,
+  "total_shout_color": 166.5,
+  "total_beat_white": 682.5,
+  "total_beat_color": 111.3,
+  "total_melody_white": 520.75,
+  "total_melody_color": 201.3,
+  "updated_at": "2022-12-30"
+}

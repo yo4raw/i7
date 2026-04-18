@@ -7,7 +7,10 @@
     "build": "astro build",
     "preview": "npm run build && ln -sfn . dist/i7 && npx serve dist -l 4321",
     "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "extract-fixtures": "tsx scripts/extract-test-fixtures.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -17,7 +20,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "serve": "^14.2.6"
+    "serve": "^14.2.6",
+    "tsx": "^4.19.2",
+    "vitest": "^3.2.4"
   },
   "overrides": {
     "vite": "^7"
