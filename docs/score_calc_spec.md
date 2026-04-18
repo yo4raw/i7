@@ -69,9 +69,15 @@
 ### 3-1. カード単位の基本属性値
 
 ```
-特訓済み → baseShout = shout_max, baseBeat = beat_max, baseMelody = melody_max
-未特訓   → baseShout = shout_min, baseBeat = beat_min, baseMelody = melody_min
+特訓済み → baseShout = shout_max,   baseBeat = beat_max,   baseMelody = melody_max
+未特訓   → base<自属性> = <自属性>_max - TRAIN_BONUS[rarity]
+         → 他属性は *_max をそのまま使用
 ```
+
+特訓は「自属性のみ TRAIN_BONUS[rarity] 分増加」の仕様。TRAIN_BONUS は `constants.ts` で定義され、
+UR は `+1800`(他レアリティは未確定で 0 扱い)。
+例: 10th Anniversary 四葉環(UR / Beat) は `beat_max=7691` で、未特訓時は `7691 - 1800 = 5891`、
+Shout / Melody は特訓有無に関わらず `shout_max` / `melody_max` をそのまま使用する。
 
 ### 3-2. ラビットノート加算 + 特効倍率
 

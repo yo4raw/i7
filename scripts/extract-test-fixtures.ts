@@ -1,13 +1,14 @@
 /**
- * tests/fixtures/ 配下に全カード・全楽曲のスナップショット JSON を生成するワンショットスクリプト。
+ * tests/fixtures/ 配下に全カード・全楽曲・全固定ブローチのスナップショット JSON を生成するワンショットスクリプト。
  *
  * 実行: npm run extract-fixtures
  *
  * 出力物:
- *   - tests/fixtures/cards.json  全カードデータ
- *   - tests/fixtures/songs.json  全楽曲データ
+ *   - tests/fixtures/cards.json   全カードデータ
+ *   - tests/fixtures/songs.json   全楽曲データ
+ *   - tests/fixtures/broachs.json 全固定ブローチデータ
  *
- * 個別のピン留めカード・楽曲は tests/fixtures/index.ts の findCardById / findSongById 経由で取得する。
+ * 個別のピン留めデータは tests/fixtures/index.ts の findCardById / findSongById / findBroachsByCardId 経由で取得する。
  * スプレッドシートスキーマが変更された場合はこのスクリプトを再実行して fixture を更新する。
  */
 
@@ -17,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 import { fetchCardsJson } from '../src/lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../src/lib/data/fetchSongsJson.ts';
+import { fetchFixedBroachsJson } from '../src/lib/data/fetchFixedBroachsJson.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURES_DIR = resolve(ROOT, 'tests/fixtures');
@@ -28,13 +30,19 @@ function writeJson(path: string, data: unknown): void {
 
 async function main(): Promise<void> {
   console.log('[extract-fixtures] スプレッドシートからデータをフェッチ中...');
-  const [cards, songs] = await Promise.all([fetchCardsJson(), fetchSongsJson()]);
+  const [cards, songs, broachs] = await Promise.all([
+    fetchCardsJson(),
+    fetchSongsJson(),
+    fetchFixedBroachsJson(),
+  ]);
 
   mkdirSync(FIXTURES_DIR, { recursive: true });
   writeJson(resolve(FIXTURES_DIR, 'cards.json'), cards);
   console.log(`  ${cards.length} 件のカード`);
   writeJson(resolve(FIXTURES_DIR, 'songs.json'), songs);
   console.log(`  ${songs.length} 件の楽曲`);
+  writeJson(resolve(FIXTURES_DIR, 'broachs.json'), broachs);
+  console.log(`  ${broachs.length} 件の固定ブローチ`);
 }
 
 main().catch((err) => {
