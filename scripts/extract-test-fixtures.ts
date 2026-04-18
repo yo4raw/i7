@@ -3,11 +3,11 @@
  *
  * 実行: npm run extract-fixtures
  *
- * 実スプレッドシートから「10th Anniversary 環 (Main color)」カードと
- * 「MONSTER GENERATiON」楽曲データを取得し、
- *   - tests/fixtures/10th-tamaki-main.json
- *   - tests/fixtures/monster-generation.json
- * に保存する。
+ * 出力物:
+ *   - tests/fixtures/cards.json              全カードデータ
+ *   - tests/fixtures/songs.json              全楽曲データ
+ *   - tests/fixtures/10th-tamaki-main.json   10th Anniversary 四葉環(ピン留め)
+ *   - tests/fixtures/monster-generation.json MONSTER GENERATiON(ピン留め)
  *
  * スプレッドシートスキーマが変更された場合はこのスクリプトを再実行して fixture を更新する。
  */
@@ -32,59 +32,54 @@ function matchesMonsterGeneration(song: Song): boolean {
   return name.includes('MONSTERGENERATION');
 }
 
-function abortWithCandidates<T>(label: string, items: T[], summarize: (item: T) => string): never {
-  console.error(`\n[extract-fixtures] ${label}: 候補が ${items.length} 件見つかりました。`);
-  for (const it of items) {
-    console.error(`  - ${summarize(it)}`);
+function pickUnique<T>(label: string, items: T[], summarize: (item: T) => string): T {
+  if (items.length === 0) {
+    console.error(`[extract-fixtures] ${label}: 見つかりません`);
+    process.exit(1);
   }
-  console.error('[extract-fixtures] フィルタ条件を絞り込んでください。\n');
-  process.exit(1);
+  if (items.length > 1) {
+    console.error(`\n[extract-fixtures] ${label}: 候補が ${items.length} 件見つかりました。`);
+    for (const it of items) console.error(`  - ${summarize(it)}`);
+    console.error('[extract-fixtures] フィルタ条件を絞り込んでください。\n');
+    process.exit(1);
+  }
+  return items[0];
+}
+
+function writeJson(path: string, data: unknown): void {
+  writeFileSync(path, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+  console.log(`[extract-fixtures] saved: ${path}`);
 }
 
 async function main(): Promise<void> {
   console.log('[extract-fixtures] スプレッドシートからデータをフェッチ中...');
   const [cards, songs] = await Promise.all([fetchCardsJson(), fetchSongsJson()]);
 
-  const tamakiCandidates = cards.filter(matches10thTamaki);
-  const monsterCandidates = songs.filter(matchesMonsterGeneration);
-
-  if (tamakiCandidates.length === 0) {
-    console.error('[extract-fixtures] 10th Anniversary 環 (Main color) が見つかりません。');
-    process.exit(1);
-  }
-  if (tamakiCandidates.length > 1) {
-    abortWithCandidates(
-      '10th 環 Main color',
-      tamakiCandidates,
-      (c) => `cardID=${c.cardID} name=${c.name} cardname=${c.cardname} story=${c.story} rarity=${c.rarity}`,
-    );
-  }
-
-  if (monsterCandidates.length === 0) {
-    console.error('[extract-fixtures] MONSTER GENERATiON 楽曲が見つかりません。');
-    process.exit(1);
-  }
-  if (monsterCandidates.length > 1) {
-    abortWithCandidates(
-      'MONSTER GENERATiON',
-      monsterCandidates,
-      (s) => `id=${s.id} song_name=${s.song_name} difficulty=${s.difficulty} stars=${s.stars}`,
-    );
-  }
-
-  const tamaki = tamakiCandidates[0];
-  const monster = monsterCandidates[0];
-
   mkdirSync(FIXTURES_DIR, { recursive: true });
-  const tamakiPath = resolve(FIXTURES_DIR, '10th-tamaki-main.json');
-  const monsterPath = resolve(FIXTURES_DIR, 'monster-generation.json');
 
-  writeFileSync(tamakiPath, JSON.stringify(tamaki, null, 2) + '\n', 'utf-8');
-  writeFileSync(monsterPath, JSON.stringify(monster, null, 2) + '\n', 'utf-8');
+  // 全カード / 全楽曲
+  const cardsPath = resolve(FIXTURES_DIR, 'cards.json');
+  const songsPath = resolve(FIXTURES_DIR, 'songs.json');
+  writeJson(cardsPath, cards);
+  console.log(`  ${cards.length} 件のカード`);
+  writeJson(songsPath, songs);
+  console.log(`  ${songs.length} 件の楽曲`);
 
-  console.log(`[extract-fixtures] saved: ${tamakiPath}`);
+  // ピン留めフィクスチャ
+  const tamaki = pickUnique(
+    '10th Anniversary 四葉環',
+    cards.filter(matches10thTamaki),
+    (c) => `cardID=${c.cardID} name=${c.name} cardname=${c.cardname} story=${c.story} rarity=${c.rarity}`,
+  );
+  const monster = pickUnique(
+    'MONSTER GENERATiON',
+    songs.filter(matchesMonsterGeneration),
+    (s) => `id=${s.id} song_name=${s.song_name} difficulty=${s.difficulty} stars=${s.stars}`,
+  );
+
+  writeJson(resolve(FIXTURES_DIR, '10th-tamaki-main.json'), tamaki);
   console.log(`  cardID=${tamaki.cardID} cardname=${tamaki.cardname} rarity=${tamaki.rarity} attribute=${tamaki.attribute}`);
-  console.log(`[extract-fixtures] saved: ${monsterPath}`);
+  writeJson(resolve(FIXTURES_DIR, 'monster-generation.json'), monster);
   console.log(`  id=${monster.id} song_name=${monster.song_name} difficulty=${monster.difficulty} notes=${monster.notes_count}`);
 }
 
