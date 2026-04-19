@@ -84,13 +84,13 @@ const tiers: TierView[] = [
       <span
         id="status-badge"
         class="inline-block px-2 py-0.5 rounded text-xs font-semibold text-gray-500 bg-gray-100"
-        data-start={`${event.start_date}T00:00:00+09:00`}
+        data-start={`${event.start_date}T17:00:00+09:00`}
         data-end={`${event.end_date}T17:00:00+09:00`}
       >—</span>
     </div>
     <div class="mt-2 text-sm text-gray-600 space-y-0.5">
       <p>{event.eventtype}</p>
-      <p>{event.start_date} 〜 {event.end_date} 17:00 (JST)</p>
+      <p>{event.start_date} 17:00 〜 {event.end_date} 17:00 (JST)</p>
       <p id="status-remain" class="hidden"></p>
     </div>
     {event.comment && (
