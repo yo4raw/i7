@@ -1,3 +1,5 @@
+export const SITE_NAME = 'i7ごったに部屋';
+
 export const CHARACTERS = [
   '和泉一織', '二階堂大和', '和泉三月', '四葉環',
   '逢坂壮五', '六弥ナギ', '七瀬陸',

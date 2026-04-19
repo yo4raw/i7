@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
 import { fetchEventsCsv } from '../lib/data/fetchEventsCsv.ts';
-import { RARITIES, RARITY_BADGE_CLASSES } from '../lib/constants.ts';
+import { RARITIES, RARITY_BADGE_CLASSES, SITE_NAME } from '../lib/constants.ts';
 
 const [cards, songs, events] = await Promise.all([
   fetchCardsJson(),
@@ -39,7 +39,7 @@ const base = import.meta.env.BASE_URL;
   <section class="mb-8">
     <h1 class="text-2xl font-bold mb-2">アイドリッシュセブン カードデータベース</h1>
     <p class="text-sm text-gray-600">
-      当サイト「i7 カードDB」は、スマートフォン向けゲーム『アイドリッシュセブン』のカード・楽曲・イベント情報をまとめた、ファンによる<strong>非公式</strong>のデータベースサイトです。
+      当サイト「{SITE_NAME}」は、スマートフォン向けゲーム『アイドリッシュセブン』のカード・楽曲・イベント情報をまとめた、ファンによる<strong>非公式</strong>のデータベースサイトです。
     </p>
   </section>
 
