@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { SITE_NAME } from '../src/lib/constants';
 
 const BASE = '/i7';
 
@@ -8,7 +9,7 @@ test.describe('ホームページ', () => {
   });
 
   test('タイトルが正しい', async ({ page }) => {
-    await expect(page).toHaveTitle(/ホーム.*i7 カードDB/);
+    await expect(page).toHaveTitle(new RegExp(`ホーム.*${SITE_NAME}`));
   });
 
   test('ナビゲーションリンクが存在する', async ({ page }) => {
@@ -22,7 +23,7 @@ test.describe('ホームページ', () => {
   test('カード一覧・楽曲一覧のリンクカードが表示される', async ({ page }) => {
     await expect(page.getByText('カード一覧').first()).toBeVisible();
     await expect(page.getByText('楽曲一覧').first()).toBeVisible();
-    await expect(page.getByText('レアリティ別')).toBeVisible();
+    await expect(page.getByText('カード内訳')).toBeVisible();
   });
 
   test('カード枚数と楽曲数が0より大きい', async ({ page }) => {

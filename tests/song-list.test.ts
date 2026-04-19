@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { SITE_NAME } from '../src/lib/constants';
 
 const BASE = '/i7';
 
@@ -10,7 +11,7 @@ test.describe('楽曲一覧ページ', () => {
   });
 
   test('タイトルが正しい', async ({ page }) => {
-    await expect(page).toHaveTitle(/楽曲一覧.*i7 カードDB/);
+    await expect(page).toHaveTitle(new RegExp(`楽曲一覧.*${SITE_NAME}`));
   });
 
   test('検索フォームが表示される', async ({ page }) => {
