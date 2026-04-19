@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Pages
+name: Deploy to Cloudflare Workers
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: pages-deploy
+  group: cloudflare-deploy
   cancel-in-progress: false
 
 jobs:
@@ -27,9 +27,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./dist --project-name=i7-gottani --branch=main
+          command: deploy
