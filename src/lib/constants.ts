@@ -1,4 +1,4 @@
-export const SITE_NAME = 'i7ごったに部屋';
+export const SITE_NAME = 'i7マネ部屋(β)';
 
 export const CHARACTERS = [
   '和泉一織', '二階堂大和', '和泉三月', '四葉環',
