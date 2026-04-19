@@ -1,0 +1,70 @@
+name: Fetch event DB
+
+on:
+  schedule:
+    # JST 04:00 = UTC 19:00 (前日)
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch-event-db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download event DB CSV
+        id: fetch
+        shell: bash
+        run: |
+          mkdir -p public/events
+          DEST="public/events/events.csv"
+          TMP="$(mktemp)"
+
+          HTTP_CODE=$(curl -sS -X POST \
+            --connect-timeout 10 --max-time 60 \
+            --data 'db=event&code=utf8' \
+            -o "$TMP" -w "%{http_code}" \
+            'https://i7.step-on-dream.net/admin/download.php' || true)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Download failed: HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          SIZE=$(wc -c < "$TMP" | tr -d ' ')
+          if [ "$SIZE" -lt 1024 ]; then
+            echo "Downloaded file too small: $SIZE bytes"
+            exit 1
+          fi
+          if ! head -1 "$TMP" | grep -q 'eventname'; then
+            echo "Header validation failed (expected 'eventname' in first line)"
+            head -3 "$TMP"
+            exit 1
+          fi
+
+          mv "$TMP" "$DEST"
+
+          ROWS=$(($(wc -l < "$DEST") - 1))
+          echo "rows=$ROWS" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: public/events/events.csv
+          commit-message: "Update event DB CSV"
+          branch: auto/update-event-db
+          delete-branch: true
+          title: "Update event DB (${{ steps.fetch.outputs.rows }} rows)"
+          body: |
+            ## Summary
+            Automatically fetched event DB from source server.
+
+            - **Source**: `POST https://i7.step-on-dream.net/admin/download.php` (`db=event`, `code=utf8`)
+            - **Destination**: `public/events/events.csv`
+            - **Rows**: ${{ steps.fetch.outputs.rows }}
+            - **Size**: ${{ steps.fetch.outputs.size }} bytes
