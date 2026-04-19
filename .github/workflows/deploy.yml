@@ -2,12 +2,7 @@ name: Deploy to Cloudflare Pages
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - 'public/assets/cards/**'
-      - 'public/assets/th_cards/**'
-  schedule:
-    - cron: '0 */6 * * *'
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
