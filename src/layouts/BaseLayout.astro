@@ -1,6 +1,7 @@
 ---
 import { execSync } from 'node:child_process';
 import '../styles/global.css';
+import { SITE_NAME, SITE_DESCRIPTION } from '../lib/constants';
 
 interface Props {
   title: string;
@@ -23,9 +24,9 @@ const repoUrl = 'https://github.com/yo4raw/i7';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="アイドリッシュセブン カードデータベース" />
+    <meta name="description" content={SITE_DESCRIPTION} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
-    <title>{title} | i7 カードDB</title>
+    <title>{title} | {SITE_NAME}</title>
     <script src="https://unpkg.com/htmx.org@2.0.4" is:inline></script>
     <!-- Google Tag Manager -->
     <script is:inline>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -42,7 +43,7 @@ const repoUrl = 'https://github.com/yo4raw/i7';
     <!-- End Google Tag Manager (noscript) -->
     <header class="bg-indigo-700 text-white sticky top-0 z-50 shadow-md">
       <nav class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <a href={base} class="text-lg font-bold tracking-wide">i7 カードDB</a>
+        <a href={base} class="text-lg font-bold tracking-wide">{SITE_NAME}</a>
         <button id="menu-toggle" class="md:hidden p-1" aria-label="メニュー">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />

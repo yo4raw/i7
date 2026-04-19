@@ -1,3 +1,6 @@
+export const SITE_NAME = 'i7ごったに部屋';
+export const SITE_DESCRIPTION = 'アイドリッシュセブンのカード・楽曲・イベント情報をまとめた、ファンによる非公式のデータベースサイト';
+
 export const CHARACTERS = [
   '和泉一織', '二階堂大和', '和泉三月', '四葉環',
   '逢坂壮五', '六弥ナギ', '七瀬陸',

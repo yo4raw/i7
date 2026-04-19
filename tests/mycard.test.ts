@@ -8,7 +8,7 @@ test.describe('所持カードページ', () => {
   });
 
   test('タイトルが正しい', async ({ page }) => {
-    await expect(page).toHaveTitle(/所持カード一覧.*i7 カードDB/);
+    await expect(page).toHaveTitle(/所持カード一覧.*i7ごったに部屋/);
   });
 
   test('所持カードがない場合は空メッセージが表示される', async ({ page }) => {

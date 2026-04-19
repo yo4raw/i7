@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE_NAME } from '../../lib/constants';
 
 const base = import.meta.env.BASE_URL;
 ---
@@ -7,7 +8,7 @@ const base = import.meta.env.BASE_URL;
 <BaseLayout title="このサイトについて">
   <h1 class="text-2xl font-bold mb-2">このサイトについて</h1>
   <p class="text-sm text-gray-600 mb-8">
-    当サイト「i7 カードDB」は、スマートフォン向けゲーム『アイドリッシュセブン』のカード・楽曲・イベント情報をまとめた、ファンによる非公式のデータベースサイトです。
+    当サイト「{SITE_NAME}」は、スマートフォン向けゲーム『アイドリッシュセブン』のカード・楽曲・イベント情報をまとめた、ファンによる非公式のデータベースサイトです。
   </p>
   <section class="bg-white rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">サイトの目的</h2>

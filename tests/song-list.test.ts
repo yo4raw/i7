@@ -10,7 +10,7 @@ test.describe('楽曲一覧ページ', () => {
   });
 
   test('タイトルが正しい', async ({ page }) => {
-    await expect(page).toHaveTitle(/楽曲一覧.*i7 カードDB/);
+    await expect(page).toHaveTitle(/楽曲一覧.*i7ごったに部屋/);
   });
 
   test('検索フォームが表示される', async ({ page }) => {

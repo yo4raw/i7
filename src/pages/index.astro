@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
+import { SITE_NAME } from '../lib/constants';
 
 const [cards, songs] = await Promise.all([fetchCardsJson(), fetchSongsJson()]);
 
@@ -14,7 +15,7 @@ const sortedRarities = Object.entries(rarityCounts).sort(([a], [b]) => a.localeC
 ---
 
 <BaseLayout title="ホーム">
-  <h1 class="text-2xl font-bold mb-6">アイドリッシュセブン カードデータベース</h1>
+  <h1 class="text-2xl font-bold mb-6">{SITE_NAME}</h1>
   <p class="text-gray-600 mb-8">カード情報の検索・閲覧ができるデータベースサイトです。</p>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

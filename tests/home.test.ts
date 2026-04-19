@@ -8,7 +8,7 @@ test.describe('ホームページ', () => {
   });
 
   test('タイトルが正しい', async ({ page }) => {
-    await expect(page).toHaveTitle(/ホーム.*i7 カードDB/);
+    await expect(page).toHaveTitle(/ホーム.*i7ごったに部屋/);
   });
 
   test('ナビゲーションリンクが存在する', async ({ page }) => {
