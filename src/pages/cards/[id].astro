@@ -2,23 +2,47 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
+import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
 import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
 import { ATTR_TEXT_CLASS, cardImageUrl } from '../../lib/ui';
 import { attrDonutSvg } from '../../lib/donutChart';
 import { formatSkillEffect } from '../../lib/score/skillFormatter';
 
 export async function getStaticPaths() {
-  const [cards, broachs] = await Promise.all([fetchCardsJson(), fetchFixedBroachsJson()]);
-  return (cards as any[]).map((card: any) => ({
-    params: { id: String(card.ID) },
-    props: {
-      card,
-      broachs: (broachs as any[]).filter((b: any) => b.card_id === card.cardID),
-    },
-  }));
+  const [cards, broachs, events] = await Promise.all([
+    fetchCardsJson(),
+    fetchFixedBroachsJson(),
+    fetchEventsCsv(),
+  ]);
+  return (cards as any[]).map((card: any) => {
+    const cardId = card.ID;
+    const relatedEvents = events
+      .filter(e =>
+        e.gold.cardIds.includes(cardId) ||
+        e.silver.cardIds.includes(cardId) ||
+        e.bronze.cardIds.includes(cardId)
+      )
+      .map(e => ({
+        id: e.id,
+        eventname: e.eventname,
+        start_date: e.start_date,
+        end_date: e.end_date,
+        tier: e.gold.cardIds.includes(cardId)
+          ? 'gold'
+          : e.silver.cardIds.includes(cardId) ? 'silver' : 'bronze',
+      }));
+    return {
+      params: { id: String(cardId) },
+      props: {
+        card,
+        broachs: (broachs as any[]).filter((b: any) => b.card_id === card.cardID),
+        relatedEvents,
+      },
+    };
+  });
 }
 
-const { card, broachs } = Astro.props;
+const { card, broachs, relatedEvents } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
 const infoRows = [
@@ -86,6 +110,12 @@ const otherSkills = [
           </tbody>
         </table>
       </div>
+
+      {/* 現在開催中の特効 (クライアント側で live 判定) */}
+      <section id="current-bonus-section" class="bg-white rounded-lg shadow p-4 hidden">
+        <h2 class="text-lg font-semibold mb-3">🎯 現在開催中の特効</h2>
+        <ul id="current-bonus-list" class="space-y-2 text-sm"></ul>
+      </section>
 
       {/* ステータス */}
       {(() => {
@@ -178,7 +208,7 @@ const otherSkills = [
 
   <!-- ブローチ情報 -->
   {broachs.length > 0 && (
-    <section class="bg-white rounded-lg shadow p-6 mb-6">
+    <section class="bg-white rounded-lg shadow p-6 mb-6" id="broach-section">
       <h2 class="text-lg font-semibold mb-4">固有ブローチ</h2>
       <div class="space-y-3">
         {broachs.map((b: any) => (
@@ -195,4 +225,43 @@ const otherSkills = [
       </div>
     </section>
   )}
+
+  <script type="application/json" id="related-events-data" set:html={JSON.stringify(relatedEvents)}></script>
+  <script define:vars={{ base }}>
+    window.__BASE_URL__ = base;
+  </script>
+  <script>
+    import { isEventLive, bonusBadgeHtml, TIER_RANK, type EventBonusTier } from '../../lib/data/eventBonusTiers';
+
+    interface RelatedEvent {
+      id: number;
+      eventname: string;
+      start_date: string;
+      end_date: string;
+      tier: EventBonusTier;
+    }
+
+    const raw = document.getElementById('related-events-data')?.textContent ?? '[]';
+    const relatedEvents: RelatedEvent[] = JSON.parse(raw);
+    const base = (window as any).__BASE_URL__ || '/i7/';
+
+    const liveHits = relatedEvents
+      .filter(r => isEventLive(r.start_date, r.end_date))
+      .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]);
+
+    if (liveHits.length > 0) {
+      const list = document.getElementById('current-bonus-list');
+      const section = document.getElementById('current-bonus-section');
+      if (list && section) {
+        list.innerHTML = liveHits.map(h =>
+          `<li class="flex flex-wrap items-center gap-2">
+            ${bonusBadgeHtml(h.tier)}
+            <a href="${base}events/${h.id}/" class="text-indigo-600 hover:underline font-medium">${h.eventname}</a>
+            <span class="text-xs text-gray-500">${h.start_date} 〜 ${h.end_date}</span>
+          </li>`
+        ).join('');
+        section.classList.remove('hidden');
+      }
+    }
+  </script>
 </BaseLayout>
