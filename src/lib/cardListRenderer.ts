@@ -3,7 +3,7 @@
  *
  * 使い方:
  *   import { initRenderer, renderTableRow, ... } from '../../lib/cardListRenderer';
- *   initRenderer({ base: '/i7/', thumbUrl: 'https://...' });
+ *   initRenderer({ base: '/', thumbUrl: 'https://...' });
  */
 
 import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from './constants';
@@ -13,7 +13,7 @@ import { bonusBadgeHtml, type EventBonusTier } from './data/eventBonusTiers';
 
 // --- 設定 ---
 
-let _base = '/i7/';
+let _base = '/';
 let _thumbUrl = '';
 
 export function initRenderer(config: { base: string; thumbUrl: string }) {

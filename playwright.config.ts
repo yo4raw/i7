@@ -9,7 +9,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run preview',
-    url: 'http://localhost:4321/i7/',
+    url: 'http://localhost:4321/',
     reuseExistingServer: true,
     timeout: 30000,
   },

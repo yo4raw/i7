@@ -243,7 +243,7 @@ const otherSkills = [
 
     const raw = document.getElementById('related-events-data')?.textContent ?? '[]';
     const relatedEvents: RelatedEvent[] = JSON.parse(raw);
-    const base = (window as any).__BASE_URL__ || '/i7/';
+    const base = (window as any).__BASE_URL__ || '/';
 
     const liveHits = relatedEvents
       .filter(r => isEventLive(r.start_date, r.end_date))
