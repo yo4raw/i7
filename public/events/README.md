@@ -22,13 +22,13 @@
 
 各イベントには **金 / 銀 / 銅** の 3 段階の特効 (特攻) が定義される。カラム名の `special1` / `special2` / `special3` はこの 3 段階に対応する。
 
-| カラム接頭辞 | 特効ランク | スコア倍率 *1 |
-|:---:|:---:|:---:|
-| `special1_*` | **金特効** (140%) | 2.4x |
-| `special2_*` | **銀特効** (120%) | 2.2x |
-| `special3_*` | **銅特効** (100%) | 2.0x |
+| カラム接頭辞 | 特効ランク |
+|:---:|:---:|
+| `special1_*` | 金特効 |
+| `special2_*` | 銀特効 |
+| `special3_*` | 銅特効 |
 
-*1 スコア倍率の定数は `src/lib/data/eventBonusTiers.ts` を参照。
+特効ランクごとの UP 率や対象カード数はイベントごとに異なる。具体的な値は各イベント行の `special{N}_*_up` / `special{N}_ID` カラムを参照。
 
 ## 効果種別 (effect)
 
@@ -136,4 +136,4 @@
 | ファイル | 役割 |
 |:---|:---|
 | `.github/workflows/fetch-event-db.yml` | 自動取得ワークフロー |
-| `src/lib/data/eventBonusTiers.ts` | 金/銀/銅特効の倍率定義と UI ラベル |
+| `src/lib/data/eventBonusTiers.ts` | 金/銀/銅特効の UI ラベル・表示スタイル定義 |
