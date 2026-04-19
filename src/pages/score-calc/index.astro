@@ -3,16 +3,28 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
+import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
 import { CARD_THUMB_BASE_URL } from '../../lib/constants';
 import { ATTR_TEXT_CLASS } from '../../lib/ui';
 
-const [allCards, allSongsRaw, allBroachs] = await Promise.all([
+const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
   fetchCardsJson(),
   fetchSongsJson(),
   fetchFixedBroachsJson(),
+  fetchEventsCsv(),
 ]);
 
 const allSongs = filterValidSongs(allSongsRaw);
+
+const eventsForBonus = allEvents.map(e => ({
+  id: e.id,
+  start_date: e.start_date,
+  end_date: e.end_date,
+  gold: e.gold.cardIds,
+  silver: e.silver.cardIds,
+  bronze: e.bronze.cardIds,
+}));
+
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -382,6 +394,7 @@ const base = import.meta.env.BASE_URL;
   <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
   <script type="application/json" id="song-data" set:html={JSON.stringify(allSongs)}></script>
   <script type="application/json" id="broach-data" set:html={JSON.stringify(allBroachs)}></script>
+  <script type="application/json" id="events-data" set:html={JSON.stringify(eventsForBonus)}></script>
   <script define:vars={{ base, CARD_THUMB_BASE_URL }}>
     window.__BASE_URL__ = base;
     window.__CARD_THUMB_BASE_URL__ = CARD_THUMB_BASE_URL;
@@ -411,6 +424,43 @@ const base = import.meta.env.BASE_URL;
     let allCards: Card[] = JSON.parse(document.getElementById('card-data')!.textContent!);
     let allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!);
     let allBroachs: FixedBroach[] = JSON.parse(document.getElementById('broach-data')!.textContent!);
+
+    interface EventForBonus {
+      id: number;
+      start_date: string;
+      end_date: string;
+      gold: number[];
+      silver: number[];
+      bronze: number[];
+    }
+    const allEventsForBonus: EventForBonus[] =
+      JSON.parse(document.getElementById('events-data')!.textContent!);
+
+    const TIER_RANK: Record<EventBonusTier, number> = { none: 0, bronze: 1, silver: 2, gold: 3 };
+
+    function buildDefaultTierMap(): Map<number, EventBonusTier> {
+      const now = Date.now();
+      const map = new Map<number, EventBonusTier>();
+      const upgrade = (id: number, tier: EventBonusTier) => {
+        const cur = map.get(id) ?? 'none';
+        if (TIER_RANK[tier] > TIER_RANK[cur]) map.set(id, tier);
+      };
+      for (const ev of allEventsForBonus) {
+        const start = Date.parse(`${ev.start_date}T00:00:00+09:00`);
+        const end = Date.parse(`${ev.end_date}T17:00:00+09:00`);
+        if (!(now >= start && now < end)) continue;
+        for (const id of ev.gold) upgrade(id, 'gold');
+        for (const id of ev.silver) upgrade(id, 'silver');
+        for (const id of ev.bronze) upgrade(id, 'bronze');
+      }
+      return map;
+    }
+    const defaultTierMap = buildDefaultTierMap();
+
+    function defaultTierFor(card: Card | null): EventBonusTier {
+      if (!card || card.ID == null) return 'none';
+      return defaultTierMap.get(card.ID) ?? 'none';
+    }
 
     const $ = (id: string) => document.getElementById(id)!;
 
@@ -948,6 +998,7 @@ const base = import.meta.env.BASE_URL;
           const card = allCards.find(c => c.ID === cardId);
           if (card && activeModalSlot >= 0) {
             deck[activeModalSlot] = card;
+            deckBonusTiers[activeModalSlot] = defaultTierFor(card);
             validateSharedBroachs(activeModalSlot);
             closeCardPicker();
             renderDeckSlots();
