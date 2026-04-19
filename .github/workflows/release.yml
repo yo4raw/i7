@@ -21,7 +21,11 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger deploy
+      - name: Trigger GitHub Pages deploy
         run: gh workflow run deploy.yml --ref main -R "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Trigger Cloudflare Pages deploy
+        run: gh workflow run cloudflare-deploy.yml --ref main -R "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ github.token }}
