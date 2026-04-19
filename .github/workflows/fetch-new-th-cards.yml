@@ -99,7 +99,8 @@ jobs:
           export -f fetch_thumbnail
 
           RESULTS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$' \
-            | xargs -P 10 -I {} bash -c 'fetch_thumbnail "$@"' _ {} || true)
+            | xargs -P 10 -I {} bash -c 'fetch_thumbnail "$@"' _ {} \
+            | tee /dev/stderr || true)
 
           DOWNLOADED=$(echo "$RESULTS" | grep -c "^OK:" || true)
           NEW_IDS=$(echo "$RESULTS" | grep "^OK:" | sed 's/^OK://' | sort -n | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g' || true)
