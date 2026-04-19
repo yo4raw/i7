@@ -9,6 +9,7 @@
 import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from './constants';
 import { ATTR_TEXT_CLASS } from './ui';
 import { attrDonutSvg } from './donutChart';
+import { bonusBadgeHtml, type EventBonusTier } from './data/eventBonusTiers';
 
 // --- 設定 ---
 
@@ -115,6 +116,8 @@ export function rowBg(attrColor: string, thumbUrl: string): string {
 export interface RenderOptions {
   /** カード名クリックでフィルタする data-filter-cardname 属性を付与するか */
   enableNameFilter?: boolean;
+  /** 現在開催中のイベント特効 tier。'none' または undefined なら表示なし */
+  eventBonusTier?: EventBonusTier;
 }
 
 export function renderTableRow(card: CardListItem, opts: RenderOptions = {}): string {
@@ -137,6 +140,7 @@ export function renderTableRow(card: CardListItem, opts: RenderOptions = {}): st
     <td class="px-3 py-2">${card.name || ''}</td>
     <td class="px-3 py-2">${rarityBadge(card.rarity)}</td>
     <td class="px-3 py-2">${attrBadge(card.attribute)}</td>
+    <td class="px-3 py-2 bonus-cell">${bonusBadgeHtml(opts.eventBonusTier)}</td>
     <td class="px-3 py-2">${statsPie(card.shout_max || 0, card.beat_max || 0, card.melody_max || 0)}</td>
     <td class="px-3 py-2 text-right">${(card.shout_max || 0).toLocaleString()}<div class="text-xs text-gray-400">${pct.sPct}%</div></td>
     <td class="px-3 py-2 text-right">${(card.beat_max || 0).toLocaleString()}<div class="text-xs text-gray-400">${pct.bPct}%</div></td>
@@ -161,7 +165,7 @@ export function renderMobileCard(card: CardListItem, opts: RenderOptions = {}): 
     <div class="flex gap-3" onclick="location.href='${_base}cards/${card.ID}/'" style="cursor:pointer">
       <div class="flex-shrink-0">${imgTag(card.ID)}</div>
       <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)}</div>
+        <div class="flex items-center gap-1 mb-1">${rarityBadge(card.rarity)} ${attrBadge(card.attribute)} ${bonusBadgeHtml(opts.eventBonusTier)}</div>
         <p class="font-medium text-sm truncate"${nameAttr}><span class="text-indigo-600 hover:underline cursor-pointer">${card.cardname || ''}</span></p>
         <p class="text-xs text-gray-500">${card.name || ''}</p>
         <div class="flex items-center gap-2 mt-1">

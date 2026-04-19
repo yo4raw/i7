@@ -27,3 +27,42 @@ export const BONUS_CLASS: Record<EventBonusTier, string> =
 
 export const ALL_SELECT_CLASSES: string[] =
   EVENT_BONUS_TIERS.flatMap(t => t.selectClasses);
+
+export interface EventForBonus {
+  id: number;
+  start_date: string;
+  end_date: string;
+  gold: number[];
+  silver: number[];
+  bronze: number[];
+}
+
+export const TIER_RANK: Record<EventBonusTier, number> = { none: 0, bronze: 1, silver: 2, gold: 3 };
+
+export function isEventLive(start_date: string, end_date: string, now: number = Date.now()): boolean {
+  const s = Date.parse(`${start_date}T00:00:00+09:00`);
+  const e = Date.parse(`${end_date}T17:00:00+09:00`);
+  return now >= s && now < e;
+}
+
+export function buildLiveTierMap(events: EventForBonus[], now: number = Date.now()): Map<number, EventBonusTier> {
+  const map = new Map<number, EventBonusTier>();
+  const upgrade = (id: number, tier: EventBonusTier) => {
+    const cur = map.get(id) ?? 'none';
+    if (TIER_RANK[tier] > TIER_RANK[cur]) map.set(id, tier);
+  };
+  for (const ev of events) {
+    if (!isEventLive(ev.start_date, ev.end_date, now)) continue;
+    for (const id of ev.gold) upgrade(id, 'gold');
+    for (const id of ev.silver) upgrade(id, 'silver');
+    for (const id of ev.bronze) upgrade(id, 'bronze');
+  }
+  return map;
+}
+
+export function bonusBadgeHtml(tier: EventBonusTier | undefined | null): string {
+  if (!tier || tier === 'none') return '';
+  const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
+  if (!def) return '';
+  return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold rounded border ${def.selectClasses.join(' ')}">${def.shortLabel}</span>`;
+}

@@ -1,10 +1,23 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
+import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
 import { CHARACTERS, RARITIES, ATTRIBUTES, CARD_THUMB_BASE_URL, ATTRIBUTE_MAP, PAGE_SIZE } from '../../lib/constants';
 
-const allCards = await fetchCardsJson() as any[];
+const [allCards, allEvents] = await Promise.all([
+  fetchCardsJson() as Promise<any[]>,
+  fetchEventsCsv(),
+]);
 const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].sort() as string[];
+
+const eventsForBonus = allEvents.map(e => ({
+  id: e.id,
+  start_date: e.start_date,
+  end_date: e.end_date,
+  gold: e.gold.cardIds,
+  silver: e.silver.cardIds,
+  bronze: e.bronze.cardIds,
+}));
 
 const base = import.meta.env.BASE_URL;
 ---
@@ -14,7 +27,7 @@ const base = import.meta.env.BASE_URL;
 
   <!-- 検索フォーム -->
   <div class="bg-white rounded-lg shadow p-4 mb-6">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3">
       <div>
         <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">名前検索</label>
         <input type="text" id="search-text" placeholder="カード名/キャラ名"
@@ -42,6 +55,14 @@ const base = import.meta.env.BASE_URL;
         <label for="search-skill" class="block text-xs font-medium text-gray-500 mb-1">スキルタイプ</label>
         <select id="search-skill" multiple class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]">
           {skillTypes.map(s => <option value={s}>{s}</option>)}
+        </select>
+      </div>
+      <div id="bonus-filter-wrapper" class="hidden">
+        <label for="search-bonus" class="block text-xs font-medium text-gray-500 mb-1">特効</label>
+        <select id="search-bonus" multiple class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]">
+          <option value="gold">金特効</option>
+          <option value="silver">銀特効</option>
+          <option value="bronze">銅特効</option>
         </select>
       </div>
       <div>
@@ -73,6 +94,7 @@ const base = import.meta.env.BASE_URL;
             <th class="px-3 py-2">キャラ</th>
             <th class="px-3 py-2">レア</th>
             <th class="px-3 py-2">属性</th>
+            <th id="bonus-th" class="px-3 py-2 hidden">特効</th>
             <th class="px-3 py-2 w-20">属性比率</th>
             <th class="px-3 py-2 text-right">Shout</th>
             <th class="px-3 py-2 text-right">Beat</th>
@@ -103,6 +125,7 @@ const base = import.meta.env.BASE_URL;
 
   <!-- ビルド時に埋め込んだカードデータ -->
   <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
+  <script type="application/json" id="events-data" set:html={JSON.stringify(eventsForBonus)}></script>
   <script define:vars={{ base, PAGE_SIZE, CARD_THUMB_BASE_URL, ATTRIBUTE_MAP }}>
     window.__BASE_URL__ = base;
     window.__PAGE_SIZE__ = PAGE_SIZE;
@@ -116,6 +139,7 @@ const base = import.meta.env.BASE_URL;
       getCount, setCount,
       renderTableRow, renderMobileCard,
     } from '../../lib/cardListRenderer';
+    import { buildLiveTierMap, type EventForBonus, type EventBonusTier } from '../../lib/data/eventBonusTiers';
 
     const base = (window as any).__BASE_URL__ || '/i7/';
     const PAGE_SIZE = (window as any).__PAGE_SIZE__ || 100;
@@ -123,9 +147,14 @@ const base = import.meta.env.BASE_URL;
 
     initRenderer({ base, thumbUrl: THUMB_URL });
 
-    const renderOpts = { enableNameFilter: true };
-
     let allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
+    const allEventsForBonus: EventForBonus[] = JSON.parse(document.getElementById('events-data')!.textContent!);
+    const tierMap = buildLiveTierMap(allEventsForBonus);
+    const hasAnyLive = tierMap.size > 0;
+    if (hasAnyLive) {
+      document.getElementById('bonus-filter-wrapper')?.classList.remove('hidden');
+      document.getElementById('bonus-th')?.classList.remove('hidden');
+    }
     let filtered: CardListItem[] = [];
     let loadedPages = 0;
     let hasMore = true;
@@ -164,11 +193,12 @@ const base = import.meta.env.BASE_URL;
       }
 
       // ページ境界マーカー（スクロール位置 → URL 追跡用）
-      const markerTr = `<tr data-page-marker="${loadedPages}" aria-hidden="true" style="height:0"><td colspan="12" style="height:0;padding:0;border:0"></td></tr>`;
+      const markerTr = `<tr data-page-marker="${loadedPages}" aria-hidden="true" style="height:0"><td colspan="13" style="height:0;padding:0;border:0"></td></tr>`;
       const markerDiv = `<div data-page-marker="${loadedPages}" aria-hidden="true"></div>`;
 
-      const tableHtml = markerTr + page.map(c => renderTableRow(c, renderOpts)).join('');
-      const mobileHtml = markerDiv + page.map(c => renderMobileCard(c, renderOpts)).join('');
+      const optsFor = (c: CardListItem) => ({ enableNameFilter: true, eventBonusTier: tierMap.get(c.ID) });
+      const tableHtml = markerTr + page.map(c => renderTableRow(c, optsFor(c))).join('');
+      const mobileHtml = markerDiv + page.map(c => renderMobileCard(c, optsFor(c))).join('');
 
       $('table-body').insertAdjacentHTML('beforeend', tableHtml);
       $('mobile-cards').insertAdjacentHTML('beforeend', mobileHtml);
@@ -236,6 +266,9 @@ const base = import.meta.env.BASE_URL;
       const attributes = getSelectedValues($('search-attribute') as HTMLSelectElement);
       const characters = getSelectedValues($('search-character') as HTMLSelectElement);
       const skillTypes = getSelectedValues($('search-skill') as HTMLSelectElement);
+      const bonuses = hasAnyLive
+        ? getSelectedValues($('search-bonus') as HTMLSelectElement)
+        : [];
       const sortBy = ($('sort-by') as HTMLSelectElement).value;
 
       filtered = allCards.filter(card => {
@@ -245,6 +278,10 @@ const base = import.meta.env.BASE_URL;
         if (attributes.length && !attributes.includes(card.attribute)) return false;
         if (characters.length && !characters.includes(card.name)) return false;
         if (skillTypes.length && !skillTypes.includes(card.ap_skill_type || '')) return false;
+        if (bonuses.length) {
+          const t = tierMap.get(card.ID);
+          if (!t || !bonuses.includes(t)) return false;
+        }
         return true;
       });
 
@@ -301,6 +338,10 @@ const base = import.meta.env.BASE_URL;
       if (attributes.length) params.set('attr', attributes.join(','));
       if (characters.length) params.set('char', characters.join(','));
       if (skillTypes.length) params.set('skill', skillTypes.join(','));
+      if (hasAnyLive) {
+        const bonuses = getSelectedValues($('search-bonus') as HTMLSelectElement);
+        if (bonuses.length) params.set('bonus', bonuses.join(','));
+      }
       if (sortBy !== 'id-desc') params.set('sort', sortBy);
       if (currentVisiblePage > 1) params.set('page', String(currentVisiblePage));
 
@@ -321,6 +362,9 @@ const base = import.meta.env.BASE_URL;
       restoreMultiSelect($('search-attribute') as HTMLSelectElement, params.get('attr'));
       restoreMultiSelect($('search-character') as HTMLSelectElement, params.get('char'));
       restoreMultiSelect($('search-skill') as HTMLSelectElement, params.get('skill'));
+      if (hasAnyLive) {
+        restoreMultiSelect($('search-bonus') as HTMLSelectElement, params.get('bonus'));
+      }
       if (params.get('sort')) ($('sort-by') as HTMLSelectElement).value = params.get('sort')!;
       const pageParam = params.get('page');
       initialTargetPage = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : 1;
@@ -389,12 +433,16 @@ const base = import.meta.env.BASE_URL;
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(applyFilters, 300);
     });
-    for (const id of ['search-rarity', 'search-attribute', 'search-character', 'search-skill', 'sort-by']) {
+    const filterSelects = ['search-rarity', 'search-attribute', 'search-character', 'search-skill', 'sort-by'];
+    if (hasAnyLive) filterSelects.push('search-bonus');
+    for (const id of filterSelects) {
       $(id).addEventListener('change', applyFilters);
     }
     $('btn-reset').addEventListener('click', () => {
       ($('search-text') as HTMLInputElement).value = '';
-      ['search-rarity', 'search-attribute', 'search-character', 'search-skill'].forEach(id => {
+      const resetIds = ['search-rarity', 'search-attribute', 'search-character', 'search-skill'];
+      if (hasAnyLive) resetIds.push('search-bonus');
+      resetIds.forEach(id => {
         const sel = $(id) as HTMLSelectElement;
         Array.from(sel.options).forEach(o => { o.selected = false; });
       });
