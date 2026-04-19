@@ -61,9 +61,7 @@ export function renderHistogramSvg(
   const xLabels = Array.from({ length: labelCount + 1 }, (_, i) => {
     const val = minScore + (range * i) / labelCount;
     const x = MARGIN.left + (INNER_WIDTH * i) / labelCount;
-    const label = val >= 1000000
-      ? `${(val / 10000).toFixed(0)}万`
-      : Math.round(val).toLocaleString();
+    const label = Math.round(val).toLocaleString();
     return `<text x="${x}" y="${MARGIN.top + INNER_HEIGHT + 16}" text-anchor="middle" fill="#6b7280" font-size="9">${label}</text>`;
   }).join('\n    ');
 
