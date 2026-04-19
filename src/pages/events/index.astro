@@ -1,0 +1,277 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv';
+
+const allEvents = await fetchEventsCsv();
+allEvents.sort((a, b) => b.id - a.id);
+
+const eventTypes = [...new Set(allEvents.map(e => e.eventtype).filter(Boolean))].sort();
+
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="イベント情報">
+  <h1 class="text-2xl font-bold mb-6">イベント情報</h1>
+
+  <!-- 検索フォーム -->
+  <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div>
+        <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">イベント名検索</label>
+        <input type="text" id="search-text" placeholder="イベント名"
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label for="search-type" class="block text-xs font-medium text-gray-500 mb-1">イベントタイプ</label>
+        <select id="search-type" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">すべて</option>
+          {eventTypes.map(t => <option value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div>
+        <label for="search-status" class="block text-xs font-medium text-gray-500 mb-1">状態</label>
+        <select id="search-status" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">すべて</option>
+          <option value="live">実施中</option>
+          <option value="upcoming">開催予定</option>
+          <option value="past">終了</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-3 flex items-center gap-3">
+      <button id="btn-reset" class="text-sm text-indigo-600 hover:underline">条件リセット</button>
+      <span id="result-count" class="text-sm text-gray-500">{allEvents.length}件を表示</span>
+    </div>
+  </div>
+
+  <p class="text-xs text-gray-500 mb-3">※ 終了時刻は各イベント終了日の 17:00 (JST) として扱います。</p>
+
+  <!-- デスクトップテーブル -->
+  <div class="hidden md:block overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+          <th class="px-3 py-2 w-40">状態</th>
+          <th class="px-3 py-2">イベント名</th>
+          <th class="px-3 py-2 w-56">イベントタイプ</th>
+          <th class="px-3 py-2 w-36">開始</th>
+          <th class="px-3 py-2 w-44">終了 (17:00)</th>
+        </tr>
+      </thead>
+      <tbody id="table-body" class="divide-y divide-gray-100">
+        {allEvents.map(ev => (
+          <tr
+            class="event-row"
+            data-id={ev.id}
+            data-start={`${ev.start_date}T00:00:00+09:00`}
+            data-end={`${ev.end_date}T17:00:00+09:00`}
+            data-type={ev.eventtype}
+            data-name={ev.eventname}
+          >
+            <td class="px-3 py-2 align-top">
+              <span class="status-badge inline-block px-2 py-0.5 rounded text-xs font-semibold text-gray-500 bg-gray-100">—</span>
+              <div class="status-remain text-xs mt-1 text-gray-500 hidden"></div>
+            </td>
+            <td class="px-3 py-2 font-medium">{ev.eventname}</td>
+            <td class="px-3 py-2 text-xs text-gray-600">{ev.eventtype}</td>
+            <td class="px-3 py-2 text-xs text-gray-700">{ev.start_date}</td>
+            <td class="px-3 py-2 text-xs text-gray-700">{ev.end_date} 17:00</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- モバイルカード -->
+  <div id="mobile-cards" class="md:hidden space-y-3">
+    {allEvents.map(ev => (
+      <div
+        class="event-card rounded-lg shadow p-3 bg-white"
+        data-id={ev.id}
+        data-start={`${ev.start_date}T00:00:00+09:00`}
+        data-end={`${ev.end_date}T17:00:00+09:00`}
+        data-type={ev.eventtype}
+        data-name={ev.eventname}
+      >
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <p class="font-medium text-sm flex-1">{ev.eventname}</p>
+          <span class="status-badge shrink-0 inline-block px-2 py-0.5 rounded text-xs font-semibold text-gray-500 bg-gray-100">—</span>
+        </div>
+        <div class="status-remain text-xs text-gray-500 hidden mb-1"></div>
+        <p class="text-xs text-gray-600">{ev.eventtype}</p>
+        <p class="text-xs text-gray-700 mt-1">
+          <span>{ev.start_date}</span>
+          <span class="mx-1">〜</span>
+          <span>{ev.end_date} 17:00</span>
+        </p>
+      </div>
+    ))}
+  </div>
+
+  <script>
+    type Status = 'live' | 'upcoming' | 'past';
+
+    interface Row {
+      el: HTMLElement;
+      start: number;
+      end: number;
+      type: string;
+      name: string;
+      status: Status;
+    }
+
+    const rows: Row[] = [];
+    document.querySelectorAll<HTMLElement>('.event-row, .event-card').forEach((el) => {
+      const start = Date.parse(el.dataset.start || '');
+      const end = Date.parse(el.dataset.end || '');
+      if (Number.isNaN(start) || Number.isNaN(end)) return;
+      rows.push({
+        el,
+        start,
+        end,
+        type: el.dataset.type || '',
+        name: el.dataset.name || '',
+        status: 'past',
+      });
+    });
+
+    function classifyStatus(now: number, start: number, end: number): Status {
+      if (now < start) return 'upcoming';
+      if (now >= end) return 'past';
+      return 'live';
+    }
+
+    function formatRemaining(ms: number): string {
+      if (ms <= 0) return '';
+      const totalSec = Math.floor(ms / 1000);
+      const d = Math.floor(totalSec / 86400);
+      const h = Math.floor((totalSec % 86400) / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (d > 0) return `残り ${d}日 ${h}時間 ${m}分 ${s}秒`;
+      if (h > 0) return `残り ${h}時間 ${m}分 ${s}秒`;
+      if (m > 0) return `残り ${m}分 ${s}秒`;
+      return `残り ${s}秒`;
+    }
+
+    function applyBadge(el: HTMLElement, status: Status) {
+      const badge = el.querySelector<HTMLElement>('.status-badge');
+      if (!badge) return;
+      badge.classList.remove(
+        'text-gray-500', 'bg-gray-100',
+        'text-white', 'bg-red-600', 'animate-pulse',
+        'text-blue-700', 'bg-blue-100',
+        'text-gray-400', 'bg-gray-50'
+      );
+      if (status === 'live') {
+        badge.textContent = '実施中';
+        badge.classList.add('text-white', 'bg-red-600', 'animate-pulse');
+      } else if (status === 'upcoming') {
+        badge.textContent = '開催予定';
+        badge.classList.add('text-blue-700', 'bg-blue-100');
+      } else {
+        badge.textContent = '終了';
+        badge.classList.add('text-gray-400', 'bg-gray-50');
+      }
+    }
+
+    function applyRowStyle(el: HTMLElement, status: Status) {
+      el.classList.remove('bg-red-50', 'border-l-4', 'border-red-500', 'opacity-60');
+      if (status === 'live') {
+        el.classList.add('bg-red-50', 'border-l-4', 'border-red-500');
+      } else if (status === 'past') {
+        el.classList.add('opacity-60');
+      }
+    }
+
+    function render() {
+      const now = Date.now();
+      for (const r of rows) {
+        r.status = classifyStatus(now, r.start, r.end);
+        applyBadge(r.el, r.status);
+        applyRowStyle(r.el, r.status);
+        const remainEl = r.el.querySelector<HTMLElement>('.status-remain');
+        if (remainEl) {
+          if (r.status === 'live') {
+            remainEl.textContent = formatRemaining(r.end - now);
+            remainEl.classList.remove('hidden', 'text-gray-500');
+            remainEl.classList.add('text-red-600', 'font-medium');
+          } else if (r.status === 'upcoming') {
+            remainEl.textContent = `開始まで ${formatRemainingShort(r.start - now)}`;
+            remainEl.classList.remove('hidden', 'text-red-600', 'font-medium');
+            remainEl.classList.add('text-gray-500');
+          } else {
+            remainEl.textContent = '';
+            remainEl.classList.add('hidden');
+          }
+        }
+      }
+      applyFilters();
+    }
+
+    function formatRemainingShort(ms: number): string {
+      if (ms <= 0) return '';
+      const totalSec = Math.floor(ms / 1000);
+      const d = Math.floor(totalSec / 86400);
+      const h = Math.floor((totalSec % 86400) / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      if (d > 0) return `${d}日 ${h}時間`;
+      if (h > 0) return `${h}時間 ${m}分`;
+      return `${m}分`;
+    }
+
+    const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+    function applyFilters() {
+      const text = ($<HTMLInputElement>('search-text').value || '').toLowerCase();
+      const type = $<HTMLSelectElement>('search-type').value;
+      const status = $<HTMLSelectElement>('search-status').value as Status | '';
+
+      let visible = 0;
+      for (const r of rows) {
+        const nameMatch = !text || r.name.toLowerCase().includes(text);
+        const typeMatch = !type || r.type === type;
+        const statusMatch = !status || r.status === status;
+        const show = nameMatch && typeMatch && statusMatch;
+        if (show) {
+          r.el.classList.remove('hidden');
+          visible++;
+        } else {
+          r.el.classList.add('hidden');
+        }
+      }
+      // rows は desktop+mobile を両方含むので表示件数はイベント単位に換算
+      const perItem = rows.length / Math.max(1, new Set(rows.map(r => r.el.dataset.id)).size);
+      const countEl = $('result-count');
+      if (countEl) countEl.textContent = `${Math.round(visible / perItem)}件を表示`;
+    }
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const searchText = $('search-text') as HTMLInputElement;
+    searchText?.addEventListener('input', () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(applyFilters, 200);
+    });
+    $('search-type')?.addEventListener('change', applyFilters);
+    $('search-status')?.addEventListener('change', applyFilters);
+    $('btn-reset')?.addEventListener('click', () => {
+      ($('search-text') as HTMLInputElement).value = '';
+      ($('search-type') as HTMLSelectElement).value = '';
+      ($('search-status') as HTMLSelectElement).value = '';
+      applyFilters();
+    });
+
+    // 実施中のイベントがあれば 1 秒ごとに更新、無ければ 30 秒ごと
+    function scheduleTick() {
+      const hasLive = rows.some(r => r.status === 'live');
+      const interval = hasLive ? 1000 : 30000;
+      setTimeout(() => {
+        render();
+        scheduleTick();
+      }, interval);
+    }
+
+    render();
+    scheduleTick();
+  </script>
+</BaseLayout>
