@@ -1,0 +1,35 @@
+services:
+  dev:
+    build: .
+    image: i7-gottani-dev
+    command: sh -c "npm run dev -- --host 0.0.0.0 --port 4321"
+    ports:
+      - "4321:4321"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+
+  preview:
+    build: .
+    image: i7-gottani-dev
+    command: sh -c "npm run build && ln -sfn . dist/i7 && npx serve dist -l 4321"
+    ports:
+      - "4321:4321"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+
+  wrangler:
+    build: .
+    image: i7-gottani-dev
+    command: sh -c "DEPLOY_TARGET=cloudflare npm run build && wrangler pages dev dist --ip 0.0.0.0 --port 8788"
+    ports:
+      - "8788:8788"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      - DEPLOY_TARGET=cloudflare
+
+volumes:
+  node_modules:
