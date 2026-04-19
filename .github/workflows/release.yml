@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   release:
@@ -16,16 +15,3 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
-
-  deploy:
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger GitHub Pages deploy
-        run: gh workflow run deploy.yml --ref main -R "${{ github.repository }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Trigger Cloudflare Pages deploy
-        run: gh workflow run cloudflare-deploy.yml --ref main -R "${{ github.repository }}"
-        env:
-          GH_TOKEN: ${{ github.token }}

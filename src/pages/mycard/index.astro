@@ -62,7 +62,7 @@ const base = import.meta.env.BASE_URL;
       renderTableRow, renderMobileCard, bindCountEvents,
     } from '../../lib/cardListRenderer';
 
-    const base = (window as any).__BASE_URL__ || '/i7/';
+    const base = (window as any).__BASE_URL__ || '/';
     const THUMB_URL = (window as any).__CARD_THUMB_BASE_URL__;
 
     initRenderer({ base, thumbUrl: THUMB_URL });

@@ -4,7 +4,7 @@
 
 ## サイト
 
-https://yo4raw.github.io/i7/
+<https://i7.yo4raw.com>
 
 ## 機能
 
@@ -21,21 +21,28 @@ https://yo4raw.github.io/i7/
 - [Tailwind CSS](https://tailwindcss.com/) 4 - ユーティリティファーストCSS
 - [htmx](https://htmx.org/) - 軽量なクライアントサイドインタラクション
 - Google Sheets (GViz API) - データソース
-- GitHub Pages - ホスティング
+- Cloudflare Pages - ホスティング
 - [Playwright](https://playwright.dev/) - E2E テスト
 
 ## 開発
 
+ローカル環境は Docker (docker compose) で統一しています:
+
 ```bash
-npm install     # 依存関係のインストール
-npm run dev     # 開発サーバー起動
-npm run build   # 本番ビルド
-npm run preview # ビルド + ローカルプレビュー
-npm run test    # Playwright E2E テスト実行
+docker compose up dev       # 開発サーバー (http://localhost:4321)
+docker compose up preview   # ビルド + ローカル配信 (http://localhost:4321)
+docker compose up wrangler  # Cloudflare Pages 挙動再現 (http://localhost:8788)
 ```
 
-Node.js 22 が必要です（`.nvmrc` 参照）。
+Playwright E2E テストはホスト実行:
+
+```bash
+npm install     # 依存関係のインストール
+npm run test    # Playwright E2E テスト
+```
+
+Node.js は `.nvmrc` で 22 を指定（テスト/npm scripts をホスト実行する場合のみ必須）。
 
 ## デプロイ
 
-バージョンタグ（`v1.0.0` 等）の push で GitHub Actions により GitHub Pages へ自動デプロイされます。データ鮮度のため6時間ごとに自動リビルドも行われます。
+Cloudflare Pages の Git 連携により main ブランチへの push で自動デプロイされます。データ鮮度のため6時間ごとに Deploy Hook 経由で自動リビルドも行われます。

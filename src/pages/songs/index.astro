@@ -93,7 +93,7 @@ const base = import.meta.env.BASE_URL;
     import { STORAGE_KEYS, loadJson, saveJson } from '../../lib/storage';
     import { songImageUrl, starsText } from '../../lib/ui';
 
-    const base = (window as any).__BASE_URL__ || '/i7/';
+    const base = (window as any).__BASE_URL__ || '/';
     const $ = (id: string) => document.getElementById(id)!;
 
     let allSongs: Song[] = JSON.parse(document.getElementById('song-data')!.textContent!) as Song[];

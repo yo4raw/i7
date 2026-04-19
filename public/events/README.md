@@ -7,7 +7,7 @@
 - **取得元**: [i7.step-on-dream.net](https://i7.step-on-dream.net/admin/index.php) の「イベントDBをダウンロード(utf8)」
 - **エンドポイント**: `POST https://i7.step-on-dream.net/admin/download.php` (`db=event&code=utf8`)
 - **更新頻度**: 毎朝 JST 04:00 (GitHub Actions `.github/workflows/fetch-event-db.yml`)
-- **公開 URL**: `https://yo4raw.github.io/i7/events/events.csv`
+- **公開 URL**: `https://i7.yo4raw.com/events/events.csv`
 - **更新フロー**: 差分がある日のみ `auto/update-event-db` ブランチに PR が自動作成される
 
 ## フォーマット

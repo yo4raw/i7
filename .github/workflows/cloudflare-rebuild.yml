@@ -1,0 +1,13 @@
+name: Trigger Cloudflare Pages rebuild
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Cloudflare Pages deploy hook
+        run: curl -fsS -X POST "${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}"
