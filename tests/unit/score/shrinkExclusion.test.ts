@@ -112,17 +112,18 @@ describe('computeShrinkExclusion', () => {
     expect(exc.partialCount).toBe(0);
   });
 
-  it('maxCount=23 (3枚構成想定) のとき notes_20 全 + light_2 先頭 2 ノート', () => {
+  it('複数スキル [count=23, count=20] → minCount=20 で notes_20 全除外 (21)', () => {
     const team = makeTeam([null, shrinkSkill(23), null, null, null, shrinkSkill(20)]);
     const exc = computeShrinkExclusion(team, groupSizes);
-    expect(exc.totalExcluded).toBe(23);
+    // max(notes_20=21, minCount=20) = 21 → notes_20 のみ除外
+    expect(exc.totalExcluded).toBe(21);
     expect(exc.fullGroups.has('notes_20')).toBe(true);
     expect(exc.fullGroups.has('light_2')).toBe(false);
-    expect(exc.partialGroup).toBe('light_2');
-    expect(exc.partialCount).toBe(2);
+    expect(exc.partialGroup).toBeUndefined();
+    expect(exc.partialCount).toBe(0);
   });
 
-  it('maxCount=26 (ユーザー例: 6 ノート超過) のとき notes_20 全 + light_2 先頭 5 ノート', () => {
+  it('minCount=26 (単体, ユーザー例: 6 ノート超過) のとき notes_20 全 + light_2 先頭 5 ノート', () => {
     const team = makeTeam([shrinkSkill(26), null, null, null, null, null]);
     const exc = computeShrinkExclusion(team, groupSizes);
     expect(exc.totalExcluded).toBe(26);
@@ -131,7 +132,7 @@ describe('computeShrinkExclusion', () => {
     expect(exc.partialCount).toBe(5);
   });
 
-  it('maxCount=50 (複数グループ跨ぎ) のとき notes_20 + light_2 全 + light_3 先頭 15 ノート', () => {
+  it('minCount=50 (単体, 複数グループ跨ぎ) のとき notes_20 + light_2 全 + light_3 先頭 15 ノート', () => {
     const team = makeTeam([shrinkSkill(50), null, null, null, null, null]);
     const exc = computeShrinkExclusion(team, groupSizes);
     expect(exc.totalExcluded).toBe(50);
@@ -141,7 +142,7 @@ describe('computeShrinkExclusion', () => {
     expect(exc.partialCount).toBe(15);
   });
 
-  it('複数縮小スキルから最大 count が採用される', () => {
+  it('複数縮小スキルから最小 count が採用される (仕様 §2: min)', () => {
     const team = makeTeam([
       shrinkSkill(20),
       shrinkSkill(23),
@@ -149,12 +150,15 @@ describe('computeShrinkExclusion', () => {
       null, null, shrinkSkill(22),
     ]);
     const exc = computeShrinkExclusion(team, groupSizes);
-    expect(exc.totalExcluded).toBe(23);
-    expect(exc.partialGroup).toBe('light_2');
-    expect(exc.partialCount).toBe(2);
+    // minCount = 20 → max(notes_20=21, 20) = 21
+    expect(exc.totalExcluded).toBe(21);
+    expect(exc.fullGroups.has('notes_20')).toBe(true);
+    expect(exc.partialGroup).toBeUndefined();
+    expect(exc.partialCount).toBe(0);
   });
 
-  it('count=0 の不正な縮小スキルは最大値算出から除外される', () => {
+  it('count=0 の不正な縮小スキルは最小値算出から除外される', () => {
+    // 有効スキルは count=25 のみ → minCount = 25 → max(21, 25) = 25
     const team = makeTeam([shrinkSkill(0), shrinkSkill(25), null, null, null, null]);
     const exc = computeShrinkExclusion(team, groupSizes);
     expect(exc.totalExcluded).toBe(25);

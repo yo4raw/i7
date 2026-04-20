@@ -9,7 +9,7 @@ import {
   type ExpectedScore,
 } from './types';
 import {
-  NOTE_RATE, LIGHT_MULTIPLIER, SHRINK_MULTIPLIER,
+  NOTE_RATE, LIGHT_MULTIPLIER,
   SCOREUP_ASSIST_RATE,
   MC_CHUNK_SIZE, CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
   EVENT_BONUS_MULTIPLIER, TRAIN_BONUS,
@@ -31,6 +31,7 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
   const count = sl.count;
   const per = sl.per;
   const value = sl.value;
+  const rate = sl.rate;
 
   if (count == null || per == null) return null;
 
@@ -48,6 +49,7 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
     count: count || 0,
     per: per || 0,
     value: value || 0,
+    rate: rate || 0,
     isTimer,
     isShrink,
     spTime: card.sp_time || 0,
@@ -208,14 +210,24 @@ export function computeTeam(
 }
 
 /**
- * SCOREUPアシスト / SCOREUPバッジを最終スコアに乗算で反映する。
- * 仕様: floor(基本スコア × (1 + assistRate) × (1 + badgeRate/100)) + broachScoreBonus
+ * SCOREUPバッジ倍率を最終スコアに乗算で反映し、ブローチのスコア直接加算を加える。
+ * 仕様（docs/shrink-skill-spec.md §1 / docs/score_calc_spec.md §3-7 準拠）:
+ *   スコアアップアシスト (+20%) は属性値段階で適用済みのため、ここでは乗じない。
+ *   finalScore = floor(baseTotal × (1 + badgeRate/100)) + broachScoreBonus
  */
 function applyFinalBonus(baseTotal: number, team: ComputedTeam, options?: ScoreOptions): number {
-  const assistMult = options?.scoreUpAssist ? 1 + SCOREUP_ASSIST_RATE : 1;
   const badgeRateRaw = options?.scoreUpBadgeRate ?? 0;
   const badgeMult = badgeRateRaw > 0 ? 1 + badgeRateRaw / 100 : 1;
-  return Math.floor(baseTotal * assistMult * badgeMult) + team.broachScoreBonus;
+  return Math.floor(baseTotal * badgeMult) + team.broachScoreBonus;
+}
+
+/**
+ * スコアアップアシストを属性値段階で適用した appeal を返す。
+ * docs/score_calc_spec.md §3-7 準拠: teamXxxAssisted = floor(teamXxx × 1.2)
+ */
+function getAppeal(team: ComputedTeam, attr: AttributeName, assist: boolean): number {
+  const raw = team[attr];
+  return assist ? Math.floor(raw * (1 + SCOREUP_ASSIST_RATE)) : raw;
 }
 
 /** 1 ノーツのスコアを計算（属性値 × 倍率 × レートをまとめて floor） */
@@ -224,11 +236,17 @@ function calcNoteScore(appeal: number, note: FlatNote): number {
 }
 
 /**
- * 縮小カバー率を計算する（100%発動 + 確率考慮の期待値）
+ * 縮小カバー率を計算する (docs/shrink-skill-spec.md §3, §4 準拠)。
+ *
+ * 仕様:
+ *  - 各縮小スキルの「発動回数 × 持続秒」を単純加算 (rawCoveredSeconds)
+ *  - 各縮小スキルの「発動回数 × 持続秒 × per/100」を単純加算 (rawExpectedCoveredSeconds)
+ *  - 内部計算用カバー率は effectiveSeconds で必ず 100% キャップ
+ *  - 表示用 raw* は 100% 超過可 (UI 側で注記する)
  *
  * @param excludeHeadCount 先頭から縮小発動判定対象外とするノート数。
  *   通常は {@link computeShrinkExclusion} の `totalExcluded` を渡す
- *   (= max(notes_20サイズ, デッキ縮小スキル count の最大値))。
+ *   (= max(notes_20サイズ, デッキ縮小スキル count の最小値))。
  */
 export function calcShrinkCoverage(
   team: ComputedTeam,
@@ -236,16 +254,16 @@ export function calcShrinkCoverage(
   offsetSeconds: number = 0,
   excludeHeadCount: number = 0,
 ): {
-  /** 区間マージ後のカバー率 (スコア計算対象、最大100%) */
+  /** 内部計算用カバー率 (100% キャップ済み、スコア計算で使用) */
   coverageRate: number;
   coveredSeconds: number;
-  /** 区間マージ前の単純合計カバー率 (100%超表示用、重複区間を含む) */
+  /** 生の単純合計カバー率 (100% 超可、表示用) */
   rawCoverageRate: number;
   rawCoveredSeconds: number;
-  /** 区間重複補正込みの期待カバー率 (シミュレーション/スコア計算用) */
+  /** 内部計算用期待カバー率 (100% キャップ済み、期待値スコアで使用) */
   expectedCoverageRate: number;
   expectedCoveredSeconds: number;
-  /** 単純加算の期待カバー率 (表示用、重複補正なし = Σ 発動回数 × 持続秒 × 確率) */
+  /** 生の単純加算期待カバー率 (100% 超可、表示用) */
   rawExpectedCoverageRate: number;
   rawExpectedCoveredSeconds: number;
   effectiveSeconds: number;
@@ -267,9 +285,7 @@ export function calcShrinkCoverage(
   // 縮小判定対象ノート数 (先頭除外分 excludeHeadCount を引いたもの)
   const eligibleCount = Math.max(0, notesCount - excludeHeadCount);
 
-  // 生の合計時間（区間マージ前、songDuration でのキャップ無し）
-  // 仕様: 各スキルの「発動回数 × 持続秒数」の単純加算。100% 超過分はスコア計算対象外。
-  // 期待値側も「発動回数 × 持続秒数 × 発動確率」の単純加算（重複補正なし）を並行で保持。
+  // 各スキルの発動回数 × 持続秒 (と × 確率) を単純加算
   let rawCoveredSeconds = 0;
   let rawExpectedCoveredSeconds = 0;
   for (const dc of shrinkCards) {
@@ -279,71 +295,9 @@ export function calcShrinkCoverage(
     rawExpectedCoveredSeconds += numActivations * skill.value * (skill.per / 100);
   }
 
-  // 全縮小カードの発動区間を収集（確率付き）
-  const intervals: { start: number; end: number; prob: number }[] = [];
-  for (const dc of shrinkCards) {
-    const skill = dc.skill!;
-    const prob = skill.per / 100;
-    const numActivations = Math.floor(eligibleCount / skill.count);
-    for (let k = 1; k <= numActivations; k++) {
-      // excludeHeadCount 分を先頭にスキップしてから k * count - 1 番目を発動ノートとする
-      const noteIndex = excludeHeadCount + k * skill.count - 1;
-      const activationTime = noteIndex / notesCount * team.songDuration;
-      const start = Math.max(activationTime, offsetSeconds);
-      const end = Math.min(activationTime + skill.value, team.songDuration);
-      if (start < end) intervals.push({ start, end, prob });
-    }
-  }
-
-  if (intervals.length === 0) {
-    return {
-      ...zero,
-      rawCoverageRate: rawCoveredSeconds / effectiveSeconds,
-      rawCoveredSeconds,
-      rawExpectedCoverageRate: rawExpectedCoveredSeconds / effectiveSeconds,
-      rawExpectedCoveredSeconds,
-      effectiveSeconds,
-    };
-  }
-
-  // --- 100%発動: 区間マージ ---
-  const sorted = [...intervals].sort((a, b) => a.start - b.start);
-  const merged: [number, number][] = [[sorted[0].start, sorted[0].end]];
-  for (let i = 1; i < sorted.length; i++) {
-    const last = merged[merged.length - 1];
-    if (sorted[i].start <= last[1]) {
-      last[1] = Math.max(last[1], sorted[i].end);
-    } else {
-      merged.push([sorted[i].start, sorted[i].end]);
-    }
-  }
-  const coveredSeconds = merged.reduce((sum, [s, e]) => sum + (e - s), 0);
-
-  // --- 期待値: 各時間セグメントで「少なくとも1つ発動中」の確率を積分 ---
-  // イベント収集（全区間の開始・終了時刻）
-  const times = new Set<number>();
-  for (const iv of intervals) {
-    times.add(iv.start);
-    times.add(iv.end);
-  }
-  const sortedTimes = [...times].sort((a, b) => a - b);
-
-  let expectedCoveredSeconds = 0;
-  for (let i = 0; i < sortedTimes.length - 1; i++) {
-    const segStart = sortedTimes[i];
-    const segEnd = sortedTimes[i + 1];
-    const segLen = segEnd - segStart;
-    if (segLen <= 0) continue;
-
-    // このセグメントをカバーする全区間の「不発動確率」の積
-    let probNone = 1;
-    for (const iv of intervals) {
-      if (iv.start <= segStart && iv.end >= segEnd) {
-        probNone *= (1 - iv.prob);
-      }
-    }
-    expectedCoveredSeconds += segLen * (1 - probNone);
-  }
+  // 内部計算用は effectiveSeconds で 100% キャップ
+  const coveredSeconds = Math.min(rawCoveredSeconds, effectiveSeconds);
+  const expectedCoveredSeconds = Math.min(rawExpectedCoveredSeconds, effectiveSeconds);
 
   return {
     coverageRate: coveredSeconds / effectiveSeconds,
@@ -360,9 +314,10 @@ export function calcShrinkCoverage(
 
 /** スキル全不発の最低スコア */
 export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
+  const assist = options?.scoreUpAssist ?? false;
   let total = 0;
   for (const note of notes) {
-    total += calcNoteScore(team[note.attribute], note);
+    total += calcNoteScore(getAppeal(team, note.attribute, assist), note);
   }
   return applyFinalBonus(total, team, options);
 }
@@ -370,6 +325,7 @@ export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
 /** スキル全発動の最高スコア */
 export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const N = notes.length;
+  const assist = options?.scoreUpAssist ?? false;
 
   // タイマースキル: 全タイミングで必ず発動、発動1回につき value 点を起点ノートに加算
   const timerBonus = new Array<number>(N).fill(0);
@@ -421,14 +377,18 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
       }
     }
 
-    let shrinkActive = false;
+    // 発動中の縮小スキルから max rate を採用（「いずれか発動中」判定・重ねがけなし、§1）
+    let activeRate = 0;
     for (let c = 0; c < team.cards.length; c++) {
-      if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
+      if (shrinkEndNotes[c] > n) {
+        const r = team.cards[c].skill?.rate ?? 0;
+        if (r > activeRate) activeRate = r;
+      }
     }
 
-    const noteScore = calcNoteScore(team[note.attribute], note);
-    const shrinkExtra = (shrinkActive && !note.excluded)
-      ? Math.floor(noteScore * (SHRINK_MULTIPLIER - 1.0))
+    const noteScore = calcNoteScore(getAppeal(team, note.attribute, assist), note);
+    const shrinkExtra = (activeRate > 0 && !note.excluded)
+      ? Math.floor(noteScore * (activeRate - 1.0))
       : 0;
 
     total += noteScore + shrinkExtra + scoreUpSum;
@@ -438,10 +398,10 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
 }
 
 /**
- * 算術期待値によるスコア計算（外部サイト準拠の単純期待値）。
- * - 属性値による楽曲スコア: スキル全不発時の素点合計（= calcMinScore のベース部分）
+ * 算術期待値によるスコア計算 (docs/shrink-skill-spec.md §5-3 準拠)。
+ * - 属性値による楽曲スコア: スキル全不発時の素点合計（アシスト適用後）
  * - スコアアップ期待値: Σ( (タイマーなら songDuration, 通常なら notesCount) / count × per/100 × value )
- * - 縮小期待値: baseScore(未アシスト) × (SHRINK_MULTIPLIER - 1) × expectedCoverageRate
+ * - 縮小期待値: eligibleBaseScore × (maxRate - 1) × min(期待カバー率, 1.0)
  */
 export function calcExpectedScore(
   team: ComputedTeam,
@@ -449,10 +409,12 @@ export function calcExpectedScore(
   notesCount: number,
   options?: ScoreOptions,
 ): ExpectedScore {
-  // 属性値による楽曲スコア（スキル全不発 = calcMinScore の broachScoreBonus・bonus 抜き）
+  const assist = options?.scoreUpAssist ?? false;
+
+  // 属性値による楽曲スコア（アシスト適用後の素点で合算）
   let baseScore = 0;
   for (const note of notes) {
-    baseScore += calcNoteScore(team[note.attribute], note);
+    baseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
   }
 
   // スコアアップスキル期待値: floor(対象量 / count) 回 × 発動確率 × value
@@ -468,19 +430,26 @@ export function calcExpectedScore(
   }
   scoreUpExpected = Math.floor(scoreUpExpected);
 
-  // 縮小期待値: 先頭除外ノート (note.excluded) を除いた楽曲スコア × 縮小追加倍率 × 期待カバー率
-  // excluded なノートは縮小発動判定・効果適用の対象外なので、期待値ベースも除外スコアで計算する
+  // 縮小期待値: excluded ノートを除いた対象素点 × (maxRate - 1) × 期待カバー率
   const excludedCount = notes.filter(n => n.excluded).length;
   let eligibleBaseScore = 0;
   for (const note of notes) {
     if (note.excluded) continue;
-    eligibleBaseScore += calcNoteScore(team[note.attribute], note);
+    eligibleBaseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
   }
+
+  // 代表 rate: デッキ内縮小スキル rate の最大値 (§5-4 effectiveRate と同等)
+  let maxRate = 0;
+  for (const dc of team.cards) {
+    const s = dc.skill;
+    if (s?.isShrink && s.count > 0 && s.rate > maxRate) maxRate = s.rate;
+  }
+
   let shrinkExpected = 0;
   const coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount);
-  if (coverage && coverage.effectiveSeconds > 0) {
+  if (coverage && coverage.effectiveSeconds > 0 && maxRate > 0) {
     shrinkExpected = Math.floor(
-      eligibleBaseScore * (SHRINK_MULTIPLIER - 1.0) * coverage.expectedCoverageRate,
+      eligibleBaseScore * (maxRate - 1.0) * coverage.expectedCoverageRate,
     );
   }
 
@@ -502,6 +471,21 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
   const cardCount = team.cards.length;
   const activations = new Array<number>(cardCount).fill(0);
   const contributions = new Array<number>(cardCount).fill(0);
+  const assist = options?.scoreUpAssist ?? false;
+
+  // 期待縮小時間 (§2-2 按分用): 試行間で変わらない固定係数
+  const excludedCount = notes.reduce((acc, n) => acc + (n.excluded ? 1 : 0), 0);
+  const eligibleCount = Math.max(0, N - excludedCount);
+  const expectedShrinkTimes = new Array<number>(cardCount).fill(0);
+  let totalExpectedShrinkTime = 0;
+  for (let c = 0; c < cardCount; c++) {
+    const s = team.cards[c].skill;
+    if (!s?.isShrink || s.count <= 0) continue;
+    const numAct = Math.floor(eligibleCount / s.count);
+    const expSec = numAct * s.value * (s.per / 100);
+    expectedShrinkTimes[c] = expSec;
+    totalExpectedShrinkTime += expSec;
+  }
 
   // Phase 1: タイマースキル (1 発動で起点ノートに value 点を 1 回加算)
   const timerBonus = new Array<number>(N).fill(0);
@@ -561,31 +545,27 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       }
     }
 
-    // 判定縮小スキルのアクティブ判定（value 秒の持続時間ベース）
-    let shrinkActive = false;
+    // 発動中の縮小スキルから max rate を採用（「いずれか発動中」判定・重ねがけなし、§1）
+    let activeRate = 0;
     for (let c = 0; c < cardCount; c++) {
-      if (shrinkEndNotes[c] > n) { shrinkActive = true; break; }
+      if (shrinkEndNotes[c] > n) {
+        const r = team.cards[c].skill?.rate ?? 0;
+        if (r > activeRate) activeRate = r;
+      }
     }
 
-    const noteScoreBase = calcNoteScore(team[note.attribute], note);
-    const shrinkExtra = (shrinkActive && !note.excluded)
-      ? Math.floor(noteScoreBase * (SHRINK_MULTIPLIER - 1.0))
+    const noteScoreBase = calcNoteScore(getAppeal(team, note.attribute, assist), note);
+    const shrinkExtra = (activeRate > 0 && !note.excluded)
+      ? Math.floor(noteScoreBase * (activeRate - 1.0))
       : 0;
 
     totalScore += noteScoreBase + shrinkExtra + scoreUpSum;
 
-    // 判定縮小スキルのスコア寄与を発動中のカードに按分（先頭除外ノートは対象外）
-    if (shrinkActive && !note.excluded && shrinkExtra > 0) {
-      let activeShrinkCount = 0;
+    // 判定縮小スキルのスコア寄与を期待縮小時間比で按分 (§2-2 仕様)
+    if (shrinkExtra > 0 && totalExpectedShrinkTime > 0) {
       for (let c = 0; c < cardCount; c++) {
-        if (shrinkEndNotes[c] > n) activeShrinkCount++;
-      }
-      if (activeShrinkCount > 0) {
-        const share = shrinkExtra / activeShrinkCount;
-        for (let c = 0; c < cardCount; c++) {
-          if (shrinkEndNotes[c] > n) {
-            contributions[c] += share;
-          }
+        if (expectedShrinkTimes[c] > 0) {
+          contributions[c] += shrinkExtra * (expectedShrinkTimes[c] / totalExpectedShrinkTime);
         }
       }
     }

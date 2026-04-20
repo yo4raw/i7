@@ -11,9 +11,8 @@ export const LIGHT_MULTIPLIER: Record<string, number> = {
   chorus_light_6: 3.0,
 };
 
-export const SHRINK_MULTIPLIER = 1.6;
-/** スコアアップアシスト適用時の最終スコア加算率 (12%) */
-export const SCOREUP_ASSIST_RATE = 0.12;
+/** スコアアップアシスト適用時の属性値加算率 (20% = ×1.2)。docs/score_calc_spec.md §3-7 に準拠。 */
+export const SCOREUP_ASSIST_RATE = 0.2;
 /** スコアアップバッジ倍率のデフォルト値（%）。UI 初期値として使用 */
 export const DEFAULT_SCOREUP_BADGE_RATE = 15;
 export const MC_ITERATIONS = 5000;
