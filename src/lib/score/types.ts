@@ -15,6 +15,8 @@ export interface FlatNote {
   attribute: AttributeName;
   type: 'white' | 'color';
   group: string;
+  /** 縮小スキルの発動判定・効果適用の対象外フラグ (flattenNotes で ShrinkExclusion から付与) */
+  excluded: boolean;
 }
 
 export interface CardSkill {
