@@ -183,4 +183,4 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 1. `docker compose up preview` でローカルプレビューサーバーを Docker 上に起動する
 2. Playwright MCP でプレビューサーバー（`http://localhost:4321/`）にアクセスし、変更箇所の画面表示を確認する
 3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
-4. ユーザーの確認が取れたら 対応ないように応じたブランチを作成して`git commit` → `git push` とPRの作成を行う
+4. ユーザーの確認が取れたら 対応ないように応じたブランチを作成して`git commit` → `git push` とPRの作成を行い、CIの結果を待たずリリースまで行う。リリースに伴うworkflowを待つ必要はない。
