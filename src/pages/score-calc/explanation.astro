@@ -1,0 +1,1224 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="スコア計算ロジックの解説">
+  <h1 class="text-2xl font-bold mb-2">スコア計算ロジックの解説</h1>
+  <p class="text-sm text-gray-600 mb-6">
+    「スコア計算」ページがどのようにスコアを算出しているかを、内部ロジックに沿って章ごとに解説します。
+    数値例は主に「MONSTER GENERATiON × 10th Anniv 四葉環（センター） + 記念日2024 四葉環（フレンド）」を用います。
+  </p>
+
+  <nav aria-label="目次" class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 text-sm">
+    <h2 class="font-bold text-gray-700 mb-2">目次</h2>
+    <ol class="list-decimal pl-5 space-y-1 text-indigo-600">
+      <li><a href="#sec-intro" class="hover:underline">はじめに ― なぜシミュレーションが必要か</a></li>
+      <li><a href="#sec-overview" class="hover:underline">全体像フロー</a></li>
+      <li><a href="#sec-team" class="hover:underline">チーム属性値の計算</a></li>
+      <li><a href="#sec-flatten" class="hover:underline">ノート列を作る (flattenNotes)</a></li>
+      <li><a href="#sec-note-score" class="hover:underline">1 ノートのスコア</a></li>
+      <li><a href="#sec-skills" class="hover:underline">スキル ― 3 種類の効果</a></li>
+      <li><a href="#sec-broach" class="hover:underline">ブローチ ― 9 種類のルール</a></li>
+      <li><a href="#sec-theoretical" class="hover:underline">理論最低・最高・算術期待値</a></li>
+      <li><a href="#sec-mc" class="hover:underline">モンテカルロシミュレーション</a></li>
+      <li><a href="#sec-final" class="hover:underline">最終スコアの組み立て</a></li>
+      <li><a href="#sec-histogram" class="hover:underline">結果の読み方（分布と統計）</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. はじめに -->
+  <section id="sec-intro">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">1. はじめに ― なぜシミュレーションが必要か</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      スコア計算ページは、デッキが実際のライブで出しうるスコアの「分布」をモンテカルロシミュレーションで推定しています。
+      シミュレーションが必要なのは、スコアが以下 2 つの不確実性を持つためです。
+    </p>
+    <ul class="list-disc pl-6 text-sm text-gray-800 space-y-1 mb-3">
+      <li><strong class="text-indigo-700">スキルの確率発動</strong>: 多くのスキルは 40%〜60% 程度の確率でしか発動しません。
+        同じデッキでも毎回のスコアはぶれます。</li>
+      <li><strong class="text-indigo-700">ノートの出現順序</strong>: 本サイトは公式 API からノート順序を取得できないため、
+        <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">flattenNotes</code> で擬似的にシャッフルして順序を近似します。</li>
+    </ul>
+    <p class="text-sm text-gray-800 leading-relaxed">
+      理論最低 / 理論最高だけを見ても「実際に出やすいのはどのあたりか」は分かりません。
+      そこで同じ条件で 5,000 回ライブを繰り返し、平均・中央値・標準偏差・パーセンタイルを集計することで、
+      <mark class="bg-amber-100 px-0.5">確率発動の揺らぎまで含めたスコア評価</mark>が可能になっています。
+    </p>
+  </section>
+
+  <!-- 2. 全体像フロー -->
+  <section id="sec-overview">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">2. 全体像フロー</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-4">
+      入力（デッキ・楽曲・オプション）から統計値までの流れは下図の通りです。
+      シミュレーションは「1 ノートずつ順に処理する」ループを 5,000 回繰り返したものです。
+    </p>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 620 260" role="img" aria-labelledby="sc-fig1-title sc-fig1-desc" class="w-full h-auto max-w-[620px] mx-auto block">
+        <title id="sc-fig1-title">図1: スコア計算の全体パイプライン</title>
+        <desc id="sc-fig1-desc">入力からチーム属性値・ノート列を経て、1試行を5000回繰り返し統計値を算出するフロー</desc>
+        <defs>
+          <marker id="sc-fig1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#4b5563" />
+          </marker>
+        </defs>
+        <g font-family="system-ui, sans-serif" font-size="12" fill="#1f2937">
+          <!-- 入力 -->
+          <rect x="10" y="90" width="110" height="70" rx="6" fill="#f3f4f6" stroke="#9ca3af" />
+          <text x="65" y="115" text-anchor="middle" font-weight="bold">入力</text>
+          <text x="65" y="133" text-anchor="middle" font-size="10">デッキ 6 枠</text>
+          <text x="65" y="147" text-anchor="middle" font-size="10">楽曲 / ブローチ</text>
+
+          <!-- computeTeam -->
+          <rect x="145" y="90" width="120" height="70" rx="6" fill="#eef2ff" stroke="#6366f1" />
+          <text x="205" y="113" text-anchor="middle" font-weight="bold">computeTeam</text>
+          <text x="205" y="131" text-anchor="middle" font-size="10">チーム属性値</text>
+          <g font-size="10">
+            <circle cx="175" cy="148" r="5" fill="#ef4444" />
+            <circle cx="205" cy="148" r="5" fill="#22c55e" />
+            <circle cx="235" cy="148" r="5" fill="#3b82f6" />
+          </g>
+
+          <!-- flattenNotes -->
+          <rect x="290" y="90" width="120" height="70" rx="6" fill="#eef2ff" stroke="#6366f1" />
+          <text x="350" y="113" text-anchor="middle" font-weight="bold">flattenNotes</text>
+          <text x="350" y="131" text-anchor="middle" font-size="10">ノート列 N 個</text>
+          <g>
+            <circle cx="305" cy="148" r="3" fill="#22c55e" />
+            <circle cx="315" cy="148" r="3" fill="#ef4444" />
+            <circle cx="325" cy="148" r="3" fill="#3b82f6" />
+            <circle cx="335" cy="148" r="3" fill="#22c55e" />
+            <circle cx="345" cy="148" r="3" fill="#ef4444" />
+            <circle cx="355" cy="148" r="3" fill="#3b82f6" />
+            <circle cx="365" cy="148" r="3" fill="#22c55e" />
+            <circle cx="375" cy="148" r="3" fill="#3b82f6" />
+            <circle cx="385" cy="148" r="3" fill="#ef4444" />
+            <circle cx="395" cy="148" r="3" fill="#22c55e" />
+          </g>
+
+          <!-- runOnce -->
+          <rect x="435" y="90" width="110" height="70" rx="6" fill="#fef3c7" stroke="#d97706" />
+          <text x="490" y="113" text-anchor="middle" font-weight="bold">1 試行</text>
+          <text x="490" y="131" text-anchor="middle" font-size="10">ノート列を走査</text>
+          <text x="490" y="147" text-anchor="middle" font-size="10">スキル判定</text>
+
+          <!-- 統計 -->
+          <rect x="490" y="180" width="110" height="60" rx="6" fill="#f3e8ff" stroke="#a855f7" />
+          <text x="545" y="203" text-anchor="middle" font-weight="bold">統計</text>
+          <text x="545" y="220" text-anchor="middle" font-size="10">mean / stddev</text>
+          <text x="545" y="234" text-anchor="middle" font-size="10">p90 / ヒスト</text>
+
+          <!-- 矢印 -->
+          <line x1="122" y1="125" x2="143" y2="125" stroke="#4b5563" stroke-width="1.5" marker-end="url(#sc-fig1-arrow)" />
+          <line x1="267" y1="125" x2="288" y2="125" stroke="#4b5563" stroke-width="1.5" marker-end="url(#sc-fig1-arrow)" />
+          <line x1="412" y1="125" x2="433" y2="125" stroke="#4b5563" stroke-width="1.5" marker-end="url(#sc-fig1-arrow)" />
+          <line x1="490" y1="162" x2="545" y2="178" stroke="#4b5563" stroke-width="1.5" marker-end="url(#sc-fig1-arrow)" />
+
+          <!-- ×5000 ループ -->
+          <path d="M435 105 Q420 50 545 50 Q600 50 555 95" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#sc-fig1-arrow)" />
+          <text x="490" y="45" text-anchor="middle" font-size="11" fill="#d97706" font-weight="bold">× 5,000 回繰り返し</text>
+
+          <!-- オプション -->
+          <rect x="10" y="195" width="420" height="48" rx="6" fill="#fafafa" stroke="#d1d5db" stroke-dasharray="3,3" />
+          <text x="220" y="215" text-anchor="middle" font-size="11" font-weight="bold">スキルオプション / アシスト / バッジ</text>
+          <text x="220" y="232" text-anchor="middle" font-size="10" fill="#6b7280">1 試行の合算 &amp; 最終スコア計算に合流</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図1: 入力 → チーム属性値 → ノート列 → 1 試行（× 5,000）→ 統計</figcaption>
+    </figure>
+
+    <p class="text-sm text-gray-800 leading-relaxed">
+      大きく 3 つのブロックに分かれます: <strong>(A)</strong> 確率に依存しないチーム属性値の事前計算、
+      <strong>(B)</strong> 乱数で揺れる 1 試行のスコア計算、<strong>(C)</strong> 5,000 試行の集計。
+      以降の章ではこれらを順に掘り下げます。
+    </p>
+  </section>
+
+  <!-- 3. チーム属性値の計算 -->
+  <section id="sec-team">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">3. チーム属性値の計算</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      チーム属性値 <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">Shout / Beat / Melody</code> は、
+      ノートスコアを掛け算するための係数です。以下 3 段の積み上げで決まります。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">3-1. カード素点 + ブローチ + センター/フレンド倍率</h3>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 620 300" role="img" aria-labelledby="sc-fig2-title sc-fig2-desc" class="w-full h-auto max-w-[620px] mx-auto block">
+        <title id="sc-fig2-title">図2: チーム属性値の積み上げ</title>
+        <desc id="sc-fig2-desc">10th環センター単騎の例。Beat 7,691 → +ブローチ 4,500 → +センター倍率 1,219 = 13,410</desc>
+        <g font-family="system-ui, sans-serif" font-size="12" fill="#1f2937">
+          <!-- Shout 棒 -->
+          <g transform="translate(70,30)">
+            <text x="40" y="-8" text-anchor="middle" font-weight="bold" fill="#ef4444">Shout</text>
+            <rect x="10" y="180" width="60" height="70" fill="#fecaca" stroke="#ef4444" />
+            <text x="40" y="220" text-anchor="middle" font-size="11">raw</text>
+            <text x="40" y="236" text-anchor="middle" font-size="11" font-weight="bold">3,898</text>
+            <text x="80" y="220" font-size="10" fill="#6b7280">(素点)</text>
+          </g>
+
+          <!-- Beat 棒 (積み上げ) -->
+          <g transform="translate(230,30)">
+            <text x="40" y="-8" text-anchor="middle" font-weight="bold" fill="#22c55e">Beat</text>
+            <!-- raw -->
+            <rect x="10" y="180" width="60" height="70" fill="#bbf7d0" stroke="#22c55e" />
+            <text x="40" y="220" text-anchor="middle" font-size="11">raw</text>
+            <text x="40" y="236" text-anchor="middle" font-size="11" font-weight="bold">7,691</text>
+            <!-- +brooch -->
+            <rect x="10" y="130" width="60" height="50" fill="#86efac" stroke="#22c55e" stroke-dasharray="3,2" />
+            <text x="40" y="158" text-anchor="middle" font-size="11">+brooch</text>
+            <text x="40" y="172" text-anchor="middle" font-size="11" font-weight="bold">+4,500</text>
+            <!-- center bonus -->
+            <rect x="10" y="110" width="60" height="20" fill="#4ade80" stroke="#16a34a" opacity="0.6" />
+            <text x="40" y="125" text-anchor="middle" font-size="10">×1.10 (+1,219)</text>
+            <!-- 合計 -->
+            <text x="80" y="118" font-size="11" font-weight="bold" fill="#166534">= 13,410</text>
+          </g>
+
+          <!-- Melody 棒 -->
+          <g transform="translate(400,30)">
+            <text x="40" y="-8" text-anchor="middle" font-weight="bold" fill="#3b82f6">Melody</text>
+            <rect x="10" y="180" width="60" height="70" fill="#bfdbfe" stroke="#3b82f6" />
+            <text x="40" y="220" text-anchor="middle" font-size="11">raw</text>
+            <text x="40" y="236" text-anchor="middle" font-size="11" font-weight="bold">4,611</text>
+            <text x="80" y="220" font-size="10" fill="#6b7280">(素点)</text>
+          </g>
+
+          <!-- 凡例 -->
+          <g transform="translate(10,270)" font-size="10" fill="#374151">
+            <rect x="0" y="0" width="12" height="10" fill="#bbf7d0" stroke="#22c55e" />
+            <text x="16" y="9">カード素点</text>
+            <rect x="100" y="0" width="12" height="10" fill="#86efac" stroke="#22c55e" stroke-dasharray="3,2" />
+            <text x="116" y="9">固定 / 共有ブローチ加算</text>
+            <rect x="280" y="0" width="12" height="10" fill="#4ade80" stroke="#16a34a" opacity="0.6" />
+            <text x="296" y="9">センター / フレンド倍率</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図2: 10th Anniv 四葉環（UR/Beat）センター単騎の積み上げ。Beat が 7,691 → 13,410 に伸びる</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">3-2. 特訓・ラビットノート・イベント特効</h3>
+    <ul class="list-disc pl-6 text-sm text-gray-800 space-y-1 mb-3">
+      <li><strong>特訓</strong>: 未特訓時は自属性のみ <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">(max − TRAIN_BONUS)</code> を使用。
+        <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">TRAIN_BONUS</code> は UR で 1,800、それ以外は 0 が定義されています。</li>
+      <li><strong>ラビットノート</strong>: カード名をキーに属性値を加算。加算はブローチより前、倍率適用前に行われます。</li>
+      <li><strong>イベント特効</strong>: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">EVENT_BONUS_MULTIPLIER</code> をカード属性値（＋ラビットノート分）に掛けて整数化。
+        <mark class="bg-amber-100 px-0.5">none=×1.0 / bronze=×2.0 / silver=×2.2 / gold=×2.4</mark>。</li>
+    </ul>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">3-3. センター / フレンド スキル倍率</h3>
+    <figure class="my-4">
+      <svg viewBox="0 0 440 210" role="img" aria-labelledby="sc-fig3-title sc-fig3-desc" class="w-full h-auto max-w-[440px] mx-auto block">
+        <title id="sc-fig3-title">図3: センター / フレンド スキルボーナス</title>
+        <desc id="sc-fig3-desc">6 枠のデッキ。スロット 0 (センター) とスロット 5 (フレンド) に +10% バッジ。同属性なら加算が重複する</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- 6 スロット -->
+          <g>
+            <rect x="20" y="60" width="50" height="70" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2" />
+            <text x="45" y="80" text-anchor="middle" font-size="10" font-weight="bold">センター</text>
+            <text x="45" y="100" text-anchor="middle" font-size="9" fill="#6b7280">slot 0</text>
+            <!-- +10% バッジ -->
+            <circle cx="65" cy="60" r="15" fill="#a855f7" />
+            <text x="65" y="64" text-anchor="middle" font-size="10" font-weight="bold" fill="white">+10%</text>
+
+            <rect x="80" y="60" width="50" height="70" rx="4" fill="#f3f4f6" stroke="#9ca3af" />
+            <text x="105" y="85" text-anchor="middle" font-size="10">member 1</text>
+            <rect x="140" y="60" width="50" height="70" rx="4" fill="#f3f4f6" stroke="#9ca3af" />
+            <text x="165" y="85" text-anchor="middle" font-size="10">member 2</text>
+            <rect x="200" y="60" width="50" height="70" rx="4" fill="#f3f4f6" stroke="#9ca3af" />
+            <text x="225" y="85" text-anchor="middle" font-size="10">member 3</text>
+            <rect x="260" y="60" width="50" height="70" rx="4" fill="#f3f4f6" stroke="#9ca3af" />
+            <text x="285" y="85" text-anchor="middle" font-size="10">member 4</text>
+
+            <rect x="320" y="60" width="50" height="70" rx="4" fill="#fef3c7" stroke="#d97706" stroke-width="2" />
+            <text x="345" y="80" text-anchor="middle" font-size="10" font-weight="bold">フレンド</text>
+            <text x="345" y="100" text-anchor="middle" font-size="9" fill="#6b7280">slot 5</text>
+            <circle cx="365" cy="60" r="15" fill="#a855f7" />
+            <text x="365" y="64" text-anchor="middle" font-size="10" font-weight="bold" fill="white">+10%</text>
+          </g>
+
+          <!-- 説明 -->
+          <text x="20" y="160" font-size="11">レアリティ別の増加率: <tspan font-weight="bold">UR=10% / SSR=7% / その他=6%</tspan></text>
+          <text x="20" y="180" font-size="11">同属性なら両方加算 (例: 両方 Beat で +20%)。ブローチ加算後の値に乗算。</text>
+          <text x="20" y="198" font-size="10" fill="#6b7280">※ フレンドカード自身の属性値はスロット 5 のみで計算され、ブローチ加算の対象外</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図3: センターとフレンドはそれぞれ「自身の属性」に倍率を追加する</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">3-4. 計算例（10th 環センター単騎）</h3>
+    <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs font-mono overflow-x-auto">teamShout  = floor(3,898 × (100 + 0) / 100)             = 3,898
+teamBeat   = floor((7,691 + 4,500) × (100 + 10) / 100)  = floor(13,410.1)  = 13,410
+teamMelody = floor(4,611 × (100 + 0) / 100)             = 4,611</pre>
+    <p class="text-sm text-gray-700 leading-relaxed">
+      Beat の <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">+4,500</code> は 10th 環の固定ブローチ（種類 4 / GROUP=IDOLiSH7）。
+      センター単騎のデッキなのでグループ条件を満たし、加算が有効になります。
+    </p>
+  </section>
+
+  <!-- 4. ノート列を作る -->
+  <section id="sec-flatten">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">4. ノート列を作る (flattenNotes)</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      楽曲マスターは「ライトグループ × 属性 × 白／色」のノート数だけを持っています。
+      <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">flattenNotes</code> はこれを 1 次元の配列に展開し、
+      スキル発動判定のために<strong>順序を近似</strong>します。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">4-1. ノートの 48 通り</h3>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">8 グループ × 3 属性 × 2 タイプ(white/color) = 48 種類</code>。
+      スコアはグループのライト倍率とタイプ別ノートレートの積で決まります。
+    </p>
+    <figure class="my-4">
+      <svg viewBox="0 0 660 260" role="img" aria-labelledby="sc-fig4-title sc-fig4-desc" class="w-full h-auto max-w-[660px] mx-auto block">
+        <title id="sc-fig4-title">図4: 8 グループ × 3 属性のノート早見表</title>
+        <desc id="sc-fig4-desc">各セルを白(上)と色(下)で 2 分割。セル上部にライト倍率を表示</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- グループ見出し -->
+          <g font-size="10" text-anchor="middle">
+            <text x="100" y="20" font-weight="bold">notes_20</text><text x="100" y="34">×1.0</text>
+            <text x="170" y="20" font-weight="bold">light_2</text><text x="170" y="34">×1.0</text>
+            <text x="240" y="20" font-weight="bold">light_3</text><text x="240" y="34">×1.1</text>
+            <text x="310" y="20" font-weight="bold">light_4</text><text x="310" y="34">×1.2</text>
+            <text x="380" y="20" font-weight="bold">light_5</text><text x="380" y="34">×1.3</text>
+            <text x="450" y="20" font-weight="bold">light_6</text><text x="450" y="34">×1.5</text>
+            <text x="520" y="20" font-weight="bold">chorus_5</text><text x="520" y="34">×2.6</text>
+            <text x="590" y="20" font-weight="bold">chorus_6</text><text x="590" y="34">×3.0</text>
+          </g>
+
+          <!-- 行ラベル -->
+          <text x="50" y="75" text-anchor="middle" font-weight="bold" fill="#ef4444">Shout</text>
+          <text x="50" y="135" text-anchor="middle" font-weight="bold" fill="#22c55e">Beat</text>
+          <text x="50" y="195" text-anchor="middle" font-weight="bold" fill="#3b82f6">Melody</text>
+
+          <!-- グリッド: 3 行 × 8 列、各セルを白/色で 2 分割 -->
+          <!-- Shout 行 -->
+          <g>
+            <rect x="70" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="70" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="140" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="140" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="210" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="210" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="280" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="280" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="350" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="350" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="420" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="420" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="490" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="490" y="70" width="60" height="20" fill="#ef4444" />
+            <rect x="560" y="50" width="60" height="20" fill="#fef2f2" stroke="#ef4444" />
+            <rect x="560" y="70" width="60" height="20" fill="#ef4444" />
+          </g>
+          <!-- Beat 行 -->
+          <g>
+            <rect x="70" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="70" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="140" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="140" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="210" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="210" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="280" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="280" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="350" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="350" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="420" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="420" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="490" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="490" y="130" width="60" height="20" fill="#22c55e" />
+            <rect x="560" y="110" width="60" height="20" fill="#f0fdf4" stroke="#22c55e" />
+            <rect x="560" y="130" width="60" height="20" fill="#22c55e" />
+          </g>
+          <!-- Melody 行 -->
+          <g>
+            <rect x="70" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="70" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="140" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="140" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="210" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="210" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="280" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="280" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="350" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="350" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="420" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="420" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="490" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="490" y="190" width="60" height="20" fill="#3b82f6" />
+            <rect x="560" y="170" width="60" height="20" fill="#eff6ff" stroke="#3b82f6" />
+            <rect x="560" y="190" width="60" height="20" fill="#3b82f6" />
+          </g>
+
+          <!-- 凡例 -->
+          <g transform="translate(70,230)" font-size="10" fill="#374151">
+            <rect x="0" y="0" width="20" height="10" fill="#fef2f2" stroke="#9ca3af" />
+            <text x="26" y="9">上半分 = 白 (ノートレート 2.5%)</text>
+            <rect x="230" y="0" width="20" height="10" fill="#6b7280" />
+            <text x="256" y="9">下半分 = 色 (ノートレート 3.0%)</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図4: 8 グループ × 3 属性 × 2 タイプ = 48 種類のノートマトリクス</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">4-2. ライト倍率とノートレートの定義値</h3>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-max text-xs border-collapse border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-2 py-1 text-left">グループ</th>
+            <th class="border border-gray-300 px-2 py-1">notes_20</th>
+            <th class="border border-gray-300 px-2 py-1">light_2</th>
+            <th class="border border-gray-300 px-2 py-1">light_3</th>
+            <th class="border border-gray-300 px-2 py-1">light_4</th>
+            <th class="border border-gray-300 px-2 py-1">light_5</th>
+            <th class="border border-gray-300 px-2 py-1">light_6</th>
+            <th class="border border-gray-300 px-2 py-1">chorus_light_5</th>
+            <th class="border border-gray-300 px-2 py-1">chorus_light_6</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th class="border border-gray-300 px-2 py-1 text-left bg-gray-50">ライト倍率</th>
+            <td class="border border-gray-300 px-2 py-1 text-center">1.0</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">1.0</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">1.1</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">1.2</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">1.3</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">1.5</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">2.6</td>
+            <td class="border border-gray-300 px-2 py-1 text-center font-bold">3.0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-gray-800 leading-relaxed">
+      ノートレートは <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">white = 0.025 / color = 0.030</code> の 2 種類のみ。
+      コーラスライト 6 は通常ライト 2 の <strong>3 倍</strong>、ここで稼ぐノートが多いほど総スコアが跳ね上がります。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">4-3. Fisher-Yates シャッフル</h3>
+    <figure class="my-4">
+      <svg viewBox="0 0 540 160" role="img" aria-labelledby="sc-fig5-title sc-fig5-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig5-title">図5: Fisher-Yates シャッフル</title>
+        <desc id="sc-fig5-desc">属性順に並んだ初期配列がランダムな順序に並び替わる様子</desc>
+        <g font-family="system-ui, sans-serif" font-size="10" fill="#1f2937">
+          <!-- 初期配列 (属性順) -->
+          <text x="10" y="30" font-weight="bold">初期</text>
+          <g transform="translate(60,15)">
+            <!-- Shout 6個 -->
+            <circle cx="10" cy="12" r="6" fill="#ef4444" />
+            <circle cx="26" cy="12" r="6" fill="#ef4444" />
+            <circle cx="42" cy="12" r="6" fill="#ef4444" />
+            <circle cx="58" cy="12" r="6" fill="#ef4444" />
+            <circle cx="74" cy="12" r="6" fill="#ef4444" />
+            <circle cx="90" cy="12" r="6" fill="#ef4444" />
+            <!-- Beat 7個 -->
+            <circle cx="110" cy="12" r="6" fill="#22c55e" />
+            <circle cx="126" cy="12" r="6" fill="#22c55e" />
+            <circle cx="142" cy="12" r="6" fill="#22c55e" />
+            <circle cx="158" cy="12" r="6" fill="#22c55e" />
+            <circle cx="174" cy="12" r="6" fill="#22c55e" />
+            <circle cx="190" cy="12" r="6" fill="#22c55e" />
+            <circle cx="206" cy="12" r="6" fill="#22c55e" />
+            <!-- Melody 7個 -->
+            <circle cx="226" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="242" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="258" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="274" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="290" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="306" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="322" cy="12" r="6" fill="#3b82f6" />
+          </g>
+
+          <!-- 矢印 + 乱数 -->
+          <g transform="translate(60,55)">
+            <line x1="0" y1="0" x2="330" y2="0" stroke="#6b7280" stroke-dasharray="3,2" />
+            <text x="165" y="-4" text-anchor="middle" fill="#6b7280" font-size="11">rng.next() で末尾から入れ替え</text>
+          </g>
+
+          <!-- シャッフル後 -->
+          <text x="10" y="95" font-weight="bold">混合後</text>
+          <g transform="translate(60,80)">
+            <circle cx="10" cy="12" r="6" fill="#22c55e" />
+            <circle cx="26" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="42" cy="12" r="6" fill="#ef4444" />
+            <circle cx="58" cy="12" r="6" fill="#22c55e" />
+            <circle cx="74" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="90" cy="12" r="6" fill="#ef4444" />
+            <circle cx="110" cy="12" r="6" fill="#22c55e" />
+            <circle cx="126" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="142" cy="12" r="6" fill="#ef4444" />
+            <circle cx="158" cy="12" r="6" fill="#22c55e" />
+            <circle cx="174" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="190" cy="12" r="6" fill="#ef4444" />
+            <circle cx="206" cy="12" r="6" fill="#22c55e" />
+            <circle cx="222" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="238" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="254" cy="12" r="6" fill="#ef4444" />
+            <circle cx="270" cy="12" r="6" fill="#3b82f6" />
+            <circle cx="286" cy="12" r="6" fill="#22c55e" />
+            <circle cx="302" cy="12" r="6" fill="#ef4444" />
+            <circle cx="318" cy="12" r="6" fill="#22c55e" />
+          </g>
+
+          <!-- シード -->
+          <text x="10" y="130" fill="#6b7280">シードが同じなら結果も同じ（決定論的）</text>
+          <text x="10" y="148" fill="#6b7280">→ テストや再現性確保に使える</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図5: Fisher-Yates シャッフルによるノート順序の近似（シード指定で再現可能）</figcaption>
+    </figure>
+    <aside class="bg-indigo-50 border-l-4 border-indigo-400 p-3 text-xs text-gray-700 rounded-r my-3">
+      実ゲームのノート順は公式 API から取得できないため、属性順に並べた配列を XorShift128Plus の乱数でシャッフルして近似しています。
+      このため「ノートが何秒目か」は<strong>ノート位置 × 楽曲秒数 / 総ノート数</strong>の均等近似です。
+    </aside>
+  </section>
+
+  <!-- 5. 1 ノートのスコア -->
+  <section id="sec-note-score">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">5. 1 ノートのスコア</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      ノート 1 枚あたりのスコアは、<strong>チーム属性値・ライト倍率・ノートレート</strong>の 3 つを掛けて小数を切り捨てた値です。
+    </p>
+    <figure class="my-4">
+      <svg viewBox="0 0 620 140" role="img" aria-labelledby="sc-fig6-title sc-fig6-desc" class="w-full h-auto max-w-[620px] mx-auto block">
+        <title id="sc-fig6-title">図6: 1 ノートあたりのスコア式</title>
+        <desc id="sc-fig6-desc">属性値 × ライト倍率 × ノートレート を floor した値が 1 ノートスコア</desc>
+        <g font-family="system-ui, sans-serif" font-size="12" fill="#1f2937">
+          <!-- floor 大括弧 -->
+          <text x="10" y="80" font-size="48" fill="#6b7280" font-family="serif">⌊</text>
+          <text x="555" y="80" font-size="48" fill="#6b7280" font-family="serif">⌋</text>
+
+          <!-- 属性値 -->
+          <rect x="35" y="45" width="110" height="50" rx="6" fill="#bbf7d0" stroke="#22c55e" />
+          <text x="90" y="65" text-anchor="middle" font-size="10" fill="#166534">チーム属性値</text>
+          <text x="90" y="82" text-anchor="middle" font-weight="bold">13,410</text>
+
+          <text x="160" y="75" text-anchor="middle" font-size="20" fill="#6b7280">×</text>
+
+          <!-- ライト倍率 -->
+          <rect x="180" y="45" width="110" height="50" rx="6" fill="#fef3c7" stroke="#d97706" />
+          <text x="235" y="65" text-anchor="middle" font-size="10" fill="#92400e">ライト倍率</text>
+          <text x="235" y="82" text-anchor="middle" font-weight="bold">3.0</text>
+
+          <text x="305" y="75" text-anchor="middle" font-size="20" fill="#6b7280">×</text>
+
+          <!-- ノートレート -->
+          <rect x="325" y="45" width="110" height="50" rx="6" fill="#e0e7ff" stroke="#6366f1" />
+          <text x="380" y="65" text-anchor="middle" font-size="10" fill="#3730a3">ノートレート</text>
+          <text x="380" y="82" text-anchor="middle" font-weight="bold">0.025</text>
+
+          <text x="450" y="75" text-anchor="middle" font-size="20" fill="#6b7280">=</text>
+
+          <!-- 結果 -->
+          <rect x="470" y="45" width="80" height="50" rx="6" fill="#f3e8ff" stroke="#a855f7" />
+          <text x="510" y="65" text-anchor="middle" font-size="10" fill="#6b21a8">1 ノート</text>
+          <text x="510" y="82" text-anchor="middle" font-weight="bold">= 1,005</text>
+
+          <!-- キャプション -->
+          <text x="310" y="120" text-anchor="middle" font-size="10" fill="#6b7280">例: Beat 13,410、chorus_light_6 (×3.0)、白ノート (2.5%) → 1,005 点</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図6: <code class="text-xs font-mono">floor(属性値 × ライト倍率 × ノートレート)</code></figcaption>
+    </figure>
+
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      このノートが Chorus Light 6 セクションに <strong>47 枚</strong>あれば、
+      <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">47 × 1,005 = 47,235 点</code>になります。
+      これを全 428 ノートについて積み上げたものが「基本スコア」(理論最低値) です。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">5-1. 計算例: MONSTER GENERATiON × 10th 環センター単騎</h3>
+    <p class="text-sm text-gray-800 leading-relaxed mb-2">
+      各グループごとに上記式を適用して積み上げると、以下の通り<strong>163,242 点</strong>になります。
+    </p>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-max text-xs border-collapse border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-2 py-1 text-left">グループ</th>
+            <th class="border border-gray-300 px-2 py-1">小計</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="border border-gray-300 px-2 py-1">Notes 2.0 (×1.0)</td><td class="border border-gray-300 px-2 py-1 text-right">2,553</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">Light 2 (×1.0)</td><td class="border border-gray-300 px-2 py-1 text-right">1,702</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">Light 3 (×1.1)</td><td class="border border-gray-300 px-2 py-1 text-right">6,566</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">Light 4 (×1.2)</td><td class="border border-gray-300 px-2 py-1 text-right">18,492</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">Light 5 (×1.3)</td><td class="border border-gray-300 px-2 py-1 text-right">21,489</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">Light 6 (×1.5)</td><td class="border border-gray-300 px-2 py-1 text-right">17,792</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">Chorus Light 6 (×3.0)</td><td class="border border-gray-300 px-2 py-1 text-right">94,648</td></tr>
+          <tr class="bg-gray-50"><td class="border border-gray-300 px-2 py-1 font-bold">合計</td><td class="border border-gray-300 px-2 py-1 text-right font-bold">163,242</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-gray-700">
+      このデッキはスキルが <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">BAD→Perfect</code>（スコアに寄与しない種類）なので、
+      理論最低 = 理論最高 = MC 全試行が同一値（163,242）に収束します。
+    </p>
+  </section>
+
+  <!-- 6. スキル -->
+  <section id="sec-skills">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">6. スキル ― 3 種類の効果</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      スコアに寄与するスキルは大きく <strong>(1) スコアアップ・タイマー</strong>、<strong>(2) スコアアップ・コンボ</strong>、
+      <strong>(3) 判定縮小 (Perfect)</strong> の 3 種類です。発動判定の軸が違うだけで、スコアに加算する形は共通しています。
+    </p>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 620 280" role="img" aria-labelledby="sc-fig7-title sc-fig7-desc" class="w-full h-auto max-w-[620px] mx-auto block">
+        <title id="sc-fig7-title">図7: 3 種スキルの発動タイムライン</title>
+        <desc id="sc-fig7-desc">楽曲 104 秒を横軸に、タイマー・コンボ・判定縮小 の発動ポイントを比較</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- 共通軸 -->
+          <text x="10" y="15" font-size="10" fill="#6b7280">←楽曲 104 秒→</text>
+
+          <!-- タイマー (16秒おき、6回) -->
+          <g transform="translate(0,30)">
+            <text x="10" y="14" font-weight="bold">タイマー</text>
+            <text x="10" y="28" font-size="9" fill="#6b7280">(秒単位)</text>
+            <line x1="100" y1="20" x2="600" y2="20" stroke="#6b7280" stroke-width="2" />
+            <!-- 16秒おきの判定マーカー -->
+            <g>
+              <circle cx="176" cy="20" r="6" fill="#6366f1" />
+              <text x="176" y="4" text-anchor="middle" font-size="9" fill="#6366f1">16s</text>
+              <circle cx="253" cy="20" r="6" fill="#6366f1" />
+              <text x="253" y="4" text-anchor="middle" font-size="9" fill="#6366f1">32s</text>
+              <circle cx="329" cy="20" r="6" fill="#6366f1" />
+              <text x="329" y="4" text-anchor="middle" font-size="9" fill="#6366f1">48s</text>
+              <circle cx="405" cy="20" r="6" fill="#6366f1" />
+              <text x="405" y="4" text-anchor="middle" font-size="9" fill="#6366f1">64s</text>
+              <circle cx="482" cy="20" r="6" fill="#6366f1" />
+              <text x="482" y="4" text-anchor="middle" font-size="9" fill="#6366f1">80s</text>
+              <circle cx="558" cy="20" r="6" fill="#6366f1" />
+              <text x="558" y="4" text-anchor="middle" font-size="9" fill="#6366f1">96s</text>
+            </g>
+            <text x="450" y="44" font-size="10" fill="#6b7280">floor(104 / 16) = 6 回判定</text>
+          </g>
+
+          <!-- コンボ (16ノートおき、26回) -->
+          <g transform="translate(0,90)">
+            <text x="10" y="14" font-weight="bold">コンボ</text>
+            <text x="10" y="28" font-size="9" fill="#6b7280">(ノート単位)</text>
+            <line x1="100" y1="20" x2="600" y2="20" stroke="#6b7280" stroke-width="2" />
+            <g fill="#22c55e">
+              <!-- 26 ポイントを均等配置 -->
+              <circle cx="119" cy="20" r="3" /><circle cx="138" cy="20" r="3" /><circle cx="157" cy="20" r="3" />
+              <circle cx="176" cy="20" r="3" /><circle cx="195" cy="20" r="3" /><circle cx="214" cy="20" r="3" />
+              <circle cx="233" cy="20" r="3" /><circle cx="252" cy="20" r="3" /><circle cx="271" cy="20" r="3" />
+              <circle cx="290" cy="20" r="3" /><circle cx="309" cy="20" r="3" /><circle cx="328" cy="20" r="3" />
+              <circle cx="347" cy="20" r="3" /><circle cx="366" cy="20" r="3" /><circle cx="385" cy="20" r="3" />
+              <circle cx="404" cy="20" r="3" /><circle cx="423" cy="20" r="3" /><circle cx="442" cy="20" r="3" />
+              <circle cx="461" cy="20" r="3" /><circle cx="480" cy="20" r="3" /><circle cx="499" cy="20" r="3" />
+              <circle cx="518" cy="20" r="3" /><circle cx="537" cy="20" r="3" /><circle cx="556" cy="20" r="3" />
+              <circle cx="575" cy="20" r="3" /><circle cx="594" cy="20" r="3" />
+            </g>
+            <text x="450" y="44" font-size="10" fill="#6b7280">floor(428 / 16) = 26 回判定</text>
+          </g>
+
+          <!-- 判定縮小 (20ノートおき、帯) -->
+          <g transform="translate(0,150)">
+            <text x="10" y="14" font-weight="bold">判定縮小</text>
+            <text x="10" y="28" font-size="9" fill="#6b7280">(帯で表現)</text>
+            <line x1="100" y1="20" x2="600" y2="20" stroke="#6b7280" stroke-width="2" />
+            <!-- notes_20 除外部分 (グレー) -->
+            <rect x="100" y="14" width="25" height="12" fill="#e5e7eb" />
+            <text x="112" y="44" font-size="9" fill="#6b7280" text-anchor="middle">notes_20 除外</text>
+            <!-- 発動帯 (4秒 × 何回か) -->
+            <rect x="150" y="14" width="19" height="12" fill="#fbbf24" opacity="0.8" />
+            <rect x="220" y="14" width="19" height="12" fill="#fbbf24" opacity="0.8" />
+            <rect x="300" y="14" width="19" height="12" fill="#fbbf24" opacity="0.8" />
+            <rect x="380" y="14" width="19" height="12" fill="#fbbf24" opacity="0.8" />
+            <rect x="480" y="14" width="19" height="12" fill="#fbbf24" opacity="0.8" />
+            <rect x="560" y="14" width="19" height="12" fill="#fbbf24" opacity="0.8" />
+            <text x="450" y="44" font-size="10" fill="#6b7280">発動中はスコア ×1.6</text>
+          </g>
+
+          <!-- 数値まとめ -->
+          <g transform="translate(10,215)" font-size="10" fill="#374151">
+            <rect x="0" y="0" width="600" height="55" rx="4" fill="#f9fafb" stroke="#e5e7eb" />
+            <text x="10" y="14" font-weight="bold">例 (Lv5 / MONSTER GENERATiON 104秒 / 428ノート):</text>
+            <text x="10" y="30">・タイマー (ID861): 6 回判定 × 47% × 7,200 点 = 期待値 20,304</text>
+            <text x="10" y="44">・コンボ (ID204): 26 回判定 × 46% × 6,403 点 = 期待値 76,579</text>
+            <text x="320" y="30">・判定縮小 (ID1952): 20 回判定 × 40% × 4 秒</text>
+            <text x="320" y="44">  → 区間マージで最大 80 秒カバー</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図7: タイマー／コンボ／判定縮小の 3 種で発動軸と効果形が異なる</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">6-1. スコアアップ・タイマー</h3>
+    <p class="text-sm text-gray-800 leading-relaxed mb-2">
+      発動判定は<strong>秒単位</strong>。 <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">floor(楽曲の長さ / skill.count)</code> 回の判定が行われ、各判定で確率 <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">per%</code> で発動。発動時はそのタイムシグナルに最も近いノートに <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">value</code> 点を加算します。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">6-2. スコアアップ・コンボ</h3>
+    <p class="text-sm text-gray-800 leading-relaxed mb-2">
+      発動判定は<strong>ノート数単位</strong>。 <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">floor(総ノート数 / skill.count)</code> 回の判定で、
+      判定ノート自身に <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">value</code> 点を加算します。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">6-3. 判定縮小 (Perfect)</h3>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      発動すると <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">value</code> 秒の間、判定対象ノートのスコアが <mark class="bg-amber-100 px-0.5">×1.6 倍</mark>になります。
+      追加分は <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">基本スコア × 0.6</code>。判定軸はコンボと同じノート数単位ですが、
+      楽曲先頭の <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">notes_20</code>（21 ノート）は判定から除外されます。
+    </p>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 540 240" role="img" aria-labelledby="sc-fig8-title sc-fig8-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig8-title">図8: 判定縮小スキルの区間マージ</title>
+        <desc id="sc-fig8-desc">2 本のスキルの発動区間が重なると、マージされて合算になる様子</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- 軸 -->
+          <text x="10" y="15" font-size="10" fill="#6b7280">時間軸 (秒)</text>
+          <line x1="40" y1="40" x2="520" y2="40" stroke="#6b7280" stroke-width="1.5" />
+          <g font-size="9" fill="#6b7280">
+            <text x="40" y="30" text-anchor="middle">0</text>
+            <text x="155" y="30" text-anchor="middle">26</text>
+            <text x="280" y="30" text-anchor="middle">52</text>
+            <text x="400" y="30" text-anchor="middle">78</text>
+            <text x="520" y="30" text-anchor="middle">104</text>
+          </g>
+
+          <!-- スキル A (記念日環 4秒 × 5 回分 実例) -->
+          <text x="10" y="70" font-weight="bold">スキル A</text>
+          <text x="10" y="84" font-size="9" fill="#6b7280">(4秒 / p=40%)</text>
+          <g fill="#ef4444" opacity="0.5">
+            <rect x="100" y="55" width="18" height="26" />
+            <rect x="180" y="55" width="18" height="26" />
+            <rect x="280" y="55" width="18" height="26" />
+            <rect x="370" y="55" width="18" height="26" />
+            <rect x="460" y="55" width="18" height="26" />
+          </g>
+
+          <!-- スキル B (リスポ2陸 5秒 × 5 回分 実例) -->
+          <text x="10" y="115" font-weight="bold">スキル B</text>
+          <text x="10" y="129" font-size="9" fill="#6b7280">(5秒 / p=39%)</text>
+          <g fill="#3b82f6" opacity="0.5">
+            <rect x="110" y="100" width="23" height="26" />
+            <rect x="210" y="100" width="23" height="26" />
+            <rect x="290" y="100" width="23" height="26" />
+            <rect x="380" y="100" width="23" height="26" />
+            <rect x="470" y="100" width="23" height="26" />
+          </g>
+
+          <!-- マージ後 -->
+          <text x="10" y="160" font-weight="bold">マージ</text>
+          <text x="10" y="174" font-size="9" fill="#6b7280">(両スキルの和)</text>
+          <g fill="#a855f7" opacity="0.7">
+            <rect x="100" y="145" width="33" height="26" />
+            <rect x="180" y="145" width="53" height="26" />
+            <rect x="280" y="145" width="33" height="26" />
+            <rect x="370" y="145" width="33" height="26" />
+            <rect x="460" y="145" width="33" height="26" />
+          </g>
+
+          <!-- キャプション -->
+          <g transform="translate(10,195)" font-size="10" fill="#374151">
+            <text x="0" y="10">・区間が重なると秒数が延長されるが、合計秒は楽曲長でキャップ</text>
+            <text x="0" y="26">・期待カバー率は重複区間で <tspan font-family="monospace" fill="#111827">1 - (1 - p₁)(1 - p₂)</tspan> になり、単純加算より小さい</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図8: 2 枚の縮小スキルが同時発動した場合の区間マージと確率合成</figcaption>
+    </figure>
+
+    <aside class="bg-indigo-50 border-l-4 border-indigo-400 p-3 text-xs text-gray-700 rounded-r my-3">
+      <strong>カバー率の計算</strong>: 全スキル発動時の合計秒数が楽曲長を超える場合、 <mark class="bg-amber-100 px-0.5">100 % を超えた分はスコア対象外</mark>として扱われます。UI では「100 % を超えた生の合計値」も参考表示しますが、実際のスコア計算は区間マージ後の値を使います。
+    </aside>
+  </section>
+
+  <!-- 7. ブローチ -->
+  <section id="sec-broach">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">7. ブローチ ― 9 種類のルール</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      ブローチは <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">broach_type</code> で 9 種類に分かれ、
+      条件を満たすと <strong>(A) チーム属性値に加算</strong> するか <strong>(B) 最終スコアに直接加算</strong> します（種類 9 のみ B）。
+    </p>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 620 360" role="img" aria-labelledby="sc-fig10-title sc-fig10-desc" class="w-full h-auto max-w-[620px] mx-auto block">
+        <title id="sc-fig10-title">図10: ブローチ 9 種の条件フロー</title>
+        <desc id="sc-fig10-desc">各種類がどの経路でスコアに影響するかのフローチャート</desc>
+        <defs>
+          <marker id="sc-fig10-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#4b5563" />
+          </marker>
+        </defs>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- 9 種類のバブル -->
+          <g>
+            <rect x="10" y="10" width="200" height="28" rx="4" fill="#eef2ff" stroke="#6366f1" />
+            <text x="20" y="29" font-size="10"><tspan font-weight="bold">種類 1</tspan>: 属性UP (無条件)</text>
+
+            <rect x="10" y="46" width="200" height="28" rx="4" fill="#eef2ff" stroke="#6366f1" />
+            <text x="20" y="65" font-size="10"><tspan font-weight="bold">種類 4</tspan>: グループ条件</text>
+
+            <rect x="10" y="82" width="200" height="28" rx="4" fill="#eef2ff" stroke="#6366f1" />
+            <text x="20" y="101" font-size="10"><tspan font-weight="bold">種類 5</tspan>: アイドル×属性カウント</text>
+
+            <rect x="10" y="118" width="200" height="28" rx="4" fill="#eef2ff" stroke="#6366f1" />
+            <text x="20" y="137" font-size="10"><tspan font-weight="bold">種類 6</tspan>: 属性UP (発動上限あり)</text>
+
+            <rect x="10" y="154" width="200" height="28" rx="4" fill="#eef2ff" stroke="#6366f1" />
+            <text x="20" y="173" font-size="10"><tspan font-weight="bold">種類 7</tspan>: 3 属性揃い</text>
+
+            <rect x="10" y="190" width="200" height="28" rx="4" fill="#f3f4f6" stroke="#9ca3af" />
+            <text x="20" y="209" font-size="10" fill="#6b7280"><tspan font-weight="bold">種類 8</tspan>: オート専用（計算対象外）</text>
+
+            <rect x="10" y="226" width="200" height="28" rx="4" fill="#fef3c7" stroke="#d97706" />
+            <text x="20" y="245" font-size="10"><tspan font-weight="bold">種類 9</tspan>: スコアUP (楽曲条件)</text>
+          </g>
+
+          <!-- 判定菱形 -->
+          <g>
+            <polygon points="295,95 355,65 415,95 355,125" fill="#fff7ed" stroke="#ea580c" />
+            <text x="355" y="92" text-anchor="middle" font-size="10" font-weight="bold">条件</text>
+            <text x="355" y="106" text-anchor="middle" font-size="9">判定</text>
+          </g>
+
+          <!-- 合流先 -->
+          <rect x="470" y="60" width="130" height="60" rx="6" fill="#bbf7d0" stroke="#22c55e" />
+          <text x="535" y="85" text-anchor="middle" font-weight="bold">チーム属性値</text>
+          <text x="535" y="102" text-anchor="middle" font-size="10">(種類 1/4/5/6/7)</text>
+
+          <rect x="470" y="226" width="130" height="50" rx="6" fill="#f3e8ff" stroke="#a855f7" />
+          <text x="535" y="246" text-anchor="middle" font-weight="bold">最終スコア</text>
+          <text x="535" y="262" text-anchor="middle" font-size="10">broachScoreBonus</text>
+
+          <!-- 矢印: 種類 1〜7 → 菱形 → 属性値 -->
+          <line x1="210" y1="24" x2="295" y2="92" stroke="#4b5563" stroke-width="1" marker-end="url(#sc-fig10-arrow)" />
+          <line x1="210" y1="60" x2="295" y2="94" stroke="#4b5563" stroke-width="1" marker-end="url(#sc-fig10-arrow)" />
+          <line x1="210" y1="96" x2="295" y2="95" stroke="#4b5563" stroke-width="1" marker-end="url(#sc-fig10-arrow)" />
+          <line x1="210" y1="132" x2="295" y2="97" stroke="#4b5563" stroke-width="1" marker-end="url(#sc-fig10-arrow)" />
+          <line x1="210" y1="168" x2="295" y2="100" stroke="#4b5563" stroke-width="1" marker-end="url(#sc-fig10-arrow)" />
+          <line x1="415" y1="95" x2="468" y2="90" stroke="#16a34a" stroke-width="1.5" marker-end="url(#sc-fig10-arrow)" />
+          <!-- 矢印: 種類 9 → 最終スコア -->
+          <line x1="210" y1="240" x2="468" y2="248" stroke="#a855f7" stroke-width="1.5" marker-end="url(#sc-fig10-arrow)" />
+          <!-- 種類 8 は ✕ -->
+          <text x="250" y="210" font-size="16" fill="#ef4444">✕</text>
+
+          <!-- 種類 5 の倍率注釈 -->
+          <g transform="translate(10,280)">
+            <text x="0" y="12" font-size="10" fill="#6b7280" font-weight="bold">※ 種類 5 の倍率:</text>
+            <text x="0" y="28" font-size="10" fill="#374151">デッキ内の同アイドル × 同属性カード枚数分スケール</text>
+            <text x="0" y="44" font-size="10" fill="#374151">例: Melody 環が 2 枚 → ブローチの加算値が <tspan font-family="monospace" fill="#7c3aed">×2</tspan></text>
+          </g>
+
+          <!-- 種類 7 の上限注釈 -->
+          <g transform="translate(340,310)">
+            <text x="0" y="12" font-size="10" fill="#6b7280" font-weight="bold">※ 種類 6 / 7 は発動上限あり:</text>
+            <text x="0" y="28" font-size="10" fill="#374151">limit を超える分は無効化される</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図10: ブローチの種類別条件判定と、スコアへの合流先</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">7-1. 種類別の条件一覧</h3>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-max text-xs border-collapse border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-2 py-1">broach_type</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">名称</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">発動条件</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">合流先</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="border border-gray-300 px-2 py-1 text-center">1</td><td class="border border-gray-300 px-2 py-1">属性UP</td><td class="border border-gray-300 px-2 py-1">無条件</td><td class="border border-gray-300 px-2 py-1">チーム属性値</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 text-center">4</td><td class="border border-gray-300 px-2 py-1">グループ</td><td class="border border-gray-300 px-2 py-1">自カード (slot 0-4) が全て指定グループ</td><td class="border border-gray-300 px-2 py-1">チーム属性値</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 text-center">5</td><td class="border border-gray-300 px-2 py-1">アイドル×属性カウント</td><td class="border border-gray-300 px-2 py-1">同アイドル・同属性が limit 枚以上<br/>加算値は対象カード枚数でスケール</td><td class="border border-gray-300 px-2 py-1">チーム属性値</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 text-center">6</td><td class="border border-gray-300 px-2 py-1">属性UP (上限付き)</td><td class="border border-gray-300 px-2 py-1">無条件 / デッキ内発動数に上限</td><td class="border border-gray-300 px-2 py-1">チーム属性値</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 text-center">7</td><td class="border border-gray-300 px-2 py-1">全属性</td><td class="border border-gray-300 px-2 py-1">デッキ内に Shout / Beat / Melody が揃う</td><td class="border border-gray-300 px-2 py-1">チーム属性値</td></tr>
+          <tr class="bg-gray-50 text-gray-500"><td class="border border-gray-300 px-2 py-1 text-center">8</td><td class="border border-gray-300 px-2 py-1">オート専用</td><td class="border border-gray-300 px-2 py-1">スコア計算では常に無効</td><td class="border border-gray-300 px-2 py-1">—</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 text-center">9</td><td class="border border-gray-300 px-2 py-1">スコアUP</td><td class="border border-gray-300 px-2 py-1">指定楽曲と一致</td><td class="border border-gray-300 px-2 py-1">最終スコア (直接加算)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">7-2. 計算例: 10th 環の種類 4 ブローチ</h3>
+    <p class="text-sm text-gray-800 leading-relaxed mb-2">
+      10th Anniv 四葉環（カード ID 3414）の固定ブローチは <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">beat +4,500 / group=IDOLiSH7</code>。
+      センター単騎のデッキはスロット 0 のみ使用で、指定以外のグループカードは存在しない → 条件成立。
+      フレンドが同じく IDOLiSH7 グループの 1952 記念日環になっても成立し、<strong>Beat が +4,500 されます</strong>。
+    </p>
+
+    <aside class="bg-indigo-50 border-l-4 border-indigo-400 p-3 text-xs text-gray-700 rounded-r my-3">
+      <strong>フレンド (slot 5) のブローチは無視</strong>されます (<code class="text-xs font-mono">broachResolver</code> がスロット 0-4 のみを対象にするため)。
+      一方、種類 5 のカウント条件では<strong>フレンドも枚数に含まれる</strong>点に注意してください。
+    </aside>
+  </section>
+
+  <!-- 8. 理論最低・最高・算術期待値 -->
+  <section id="sec-theoretical">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">8. 理論最低・最高・算術期待値</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      シミュレーションの結果を評価するには、<strong>理論的な上限・下限</strong>と、外部サイト比較用の<strong>算術期待値</strong>が必要です。
+      本サイトはこれら 3 つを MC とは独立に計算して表示しています。
+    </p>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 540 200" role="img" aria-labelledby="sc-fig11-title sc-fig11-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig11-title">図11: 理論最低・算術期待値・理論最高の数直線</title>
+        <desc id="sc-fig11-desc">10th環＋記念日フレンドの例 (293,120 / 344,497 / 420,279)</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- 背景レンジ -->
+          <rect x="60" y="80" width="420" height="30" fill="#eef2ff" stroke="#6366f1" stroke-dasharray="2,2" />
+          <text x="270" y="75" text-anchor="middle" font-size="10" fill="#6366f1">MC の実測値はこの区間に収まる</text>
+
+          <!-- 軸 -->
+          <line x1="60" y1="110" x2="480" y2="110" stroke="#1f2937" stroke-width="1.5" />
+
+          <!-- Min -->
+          <line x1="60" y1="100" x2="60" y2="130" stroke="#ef4444" stroke-width="2" />
+          <text x="60" y="150" text-anchor="middle" font-size="11" font-weight="bold" fill="#ef4444">Min</text>
+          <text x="60" y="166" text-anchor="middle" font-size="11" font-weight="bold">293,120</text>
+          <text x="60" y="182" text-anchor="middle" font-size="9" fill="#6b7280">全スキル不発</text>
+
+          <!-- Expected -->
+          <line x1="250" y1="100" x2="250" y2="130" stroke="#6366f1" stroke-width="2" />
+          <text x="250" y="150" text-anchor="middle" font-size="11" font-weight="bold" fill="#6366f1">期待値</text>
+          <text x="250" y="166" text-anchor="middle" font-size="11" font-weight="bold">344,497</text>
+          <text x="250" y="182" text-anchor="middle" font-size="9" fill="#6b7280">算術期待値</text>
+
+          <!-- Max -->
+          <line x1="480" y1="100" x2="480" y2="130" stroke="#22c55e" stroke-width="2" />
+          <text x="480" y="150" text-anchor="middle" font-size="11" font-weight="bold" fill="#22c55e">Max</text>
+          <text x="480" y="166" text-anchor="middle" font-size="11" font-weight="bold">420,279</text>
+          <text x="480" y="182" text-anchor="middle" font-size="9" fill="#6b7280">全スキル発動</text>
+
+          <!-- タイトル -->
+          <text x="270" y="30" text-anchor="middle" font-weight="bold">例: 10th環(センター) + 記念日環(フレンド) × MONSTER GENERATiON</text>
+          <text x="270" y="50" text-anchor="middle" font-size="10" fill="#6b7280">縮小スキル 1 枚の分布</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図11: 理論値 3 点の関係。MC の実測値は左右の端点の内側に収まる</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">8-1. 3 つの値の定義</h3>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-max text-xs border-collapse border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-2 py-1 text-left">値</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">定義</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">用途</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="border border-gray-300 px-2 py-1">理論最低 (calcMinScore)</td><td class="border border-gray-300 px-2 py-1">全スキルが一度も発動しなかった場合</td><td class="border border-gray-300 px-2 py-1">下限保証</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">理論最高 (calcMaxScore)</td><td class="border border-gray-300 px-2 py-1">全スキルが毎回発動した場合</td><td class="border border-gray-300 px-2 py-1">上限保証</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">算術期待値 (calcExpectedScore)</td><td class="border border-gray-300 px-2 py-1"><code class="text-xs font-mono">Σ 発動回数 × 確率 × 効果値</code> の単純積算</td><td class="border border-gray-300 px-2 py-1">外部サイト比較</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-gray-800 leading-relaxed">
+      MC 実測の<strong>平均</strong>は算術期待値と近い値になりますが、分散情報を持たない点が違いです。
+      算術期待値は縮小スキルの重複区間でも <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">1 - (1 - p₁)(1 - p₂)</code> で補正しているため、
+      単純な <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">Σ p</code> より精度が高くなっています。
+    </p>
+  </section>
+
+  <!-- 9. モンテカルロシミュレーション -->
+  <section id="sec-mc">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">9. モンテカルロシミュレーション</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      1 試行 (<code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">runOnce</code>) では以下 2 フェーズで 1 ライブ分のスコアを作ります。
+    </p>
+
+    <figure class="my-4">
+      <svg viewBox="0 0 540 260" role="img" aria-labelledby="sc-fig12-title sc-fig12-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig12-title">図12: 1 試行の 2 フェーズ処理</title>
+        <desc id="sc-fig12-desc">Phase1でタイマー判定を先に済ませ、Phase2でノート順走査とコンボ・縮小判定を行う</desc>
+        <defs>
+          <marker id="sc-fig12-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#4b5563" />
+          </marker>
+        </defs>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- Phase 1 -->
+          <rect x="20" y="20" width="500" height="90" rx="6" fill="#fef3c7" stroke="#d97706" />
+          <text x="35" y="40" font-weight="bold">Phase 1: タイマースキル判定 (秒軸)</text>
+          <text x="35" y="60" font-size="10">各タイマースキルを <tspan font-family="monospace">floor(songDuration / count)</tspan> 回判定し、発動したら対応ノート位置に +value を予約</text>
+          <!-- タイムライン -->
+          <line x1="50" y1="85" x2="500" y2="85" stroke="#6b7280" stroke-width="1.5" />
+          <g fill="#d97706">
+            <circle cx="130" cy="85" r="5" /><circle cx="200" cy="85" r="5" /><circle cx="290" cy="85" r="5" />
+            <circle cx="350" cy="85" r="5" /><circle cx="430" cy="85" r="5" /><circle cx="490" cy="85" r="5" />
+          </g>
+          <text x="490" y="105" text-anchor="end" font-size="9" fill="#6b7280">→ ノートごとの加算値を一度確定</text>
+
+          <!-- 矢印 -->
+          <line x1="270" y1="115" x2="270" y2="135" stroke="#4b5563" stroke-width="1.5" marker-end="url(#sc-fig12-arrow)" />
+
+          <!-- Phase 2 -->
+          <rect x="20" y="140" width="500" height="100" rx="6" fill="#e0e7ff" stroke="#6366f1" />
+          <text x="35" y="160" font-weight="bold">Phase 2: ノート走査 (ノート軸)</text>
+          <text x="35" y="178" font-size="10">ノート 0 から N-1 まで順に処理し、各ノートで以下を集計:</text>
+          <text x="50" y="194" font-size="10">・基本スコア <tspan font-family="monospace">floor(属性値 × ライト倍率 × レート)</tspan></text>
+          <text x="50" y="210" font-size="10">・コンボスキル判定 / 縮小スキル判定 (カウントが規定値に達した時点)</text>
+          <text x="50" y="226" font-size="10">・縮小発動中ならスコア ×1.6 (追加分 0.6 倍) / Phase 1 で予約された加算を適用</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図12: 1 試行は「タイマー先行 → ノート走査」の 2 フェーズで処理される</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">9-1. 乱数と試行回数</h3>
+    <figure class="my-4">
+      <svg viewBox="0 0 540 180" role="img" aria-labelledby="sc-fig13-title sc-fig13-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig13-title">図13: XorShift128Plus と 5,000 試行の非同期処理</title>
+        <desc id="sc-fig13-desc">乱数生成器の内部状態と、チャンクごとに UI を解放する設計</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- 乱数生成器 -->
+          <g transform="translate(10,20)">
+            <text x="0" y="0" font-weight="bold">XorShift128Plus</text>
+            <rect x="0" y="10" width="70" height="30" rx="4" fill="#e0e7ff" stroke="#6366f1" />
+            <text x="35" y="30" text-anchor="middle" font-size="10">s0 (32bit)</text>
+            <rect x="80" y="10" width="70" height="30" rx="4" fill="#e0e7ff" stroke="#6366f1" />
+            <text x="115" y="30" text-anchor="middle" font-size="10">s1 (32bit)</text>
+            <text x="75" y="60" text-anchor="middle" font-size="10" fill="#6b7280">XOR / シフトで更新</text>
+            <text x="75" y="78" text-anchor="middle" font-size="10" fill="#6b7280">→ [0, 1) の浮動小数点</text>
+          </g>
+
+          <!-- シード -->
+          <g transform="translate(200,30)">
+            <text x="0" y="0" font-size="10" fill="#6b7280">シード = Date.now() または明示値</text>
+            <text x="0" y="14" font-size="10" fill="#6b7280">同じシードなら結果も同じ → 単体テストが書ける</text>
+          </g>
+
+          <!-- チャンク -->
+          <g transform="translate(10,110)">
+            <text x="0" y="0" font-weight="bold">5,000 試行を 50 件ずつチャンク分割</text>
+            <g>
+              <rect x="0" y="10" width="30" height="20" fill="#6366f1" opacity="0.8" />
+              <rect x="32" y="10" width="30" height="20" fill="#6366f1" opacity="0.8" />
+              <rect x="64" y="10" width="30" height="20" fill="#6366f1" opacity="0.8" />
+              <text x="100" y="25" font-size="10" fill="#4b5563">...</text>
+              <rect x="120" y="10" width="30" height="20" fill="#6366f1" opacity="0.8" />
+            </g>
+            <text x="0" y="52" font-size="10" fill="#6b7280">各チャンクの間に <tspan font-family="monospace">await new Promise(resolve =&gt; setTimeout(resolve, 0))</tspan></text>
+            <text x="0" y="68" font-size="10" fill="#6b7280">→ UI スレッドが固まらず、進捗バーも更新できる</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図13: XorShift128Plus の決定論性と、50 件ずつ処理を譲る非同期設計</figcaption>
+    </figure>
+    <aside class="bg-indigo-50 border-l-4 border-indigo-400 p-3 text-xs text-gray-700 rounded-r my-3">
+      デフォルト試行回数は <code class="text-xs font-mono">MC_ITERATIONS = 5,000</code>。UI では 1,000 / 5,000 / 10,000 から選択できます。
+      少ない試行回数は stddev の精度が落ちるので、分散評価が重要な場合は 5,000 以上を推奨します。
+    </aside>
+  </section>
+
+  <!-- 10. 最終スコアの組み立て -->
+  <section id="sec-final">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">10. 最終スコアの組み立て</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      1 試行のノートスコア合計 <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">baseScore</code> に、
+      アシスト・バッジの加算率と種類 9 ブローチの直接加算を合算して、最終スコアが決まります。
+    </p>
+    <figure class="my-4">
+      <svg viewBox="0 0 580 160" role="img" aria-labelledby="sc-fig14-title sc-fig14-desc" class="w-full h-auto max-w-[580px] mx-auto block">
+        <title id="sc-fig14-title">図14: 最終スコアの合算式</title>
+        <desc id="sc-fig14-desc">baseScore + floor(baseScore × (assist + badge)) + broachScoreBonus</desc>
+        <g font-family="system-ui, sans-serif" font-size="11" fill="#1f2937">
+          <!-- baseScore -->
+          <rect x="10" y="50" width="140" height="60" rx="6" fill="#f3f4f6" stroke="#9ca3af" />
+          <text x="80" y="72" text-anchor="middle" font-size="11" font-weight="bold">baseScore</text>
+          <text x="80" y="89" text-anchor="middle" font-size="10" fill="#6b7280">全ノート + スキル加算</text>
+          <text x="80" y="104" text-anchor="middle" font-weight="bold">163,242</text>
+
+          <text x="163" y="87" text-anchor="middle" font-size="20" fill="#6b7280">+</text>
+
+          <!-- assist + badge -->
+          <rect x="180" y="50" width="160" height="60" rx="6" fill="#f3e8ff" stroke="#a855f7" />
+          <text x="260" y="68" text-anchor="middle" font-size="10" font-weight="bold" fill="#6b21a8">floor(baseScore ×</text>
+          <text x="260" y="82" text-anchor="middle" font-size="10" fill="#6b21a8">(assist + badge))</text>
+          <text x="260" y="104" text-anchor="middle" font-weight="bold">+ 44,075</text>
+
+          <text x="353" y="87" text-anchor="middle" font-size="20" fill="#6b7280">+</text>
+
+          <!-- broachScoreBonus -->
+          <rect x="370" y="50" width="120" height="60" rx="6" fill="#fef3c7" stroke="#d97706" />
+          <text x="430" y="72" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400e">broach</text>
+          <text x="430" y="88" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400e">ScoreBonus</text>
+          <text x="430" y="104" text-anchor="middle" font-weight="bold">0</text>
+
+          <text x="503" y="87" text-anchor="middle" font-size="20" fill="#6b7280">=</text>
+
+          <!-- 合計 -->
+          <rect x="510" y="50" width="60" height="60" rx="6" fill="#bbf7d0" stroke="#16a34a" />
+          <text x="540" y="75" text-anchor="middle" font-size="10" fill="#14532d">最終</text>
+          <text x="540" y="98" text-anchor="middle" font-weight="bold">207,317</text>
+
+          <!-- キャプション -->
+          <text x="290" y="140" text-anchor="middle" font-size="10" fill="#6b7280">例: baseScore=163,242、 assist=12% + badge=15% (27%)、種類 9 ブローチなし</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図14: 最終スコア = <code class="text-xs font-mono">baseScore + floor(baseScore × (assist + badge)) + broachScoreBonus</code></figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">10-1. 加算率の組み合わせ</h3>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-max text-xs border-collapse border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-2 py-1 text-left">条件</th>
+            <th class="border border-gray-300 px-2 py-1">加算率</th>
+            <th class="border border-gray-300 px-2 py-1">加算値</th>
+            <th class="border border-gray-300 px-2 py-1">最終スコア</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="border border-gray-300 px-2 py-1">なし</td><td class="border border-gray-300 px-2 py-1 text-right">0%</td><td class="border border-gray-300 px-2 py-1 text-right">0</td><td class="border border-gray-300 px-2 py-1 text-right">163,242</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">SCOREUP アシストのみ</td><td class="border border-gray-300 px-2 py-1 text-right">12%</td><td class="border border-gray-300 px-2 py-1 text-right">19,589</td><td class="border border-gray-300 px-2 py-1 text-right">182,831</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1">SCOREUP バッジ (15) のみ</td><td class="border border-gray-300 px-2 py-1 text-right">15%</td><td class="border border-gray-300 px-2 py-1 text-right">24,486</td><td class="border border-gray-300 px-2 py-1 text-right">187,728</td></tr>
+          <tr class="bg-gray-50"><td class="border border-gray-300 px-2 py-1 font-bold">アシスト + バッジ (15)</td><td class="border border-gray-300 px-2 py-1 text-right font-bold">27%</td><td class="border border-gray-300 px-2 py-1 text-right font-bold">44,075</td><td class="border border-gray-300 px-2 py-1 text-right font-bold">207,317</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <aside class="bg-indigo-50 border-l-4 border-indigo-400 p-3 text-xs text-gray-700 rounded-r my-3">
+      アシストとバッジは<strong>加算率を合算してから</strong>乗算します。個別に適用してから足すよりも小数切り捨て誤差が小さくなります。
+      種類 9 のブローチスコアボーナスは、この加算率の外側で <strong>最後に直接加算</strong>されます（バッジ倍率の影響を受けない）。
+    </aside>
+  </section>
+
+  <!-- 11. 結果の読み方 -->
+  <section id="sec-histogram">
+    <h2 class="text-xl font-bold text-indigo-700 mt-10 mb-3 border-b border-indigo-100 pb-1">11. 結果の読み方（分布と統計）</h2>
+    <p class="text-sm text-gray-800 leading-relaxed mb-3">
+      スコア計算ページは 5,000 試行分のスコア配列から、以下の統計値とヒストグラムを算出します。
+      それぞれの値の読み方をまとめます。
+    </p>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">11-1. ヒストグラム</h3>
+    <figure class="my-4">
+      <svg viewBox="0 0 540 220" role="img" aria-labelledby="sc-fig15-title sc-fig15-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig15-title">図15: スコア分布ヒストグラムの見方</title>
+        <desc id="sc-fig15-desc">25 bin のヒストグラム。mean を赤線で、min / max / p90 を矢印で示す</desc>
+        <g font-family="system-ui, sans-serif" font-size="10" fill="#1f2937">
+          <!-- 軸 -->
+          <line x1="50" y1="170" x2="500" y2="170" stroke="#1f2937" stroke-width="1" />
+          <line x1="50" y1="30" x2="50" y2="170" stroke="#1f2937" stroke-width="1" />
+
+          <!-- バー (25 bin、釣鐘状) -->
+          <g fill="#6366f1" opacity="0.8">
+            <rect x="52" y="160" width="16" height="10" />
+            <rect x="70" y="155" width="16" height="15" />
+            <rect x="88" y="148" width="16" height="22" />
+            <rect x="106" y="138" width="16" height="32" />
+            <rect x="124" y="125" width="16" height="45" />
+            <rect x="142" y="110" width="16" height="60" />
+            <rect x="160" y="90" width="16" height="80" />
+            <rect x="178" y="70" width="16" height="100" />
+            <rect x="196" y="55" width="16" height="115" />
+            <rect x="214" y="45" width="16" height="125" />
+            <rect x="232" y="40" width="16" height="130" />
+            <rect x="250" y="35" width="16" height="135" />
+            <rect x="268" y="40" width="16" height="130" />
+            <rect x="286" y="50" width="16" height="120" />
+            <rect x="304" y="60" width="16" height="110" />
+            <rect x="322" y="75" width="16" height="95" />
+            <rect x="340" y="95" width="16" height="75" />
+            <rect x="358" y="115" width="16" height="55" />
+            <rect x="376" y="128" width="16" height="42" />
+            <rect x="394" y="140" width="16" height="30" />
+            <rect x="412" y="148" width="16" height="22" />
+            <rect x="430" y="155" width="16" height="15" />
+            <rect x="448" y="160" width="16" height="10" />
+            <rect x="466" y="165" width="16" height="5" />
+            <rect x="484" y="168" width="16" height="2" />
+          </g>
+
+          <!-- 平均線 -->
+          <line x1="258" y1="25" x2="258" y2="170" stroke="#ef4444" stroke-width="2" stroke-dasharray="3,2" />
+          <text x="258" y="20" text-anchor="middle" font-size="10" fill="#ef4444" font-weight="bold">平均</text>
+
+          <!-- 矢印 (min / p90 / max) -->
+          <g fill="#6b7280" font-size="9">
+            <text x="50" y="190" text-anchor="middle">min</text>
+            <text x="390" y="190" text-anchor="middle">p90</text>
+            <text x="500" y="190" text-anchor="middle">max</text>
+          </g>
+
+          <!-- 軸ラベル -->
+          <text x="275" y="210" text-anchor="middle" font-size="10" fill="#6b7280">スコア</text>
+          <text x="30" y="100" text-anchor="middle" font-size="10" fill="#6b7280" transform="rotate(-90 30 100)">試行数</text>
+
+          <!-- タイトル -->
+          <text x="275" y="15" text-anchor="middle" font-size="11" font-weight="bold">スコア分布 (25 ビン / 5,000 試行)</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図15: ヒストグラムは中央が厚く両端が細い釣鐘状になるのが典型</figcaption>
+    </figure>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">11-2. 統計値の読み方</h3>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-max text-xs border-collapse border border-gray-300">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border border-gray-300 px-2 py-1 text-left">値</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">意味</th>
+            <th class="border border-gray-300 px-2 py-1 text-left">使い方</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="border border-gray-300 px-2 py-1 font-bold">平均 (mean)</td><td class="border border-gray-300 px-2 py-1">5,000 試行の単純平均</td><td class="border border-gray-300 px-2 py-1">期待スコアの目安</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 font-bold">中央値 (median)</td><td class="border border-gray-300 px-2 py-1">並べたときに中央に来る値</td><td class="border border-gray-300 px-2 py-1">外れ値に影響されない代表値</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 font-bold">標準偏差 (stddev)</td><td class="border border-gray-300 px-2 py-1">ばらつきの大きさ</td><td class="border border-gray-300 px-2 py-1">小さいほど「安定して出る」デッキ</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 font-bold">90% 点 (p90)</td><td class="border border-gray-300 px-2 py-1">5,000 試行中 90% がこの値以下</td><td class="border border-gray-300 px-2 py-1">「上振れ狙い」評価に使う</td></tr>
+          <tr><td class="border border-gray-300 px-2 py-1 font-bold">MC 最小 / 最大</td><td class="border border-gray-300 px-2 py-1">5,000 試行の最低値 / 最高値</td><td class="border border-gray-300 px-2 py-1">理論値との差を確認</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-base font-bold text-gray-800 mt-6 mb-2">11-3. 縮小スキル 1 枚 vs 2 枚</h3>
+    <figure class="my-4">
+      <svg viewBox="0 0 540 220" role="img" aria-labelledby="sc-fig16-title sc-fig16-desc" class="w-full h-auto max-w-[540px] mx-auto block">
+        <title id="sc-fig16-title">図16: 縮小スキル 1 枚と 2 枚の分布比較</title>
+        <desc id="sc-fig16-desc">同じ軸上に 2 枚の分布を半透明で重ね、stddev の違いを可視化</desc>
+        <g font-family="system-ui, sans-serif" font-size="10" fill="#1f2937">
+          <!-- 軸 -->
+          <line x1="50" y1="170" x2="500" y2="170" stroke="#1f2937" stroke-width="1" />
+          <line x1="50" y1="30" x2="50" y2="170" stroke="#1f2937" stroke-width="1" />
+
+          <!-- 1枚 (幅広・平たい釣鐘) -->
+          <path d="M 60 170 Q 90 168 120 160 Q 160 140 200 105 Q 240 75 280 80 Q 320 90 360 120 Q 400 150 440 165 Q 470 170 490 170" fill="#fbbf24" fill-opacity="0.3" stroke="#d97706" stroke-width="1.5" />
+          <text x="200" y="130" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400e">縮小 1 枚</text>
+
+          <!-- 2枚 (狭く高い釣鐘) -->
+          <path d="M 180 170 Q 210 155 240 120 Q 260 85 285 50 Q 310 85 330 120 Q 360 155 390 170" fill="#6366f1" fill-opacity="0.4" stroke="#4338ca" stroke-width="1.5" />
+          <text x="340" y="70" text-anchor="start" font-size="10" font-weight="bold" fill="#3730a3">縮小 2 枚</text>
+
+          <!-- 矢印で stddev 比較 -->
+          <text x="275" y="205" text-anchor="middle" font-size="10" fill="#6b7280">スコア →</text>
+
+          <text x="275" y="15" text-anchor="middle" font-size="11" font-weight="bold">縮小スキル 2 枚は平均↑ + stddev↓ （区間マージで飽和）</text>
+        </g>
+      </svg>
+      <figcaption class="text-center text-xs text-gray-500 mt-1">図16: 縮小 2 枚はカバー率が飽和して最悪ケースも底上げされるため、分布が狭く高くなる</figcaption>
+    </figure>
+    <p class="text-sm text-gray-800 leading-relaxed">
+      単純な算術期待値では「縮小 2 枚目は 1 枚目と同じ効果」に見えますが、実際は区間マージで<strong>100 % 近くまで飽和すると伸びが鈍る</strong>一方、
+      <strong>最悪ケースが底上げされて stddev が下がる</strong>ため、「上振れは抑えられるが安定性が増す」動きになります。
+      MC シミュレーションを使うと、この挙動がヒストグラム上で直接確認できます。
+    </p>
+  </section>
+
+  <p class="mt-12 text-sm">
+    <a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">← スコア計算に戻る</a>
+  </p>
+</BaseLayout>
