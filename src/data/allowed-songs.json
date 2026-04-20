@@ -1,0 +1,4 @@
+{
+  "note": "表示を許可する楽曲 ID のリスト。空配列の場合は制限なし (全件表示)。ID は /songs/ の URL (/songs/{id}/) や tests/fixtures/songs.json から確認できる。",
+  "allowedIds": [62, 144, 50, 48, 145, 60, 117]
+}

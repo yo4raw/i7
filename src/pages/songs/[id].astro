@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson.ts';
 import { ATTR_BADGE_BG } from '../../lib/constants';
 import { attrDonutSvg } from '../../lib/donutChart';
 import { songImageUrl, starsText } from '../../lib/ui';
 
 export async function getStaticPaths() {
-  const allSongs = filterValidSongs(await fetchSongsJson());
+  const allSongs = filterAllowedSongs(filterValidSongs(await fetchSongsJson()));
   return allSongs.map((song: any) => ({
     params: { id: String(song.id) },
     props: { song },

@@ -1,4 +1,5 @@
 import { SPREADSHEET_ID, extractCellValue, fetchSheetRaw, type GVizCell } from './gviz.ts';
+import allowedSongsConfig from '../../data/allowed-songs.json';
 
 export interface SongNoteGroup {
   shout_white: number; //shout属性値 * 0.025
@@ -127,6 +128,20 @@ function convertRow(cells: (GVizCell | null)[]): Song {
  */
 export function filterValidSongs(songs: Song[]): Song[] {
   return songs.filter(s => s.category && s.artist && s.notes_count);
+}
+
+const ALLOWED_SONG_IDS: ReadonlySet<number> | null =
+  Array.isArray(allowedSongsConfig.allowedIds) && allowedSongsConfig.allowedIds.length > 0
+    ? new Set(allowedSongsConfig.allowedIds as number[])
+    : null;
+
+/**
+ * `src/data/allowed-songs.json` の allowedIds に含まれる楽曲のみに絞り込む。
+ * allowedIds が空の場合は制限なし（全件通過）。
+ */
+export function filterAllowedSongs(songs: Song[]): Song[] {
+  if (ALLOWED_SONG_IDS === null) return songs;
+  return songs.filter(s => s.id != null && ALLOWED_SONG_IDS.has(s.id));
 }
 
 /**
