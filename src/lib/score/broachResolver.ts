@@ -74,8 +74,7 @@ function checkBroachCondition(
 
     case BROACH_TYPE.IDOL_ATTR_COUNT: {
       if (!broach.idol || !broach.attribute) return false;
-      const required = broach.limit ?? 1;
-      return countIdolAttrMatch(deck, broach.idol, broach.attribute) >= required;
+      return countIdolAttrMatch(deck, broach.idol, broach.attribute) >= 1;
     }
 
     case BROACH_TYPE.ATTRIBUTE_UP_LIMITED:
@@ -99,7 +98,9 @@ function checkBroachCondition(
 
 /**
  * デッキ全体のブローチを条件判定して返す。
- * デッキ内発動上限（種類6/7）も処理する。
+ * デッキ内発動上限（種類5/6/7）も処理する。
+ *  - 種類 6 / 7: broach_type 単位で limit 枚まで
+ *  - 種類 5: broach.id 単位で limit 枚まで（同じブローチの重複装備を制限）
  * @returns key = slotIndex (0-5), value = ResolvedBroach[]
  */
 export function resolveDeckBroachs(
@@ -111,8 +112,10 @@ export function resolveDeckBroachs(
   const result = new Map<number, ResolvedBroach[]>();
 
   // Phase 1: 各カードのブローチを条件判定（上限以外）
-  // デッキ内上限のカウンター: key = broach_type
-  const limitCounters = new Map<number, { limit: number; count: number }>();
+  // デッキ内上限のカウンター:
+  //  - 種類 6 / 7: broach_type 単位 (同種全体で limit 枚まで)
+  //  - 種類 5 (IDOL_ATTR_COUNT): broach.id 単位 (同じブローチの重複装備で limit 枚まで)
+  const limitCounters = new Map<string, { limit: number; count: number }>();
 
   // 全スロットのブローチを先に収集（上限処理のため）
   interface PendingBroach {
@@ -141,16 +144,23 @@ export function resolveDeckBroachs(
     }
   }
 
-  // Phase 2: デッキ内発動上限の処理（種類6, 7）
-  for (const p of pending) {
+  // Phase 2: デッキ内発動上限の処理（種類 5 / 6 / 7）
+  const getLimitKey = (p: PendingBroach): string | null => {
     const type = p.broach.broach_type;
-    if (!p.conditionMet) continue;
-
     if (type === BROACH_TYPE.ATTRIBUTE_UP_LIMITED || type === BROACH_TYPE.ALL_ATTRIBUTES) {
-      const limit = p.broach.limit ?? Infinity;
-      if (!limitCounters.has(type)) {
-        limitCounters.set(type, { limit, count: 0 });
-      }
+      return `type:${type}`;
+    }
+    if (type === BROACH_TYPE.IDOL_ATTR_COUNT && p.broach.id != null) {
+      return `id:${p.broach.id}`;
+    }
+    return null;
+  };
+
+  for (const p of pending) {
+    if (!p.conditionMet) continue;
+    const key = getLimitKey(p);
+    if (key != null && !limitCounters.has(key)) {
+      limitCounters.set(key, { limit: p.broach.limit ?? Infinity, count: 0 });
     }
   }
 
@@ -160,12 +170,15 @@ export function resolveDeckBroachs(
     let active = p.conditionMet;
 
     // デッキ内上限チェック
-    if (active && (type === BROACH_TYPE.ATTRIBUTE_UP_LIMITED || type === BROACH_TYPE.ALL_ATTRIBUTES)) {
-      const counter = limitCounters.get(type)!;
-      if (counter.count < counter.limit) {
-        counter.count++;
-      } else {
-        active = false;
+    if (active) {
+      const key = getLimitKey(p);
+      if (key != null) {
+        const counter = limitCounters.get(key)!;
+        if (counter.count < counter.limit) {
+          counter.count++;
+        } else {
+          active = false;
+        }
       }
     }
 
