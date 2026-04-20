@@ -65,14 +65,19 @@ interface FixedBroach {
 ```typescript
 interface SharedBroach {
   id: number;
-  name: string;      // 表示名（例: "ALL750", "Shout700"）
-  shout: number;     // Shout加算値
-  beat: number;      // Beat加算値
-  melody: number;    // Melody加算値
+  name: string;                                  // 表示名（例: "ALL750", "Shout700"）
+  shout: number;                                 // Shout加算値
+  beat: number;                                  // Beat加算値
+  melody: number;                                // Melody加算値
+  targetAttribute?: 'Shout' | 'Beat' | 'Melody'; // 条件付きブローチのみ設定
 }
 ```
 
+`targetAttribute` を持つブローチは、装着カード自身の属性ではなく **デッキ内で対応属性を持つカード枚数** に応じて加算値が倍化する（例: `targetAttribute: 'Shout'` かつデッキに Shout 属性 3 枚なら `shout × 3` を装着カードに加算）。詳細は `score_calc_spec.md §3-4` を参照。
+
 ### 共有ブローチ一覧
+
+#### 全属性ブローチ
 
 | 名前 | Shout | Beat | Melody |
 |------|-------|------|--------|
@@ -81,12 +86,37 @@ interface SharedBroach {
 | ALL500 | 500 | 500 | 500 |
 | ALL300 | 300 | 300 | 300 |
 | ALL200 | 200 | 200 | 200 |
+
+#### 単属性ブローチ
+
+| 名前 | Shout | Beat | Melody |
+|------|-------|------|--------|
+| Shout1100 | 1100 | 0 | 0 |
+| Shout1000 | 1000 | 0 | 0 |
+| Shout900 | 900 | 0 | 0 |
 | Shout700 | 700 | 0 | 0 |
+| Shout500 | 500 | 0 | 0 |
 | Shout400 | 400 | 0 | 0 |
+| Beat1100 | 0 | 1100 | 0 |
+| Beat1000 | 0 | 1000 | 0 |
+| Beat900 | 0 | 900 | 0 |
 | Beat700 | 0 | 700 | 0 |
+| Beat500 | 0 | 500 | 0 |
 | Beat400 | 0 | 400 | 0 |
+| Melody1100 | 0 | 0 | 1100 |
+| Melody1000 | 0 | 0 | 1000 |
+| Melody900 | 0 | 0 | 900 |
 | Melody700 | 0 | 0 | 700 |
+| Melody500 | 0 | 0 | 500 |
 | Melody400 | 0 | 0 | 400 |
+
+#### 条件付きブローチ（属性枚数分）
+
+| 名前 | Shout | Beat | Melody | targetAttribute |
+|------|-------|------|--------|-----------------|
+| S属性枚数分Shout+300 | 300 | 0 | 0 | Shout |
+| B属性枚数分Beat+300 | 0 | 300 | 0 | Beat |
+| M属性枚数分Melody+300 | 0 | 0 | 300 | Melody |
 
 ## 6. ブローチ種類（broach_type）
 
