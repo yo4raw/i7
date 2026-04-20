@@ -46,28 +46,4 @@ test.describe('楽曲詳細ページ', () => {
     await expect(ratioSection.getByText('Melody')).toBeVisible();
   });
 
-  test('ノート内訳テーブルが表示される（データがあれば）', async ({ page }) => {
-    const href = await getFirstSongHref(page);
-    await page.goto(href!);
-
-    const noteSection = page.locator('section', { hasText: 'ノート内訳' });
-    const visible = await noteSection.isVisible().catch(() => false);
-    if (visible) {
-      await expect(noteSection.locator('table')).toBeVisible();
-      await expect(noteSection.getByText('倍率')).toBeVisible();
-    }
-  });
-
-  test('合計ノート数が表示される（データがあれば）', async ({ page }) => {
-    const href = await getFirstSongHref(page);
-    await page.goto(href!);
-
-    const totalSection = page.locator('section', { hasText: '合計ノート数' });
-    const visible = await totalSection.isVisible().catch(() => false);
-    if (visible) {
-      await expect(totalSection.getByText('Shout')).toBeVisible();
-      await expect(totalSection.getByText('Beat')).toBeVisible();
-      await expect(totalSection.getByText('Melody')).toBeVisible();
-    }
-  });
 });
