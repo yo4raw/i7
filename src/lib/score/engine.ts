@@ -208,15 +208,14 @@ export function computeTeam(
 }
 
 /**
- * SCOREUPアシスト / SCOREUPバッジの加算率をまとめて最終スコアに反映する。
- * 仕様: 基本スコア + floor(基本スコア × (assistRate + badgeRate)) + broachScoreBonus
+ * SCOREUPアシスト / SCOREUPバッジを最終スコアに乗算で反映する。
+ * 仕様: floor(基本スコア × (1 + assistRate) × (1 + badgeRate/100)) + broachScoreBonus
  */
 function applyFinalBonus(baseTotal: number, team: ComputedTeam, options?: ScoreOptions): number {
-  const assistRate = options?.scoreUpAssist ? SCOREUP_ASSIST_RATE : 0;
+  const assistMult = options?.scoreUpAssist ? 1 + SCOREUP_ASSIST_RATE : 1;
   const badgeRateRaw = options?.scoreUpBadgeRate ?? 0;
-  const badgeRate = badgeRateRaw > 0 ? badgeRateRaw / 100 : 0;
-  const bonus = Math.floor(baseTotal * (assistRate + badgeRate));
-  return baseTotal + bonus + team.broachScoreBonus;
+  const badgeMult = badgeRateRaw > 0 ? 1 + badgeRateRaw / 100 : 1;
+  return Math.floor(baseTotal * assistMult * badgeMult) + team.broachScoreBonus;
 }
 
 /** 1 ノーツのスコアを計算（属性値 × 倍率 × レートをまとめて floor） */
