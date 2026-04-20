@@ -178,7 +178,7 @@ const base = import.meta.env.BASE_URL;
           </table>
         </div>
         <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
-        <p class="text-xs text-gray-400 mt-2">※ 最初の20ノーツは縮小の計算対象外です</p>
+        <p id="shrink-exclusion-note" class="text-xs text-gray-400 mt-2 hidden">※ 最初の<span id="shrink-exclusion-count" class="font-medium">0</span>ノーツは縮小の計算対象外です</p>
       </details>
 
       <!-- スコア内訳（計算ボタン押下前に算出） -->
@@ -406,7 +406,7 @@ const base = import.meta.env.BASE_URL;
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
-    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, runSimulation, flattenNotes, getCenterSkillRate } from '../../lib/score/engine';
+    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS } from '../../lib/score/constants';
     import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
@@ -1027,7 +1027,8 @@ const base = import.meta.env.BASE_URL;
       }
 
       const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
-      const notes = flattenNotes(selectedSong, 42);
+      const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
+      const notes = flattenNotes(selectedSong, 42, exclusion);
 
       // スコア内訳表示
       $('score-breakdown').classList.remove('hidden');
@@ -1112,13 +1113,19 @@ const base = import.meta.env.BASE_URL;
 
     function updateShrinkCoverage(team: ComputedTeam, song: Song) {
       const offset = Number(($('shrink-offset-input') as HTMLInputElement).value) || 0;
-      const n20 = song.notes_20;
-      const notes20Count = n20
-        ? (n20.shout_white || 0) + (n20.shout_color || 0)
-          + (n20.beat_white || 0) + (n20.beat_color || 0)
-          + (n20.melody_white || 0) + (n20.melody_color || 0)
-        : 0;
-      const shrinkCoverage = calcShrinkCoverage(team, song.notes_count || 0, offset, notes20Count);
+      const exclusion = computeShrinkExclusion(team, computeGroupSizes(song));
+
+      // 先頭除外ノート数の動的表示 (縮小スキル 0 枚時は非表示)
+      const noteEl = $('shrink-exclusion-note');
+      const countEl = $('shrink-exclusion-count');
+      if (exclusion.totalExcluded > 0) {
+        countEl.textContent = String(exclusion.totalExcluded);
+        noteEl.classList.remove('hidden');
+      } else {
+        noteEl.classList.add('hidden');
+      }
+
+      const shrinkCoverage = calcShrinkCoverage(team, song.notes_count || 0, offset, exclusion.totalExcluded);
       if (shrinkCoverage) {
         $('shrink-coverage-row').classList.remove('hidden');
         $('shrink-expected-row').classList.remove('hidden');
@@ -1193,7 +1200,8 @@ const base = import.meta.env.BASE_URL;
       $('progress-container').classList.remove('hidden');
 
       const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
-      const notes = flattenNotes(selectedSong, 42);
+      const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
+      const notes = flattenNotes(selectedSong, 42, exclusion);
 
       const iterations = Number(($('mc-iterations-select') as HTMLSelectElement).value) || MC_ITERATIONS;
 

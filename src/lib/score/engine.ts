@@ -226,7 +226,9 @@ function calcNoteScore(appeal: number, note: FlatNote): number {
 /**
  * 縮小カバー率を計算する（100%発動 + 確率考慮の期待値）
  *
- * @param excludeHeadCount 先頭から縮小発動判定対象外とするノート数 (仕様: notes_20 の 21 ノートを除外)
+ * @param excludeHeadCount 先頭から縮小発動判定対象外とするノート数。
+ *   通常は {@link computeShrinkExclusion} の `totalExcluded` を渡す
+ *   (= max(notes_20サイズ, デッキ縮小スキル count の最大値))。
  */
 export function calcShrinkCoverage(
   team: ComputedTeam,
@@ -262,7 +264,7 @@ export function calcShrinkCoverage(
   if (effectiveSeconds <= 0) return zero;
   if (notesCount <= 0) return { ...zero, effectiveSeconds };
 
-  // 縮小判定対象ノート数 (notes_20 を除外)
+  // 縮小判定対象ノート数 (先頭除外分 excludeHeadCount を引いたもの)
   const eligibleCount = Math.max(0, notesCount - excludeHeadCount);
 
   // 生の合計時間（区間マージ前、songDuration でのキャップ無し）
@@ -399,8 +401,8 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
       if (!skill || skill.isTimer) continue;
       if (skill.count <= 0) continue;
 
-      // 判定縮小スキルは notes_20 のノートでは発動判定対象外 (仕様)
-      if (skill.isShrink && note.group === 'notes_20') continue;
+      // 判定縮小スキルは先頭除外ノート (note.excluded=true) では発動判定対象外
+      if (skill.isShrink && note.excluded) continue;
 
       counters[c]++;
       if (counters[c] >= skill.count) {
@@ -425,7 +427,7 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
     }
 
     const noteScore = calcNoteScore(team[note.attribute], note);
-    const shrinkExtra = (shrinkActive && note.group !== 'notes_20')
+    const shrinkExtra = (shrinkActive && !note.excluded)
       ? Math.floor(noteScore * (SHRINK_MULTIPLIER - 1.0))
       : 0;
 
@@ -466,17 +468,16 @@ export function calcExpectedScore(
   }
   scoreUpExpected = Math.floor(scoreUpExpected);
 
-  // 縮小期待値: notes_20 除外後の楽曲スコア × 縮小追加倍率 × 期待カバー率
-  // notes_20 のノートは縮小発動対象外 (judgeは縮小されない) のため、
-  // 期待値ベースも notes_20 を除外したスコアで計算する
-  const notes20Count = notes.filter(n => n.group === 'notes_20').length;
+  // 縮小期待値: 先頭除外ノート (note.excluded) を除いた楽曲スコア × 縮小追加倍率 × 期待カバー率
+  // excluded なノートは縮小発動判定・効果適用の対象外なので、期待値ベースも除外スコアで計算する
+  const excludedCount = notes.filter(n => n.excluded).length;
   let eligibleBaseScore = 0;
   for (const note of notes) {
-    if (note.group === 'notes_20') continue;
+    if (note.excluded) continue;
     eligibleBaseScore += calcNoteScore(team[note.attribute], note);
   }
   let shrinkExpected = 0;
-  const coverage = calcShrinkCoverage(team, notesCount, 0, notes20Count);
+  const coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount);
   if (coverage && coverage.effectiveSeconds > 0) {
     shrinkExpected = Math.floor(
       eligibleBaseScore * (SHRINK_MULTIPLIER - 1.0) * coverage.expectedCoverageRate,
@@ -536,8 +537,8 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       if (!skill || skill.isTimer) continue;
       if (skill.count <= 0) continue;
 
-      // 判定縮小スキルは notes_20 のノートでは発動判定対象外 (仕様)
-      if (skill.isShrink && note.group === 'notes_20') continue;
+      // 判定縮小スキルは先頭除外ノート (note.excluded=true) では発動判定対象外
+      if (skill.isShrink && note.excluded) continue;
 
       counters[c]++;
       if (counters[c] >= skill.count) {
@@ -567,14 +568,14 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
     }
 
     const noteScoreBase = calcNoteScore(team[note.attribute], note);
-    const shrinkExtra = (shrinkActive && note.group !== 'notes_20')
+    const shrinkExtra = (shrinkActive && !note.excluded)
       ? Math.floor(noteScoreBase * (SHRINK_MULTIPLIER - 1.0))
       : 0;
 
     totalScore += noteScoreBase + shrinkExtra + scoreUpSum;
 
-    // 判定縮小スキルのスコア寄与を発動中のカードに按分（notes_20は対象外）
-    if (shrinkActive && note.group !== 'notes_20' && shrinkExtra > 0) {
+    // 判定縮小スキルのスコア寄与を発動中のカードに按分（先頭除外ノートは対象外）
+    if (shrinkActive && !note.excluded && shrinkExtra > 0) {
       let activeShrinkCount = 0;
       for (let c = 0; c < cardCount; c++) {
         if (shrinkEndNotes[c] > n) activeShrinkCount++;
@@ -670,3 +671,8 @@ export async function runSimulation(
 }
 
 export { flattenNotes } from './noteFlattener';
+export {
+  computeGroupSizes,
+  computeShrinkExclusion,
+  type ShrinkExclusion,
+} from './shrinkExclusion';
