@@ -238,13 +238,16 @@ shrinkActive = ∃c: shrinkEndNotes[c] > n
 
 > コミット `ae53bb8` で誤用していた `sp_time`（特訓時間）から `skill.value` に修正済。
 
-## 7. ノーツスコアの合計とバッジ適用
+## 7. ノーツスコアの合計とアシスト / バッジ適用
 
 ```
 total = Σ (ノーツ得点 + shrinkExtra + scoreUpSum)   // ノーツ順
-最終スコア = floor(total × badgeMult) + broachScoreBonus
-  where badgeMult = 1 + scoreUpBadgeRate / 100
+最終スコア = floor(total × assistMult × badgeMult) + broachScoreBonus
+  where assistMult = scoreUpAssist ? 1 + SCOREUP_ASSIST_RATE : 1   (例: true → 1.12)
+        badgeMult  = 1 + scoreUpBadgeRate / 100                    (例: 15 → 1.15)
 ```
+
+アシストとバッジは**乗算で重ねる**。例えばアシスト ON + バッジ 15% では `×1.12 × 1.15 = ×1.288` となる（加算ではない）。
 
 `scoreUpBadgeRate` は `ScoreOptions` で渡される %（例: 15 なら ×1.15）。0 または未指定の場合はバッジなし（×1.0）。
 
@@ -269,7 +272,7 @@ total = Σ (ノーツ得点 + shrinkExtra + scoreUpSum)   // ノーツ順
    - 縮小アクティブ判定
    - ノーツ得点・shrinkExtra・scoreUpSum を合算
    - 縮小 extra を発動中カードで按分して `contributions[c]` に記録（寄与率可視化用）
-3. **最終スコア**: `floor(totalScore × badgeMult) + broachScoreBonus`
+3. **最終スコア**: `floor(totalScore × assistMult × badgeMult) + broachScoreBonus`
 
 ### 8-4. `runSimulation` の流れ
 
