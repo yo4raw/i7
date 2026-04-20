@@ -319,7 +319,7 @@ baseScore = Σ calcNoteScore(getAppeal(team, attr, assist), note)
 ```
 for 各 scoreUp/timerScoreUp スキル:
   denom = isTimer ? songDuration : notesCount
-  scoreUpExpected += (denom / skill.count) × (skill.per / 100) × skill.value
+  scoreUpExpected += floor(denom / skill.count) × (skill.per / 100) × skill.value
 scoreUpExpected = floor(scoreUpExpected)
 ```
 
@@ -377,7 +377,7 @@ rawExpectedCoverageRate = rawExpectedCoveredSeconds / effectiveSeconds  // 100% 
 |------------------------------|-------------|----------|-----------|------|
 | `スコアアップ（タイマー）` | `timerScoreUp` | true | false | 一定秒毎に発動、発動タイミングのノート 1 個に `value` 点を 1 回加算 |
 | `判定縮小スコアアップ` | `shrink` | false | true | N ノーツ毎に発動、`value` 秒間縮小効果 |
-| `MISS→Good` / `null` | — | — | — | シミュ対象外（除外） |
+| `MISS→Good` / `BAD以上をPerfectに変更` / `null` | — | — | — | シミュ対象外（除外） |
 | その他（スコアアップ） | `scoreUp` | false | false | N ノーツ毎に発動、発動タイミングのノート 1 個に `value` 点を 1 回加算 |
 
 スキルレベル 1〜5 は `getApSkillLevel(card, skillLevel)` で取得し、`count / per / value` が変化する。
@@ -389,7 +389,7 @@ rawExpectedCoverageRate = rawExpectedCoveredSeconds / effectiveSeconds  // 100% 
 | 型 | 用途 |
 |----|------|
 | `FlatNote` | 1 ノーツ `{ attribute, type, group }` |
-| `CardSkill` | スキル情報 `{ skillType, count, per, value, isTimer, isShrink, spTime }`。`spTime` はカードの **特訓可能回数**（「特訓済み」は `spTime` 分の特訓完了状態を意味し、`TRAIN_BONUS` が属性値に加算されている） |
+| `CardSkill` | スキル情報 `{ cardIndex, skillType, originalType, count, per, value, rate, isTimer, isShrink, spTime }`。`rate` は判定縮小スキルの倍率（Lv 毎に 1.2〜1.6、非縮小スキルは 0）。`originalType` は表示用の元 `ap_skill_type`（正規化後）。`spTime` はカードの **特訓可能回数**（「特訓済み」は `spTime` 分の特訓完了状態を意味し、`TRAIN_BONUS` が属性値に加算されている） |
 | `DeckCard` | デッキ内カード情報（属性値＋ブローチ＋スキル） |
 | `ComputedTeam` | チーム属性値（`Shout / ShoutAssisted` 等を含む） |
 | `SimulationResult` | MC 結果 |
