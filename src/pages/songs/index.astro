@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson.ts';
 
-const allSongs = filterValidSongs(await fetchSongsJson());
+const allSongs = filterAllowedSongs(filterValidSongs(await fetchSongsJson()));
 const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as string[];
 const base = import.meta.env.BASE_URL;
 ---
@@ -351,8 +351,8 @@ const base = import.meta.env.BASE_URL;
 
     // クライアントサイドデータリフレッシュ
     import { refreshData } from '../../lib/data/clientRefresh';
-    import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson';
-    refreshData('songs', async () => filterValidSongs(await fetchSongsJson()), (fresh) => {
+    import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson';
+    refreshData('songs', async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())), (fresh) => {
       allSongs = fresh as Song[];
       applyFilters();
     });

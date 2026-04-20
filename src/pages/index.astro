@@ -1,15 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
-import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterAllowedSongs } from '../lib/data/fetchSongsJson.ts';
 import { fetchEventsCsv } from '../lib/data/fetchEventsCsv.ts';
 import { RARITIES, RARITY_BADGE_CLASSES, SITE_NAME } from '../lib/constants.ts';
 
-const [cards, songs, events] = await Promise.all([
+const [cards, songsRaw, events] = await Promise.all([
   fetchCardsJson(),
   fetchSongsJson(),
   fetchEventsCsv(),
 ]);
+const songs = filterAllowedSongs(songsRaw);
 
 const rarityCounts: Record<string, number> = {};
 for (const card of cards as Array<{ rarity?: string }>) {

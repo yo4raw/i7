@@ -1,14 +1,14 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson.ts';
 import { CARD_THUMB_BASE_URL } from '../../lib/constants';
 
 const [allCards, allSongsRaw] = await Promise.all([
   fetchCardsJson(),
   fetchSongsJson(),
 ]);
-const allSongs = filterValidSongs(allSongsRaw);
+const allSongs = filterAllowedSongs(filterValidSongs(allSongsRaw));
 const base = import.meta.env.BASE_URL;
 ---
 
