@@ -5,7 +5,8 @@ import { LIGHT_MULTIPLIER } from './constants';
 
 /**
  * 縮小スキル先頭除外仕様。
- * デッキ内縮小スキル群の最大発動周期 (count) を基準に、低倍率グループから累積して除外する。
+ * デッキ内縮小スキル群の最小発動周期 (count) を基準に、低倍率グループから累積して除外する。
+ * 最初に発動可能な（= count が最小の）スキルが判定開始できるノートまでを除外領域とする。
  */
 export interface ShrinkExclusion {
   /** 完全除外されるグループ名 (低倍率側から累積) */
@@ -47,9 +48,9 @@ export function computeGroupSizes(song: Song): Record<string, number> {
 /**
  * デッキ内の縮小スキル群と楽曲ノート構成から、縮小発動判定対象外の先頭ノート仕様を算出する。
  *
- * 仕様:
- * - デッキ内縮小スキル count の最大値 (最も発動の遅いスキル) を基準にする
- * - 下限として notes_20 全ノートは常に除外 (最大 count が notes_20 サイズ未満でも notes_20 全除外は維持)
+ * 仕様（docs/shrink-skill-spec.md §2）:
+ * - デッキ内縮小スキル count の最小値 (最も早く発動可能なスキル) を基準にする
+ * - 下限として notes_20 全ノートは常に除外 (minCount が notes_20 サイズ未満でも notes_20 全除外は維持)
  * - LIGHT_MULTIPLIER のキー順 (低倍率→高倍率) に累積して除外対象グループ/部分数を決定
  * - 縮小スキルが 0 枚のときは空仕様 (totalExcluded: 0) を返す
  */
@@ -70,9 +71,9 @@ export function computeShrinkExclusion(
   }
   if (shrinkCounts.length === 0) return empty;
 
-  const maxCount = Math.max(...shrinkCounts);
+  const minCount = Math.min(...shrinkCounts);
   const notes20Size = groupSizes.notes_20 ?? 0;
-  const target = Math.max(notes20Size, maxCount);
+  const target = Math.max(notes20Size, minCount);
 
   const fullGroups = new Set<string>();
   let partialGroup: string | undefined;

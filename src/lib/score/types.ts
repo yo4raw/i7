@@ -27,6 +27,8 @@ export interface CardSkill {
   count: number;
   per: number;
   value: number;
+  /** 判定縮小スキルの倍率（Lv 毎に 1.2〜1.6）。非縮小スキルは 0。 */
+  rate: number;
   isTimer: boolean;
   isShrink: boolean;
   spTime: number;

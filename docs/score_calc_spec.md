@@ -52,8 +52,7 @@
 
 | 定数 | 値 | 用途 |
 |------|-----|------|
-| `SHRINK_MULTIPLIER` | 1.6 | 縮小中ノーツの合計倍率（追加分 = 0.6） |
-| `SCOREUP_ASSIST_MULTIPLIER` | 1.2 | スコアアップアシスト倍率 |
+| `SCOREUP_ASSIST_RATE` | 0.2 | スコアアップアシスト: 属性値に +20% (×1.2) を適用 |
 | `DEFAULT_SCOREUP_BADGE_RATE` | 15 | バッジ倍率のデフォルト（%） |
 | `MC_ITERATIONS` | 5000 | MC シミュレーション既定回数 |
 | `MC_CHUNK_SIZE` | 50 | UI 応答性のためのチャンクサイズ |
@@ -208,50 +207,56 @@ appeal = assist ON 時は teamXxxAssisted、OFF 時は teamXxx
 
 ## 6. 判定縮小スキル
 
+判定縮小スキルの仕様詳細は `docs/shrink-skill-spec.md` を参照。本節は概要を記載。
+
 ### 6-1. 縮小効果の適用ルール
 
-縮小中（任意の縮小スキルが発動中）のノーツは、**未アシスト** の素点を基準に追加スコアが加算される:
+縮小中（任意の縮小スキルが発動中）のノーツは、**アシスト適用後** の素点を基準に追加スコアが加算される:
 
 ```
-shrinkExtra = (shrinkActive && group !== 'notes_20')
-  ? floor(ノーツ得点(unassisted) × (SHRINK_MULTIPLIER - 1.0))   // × 0.6
+shrinkExtra = (activeRate > 0 && !note.excluded)
+  ? floor(noteScoreAssisted × (activeRate - 1.0))
   : 0
 ```
 
-- `SHRINK_MULTIPLIER = 1.6` → 追加分は 0.6 倍
-- `notes_20` グループは除外（外部サイトの「最初の約 20 ノーツには縮小がかからない」に対応）
-- 未アシスト基準で計算することで、外部サイトの `縮小スコア = 属性値楽曲スコア × 0.6 ÷ 1.2`（アシスト時）と等価
+- `activeRate` = 発動中スキルの `skill.rate` の最大値（「いずれか発動中」判定で重ねがけなし）
+- スキルレベル別に `rate` は変化する（Lv1=1.2 〜 Lv5=1.6 が典型）
+- 先頭除外: `excludeHead = max(notes_20 グループのノート数, デッキ内縮小スキル count の最小値)` まで (`note.excluded=true` になる)
 
 ### 6-2. 縮小持続時間
 
-縮小スキルの発動時間は **`skill.value`（秒）** で表される。カードデータの skill value 欄が秒数を意味する。
+縮小スキルの発動時間は **`skill.value`（秒）** で表される。
 
 ```
-// 発動時点
 noteTime = n / N × songDuration
 endNote = min(floor((noteTime + skill.value) / songDuration × N), N)
 shrinkEndNotes[cardIdx] = max(shrinkEndNotes[cardIdx], endNote)
-
-// ノート走査時
 shrinkActive = ∃c: shrinkEndNotes[c] > n
 ```
 
-> コミット `ae53bb8` で誤用していた `sp_time`（特訓時間）から `skill.value` に修正済。
+### 6-3. カバー率
+
+`calcShrinkCoverage` は 4 指標を返す。内部計算用は `effectiveSeconds = songDuration - offset` で **100% キャップ**。表示用 raw 系は 100% 超可。
+
+- `coveredSeconds = min(rawCoveredSeconds, effectiveSeconds)` — スコア計算用
+- `rawCoveredSeconds = Σ (numActivations × value)` — 表示用
+- `expectedCoveredSeconds = min(rawExpectedCoveredSeconds, effectiveSeconds)` — 期待値用
+- `rawExpectedCoveredSeconds = Σ (numActivations × value × per/100)` — 表示用
 
 ## 7. ノーツスコアの合計とアシスト / バッジ適用
 
 ```
-total = Σ (ノーツ得点 + shrinkExtra + scoreUpSum)   // ノーツ順
-最終スコア = floor(total × assistMult × badgeMult) + broachScoreBonus
-  where assistMult = scoreUpAssist ? 1 + SCOREUP_ASSIST_RATE : 1   (例: true → 1.12)
-        badgeMult  = 1 + scoreUpBadgeRate / 100                    (例: 15 → 1.15)
+// アシストは属性値段階で適用 (docs/score_calc_spec.md §3-7)
+appeal = scoreUpAssist ? floor(team[attr] × 1.2) : team[attr]
+noteScore = floor(appeal × LIGHT_MULTIPLIER × NOTE_RATE)
+total = Σ (noteScore + shrinkExtra + scoreUpSum)
+最終スコア = floor(total × badgeMult) + broachScoreBonus
+  where badgeMult = 1 + scoreUpBadgeRate / 100   (例: 15 → 1.15)
 ```
 
-アシストとバッジは**乗算で重ねる**。例えばアシスト ON + バッジ 15% では `×1.12 × 1.15 = ×1.288` となる（加算ではない）。
-
-`scoreUpBadgeRate` は `ScoreOptions` で渡される %（例: 15 なら ×1.15）。0 または未指定の場合はバッジなし（×1.0）。
-
-> **外部サイトとの差分**: 外部サイトが 14% などの例示値を使っていることに対応し、実装を「ON/OFF 15% 固定」から「任意数値」に変更した。
+- アシスト ON: 属性値に ×1.2 を適用し floor してから per-note 計算（重複 floor 防止）
+- バッジ: 最終合計に乗算。`SCOREUP_ASSIST_RATE = 0.2` (属性値段階への加算率)。
+- `scoreUpBadgeRate` は `ScoreOptions` で渡される %（例: 15 なら ×1.15）。0 または未指定の場合はバッジなし（×1.0）。
 
 ## 8. モンテカルロシミュレーション (`runSimulation` / `runOnce`)
 
@@ -293,15 +298,14 @@ total = Σ (ノーツ得点 + shrinkExtra + scoreUpSum)   // ノーツ順
 
 ## 9. 算術期待値 (`calcExpectedScore`)
 
-外部サイト準拠の **単純期待値** を MC と併記して提供（`engine.ts:398`）。
+仕様 (`docs/shrink-skill-spec.md` §5-3) に準拠した **単純期待値** を MC と併記して提供。
 
 ### 9-1. 属性値による楽曲スコア
 
-全ノートを per-note floor で合算（= スキル全不発時のスコア、バッジ未適用）:
+全ノートを per-note floor で合算（アシスト適用済み appeal で計算、バッジ未適用）:
 
 ```
-baseScore          = Σ calcNoteScore(assisted appeal, note)
-baseScoreUnassisted = Σ calcNoteScore(unassisted appeal, note)
+baseScore = Σ calcNoteScore(getAppeal(team, attr, assist), note)
 ```
 
 ### 9-2. スコアアップ期待値
@@ -318,11 +322,13 @@ scoreUpExpected = floor(scoreUpExpected)
 ### 9-3. 判定縮小期待値
 
 ```
-coverage = calcShrinkCoverage(team, notesCount, 0)
-shrinkExpected = floor(baseScoreUnassisted × (SHRINK_MULTIPLIER - 1.0) × coverage.expectedCoverageRate)
+maxRate  = max(デッキ内縮小スキルの rate)
+coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount)
+shrinkExpected = floor(eligibleBaseScore × (maxRate - 1.0) × coverage.expectedCoverageRate)
 ```
 
-未アシスト基準を使うのは外部サイトの `÷1.2` 補正と等価。
+- `eligibleBaseScore` は `note.excluded !== true` のノートのみを合算した assisted 素点。
+- `expectedCoverageRate = min(rawExpectedCoveredSeconds / effectiveSeconds, 1.0)` （100% キャップ）。
 
 ### 9-4. 最終値
 
@@ -333,42 +339,31 @@ finalScore   = floor(liveEndScore × badgeMult) + broachScoreBonus
 
 ## 10. 縮小カバー率 (`calcShrinkCoverage`)
 
-`engine.ts:229-308`。縮小スキルが楽曲のうちどれだけの秒数をカバーするかを返す。
+`engine.ts` の `calcShrinkCoverage`。仕様 (`docs/shrink-skill-spec.md` §3, §4) に準拠した単純加算 + 100% キャップ方式。
 
-### 10-1. 発動区間の生成
+### 10-1. 単純加算
 
 ```
+eligibleCount = notesCount − excludeHeadCount
 for 各縮小カード:
-  prob = skill.per / 100
-  numActivations = floor(notesCount / skill.count)
-  for k = 1 .. numActivations:
-    noteIndex = k × skill.count - 1
-    activationTime = noteIndex / notesCount × songDuration
-    start = max(activationTime, offsetSeconds)
-    end   = min(activationTime + skill.value, songDuration)
-    intervals.push({start, end, prob})
+  numActivations = floor(eligibleCount / skill.count)
+  rawCoveredSeconds         += numActivations × skill.value
+  rawExpectedCoveredSeconds += numActivations × skill.value × (skill.per / 100)
 ```
 
-### 10-2. 100% 発動カバー率（区間マージ）
+### 10-2. 100% キャップ
 
 ```
-intervals を start でソート → 隣接重複をマージ
-coveredSeconds = Σ (merged.end - merged.start)
-coverageRate  = coveredSeconds / effectiveSeconds
+effectiveSeconds = songDuration - offsetSeconds
+coveredSeconds         = min(rawCoveredSeconds,         effectiveSeconds)
+expectedCoveredSeconds = min(rawExpectedCoveredSeconds, effectiveSeconds)
+coverageRate           = coveredSeconds         / effectiveSeconds    // 100% 以下
+expectedCoverageRate   = expectedCoveredSeconds / effectiveSeconds    // 100% 以下
+rawCoverageRate         = rawCoveredSeconds         / effectiveSeconds  // 100% 超可 (表示用)
+rawExpectedCoverageRate = rawExpectedCoveredSeconds / effectiveSeconds  // 100% 超可 (表示用)
 ```
 
-### 10-3. 期待カバー率（確率積分）
-
-```
-times = { 各 interval の start, end }
-for 各セグメント [segStart, segEnd]:
-  probNone = Π (1 - interval.prob)  // このセグメントを覆う全 interval
-  probActive = 1 - probNone
-  expectedCoveredSeconds += segLen × probActive
-expectedCoverageRate = expectedCoveredSeconds / effectiveSeconds
-```
-
-`effectiveSeconds = songDuration - offsetSeconds`。
+表示用 raw* は 100% 超過可 (UI で「超過分は計算対象外」と注記)。内部計算用は必ず 100% キャップ。
 
 ## 11. スキル種別マッピング
 
