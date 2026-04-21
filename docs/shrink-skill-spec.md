@@ -18,8 +18,8 @@
 | `isShrink` | true | — |
 | `isTimer` | 縮小タイマー型の場合のみ true | false |
 
-**縮小倍率**: 仕様上はカードデータの `rate`（スキルレベル別に変化し得る）を縮小倍率として使う。
-現行実装は `rate` を参照せず `SHRINK_MULTIPLIER = 1.6` 固定のみを使う（§7-4 参照）。
+**縮小倍率**: カードデータの `rate`（`CardSkill.rate`、スキルレベル依存）を参照する。
+過去は `SHRINK_MULTIPLIER = 1.6` 固定だったが、2026-04-20 の `fix/shrink-skill-spec-compliance` で `skill.rate` 参照に統一（§7-4 解消済み）。
 
 ## 1. 縮小追加スコアの基本式（仕様）
 

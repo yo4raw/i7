@@ -177,23 +177,26 @@ export function computeTeam(
     });
   }
 
-  // センター/フレンドのセンタースキルボーナス
-  let shoutRate = 0, beatRate = 0, melodyRate = 0;
+  // センター/フレンドのセンタースキルボーナス（docs/score_calc_spec.md §3-5 / §3-6 準拠）
+  // センター分とフレンド分はそれぞれ独立に floor する（合算 floor ではない）
   const centerAttr = deck[0] ? normalizeAttribute(deck[0].attribute) : null;
   const friendAttr = deck[5] ? normalizeAttribute(deck[5].attribute) : null;
   const centerRate = deck[0] ? getCenterSkillRate(deck[0].rarity) : 0;
   const friendRate = deck[5] ? getCenterSkillRate(deck[5].rarity) : 0;
 
-  if (centerAttr === 'Shout') shoutRate += centerRate;
-  if (centerAttr === 'Beat') beatRate += centerRate;
-  if (centerAttr === 'Melody') melodyRate += centerRate;
-  if (friendAttr === 'Shout') shoutRate += friendRate;
-  if (friendAttr === 'Beat') beatRate += friendRate;
-  if (friendAttr === 'Melody') melodyRate += friendRate;
+  const baseShout = rawShout + broachShoutTotal;
+  const baseBeat = rawBeat + broachBeatTotal;
+  const baseMelody = rawMelody + broachMelodyTotal;
+  const centerShout  = centerAttr === 'Shout'  ? Math.floor(baseShout  * centerRate / 100) : 0;
+  const centerBeat   = centerAttr === 'Beat'   ? Math.floor(baseBeat   * centerRate / 100) : 0;
+  const centerMelody = centerAttr === 'Melody' ? Math.floor(baseMelody * centerRate / 100) : 0;
+  const friendShout  = friendAttr === 'Shout'  ? Math.floor(baseShout  * friendRate / 100) : 0;
+  const friendBeat   = friendAttr === 'Beat'   ? Math.floor(baseBeat   * friendRate / 100) : 0;
+  const friendMelody = friendAttr === 'Melody' ? Math.floor(baseMelody * friendRate / 100) : 0;
 
-  const teamShout = Math.floor((rawShout + broachShoutTotal) * (100 + shoutRate) / 100);
-  const teamBeat = Math.floor((rawBeat + broachBeatTotal) * (100 + beatRate) / 100);
-  const teamMelody = Math.floor((rawMelody + broachMelodyTotal) * (100 + melodyRate) / 100);
+  const teamShout  = baseShout  + centerShout  + friendShout;
+  const teamBeat   = baseBeat   + centerBeat   + friendBeat;
+  const teamMelody = baseMelody + centerMelody + friendMelody;
 
   return {
     Shout: teamShout,
