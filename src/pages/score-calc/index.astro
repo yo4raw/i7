@@ -188,13 +188,9 @@ const base = import.meta.env.BASE_URL;
         </summary>
         <section id="score-breakdown" class="hidden">
           <div class="space-y-1">
-            <div id="shrink-coverage-row" class="flex items-center justify-between text-sm hidden">
+            <div id="shrink-coverage-row" class="flex justify-between text-sm hidden">
               <span class="text-gray-500">縮小カバー率（100%発動時）</span>
-              <span class="flex items-center gap-1">
-                <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
-                <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs text-right" />
-                <span class="text-gray-400 text-xs">秒除外</span>
-              </span>
+              <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
             </div>
             <div id="shrink-expected-row" class="flex justify-between text-sm hidden">
               <span class="text-gray-500">縮小カバー率（期待値）</span>
@@ -202,6 +198,11 @@ const base = import.meta.env.BASE_URL;
             </div>
           </div>
           <p id="shrink-exclusion-note" class="text-xs text-gray-400 mt-2 hidden">※ 最初の<span id="shrink-exclusion-count" class="font-medium">0</span>ノーツは縮小の計算対象外です</p>
+          <div id="shrink-offset-row" class="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500 hidden">
+            <label for="shrink-offset-input">先頭</label>
+            <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-right" />
+            <span>秒除外</span>
+          </div>
           <div id="skill-per-card-section" class="mt-4 border-t pt-3 hidden">
             <table class="w-full text-xs">
               <thead>
@@ -1175,6 +1176,7 @@ const base = import.meta.env.BASE_URL;
       if (shrinkCoverage) {
         $('shrink-coverage-row').classList.remove('hidden');
         $('shrink-expected-row').classList.remove('hidden');
+        $('shrink-offset-row').classList.remove('hidden');
         // 100%発動時は区間マージ前の生の合計を表示 (仕様: 100%超は計算対象外と明記)
         const rawPct = (shrinkCoverage.rawCoverageRate * 100).toFixed(1);
         const rawText = `${rawPct}%（${shrinkCoverage.rawCoveredSeconds.toFixed(1)}秒 / ${shrinkCoverage.effectiveSeconds.toFixed(1)}秒）`;
@@ -1192,6 +1194,7 @@ const base = import.meta.env.BASE_URL;
       } else {
         $('shrink-coverage-row').classList.add('hidden');
         $('shrink-expected-row').classList.add('hidden');
+        $('shrink-offset-row').classList.add('hidden');
       }
     }
 
