@@ -459,6 +459,90 @@ export function calcExpectedScore(
   return { baseScore, scoreUpExpected, shrinkExpected, liveEndScore, finalScore };
 }
 
+/**
+ * 単一カードのスキル期待値（当該カードのみが縮小スキルを持つと仮定）。
+ * - スコアアップ / タイマー: floor( maxActivations × per/100 × value )
+ * - 判定縮小: eligibleBaseScore × (rate - 1) × 期待カバー率 (当該カード単独で offset=0)
+ *
+ * 複数縮小スキルの max rate 合成は考慮しないため、デッキに複数の縮小スキルがある場合の
+ * 合計期待値とは一致しない（カード単独寄与の目安として表示用）。
+ */
+export function calcCardSkillExpected(
+  team: ComputedTeam,
+  notes: FlatNote[],
+  notesCount: number,
+  slotIndex: number,
+  options?: ScoreOptions,
+): number {
+  const dc = team.cards.find(c => c.slotIndex === slotIndex);
+  if (!dc || !dc.skill || dc.skill.count <= 0) return 0;
+  const skill = dc.skill;
+  const assist = options?.scoreUpAssist ?? false;
+
+  if (!skill.isShrink) {
+    const denom = skill.isTimer ? team.songDuration : notesCount;
+    if (denom <= 0) return 0;
+    const maxAct = Math.floor(denom / skill.count);
+    return Math.floor(maxAct * (skill.per / 100) * skill.value);
+  }
+
+  const effectiveSeconds = team.songDuration;
+  if (effectiveSeconds <= 0) return 0;
+  const excludedCount = notes.filter(n => n.excluded).length;
+  const eligibleCount = notesCount - excludedCount;
+  if (eligibleCount <= 0) return 0;
+  const numActivations = Math.floor(eligibleCount / skill.count);
+  const expectedSec = Math.min(
+    numActivations * skill.value * (skill.per / 100),
+    effectiveSeconds,
+  );
+  const coverageRate = expectedSec / effectiveSeconds;
+
+  let eligibleBaseScore = 0;
+  for (const n of notes) {
+    if (n.excluded) continue;
+    eligibleBaseScore += calcNoteScore(getAppeal(team, n.attribute, assist), n);
+  }
+  return Math.floor(eligibleBaseScore * (skill.rate - 1.0) * coverageRate);
+}
+
+/** 単一カードのスキル論理最高値（100% 発動・当該カードのみが縮小スキルを持つ想定）。 */
+export function calcCardSkillMax(
+  team: ComputedTeam,
+  notes: FlatNote[],
+  notesCount: number,
+  slotIndex: number,
+  options?: ScoreOptions,
+): number {
+  const dc = team.cards.find(c => c.slotIndex === slotIndex);
+  if (!dc || !dc.skill || dc.skill.count <= 0) return 0;
+  const skill = dc.skill;
+  const assist = options?.scoreUpAssist ?? false;
+
+  if (!skill.isShrink) {
+    const denom = skill.isTimer ? team.songDuration : notesCount;
+    if (denom <= 0) return 0;
+    const maxAct = Math.floor(denom / skill.count);
+    return maxAct * skill.value;
+  }
+
+  const effectiveSeconds = team.songDuration;
+  if (effectiveSeconds <= 0) return 0;
+  const excludedCount = notes.filter(n => n.excluded).length;
+  const eligibleCount = notesCount - excludedCount;
+  if (eligibleCount <= 0) return 0;
+  const numActivations = Math.floor(eligibleCount / skill.count);
+  const maxSec = Math.min(numActivations * skill.value, effectiveSeconds);
+  const coverageRate = maxSec / effectiveSeconds;
+
+  let eligibleBaseScore = 0;
+  for (const n of notes) {
+    if (n.excluded) continue;
+    eligibleBaseScore += calcNoteScore(getAppeal(team, n.attribute, assist), n);
+  }
+  return Math.floor(eligibleBaseScore * (skill.rate - 1.0) * coverageRate);
+}
+
 interface RunOnceResult {
   score: number;
   activations: number[];

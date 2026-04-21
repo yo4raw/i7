@@ -181,29 +181,14 @@ const base = import.meta.env.BASE_URL;
         <p id="shrink-exclusion-note" class="text-xs text-gray-400 mt-2 hidden">※ 最初の<span id="shrink-exclusion-count" class="font-medium">0</span>ノーツは縮小の計算対象外です</p>
       </details>
 
-      <!-- スコア内訳（計算ボタン押下前に算出） -->
+      <!-- スキル詳細 -->
       <details id="breakdown-section" class="bg-white rounded-lg shadow p-4 group" open>
         <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
-          <span>📊 内訳</span>
+          <span>📊 スキル詳細</span>
           <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </summary>
         <section id="score-breakdown" class="hidden">
-          <table class="w-full text-sm">
-            <tbody>
-              <tr><td class="text-gray-500 py-1">ベースステータス</td><td id="stat-base" class="text-right py-1 font-medium"></td></tr>
-              <tr><td class="text-gray-500 py-1">ブローチ加算</td><td id="stat-broach" class="text-right py-1 font-medium"></td></tr>
-              <tr id="stat-broach-score-row" class="hidden"><td class="text-gray-500 py-1">ブローチスコア加算</td><td id="stat-broach-score" class="text-right py-1 font-medium text-purple-600"></td></tr>
-              <tr><td class="text-gray-500 py-1">センター/フレンドボーナス</td><td id="stat-bonus" class="text-right py-1 font-medium"></td></tr>
-              <tr id="stat-bonus-s-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Shout <span id="stat-bonus-s-rate" class="text-gray-400"></span></td><td id="stat-bonus-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout} text-xs`}></td></tr>
-              <tr id="stat-bonus-b-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Beat <span id="stat-bonus-b-rate" class="text-gray-400"></span></td><td id="stat-bonus-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat} text-xs`}></td></tr>
-              <tr id="stat-bonus-m-row" class="hidden"><td class="text-gray-500 py-1 pl-4 text-xs">Melody <span id="stat-bonus-m-rate" class="text-gray-400"></span></td><td id="stat-bonus-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody} text-xs`}></td></tr>
-              <tr class="border-t"><td class="text-gray-500 py-1 font-medium">チームアピール合計</td><td id="stat-team-total" class="text-right py-1 font-bold"></td></tr>
-              <tr><td class="text-gray-500 py-1 pl-2">Shout</td><td id="stat-team-s" class={`text-right py-1 ${ATTR_TEXT_CLASS.Shout}`}></td></tr>
-              <tr><td class="text-gray-500 py-1 pl-2">Beat</td><td id="stat-team-b" class={`text-right py-1 ${ATTR_TEXT_CLASS.Beat}`}></td></tr>
-              <tr><td class="text-gray-500 py-1 pl-2">Melody</td><td id="stat-team-m" class={`text-right py-1 ${ATTR_TEXT_CLASS.Melody}`}></td></tr>
-            </tbody>
-          </table>
-          <div class="mt-4 border-t pt-3 space-y-1">
+          <div class="space-y-1">
             <div id="shrink-coverage-row" class="flex items-center justify-between text-sm hidden">
               <span class="text-gray-500">縮小カバー率（100%発動時）</span>
               <span class="flex items-center gap-1">
@@ -217,8 +202,24 @@ const base = import.meta.env.BASE_URL;
               <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
             </div>
           </div>
+          <div id="skill-per-card-section" class="mt-4 border-t pt-3 hidden">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="text-gray-500 border-b">
+                  <th class="text-left py-1 px-1">スロット</th>
+                  <th class="text-left py-1 px-1">カード名</th>
+                  <th class="text-left py-1 px-1">スキル</th>
+                  <th class="text-right py-1 px-1">スキル期待値</th>
+                  <th class="text-right py-1 px-1">スキル論理最高値</th>
+                </tr>
+              </thead>
+              <tbody id="skill-per-card-body"></tbody>
+              <tfoot id="skill-per-card-foot"></tfoot>
+            </table>
+            <p class="text-xs text-gray-400 mt-2">※ 複数の判定縮小スキルが共存する場合、max rate 合成は考慮しないためカード単独寄与の目安です</p>
+          </div>
         </section>
-        <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスコア内訳が表示されます</p>
+        <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスキル詳細が表示されます</p>
       </details>
 
       <!-- 理論最低 / 理論最高 (計算ボタン上) -->
@@ -405,8 +406,8 @@ const base = import.meta.env.BASE_URL;
     import { formatSkillEffect } from '../../lib/score/skillFormatter';
     import type { Song } from '../../lib/data/fetchSongsJson';
     import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
-    import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
-    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../../lib/score/engine';
+    import type { ComputedTeam, SimulationResult, ScoreOptions, FlatNote } from '../../lib/score/types';
+    import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
     import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../../lib/score/constants';
     import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
@@ -1053,6 +1054,7 @@ const base = import.meta.env.BASE_URL;
         $('skill-stats').classList.add('hidden');
         $('shrink-coverage-row').classList.add('hidden');
         $('shrink-expected-row').classList.add('hidden');
+        $('skill-per-card-section').classList.add('hidden');
         $('final-result').textContent = '---';
         simulationResult = null;
         return;
@@ -1062,60 +1064,8 @@ const base = import.meta.env.BASE_URL;
       const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
       const notes = flattenNotes(selectedSong, 42, exclusion);
 
-      // スコア内訳表示
+      // スキル詳細表示
       $('score-breakdown').classList.remove('hidden');
-      const rawTotal = team.rawShout + team.rawBeat + team.rawMelody;
-      const broachTotal = team.broachShout + team.broachBeat + team.broachMelody;
-      const teamTotal = team.Shout + team.Beat + team.Melody;
-      const bonusTotal = teamTotal - rawTotal - broachTotal;
-
-      $('stat-base').textContent = rawTotal.toLocaleString();
-      $('stat-broach').textContent = broachTotal > 0 ? `+${broachTotal.toLocaleString()}` : '-';
-      if (team.broachScoreBonus > 0) {
-        $('stat-broach-score-row').classList.remove('hidden');
-        $('stat-broach-score').textContent = `+${team.broachScoreBonus.toLocaleString()}`;
-      } else {
-        $('stat-broach-score-row').classList.add('hidden');
-      }
-      $('stat-bonus').textContent = bonusTotal > 0 ? `+${bonusTotal.toLocaleString()}` : '-';
-
-      // センター/フレンドボーナスの属性別内訳
-      {
-        const cCard = deck[0];
-        const fCard = deck[5];
-        const cRate = cCard ? getCenterSkillRate(cCard.rarity) : 0;
-        const fRate = fCard ? getCenterSkillRate(fCard.rarity) : 0;
-        const cAttr = cCard ? normalizeAttribute(cCard.attribute) : null;
-        const fAttr = fCard ? normalizeAttribute(fCard.attribute) : null;
-        let sRate = 0, bRate = 0, mRate = 0;
-        if (cAttr === 'Shout') sRate += cRate;
-        if (cAttr === 'Beat') bRate += cRate;
-        if (cAttr === 'Melody') mRate += cRate;
-        if (fAttr === 'Shout') sRate += fRate;
-        if (fAttr === 'Beat') bRate += fRate;
-        if (fAttr === 'Melody') mRate += fRate;
-        const showAttr = (attr: string, rate: number, bonus: number) => {
-          const rowEl = $(`stat-bonus-${attr}-row`);
-          if (rate > 0) {
-            rowEl.classList.remove('hidden');
-            $(`stat-bonus-${attr}-rate`).textContent = `+${rate}%`;
-            $(`stat-bonus-${attr}`).textContent = `+${bonus.toLocaleString()}`;
-          } else {
-            rowEl.classList.add('hidden');
-          }
-        };
-        const sBonus = team.Shout - team.rawShout - team.broachShout;
-        const bBonus = team.Beat - team.rawBeat - team.broachBeat;
-        const mBonus = team.Melody - team.rawMelody - team.broachMelody;
-        showAttr('s', sRate, sBonus);
-        showAttr('b', bRate, bBonus);
-        showAttr('m', mRate, mBonus);
-      }
-
-      $('stat-team-total').textContent = teamTotal.toLocaleString();
-      $('stat-team-s').textContent = team.Shout.toLocaleString();
-      $('stat-team-b').textContent = team.Beat.toLocaleString();
-      $('stat-team-m').textContent = team.Melody.toLocaleString();
 
       // スコアオプション
       const scoreOptions: ScoreOptions = {
@@ -1132,6 +1082,9 @@ const base = import.meta.env.BASE_URL;
       // 縮小カバー率
       updateShrinkCoverage(team, selectedSong);
 
+      // カードごとのスキル期待値/論理最高値
+      renderSkillPerCard(team, notes, selectedSong.notes_count || 0, scoreOptions);
+
       // 楽曲属性面積値
       renderAreaValues(team, selectedSong);
 
@@ -1141,6 +1094,42 @@ const base = import.meta.env.BASE_URL;
       $('skill-stats').classList.add('hidden');
       $('final-result').textContent = '---';
       simulationResult = null;
+    }
+
+    function renderSkillPerCard(team: ComputedTeam, notes: FlatNote[], notesCount: number, options: ScoreOptions) {
+      const rows: string[] = [];
+      let totalExp = 0;
+      let totalMax = 0;
+      for (const i of DISPLAY_ORDER) {
+        const card = deck[i];
+        if (!card) continue;
+        const exp = calcCardSkillExpected(team, notes, notesCount, i, options);
+        const max = calcCardSkillMax(team, notes, notesCount, i, options);
+        totalExp += exp;
+        totalMax += max;
+        const slotCls = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500';
+        rows.push(`<tr class="border-t">
+          <td class="py-1 px-1 text-[10px] ${slotCls}">${SLOT_LABELS[i]}</td>
+          <td class="py-1 px-1">
+            <div>${card.cardname || ''}</div>
+            <div class="text-[10px] text-gray-400">${card.name || ''}</div>
+          </td>
+          <td class="py-1 px-1">${card.ap_skill_type || '-'}</td>
+          <td class="py-1 px-1 text-right">${exp > 0 ? exp.toLocaleString() : '-'}</td>
+          <td class="py-1 px-1 text-right">${max > 0 ? max.toLocaleString() : '-'}</td>
+        </tr>`);
+      }
+      if (rows.length === 0) {
+        $('skill-per-card-section').classList.add('hidden');
+        return;
+      }
+      $('skill-per-card-section').classList.remove('hidden');
+      $('skill-per-card-body').innerHTML = rows.join('');
+      $('skill-per-card-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold">
+        <td colspan="3" class="py-1 px-1 text-right text-gray-700">合計</td>
+        <td class="py-1 px-1 text-right">${totalExp.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right">${totalMax.toLocaleString()}</td>
+      </tr>`;
     }
 
     function updateShrinkCoverage(team: ComputedTeam, song: Song) {
