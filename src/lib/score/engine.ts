@@ -233,9 +233,14 @@ function getAppeal(team: ComputedTeam, attr: AttributeName, assist: boolean): nu
   return assist ? Math.floor(raw * (1 + SCOREUP_ASSIST_RATE)) : raw;
 }
 
-/** 1 ノーツのスコアを計算（属性値 × 倍率 × レートをまとめて floor） */
+/**
+ * 1 ノーツのスコアを計算。
+ * 属性値に NOTE_RATE を乗じて floor した「1 ノーツ基底値」にステージ倍率を乗じて再度 floor する
+ * (docs/score_calc_spec.md §5 準拠)。
+ */
 function calcNoteScore(appeal: number, note: FlatNote): number {
-  return Math.floor(appeal * LIGHT_MULTIPLIER[note.group] * NOTE_RATE[note.type]);
+  const perNoteBase = Math.floor(appeal * NOTE_RATE[note.type]);
+  return Math.floor(perNoteBase * LIGHT_MULTIPLIER[note.group]);
 }
 
 /**

@@ -29,8 +29,9 @@
 ```text
 appeal            = scoreUpAssist ? floor(teamXxx × 1.2) : teamXxx
                     // アシストは属性値段階で floor(×1.2)（§3-7 準拠）
-noteScoreAssisted = floor(appeal × LIGHT_MULTIPLIER × NOTE_RATE)
-                    // per-note は 1 回 floor（§5 準拠）
+perNoteBase       = floor(appeal × NOTE_RATE)
+noteScoreAssisted = floor(perNoteBase × LIGHT_MULTIPLIER)
+                    // per-note は 2 段 floor（§5 準拠）
 noteScoreShrunk   = floor(noteScoreAssisted × rate)
                     // 縮小倍率 rate（Lv5 で 1.6、本実装は Lv5 固定で計算）
 ```
