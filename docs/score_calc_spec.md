@@ -140,30 +140,47 @@ if (sharedBroach.targetAttribute) {
 }
 ```
 
+**UR 限定・枠数ルール**:
+
+- UR カードはブローチ枠を 2 つ有し、共有ブローチを最大 2 つまで装備できる。
+- UR カードによっては取り外しできない固有ブローチがあり、その場合は共有ブローチを 1 つしか選択できない（残り 1 枠は固有ブローチで固定）。
+- 非 UR カード（SSR 以下）は共有ブローチ枠を持たない。
+
+画面実装では `validateSharedBroachs` (`src/pages/score-calc/index.astro`) が上記ルールに従い `deckSharedBroachs[slotIndex]` を最大 0 / 1 / 2 に切り詰める。`computeTeam` (`src/lib/score/engine.ts`) は `validateSharedBroachs` 済みの入力を前提とする（engine 単体で UR ガードを行わない）。
+
 ### 3-5. センター／フレンド ボーナス
 
-センター（スロット 0）とフレンド（スロット 5）のレアリティに応じて、各カードの属性に対応する属性値にボーナス率を加算する。
+センター（スロット 0）とフレンド（スロット 5）のレアリティに応じて、各カードの属性に対応する属性値にボーナス率を加算する。**センター分とフレンド分はそれぞれ独立に floor し、その後合算する**（合算レートで 1 回 floor しない）。
 
 ```
 centerRate = getCenterSkillRate(deck[0].rarity)   // UR=10, SSR=7, 他=6
 friendRate = getCenterSkillRate(deck[5].rarity)
 
-shoutRate = (centerAttr === 'Shout' ? centerRate : 0) + (friendAttr === 'Shout' ? friendRate : 0)
-beatRate  = (centerAttr === 'Beat'  ? centerRate : 0) + (friendAttr === 'Beat'  ? friendRate : 0)
-melodyRate = (centerAttr === 'Melody' ? centerRate : 0) + (friendAttr === 'Melody' ? friendRate : 0)
+baseShout  = rawShout  + broachShoutTotal
+baseBeat   = rawBeat   + broachBeatTotal
+baseMelody = rawMelody + broachMelodyTotal
+
+centerShout  = centerAttr === 'Shout'  ? floor(baseShout  × centerRate / 100) : 0
+centerBeat   = centerAttr === 'Beat'   ? floor(baseBeat   × centerRate / 100) : 0
+centerMelody = centerAttr === 'Melody' ? floor(baseMelody × centerRate / 100) : 0
+friendShout  = friendAttr === 'Shout'  ? floor(baseShout  × friendRate / 100) : 0
+friendBeat   = friendAttr === 'Beat'   ? floor(baseBeat   × friendRate / 100) : 0
+friendMelody = friendAttr === 'Melody' ? floor(baseMelody × friendRate / 100) : 0
 ```
 
 > **外部サイトとの差分**: 外部サイトは `ct_skill` テキスト内のキーワード（「かなり」「やや」「大きく」）で判定。実装はレアリティ判定（UR は必ず「かなり(10%)」、SSR は必ず「やや(7%)」という対応関係をコードにしたもの）。結果の数値は同じ。
 
-### 3-6. チーム属性値（最終）— 切り捨て
+### 3-6. チーム属性値（最終）
+
+センター分とフレンド分を独立 floor した結果を base に加算する:
 
 ```
-teamShout  = floor((rawShout  + broachShoutTotal)  × (100 + shoutRate)  / 100)
-teamBeat   = floor((rawBeat   + broachBeatTotal)   × (100 + beatRate)   / 100)
-teamMelody = floor((rawMelody + broachMelodyTotal) × (100 + melodyRate) / 100)
+teamShout  = baseShout  + centerShout  + friendShout
+teamBeat   = baseBeat   + centerBeat   + friendBeat
+teamMelody = baseMelody + centerMelody + friendMelody
 ```
 
-`broachXxxTotal` はスロット 0〜5（フレンド枠を含む全枠）の有効ブローチ値の合計（§3-3 / §3-4 の条件を満たすもの）。
+`baseXxx = rawXxx + broachXxxTotal`。`broachXxxTotal` はスロット 0〜5（フレンド枠を含む全枠）の有効ブローチ値の合計（§3-3 / §3-4 の条件を満たすもの）。
 
 ### 3-7. スコアアップアシスト適用済み属性値
 
