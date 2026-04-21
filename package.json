@@ -19,6 +19,7 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
+    "@playform/compress": "0.2.3",
     "@playwright/test": "^1.59.1",
     "serve": "^14.2.6",
     "tsx": "^4.19.2",
