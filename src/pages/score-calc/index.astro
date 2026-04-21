@@ -877,26 +877,21 @@ const base = import.meta.env.BASE_URL;
       const centerAttr = centerCard ? normalizeAttribute(centerCard.attribute) : null;
       const friendAttr = friendCard ? normalizeAttribute(friendCard.attribute) : null;
 
-      let shoutRate = 0, beatRate = 0, melodyRate = 0;
-      if (centerAttr === 'Shout') shoutRate += centerRate;
-      if (centerAttr === 'Beat') beatRate += centerRate;
-      if (centerAttr === 'Melody') melodyRate += centerRate;
-      if (friendAttr === 'Shout') shoutRate += friendRate;
-      if (friendAttr === 'Beat') beatRate += friendRate;
-      if (friendAttr === 'Melody') melodyRate += friendRate;
-
       const baseShout = totalShout + totalBS;
       const baseBeat = totalBeat + totalBB;
       const baseMelody = totalMelody + totalBM;
-      const csShout = Math.floor(baseShout * (100 + shoutRate) / 100) - baseShout;
-      const csBeat = Math.floor(baseBeat * (100 + beatRate) / 100) - baseBeat;
-      const csMelody = Math.floor(baseMelody * (100 + melodyRate) / 100) - baseMelody;
+      const centerShout = centerAttr === 'Shout' ? Math.floor(baseShout * centerRate / 100) : 0;
+      const centerBeat = centerAttr === 'Beat' ? Math.floor(baseBeat * centerRate / 100) : 0;
+      const centerMelody = centerAttr === 'Melody' ? Math.floor(baseMelody * centerRate / 100) : 0;
+      const friendShout = friendAttr === 'Shout' ? Math.floor(baseShout * friendRate / 100) : 0;
+      const friendBeat = friendAttr === 'Beat' ? Math.floor(baseBeat * friendRate / 100) : 0;
+      const friendMelody = friendAttr === 'Melody' ? Math.floor(baseMelody * friendRate / 100) : 0;
+      const csShout = centerShout + friendShout;
+      const csBeat = centerBeat + friendBeat;
+      const csMelody = centerMelody + friendMelody;
 
-      const hasCenter = shoutRate > 0 || beatRate > 0 || melodyRate > 0;
-      const centerSkillLabels: string[] = [];
-      if (centerCard && centerRate > 0) centerSkillLabels.push(`自分+${centerRate}%`);
-      if (friendCard && friendRate > 0) centerSkillLabels.push(`フレンド+${friendRate}%`);
-      const centerSkillLabel = centerSkillLabels.join(' / ');
+      const hasCenter = !!centerCard && centerRate > 0;
+      const hasFriend = !!friendCard && friendRate > 0;
 
       const scoreUpAssistEnabled = ($('opt-scoreup-assist') as HTMLInputElement | null)?.checked ?? false;
       const teamShout = baseShout + csShout;
@@ -908,7 +903,7 @@ const base = import.meta.env.BASE_URL;
       const assistPct = Math.round(SCOREUP_ASSIST_RATE * 100);
 
       $('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
-        <td colspan="4" class="py-1 px-1 text-right text-gray-700">合計</td>
+        <td colspan="4" class="py-1 px-1 text-right text-gray-700">単純属性値計</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${totalShout.toLocaleString()}</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${totalBeat.toLocaleString()}</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${totalMelody.toLocaleString()}</td>
@@ -916,25 +911,39 @@ const base = import.meta.env.BASE_URL;
         <td class="py-1 px-1 text-right">${totalBB || '-'}</td>
         <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
         <td colspan="2"></td>
-      </tr>${hasCenter ? `<tr class="font-bold text-xs text-purple-600">
-        <td colspan="4" class="py-1 px-1 text-right">センター/フレンドボーナス (${centerSkillLabel})</td>
-        <td class="py-1 px-1 text-right">${csShout > 0 ? `+${csShout.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${csBeat > 0 ? `+${csBeat.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${csMelody > 0 ? `+${csMelody.toLocaleString()}` : '-'}</td>
+      </tr>${(totalBS + totalBB + totalBM) > 0 ? `<tr class="font-bold text-xs text-indigo-600">
+        <td colspan="4" class="py-1 px-1 text-right">ブローチ</td>
+        <td class="py-1 px-1 text-right">${totalBS > 0 ? `+${totalBS.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${totalBB > 0 ? `+${totalBB.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${totalBM > 0 ? `+${totalBM.toLocaleString()}` : '-'}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
-      </tr>` : ''}${scoreUpAssistEnabled ? `<tr class="font-bold text-xs text-emerald-600">
-        <td colspan="4" class="py-1 px-1 text-right">SCOREUPアシスト (+${assistPct}%)</td>
+      </tr>` : ''}${hasCenter ? `<tr class="font-bold text-xs text-purple-600">
+        <td colspan="4" class="py-1 px-1 text-right">センターSkill (+${centerRate}%)</td>
+        <td class="py-1 px-1 text-right">${centerShout > 0 ? `+${centerShout.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${centerBeat > 0 ? `+${centerBeat.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${centerMelody > 0 ? `+${centerMelody.toLocaleString()}` : '-'}</td>
+        <td colspan="3"></td>
+        <td colspan="2"></td>
+      </tr>` : ''}${hasFriend ? `<tr class="font-bold text-xs text-purple-600">
+        <td colspan="4" class="py-1 px-1 text-right">FセンターSkill (+${friendRate}%)</td>
+        <td class="py-1 px-1 text-right">${friendShout > 0 ? `+${friendShout.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${friendBeat > 0 ? `+${friendBeat.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${friendMelody > 0 ? `+${friendMelody.toLocaleString()}` : '-'}</td>
+        <td colspan="3"></td>
+        <td colspan="2"></td>
+      </tr>` : ''}${scoreUpAssistEnabled ? `<tr class="border-t-2 border-gray-300 font-bold text-xs text-emerald-600">
+        <td colspan="4" class="py-1 px-1 text-right">ScoreUPアシスト (+${assistPct}%)</td>
         <td class="py-1 px-1 text-right">${assistShout > 0 ? `+${assistShout.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${assistBeat > 0 ? `+${assistBeat.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${assistMelody > 0 ? `+${assistMelody.toLocaleString()}` : '-'}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
       </tr>` : ''}<tr class="border-t-2 border-gray-300 font-bold text-xs">
-        <td colspan="4" class="py-1 px-1 text-right text-gray-700">チームアピール合計</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${teamShout.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${teamBeat.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${teamMelody.toLocaleString()}</td>
+        <td colspan="4" class="py-1 px-1 text-right text-gray-700">デッキ合計</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${(teamShout + assistShout).toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${(teamBeat + assistBeat).toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${(teamMelody + assistMelody).toLocaleString()}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
       </tr>`;
