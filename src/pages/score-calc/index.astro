@@ -408,7 +408,7 @@ const base = import.meta.env.BASE_URL;
     import type { ComputedTeam, SimulationResult, ScoreOptions } from '../../lib/score/types';
     import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../../lib/score/engine';
     import { resolveDeckBroachs, type ResolvedBroach } from '../../lib/score/broachResolver';
-    import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS } from '../../lib/score/constants';
+    import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../../lib/score/constants';
     import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../../lib/data/eventBonusTiers';
     import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
     import { renderHistogramSvg } from '../../lib/score/histogram';
@@ -898,6 +898,15 @@ const base = import.meta.env.BASE_URL;
       if (friendCard && friendRate > 0) centerSkillLabels.push(`フレンド+${friendRate}%`);
       const centerSkillLabel = centerSkillLabels.join(' / ');
 
+      const scoreUpAssistEnabled = ($('opt-scoreup-assist') as HTMLInputElement | null)?.checked ?? false;
+      const teamShout = baseShout + csShout;
+      const teamBeat = baseBeat + csBeat;
+      const teamMelody = baseMelody + csMelody;
+      const assistShout = scoreUpAssistEnabled ? Math.floor(teamShout * (1 + SCOREUP_ASSIST_RATE)) - teamShout : 0;
+      const assistBeat = scoreUpAssistEnabled ? Math.floor(teamBeat * (1 + SCOREUP_ASSIST_RATE)) - teamBeat : 0;
+      const assistMelody = scoreUpAssistEnabled ? Math.floor(teamMelody * (1 + SCOREUP_ASSIST_RATE)) - teamMelody : 0;
+      const assistPct = Math.round(SCOREUP_ASSIST_RATE * 100);
+
       $('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
         <td colspan="4" class="py-1 px-1 text-right text-gray-700">合計</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${totalShout.toLocaleString()}</td>
@@ -914,7 +923,21 @@ const base = import.meta.env.BASE_URL;
         <td class="py-1 px-1 text-right">${csMelody > 0 ? `+${csMelody.toLocaleString()}` : '-'}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
-      </tr>` : ''}`;
+      </tr>` : ''}${scoreUpAssistEnabled ? `<tr class="font-bold text-xs text-emerald-600">
+        <td colspan="4" class="py-1 px-1 text-right">SCOREUPアシスト (+${assistPct}%)</td>
+        <td class="py-1 px-1 text-right">${assistShout > 0 ? `+${assistShout.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${assistBeat > 0 ? `+${assistBeat.toLocaleString()}` : '-'}</td>
+        <td class="py-1 px-1 text-right">${assistMelody > 0 ? `+${assistMelody.toLocaleString()}` : '-'}</td>
+        <td colspan="3"></td>
+        <td colspan="2"></td>
+      </tr>` : ''}<tr class="border-t-2 border-gray-300 font-bold text-xs">
+        <td colspan="4" class="py-1 px-1 text-right text-gray-700">チームアピール合計</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${teamShout.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${teamBeat.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${teamMelody.toLocaleString()}</td>
+        <td colspan="3"></td>
+        <td colspan="2"></td>
+      </tr>`;
     }
 
     // --- カード選択モーダル ---
@@ -1556,7 +1579,10 @@ const base = import.meta.env.BASE_URL;
       $('btn-calculate').addEventListener('click', runMC);
 
       // スキルオプション変更時に再計算
-      $('opt-scoreup-assist').addEventListener('change', recalculate);
+      $('opt-scoreup-assist').addEventListener('change', () => {
+        recalculate();
+        renderCardDetailTable();
+      });
       $('opt-scoreup-badge-rate').addEventListener('input', recalculate);
 
       // 縮小カバー率の除外秒数変更時に再計算
