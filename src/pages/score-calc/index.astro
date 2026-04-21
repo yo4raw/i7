@@ -903,6 +903,17 @@ const base = import.meta.env.BASE_URL;
       const assistMelody = scoreUpAssistEnabled ? Math.floor(teamMelody * (1 + SCOREUP_ASSIST_RATE)) - teamMelody : 0;
       const assistPct = Math.round(SCOREUP_ASSIST_RATE * 100);
 
+      const deckShout  = teamShout  + assistShout;
+      const deckBeat   = teamBeat   + assistBeat;
+      const deckMelody = teamMelody + assistMelody;
+
+      const noteShoutWhite  = Math.floor(deckShout  * NOTE_RATE.white);
+      const noteBeatWhite   = Math.floor(deckBeat   * NOTE_RATE.white);
+      const noteMelodyWhite = Math.floor(deckMelody * NOTE_RATE.white);
+      const noteShoutColor  = Math.floor(deckShout  * NOTE_RATE.color);
+      const noteBeatColor   = Math.floor(deckBeat   * NOTE_RATE.color);
+      const noteMelodyColor = Math.floor(deckMelody * NOTE_RATE.color);
+
       $('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
         <td colspan="4" class="py-1 px-1 text-right text-gray-700">単純属性値計</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${totalShout.toLocaleString()}</td>
@@ -942,9 +953,23 @@ const base = import.meta.env.BASE_URL;
         <td colspan="2"></td>
       </tr>` : ''}<tr class="border-t-2 border-gray-300 font-bold text-xs">
         <td colspan="4" class="py-1 px-1 text-right text-gray-700">デッキ合計</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${(teamShout + assistShout).toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${(teamBeat + assistBeat).toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${(teamMelody + assistMelody).toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${deckShout.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${deckBeat.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${deckMelody.toLocaleString()}</td>
+        <td colspan="3"></td>
+        <td colspan="2"></td>
+      </tr><tr class="text-xs text-gray-500">
+        <td colspan="4" class="py-0.5 px-1 text-right">1ノーツ得点 / ⚪</td>
+        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${noteShoutWhite.toLocaleString()}</td>
+        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${noteBeatWhite.toLocaleString()}</td>
+        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${noteMelodyWhite.toLocaleString()}</td>
+        <td colspan="3"></td>
+        <td colspan="2"></td>
+      </tr><tr class="text-xs text-gray-500">
+        <td colspan="4" class="py-0.5 px-1 text-right">1ノーツ得点 / 🔵🔴</td>
+        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${noteShoutColor.toLocaleString()}</td>
+        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${noteBeatColor.toLocaleString()}</td>
+        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${noteMelodyColor.toLocaleString()}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
       </tr>`;
