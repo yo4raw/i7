@@ -13,7 +13,7 @@ export default defineConfig({
       JavaScript: true,
       JSON: true,
       SVG: true,
-      Image: false,
+      Image: true,
       Logger: 1,
     }),
   ],
