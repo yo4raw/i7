@@ -210,21 +210,25 @@ for groupKey in [notes_20, light_2, light_3, light_4, light_5, light_6, chorus_l
 
 ノートの発生タイミングは実ゲーム上の配置と同期しないため、シャッフルによる近似。シード固定でビルドごとに同一順序。
 
-## 5. ノーツスコアの計算（per-note floor）
+## 5. ノーツスコアの計算（2 段 floor）
 
-1 ノーツあたりのスコアは属性値・ライト倍率・ノートレートを掛け合わせて **1 回だけ** 切り捨てる:
+1 ノーツあたりのスコアは、属性値にノートレートを乗じて floor した **1 ノーツ基底値** にステージ倍率を乗じて **再度 floor** する:
 
 ```
 appeal = assist ON 時は teamXxxAssisted、OFF 時は teamXxx
 
-ノーツ得点 = floor(appeal × LIGHT_MULTIPLIER[group] × NOTE_RATE[type])
-           // LIGHT_MULTIPLIER: コンボ/サビ倍率 (§2-2)
+perNoteBase = floor(appeal × NOTE_RATE[type])
+ノーツ得点 = floor(perNoteBase × LIGHT_MULTIPLIER[group])
            // NOTE_RATE: 白 0.025 / 色 0.030 (§2-1)
+           // LIGHT_MULTIPLIER: コンボ/サビ倍率 (§2-2)
 ```
 
-実装: `engine.ts:223-227` の `calcNoteScore()` に集約。`calcMinScore` / `calcMaxScore` / `runOnce` / `calcExpectedScore` のすべてが同じ計算式を使う。
+実装: `engine.ts` の `calcNoteScore()` に集約。`calcMinScore` / `calcMaxScore` / `runOnce` / `calcExpectedScore` のすべてが同じ計算式を使う。
 
-> **外部サイトとの差分**: 実装は以前「合計後に 1 回だけ floor」していたが、これだと微小誤差が出るため各ノーツで per-note floor するよう改修した（外部サイト準拠）。per-note 内では 1 回 floor（`floor(appeal × LIGHT_MULTIPLIER × NOTE_RATE)`）とし、段階分割はしない。
+> **実装変遷**:
+> 1. 当初は「合計後に 1 回だけ floor」
+> 2. 外部サイトに合わせ「per-note 内で 1 回 floor（`floor(appeal × LIGHT_MULTIPLIER × NOTE_RATE)`）」へ変更
+> 3. さらにカード詳細パネルに表示する「1 ノーツ/⚪」「1 ノーツ/🔵🔴」（= `floor(appeal × NOTE_RATE)`）を基底単位として理論最低値と完全に整合させるため、現在の「属性値段階で先に floor → ステージ倍率を乗じて再 floor」の 2 段 floor 方式を採用している。
 
 ## 6. 判定縮小スキル
 
@@ -269,7 +273,8 @@ shrinkActive = ∃c: shrinkEndNotes[c] > n
 ```
 // アシストは属性値段階で適用 (docs/score_calc_spec.md §3-7)
 appeal = scoreUpAssist ? floor(team[attr] × 1.2) : team[attr]
-noteScore = floor(appeal × LIGHT_MULTIPLIER × NOTE_RATE)
+perNoteBase = floor(appeal × NOTE_RATE)
+noteScore = floor(perNoteBase × LIGHT_MULTIPLIER)
 total = Σ (noteScore + shrinkExtra + scoreUpSum)
 最終スコア = floor(total × badgeMult) + broachScoreBonus
   where badgeMult = 1 + scoreUpBadgeRate / 100   (例: 15 → 1.15)
