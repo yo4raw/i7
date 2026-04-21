@@ -74,7 +74,7 @@ try {
       <slot />
     </main>
     <footer class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center">
-      <span>{version}</span>
+      <a href={`${base}releases/`} class="hover:text-gray-600 hover:underline underline-offset-2">{version}</a>
     </footer>
     <script>
       const toggle = document.getElementById('menu-toggle');

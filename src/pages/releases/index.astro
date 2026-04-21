@@ -1,0 +1,81 @@
+---
+import { execSync } from 'node:child_process';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface ReleaseCommit {
+  subject: string;
+  hash: string;
+}
+
+interface Release {
+  tag: string;
+  date: string;
+  commits: ReleaseCommit[];
+}
+
+function run(cmd: string): string {
+  return execSync(cmd, { encoding: 'utf-8' }).trim();
+}
+
+let releases: Release[] = [];
+
+try {
+  const tagsRaw = run('git tag --sort=-creatordate');
+  const tags = tagsRaw.split('\n').map((t) => t.trim()).filter(Boolean);
+
+  releases = tags.map((tag, i) => {
+    const prev = tags[i + 1];
+    let date = '';
+    try {
+      date = run(`git log -1 --format=%aI ${tag}`).slice(0, 10);
+    } catch {
+      date = '';
+    }
+    let commits: ReleaseCommit[] = [];
+    try {
+      const range = prev ? `${prev}..${tag}` : tag;
+      const logRaw = run(`git log --format=%H%x09%s ${range}`);
+      if (logRaw) {
+        commits = logRaw.split('\n').map((line) => {
+          const [hash, ...rest] = line.split('\t');
+          return { hash, subject: rest.join('\t') };
+        });
+      }
+    } catch {
+      commits = [];
+    }
+    return { tag, date, commits };
+  });
+} catch {
+  releases = [];
+}
+---
+
+<BaseLayout title="リリース履歴">
+  <h1 class="text-2xl font-bold mb-2">リリース履歴</h1>
+  <p class="text-sm text-gray-500 mb-6">git タグごとに、前タグからのコミット差分を表示しています。</p>
+
+  {releases.length === 0 && (
+    <p class="text-gray-500">リリース情報を取得できませんでした。</p>
+  )}
+
+  <ul class="space-y-6">
+    {releases.map((r) => (
+      <li class="border-b border-gray-200 pb-4">
+        <div class="flex items-baseline justify-between flex-wrap gap-2 mb-2">
+          <h2 class="text-lg font-semibold text-indigo-700">{r.tag}</h2>
+          {r.date && <time class="text-sm text-gray-500">{r.date}</time>}
+        </div>
+        {r.commits.length === 0 ? (
+          <p class="text-sm text-gray-400">差分コミットなし</p>
+        ) : (
+          <ul class="list-disc list-outside pl-5 space-y-1 text-sm">
+            {r.commits.map((c) => (
+              <li>{c.subject}</li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))}
+  </ul>
+</BaseLayout>
