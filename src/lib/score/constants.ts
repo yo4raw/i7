@@ -15,7 +15,7 @@ export const LIGHT_MULTIPLIER: Record<string, number> = {
 export const SCOREUP_ASSIST_RATE = 0.2;
 /** スコアアップバッジ倍率のデフォルト値（%）。UI 初期値として使用 */
 export const DEFAULT_SCOREUP_BADGE_RATE = 16;
-export const MC_ITERATIONS = 5000;
+export const MC_ITERATIONS = 100;
 export const MC_CHUNK_SIZE = 50;
 /** センタースキル増加率（レアリティ → 増加率%） */
 export const CENTER_SKILL_RATES: Record<string, number> = {
