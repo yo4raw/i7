@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import CardCurrentBonus from '../../components/CardCurrentBonus.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
@@ -27,9 +28,9 @@ export async function getStaticPaths() {
         eventname: e.eventname,
         start_date: e.start_date,
         end_date: e.end_date,
-        tier: e.gold.cardIds.includes(cardId)
+        tier: (e.gold.cardIds.includes(cardId)
           ? 'gold'
-          : e.silver.cardIds.includes(cardId) ? 'silver' : 'bronze',
+          : e.silver.cardIds.includes(cardId) ? 'silver' : 'bronze') as 'gold' | 'silver' | 'bronze',
       }));
     return {
       params: { id: String(cardId) },
@@ -112,10 +113,7 @@ const otherSkills = [
       </div>
 
       {/* 現在開催中の特効 (クライアント側で live 判定) */}
-      <section id="current-bonus-section" class="bg-white rounded-lg shadow p-4 hidden">
-        <h2 class="text-lg font-semibold mb-3">🎯 現在開催中の特効</h2>
-        <ul id="current-bonus-list" class="space-y-2 text-sm"></ul>
-      </section>
+      <CardCurrentBonus relatedEvents={relatedEvents} base={base} client:load />
 
       {/* ステータス */}
       {(() => {
@@ -226,42 +224,4 @@ const otherSkills = [
     </section>
   )}
 
-  <script type="application/json" id="related-events-data" set:html={JSON.stringify(relatedEvents)}></script>
-  <script define:vars={{ base }}>
-    window.__BASE_URL__ = base;
-  </script>
-  <script>
-    import { isEventLive, bonusBadgeHtml, TIER_RANK, type EventBonusTier } from '../../lib/data/eventBonusTiers';
-
-    interface RelatedEvent {
-      id: number;
-      eventname: string;
-      start_date: string;
-      end_date: string;
-      tier: EventBonusTier;
-    }
-
-    const raw = document.getElementById('related-events-data')?.textContent ?? '[]';
-    const relatedEvents: RelatedEvent[] = JSON.parse(raw);
-    const base = (window as any).__BASE_URL__ || '/';
-
-    const liveHits = relatedEvents
-      .filter(r => isEventLive(r.start_date, r.end_date))
-      .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]);
-
-    if (liveHits.length > 0) {
-      const list = document.getElementById('current-bonus-list');
-      const section = document.getElementById('current-bonus-section');
-      if (list && section) {
-        list.innerHTML = liveHits.map(h =>
-          `<li class="flex flex-wrap items-center gap-2">
-            ${bonusBadgeHtml(h.tier)}
-            <a href="${base}events/${h.id}/" class="text-indigo-600 hover:underline font-medium">${h.eventname}</a>
-            <span class="text-xs text-gray-500">${h.start_date} 〜 ${h.end_date}</span>
-          </li>`
-        ).join('');
-        section.classList.remove('hidden');
-      }
-    }
-  </script>
 </BaseLayout>

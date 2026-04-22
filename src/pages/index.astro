@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import EventCountdown from '../components/EventCountdown.svelte';
 import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson, filterAllowedSongs } from '../lib/data/fetchSongsJson.ts';
 import { fetchEventsCsv } from '../lib/data/fetchEventsCsv.ts';
@@ -54,35 +55,12 @@ const base = import.meta.env.BASE_URL;
     </ul>
   </section>
 
-  {(liveEvents.length > 0 || upcomingEvents.length > 0) && (
-    <section class="mb-8" id="event-highlight">
-      <h2 class="text-lg font-bold text-indigo-700 mb-3">
-        {liveEvents.length > 0 ? '開催中のイベント' : '次回イベント'}
-      </h2>
-      <ul class="space-y-2">
-        {(liveEvents.length > 0 ? liveEvents : upcomingEvents).map((ev) => (
-          <li
-            class="event-item bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-            data-start={`${ev.start_date}T17:00:00+09:00`}
-            data-end={`${ev.end_date}T17:00:00+09:00`}
-          >
-            <div>
-              <a href={`${base}events/${ev.id}/`} class="text-indigo-700 font-semibold hover:underline">
-                {ev.eventname}
-              </a>
-              <div class="text-xs text-gray-500 mt-0.5">
-                {ev.eventtype} / {ev.start_date} 17:00 〜 {ev.end_date} 17:00 (JST)
-              </div>
-            </div>
-            <div class="flex items-center gap-3 text-xs">
-              <span class="status-badge inline-block px-2 py-0.5 rounded font-semibold text-gray-500 bg-gray-100">—</span>
-              <span class="status-remain text-gray-500"></span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )}
+  <EventCountdown
+    events={liveEvents.length > 0 ? liveEvents : upcomingEvents}
+    heading={liveEvents.length > 0 ? '開催中のイベント' : '次回イベント'}
+    base={base}
+    client:load
+  />
 
   <section class="mb-8">
     <div class="flex items-baseline justify-between mb-3">
@@ -228,45 +206,3 @@ const base = import.meta.env.BASE_URL;
   </section>
 </BaseLayout>
 
-<script>
-  function formatRemain(ms: number): string {
-    if (ms <= 0) return '';
-    const totalMin = Math.floor(ms / 60000);
-    const d = Math.floor(totalMin / (60 * 24));
-    const h = Math.floor((totalMin % (60 * 24)) / 60);
-    const m = totalMin % 60;
-    if (d > 0) return `残り ${d}日 ${h}時間`;
-    if (h > 0) return `残り ${h}時間 ${m}分`;
-    return `残り ${m}分`;
-  }
-
-  function refresh(): void {
-    const now = Date.now();
-    const items = document.querySelectorAll<HTMLElement>('#event-highlight .event-item');
-    for (const el of items) {
-      const start = new Date(el.dataset.start ?? '').getTime();
-      const end = new Date(el.dataset.end ?? '').getTime();
-      const badge = el.querySelector<HTMLElement>('.status-badge');
-      const remain = el.querySelector<HTMLElement>('.status-remain');
-      if (!badge || !remain) continue;
-      if (Number.isNaN(start) || Number.isNaN(end)) continue;
-
-      if (now < start) {
-        badge.textContent = '開催予定';
-        badge.className = 'status-badge inline-block px-2 py-0.5 rounded font-semibold text-blue-700 bg-blue-100';
-        remain.textContent = `開始まで ${formatRemain(start - now)}`;
-      } else if (now < end) {
-        badge.textContent = '実施中';
-        badge.className = 'status-badge inline-block px-2 py-0.5 rounded font-semibold text-red-700 bg-red-100';
-        remain.textContent = formatRemain(end - now);
-      } else {
-        badge.textContent = '終了';
-        badge.className = 'status-badge inline-block px-2 py-0.5 rounded font-semibold text-gray-500 bg-gray-200';
-        remain.textContent = '';
-      }
-    }
-  }
-
-  refresh();
-  setInterval(refresh, 60_000);
-</script>
