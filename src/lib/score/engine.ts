@@ -514,6 +514,34 @@ export function calcCardSkillExpected(
   return Math.floor(eligibleBaseScore * (skill.rate - 1.0) * coverageRate);
 }
 
+/**
+ * 単一カードのスキル最大発動数（理論上の上限発動回数）。
+ * - スコアアップ / タイマー: floor( (タイマーなら songDuration、通常なら notesCount) / count )
+ * - 判定縮小: floor( eligibleCount / count )
+ * 発動確率 per は考慮せず、カウント条件を満たし得る最大回数を返す。
+ */
+export function calcCardSkillMaxActivations(
+  team: ComputedTeam,
+  notes: FlatNote[],
+  notesCount: number,
+  slotIndex: number,
+): number {
+  const dc = team.cards.find(c => c.slotIndex === slotIndex);
+  if (!dc || !dc.skill || dc.skill.count <= 0) return 0;
+  const skill = dc.skill;
+
+  if (!skill.isShrink) {
+    const denom = skill.isTimer ? team.songDuration : notesCount;
+    if (denom <= 0) return 0;
+    return Math.floor(denom / skill.count);
+  }
+
+  const excludedCount = notes.filter(n => n.excluded).length;
+  const eligibleCount = notesCount - excludedCount;
+  if (eligibleCount <= 0) return 0;
+  return Math.floor(eligibleCount / skill.count);
+}
+
 /** 単一カードのスキル論理最高値（100% 発動・当該カードのみが縮小スキルを持つ想定）。 */
 export function calcCardSkillMax(
   team: ComputedTeam,
