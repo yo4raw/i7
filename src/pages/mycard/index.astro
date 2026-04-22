@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import MyCardList from '../../components/MyCardList.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { CARD_THUMB_BASE_URL, PAGE_SIZE } from '../../lib/constants';
+import { CARD_THUMB_BASE_URL } from '../../lib/constants';
 
 const allCards = await fetchCardsJson() as any[];
 const base = import.meta.env.BASE_URL;
@@ -10,102 +11,5 @@ const base = import.meta.env.BASE_URL;
 <BaseLayout title="所持カード一覧">
   <h1 class="text-2xl font-bold mb-6">所持カード一覧</h1>
 
-  <div id="empty-message" class="hidden text-center py-12 text-gray-500">
-    <p class="text-lg mb-2">所持カードがありません</p>
-    <p class="text-sm"><a href={`${base}cards/`} class="text-indigo-600 hover:underline">カード一覧</a>で所持数を登録してください</p>
-  </div>
-
-  <div id="mycard-content" class="hidden">
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="flex items-center gap-4 text-sm text-gray-600">
-        <span id="total-count"></span>
-        <span id="total-cards"></span>
-      </div>
-    </div>
-
-    <!-- デスクトップテーブル -->
-    <div class="hidden md:block overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
-            <th class="px-3 py-2 w-16">画像</th>
-            <th class="px-3 py-2">ID</th>
-            <th class="px-3 py-2">カード名</th>
-            <th class="px-3 py-2">キャラ</th>
-            <th class="px-3 py-2">レア</th>
-            <th class="px-3 py-2">属性</th>
-            <th class="px-3 py-2 w-20">属性比率</th>
-            <th class="px-3 py-2 text-right">Shout</th>
-            <th class="px-3 py-2 text-right">Beat</th>
-            <th class="px-3 py-2 text-right">Melody</th>
-            <th class="px-3 py-2">スキル</th>
-            <th class="px-3 py-2 w-28 text-center">所持数</th>
-          </tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-      </table>
-    </div>
-    <!-- モバイルカード -->
-    <div id="mobile-cards" class="md:hidden space-y-3"></div>
-  </div>
-
-  <script type="application/json" id="card-data" set:html={JSON.stringify(allCards)}></script>
-  <script define:vars={{ base, CARD_THUMB_BASE_URL }}>
-    window.__BASE_URL__ = base;
-    window.__CARD_THUMB_BASE_URL__ = CARD_THUMB_BASE_URL;
-  </script>
-
-  <script>
-    import {
-      initRenderer, type CardListItem,
-      loadCounts, getCount, setCount,
-      renderTableRow, renderMobileCard, bindCountEvents,
-    } from '../../lib/cardListRenderer';
-
-    const base = (window as any).__BASE_URL__ || '/';
-    const THUMB_URL = (window as any).__CARD_THUMB_BASE_URL__;
-
-    initRenderer({ base, thumbUrl: THUMB_URL });
-
-    let allCards: CardListItem[] = JSON.parse(document.getElementById('card-data')!.textContent!);
-    const $ = (id: string) => document.getElementById(id)!;
-
-    function render() {
-      const counts = loadCounts();
-      const owned = allCards
-        .filter(card => (counts[String(card.ID)] || 0) > 0)
-        .sort((a, b) => b.ID - a.ID);
-
-      if (owned.length === 0) {
-        $('empty-message').classList.remove('hidden');
-        $('mycard-content').classList.add('hidden');
-        return;
-      }
-
-      $('empty-message').classList.add('hidden');
-      $('mycard-content').classList.remove('hidden');
-
-      const totalOwned = Object.values(counts).reduce((sum, n) => sum + n, 0);
-      $('total-count').textContent = `所持種類: ${owned.length}種`;
-      $('total-cards').textContent = `合計枚数: ${totalOwned}枚`;
-
-      $('table-body').innerHTML = owned.map(c => renderTableRow(c)).join('');
-      $('mobile-cards').innerHTML = owned.map(c => renderMobileCard(c)).join('');
-
-      // 所持数ボタン・入力イベント（0になったら一覧から消して再描画）
-      bindCountEvents((_cardId, newValue) => {
-        if (newValue === 0) render();
-      });
-    }
-
-    render();
-
-    // クライアントサイドデータリフレッシュ
-    import { refreshData } from '../../lib/data/clientRefresh';
-    import { fetchCardsJson } from '../../lib/data/fetchCardsJson';
-    refreshData('cards', fetchCardsJson, (fresh) => {
-      allCards = fresh as CardListItem[];
-      render();
-    });
-  </script>
+  <MyCardList cards={allCards} base={base} thumbUrl={CARD_THUMB_BASE_URL} client:load />
 </BaseLayout>

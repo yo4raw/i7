@@ -2,6 +2,7 @@
 import { execSync } from 'node:child_process';
 import '../styles/global.css';
 import { SITE_NAME } from '../lib/constants.ts';
+import HeaderNav from '../components/HeaderNav.svelte';
 
 interface Props {
   title: string;
@@ -40,50 +41,12 @@ try {
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KR6P85NL"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
-    <header class="bg-indigo-700 text-white sticky top-0 z-50 shadow-md">
-      <nav class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <a href={base} class="text-lg font-bold tracking-wide">{SITE_NAME}</a>
-        <button id="menu-toggle" class="md:hidden p-1" aria-label="メニュー">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <ul id="nav-links" class="hidden md:flex gap-6 text-sm font-medium">
-          <li><a href={base} class="hover:text-indigo-200 transition-colors">ホーム</a></li>
-          <li><a href={`${base}cards/`} class="hover:text-indigo-200 transition-colors">カード一覧</a></li>
-          <li><a href={`${base}songs/`} class="hover:text-indigo-200 transition-colors">楽曲一覧</a></li>
-          <li><a href={`${base}events/`} class="hover:text-indigo-200 transition-colors">イベント情報</a></li>
-          <li><a href={`${base}mycard/`} class="hover:text-indigo-200 transition-colors">所持カード</a></li>
-          <li><a href={`${base}score-calc/`} class="hover:text-indigo-200 transition-colors">スコア計算</a></li>
-          <li><a href={`${base}rabbit-note/`} class="hover:text-indigo-200 transition-colors">ラビットノート</a></li>
-          <li><a href={`${base}decks/`} class="hover:text-indigo-200 transition-colors">保存デッキ</a></li>
-        </ul>
-      </nav>
-      <ul id="mobile-nav" class="hidden flex-col gap-2 px-4 pb-3 text-sm font-medium md:hidden">
-        <li><a href={base} class="block py-1 hover:text-indigo-200">ホーム</a></li>
-        <li><a href={`${base}cards/`} class="block py-1 hover:text-indigo-200">カード一覧</a></li>
-        <li><a href={`${base}songs/`} class="block py-1 hover:text-indigo-200">楽曲一覧</a></li>
-        <li><a href={`${base}events/`} class="block py-1 hover:text-indigo-200">イベント情報</a></li>
-        <li><a href={`${base}mycard/`} class="block py-1 hover:text-indigo-200">所持カード</a></li>
-        <li><a href={`${base}score-calc/`} class="block py-1 hover:text-indigo-200">スコア計算</a></li>
-        <li><a href={`${base}rabbit-note/`} class="block py-1 hover:text-indigo-200">ラビットノート</a></li>
-        <li><a href={`${base}decks/`} class="block py-1 hover:text-indigo-200">保存デッキ</a></li>
-      </ul>
-    </header>
+    <HeaderNav base={base} client:load />
     <main class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
       <slot />
     </main>
     <footer class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center">
       <a href={`${base}releases/`} class="hover:text-gray-600 hover:underline underline-offset-2">{version}</a>
     </footer>
-    <script>
-      const toggle = document.getElementById('menu-toggle');
-      const mobileNav = document.getElementById('mobile-nav');
-      toggle?.addEventListener('click', () => {
-        mobileNav?.classList.toggle('hidden');
-        mobileNav?.classList.toggle('flex');
-      });
-      document.addEventListener('contextmenu', (e) => e.preventDefault());
-    </script>
   </body>
 </html>
