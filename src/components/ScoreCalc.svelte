@@ -713,7 +713,7 @@
         if (!card) continue;
         const exp = calcCardSkillExpected(team, notes, notesCount, i, options);
         const max = calcCardSkillMax(team, notes, notesCount, i, options);
-        const activations = calcCardSkillMaxActivations(team, notes, notesCount, i);
+        const activations = calcCardSkillMaxActivations(team, notesCount, i);
         totalExp += exp;
         totalMax += max;
         totalActivations += activations;

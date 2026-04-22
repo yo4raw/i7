@@ -44,15 +44,19 @@ noteScoreShrunk   = floor(noteScoreAssisted × rate)
 
 ## 2. 先頭除外（仕様）
 
-判定縮小スキルは **max(notes_20, デッキ最小 count)** を発動判定の対象外とする。
+判定縮小スキルは **max(notes_20, デッキ最小 count)** を**縮小倍率 `rate` の適用対象外**とする。
 `notes_20` 以外の全ノートは縮小スキルの発動判定と効果適用可能性の対象。
+
+> **先頭除外の適用範囲**: 先頭除外は「縮小倍率 `rate` が乗じられるスコア適用範囲」（§3 理論最大縮小カバー率 / §4 期待値カバー率 で用いる `eligibleCount`）にのみ作用する。
+> UI 上の「**スキル最大発動回数**」（= カードが理論上何回発動し得るかの表示値）は先頭除外を考慮せず `notesCount` 全体で計算する。発動判定は実楽曲全体で行われ、先頭除外の有無とは独立であるため。
 
 ### 2-1. アルゴリズム
 
 1. `minCount = min(デッキ内縮小スキルの count)`（縮小スキル 1 枚の場合はその count）
 2. `excludeHead = max(notes_20 グループのノート数, minCount)`
 3. `eligibleCount = notesCount − excludeHead`
-4. 各縮小スキル `i` の発動回数上限: `floor(eligibleCount / count_i)`
+4. 各縮小スキル `i` の**縮小スコア寄与計算用の発動回数**: `floor(eligibleCount / count_i)`
+5. UI 表示の「**スキル最大発動回数**」(`calcCardSkillMaxActivations`) は先頭除外を考慮せず `floor(notesCount / count_i)` を用いる。
 
 > **意図**: 最初の縮小発動タイミングは「最も早く発動可能なスキル（= count が最小）」が `count` ノート目以降に到達してから。
 > そのため `minCount` より前のノートでは縮小判定が存在しえない。
@@ -64,9 +68,21 @@ noteScoreShrunk   = floor(noteScoreAssisted × rate)
 - デッキ縮小スキル: Card 1952 (`count=20`) / Card 3597 (`count=23`)
 - `minCount = min(20, 23) = 20`
 - `excludeHead = max(21, 20) = 21` / `eligibleCount = 407`
-- Card 1952 (`count=20` / `per=40%` / `value=4秒`): `floor(407 / 20) = 20 回` / 合計 `20 × 4 = 80 秒`
-- Card 3597 (`count=23` / `per=39%` / `value=5秒`): `floor(407 / 23) = 17 回` / 合計 `17 × 5 = 85 秒`
+- Card 1952 (`count=20` / `per=40%` / `value=4秒`): 縮小スコア寄与用 `floor(407 / 20) = 20 回` / 合計 `20 × 4 = 80 秒`
+- Card 3597 (`count=23` / `per=39%` / `value=5秒`): 縮小スコア寄与用 `floor(407 / 23) = 17 回` / 合計 `17 × 5 = 85 秒`
 - カード別の縮小スキル寄与点数は **期待縮小時間比 32 : 33.15**（≈ 49 : 51）で按分（最大縮小時間 × `per` を反映した固定比。MC 試行ごとの実発動時間比ではなく、カード別 UI 表示用の簡易配分ルール）
+- **UI 表示の「スキル最大発動回数」（先頭除外を考慮しない）**:
+  - Card 1952 (`count=20`): `floor(428 / 20) = 21 回`
+  - Card 3597 (`count=23`): `floor(428 / 23) = 18 回`
+
+### 2-3. 例（Binary Vampire × ID1923 単独デッキ）
+
+- 楽曲: `songID=60 (Binary Vampire)` / `notes_count = 461` / `notes_20 = 20 ノート` / `songDuration = 92 秒`
+- デッキ縮小スキル: Card 1923 (`count=22` / `per=42%` / `value=4秒` / `rate=1.6`) 1 枚のみ
+- `minCount = 22`
+- `excludeHead = max(20, 22) = 22` / `eligibleCount = 439`
+- **縮小スコア寄与計算用の発動回数**: `floor(439 / 22) = 19 回` / 合計 `19 × 4 = 76 秒`
+- **UI 表示の「スキル最大発動回数」**: `floor(461 / 22) = 20 回`（先頭除外の 22 ノート分は発動カウントには影響しない）
 
 ## 3. 理論最大縮小カバー率（仕様）
 
