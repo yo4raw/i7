@@ -4,17 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Dev Commands
 
-ローカルでのビルド・プレビューは原則として **Docker (docker compose)** 経由で行うこと。ホスト環境の Node.js バージョンや OS 差異による再現性問題を避けるため。
+ローカルでのビルド・プレビュー・テストはすべて **ホスト環境で直接 npm scripts** を実行する。Docker は使用しない。
 
 ```bash
-docker compose up dev       # 開発サーバー (http://localhost:4321)
-docker compose up preview   # 本番ビルド + ローカル配信 (http://localhost:4321)
-docker compose up wrangler  # Cloudflare Workers (Static Assets) 挙動再現 (http://localhost:8788, _headers 有効)
-```
-
-Playwright E2E テスト / Vitest 単体テストはホスト実行を想定:
-
-```bash
+npm run dev              # 開発サーバー (http://localhost:4321)
+npm run build            # 本番ビルド (dist/ に出力)
+npm run preview          # 本番ビルド + ローカル配信 (http://localhost:4321)
 npm run test             # Playwright E2E テスト (preview サーバーを自動起動)
 npm run test:ui          # Playwright を UI モードで実行
 npm run test:unit        # Vitest 単体テスト (1回実行、`tests/unit/` 配下)
@@ -22,7 +17,7 @@ npm run test:unit:watch  # Vitest 単体テスト (watch モード)
 npm run extract-fixtures # Google Sheets からテストフィクスチャ JSON を再生成
 ```
 
-Node.js は `.nvmrc` で 22 を指定。テストや npm scripts をホストで実行する場合のみ Node.js 22 を要する。
+Node.js は `.nvmrc` で 22 を指定。ホスト環境で Node.js 22 を用意すること（`nvm use` 等）。
 
 ### ビルド所要時間の目安
 
@@ -192,7 +187,7 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 作業完了後は以下を自動で行うこと:
 
-1. `docker compose up preview` でローカルプレビューサーバーを Docker 上に起動する
+1. `npm run preview` でローカルプレビューサーバー（ビルド + `serve` による静的配信）を起動する
 2. Playwright MCP でプレビューサーバー（`http://localhost:4321/`）にアクセスし、変更箇所の画面表示を確認する
 3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
 4. `git` に `commit` する前に必ずリリースノートを更新する
