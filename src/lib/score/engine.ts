@@ -516,30 +516,23 @@ export function calcCardSkillExpected(
 
 /**
  * 単一カードのスキル最大発動数（理論上の上限発動回数）。
- * - スコアアップ / タイマー: floor( (タイマーなら songDuration、通常なら notesCount) / count )
- * - 判定縮小: floor( eligibleCount / count )
+ * - タイマー: floor( songDuration / count )
+ * - それ以外（スコアアップ / 判定縮小）: floor( notesCount / count )
  * 発動確率 per は考慮せず、カウント条件を満たし得る最大回数を返す。
+ * 判定縮小の先頭除外 (docs/shrink-skill-spec.md §2) は縮小倍率のスコア適用範囲にのみ作用し、
+ * 発動回数の算出には影響しない。
  */
 export function calcCardSkillMaxActivations(
   team: ComputedTeam,
-  notes: FlatNote[],
   notesCount: number,
   slotIndex: number,
 ): number {
   const dc = team.cards.find(c => c.slotIndex === slotIndex);
   if (!dc || !dc.skill || dc.skill.count <= 0) return 0;
   const skill = dc.skill;
-
-  if (!skill.isShrink) {
-    const denom = skill.isTimer ? team.songDuration : notesCount;
-    if (denom <= 0) return 0;
-    return Math.floor(denom / skill.count);
-  }
-
-  const excludedCount = notes.filter(n => n.excluded).length;
-  const eligibleCount = notesCount - excludedCount;
-  if (eligibleCount <= 0) return 0;
-  return Math.floor(eligibleCount / skill.count);
+  const denom = skill.isTimer ? team.songDuration : notesCount;
+  if (denom <= 0) return 0;
+  return Math.floor(denom / skill.count);
 }
 
 /** 単一カードのスキル論理最高値（100% 発動・当該カードのみが縮小スキルを持つ想定）。 */
