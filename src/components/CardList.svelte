@@ -161,13 +161,6 @@
 
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    const htmxHandler = (e: any) => {
-      if (e.detail?.name === 'filter-cards') {
-        // Svelteでは derived が自動的に再計算するのでここでは何もしない
-      }
-    };
-    document.body.addEventListener('htmx:trigger', htmxHandler);
-
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCards = fresh as CardListItem[];
     });
@@ -175,7 +168,6 @@
     return () => {
       observer?.disconnect();
       window.removeEventListener('scroll', onScroll);
-      document.body.removeEventListener('htmx:trigger', htmxHandler);
     };
   });
 
