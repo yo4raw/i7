@@ -14,7 +14,7 @@ export default defineConfig({
     JavaScript: true,
     JSON: true,
     SVG: true,
-    Image: true,
+    Image: false,
     Logger: 1,
   }), svelte()],
 
