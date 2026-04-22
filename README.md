@@ -26,22 +26,17 @@
 
 ## 開発
 
-ローカル環境は Docker (docker compose) で統一しています:
+ローカルのホスト環境で直接実行します。Node.js は `.nvmrc` で 22 を指定:
 
 ```bash
-docker compose up dev       # 開発サーバー (http://localhost:4321)
-docker compose up preview   # ビルド + ローカル配信 (http://localhost:4321)
-docker compose up wrangler  # Cloudflare Pages 挙動再現 (http://localhost:8788)
+npm install              # 依存関係のインストール
+npm run dev              # 開発サーバー (http://localhost:4321)
+npm run preview          # ビルド + ローカル配信 (http://localhost:4321)
+npm run test             # Playwright E2E テスト
+npm run test:unit        # Vitest 単体テスト
+
+npx wrangler dev --port 8788  # Cloudflare Workers 挙動再現 (要: 事前に npm run build)
 ```
-
-Playwright E2E テストはホスト実行:
-
-```bash
-npm install     # 依存関係のインストール
-npm run test    # Playwright E2E テスト
-```
-
-Node.js は `.nvmrc` で 22 を指定（テスト/npm scripts をホスト実行する場合のみ必須）。
 
 ## デプロイ
 
