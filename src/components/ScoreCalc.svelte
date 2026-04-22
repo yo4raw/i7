@@ -826,7 +826,7 @@
       const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
       const notes = flattenNotes(selectedSong, 42, exclusion);
 
-      const iterations = Number(_q<HTMLSelectElement>('mc-iterations-select').value) || MC_ITERATIONS;
+      const iterations = Math.max(1, Math.floor(Number(_q<HTMLInputElement>('mc-iterations-input').value) || MC_ITERATIONS));
 
       const scoreOptions: ScoreOptions = {
         scoreUpAssist: _q<HTMLInputElement>('opt-scoreup-assist').checked,
@@ -1244,11 +1244,11 @@
   <!-- スキルオプション（折りたたみ可、デフォルト開） -->
   <details class="bg-white rounded-lg shadow mb-4 group" open>
     <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
-      <span>⚙️ スキルオプション / シミュレーション設定</span>
+      <span>⚙️ スキルオプション</span>
       <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </summary>
     <div class="px-4 pb-4 border-t border-gray-100 pt-3">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <label class="flex items-center gap-2">
           <input type="checkbox" id="opt-scoreup-assist" class="rounded" />
           <span>SCOREUPアシスト（属性値 ×1.2）</span>
@@ -1258,14 +1258,6 @@
           <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="16" />
           <span class="text-xs text-gray-500">%</span>
         </label>
-        <div>
-          <label for="mc-iterations-select" class="block text-xs font-medium text-gray-500 mb-1">シミュレーション回数</label>
-          <select id="mc-iterations-select" class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            <option value="1000">1,000回</option>
-            <option value="5000" selected>5,000回（推奨）</option>
-            <option value="10000">10,000回</option>
-          </select>
-        </div>
       </div>
       <p class="text-[11px] text-gray-400 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
     </div>
@@ -1414,6 +1406,18 @@
     </section>
 
     <div class="space-y-2">
+      <div class="flex items-center justify-end gap-2">
+        <label for="mc-iterations-input" class="text-xs text-gray-500">シミュレーション回数</label>
+        <input
+          id="mc-iterations-input"
+          type="number"
+          min="1"
+          step="1"
+          class="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={MC_ITERATIONS}
+        />
+        <span class="text-xs text-gray-500">回</span>
+      </div>
       <button id="btn-calculate" type="button" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
         🧮 シミュレーション計算
       </button>
