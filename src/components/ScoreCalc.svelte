@@ -5,7 +5,7 @@
   import type { Song } from '../lib/data/fetchSongsJson';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
   import type { ComputedTeam, SimulationResult, ScoreOptions, FlatNote } from '../lib/score/types';
-  import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
+  import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, calcCardSkillMaxActivations, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
   import { resolveDeckBroachs } from '../lib/score/broachResolver';
   import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../lib/score/constants';
   import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../lib/data/eventBonusTiers';
@@ -707,13 +707,16 @@
       const rows: string[] = [];
       let totalExp = 0;
       let totalMax = 0;
+      let totalActivations = 0;
       for (const i of DISPLAY_ORDER) {
         const card = deck[i];
         if (!card) continue;
         const exp = calcCardSkillExpected(team, notes, notesCount, i, options);
         const max = calcCardSkillMax(team, notes, notesCount, i, options);
+        const activations = calcCardSkillMaxActivations(team, notes, notesCount, i);
         totalExp += exp;
         totalMax += max;
+        totalActivations += activations;
         const slotCls = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500';
         rows.push(`<tr class="border-t">
           <td class="py-1 px-1 text-[10px] ${slotCls}">${SLOT_LABELS[i]}</td>
@@ -723,6 +726,7 @@
           </td>
           <td class="py-1 px-1">${card.ap_skill_type || '-'}</td>
           <td class="py-1 px-1 text-right">${exp > 0 ? exp.toLocaleString() : '-'}</td>
+          <td class="py-1 px-1 text-right">${activations > 0 ? activations.toLocaleString() : '-'}</td>
           <td class="py-1 px-1 text-right">${max > 0 ? max.toLocaleString() : '-'}</td>
         </tr>`);
       }
@@ -735,6 +739,7 @@
       _q('skill-per-card-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold">
         <td colspan="3" class="py-1 px-1 text-right text-gray-700">合計</td>
         <td class="py-1 px-1 text-right">${totalExp.toLocaleString()}</td>
+        <td class="py-1 px-1 text-right">${totalActivations.toLocaleString()}</td>
         <td class="py-1 px-1 text-right">${totalMax.toLocaleString()}</td>
       </tr>`;
     }
@@ -1360,7 +1365,7 @@
       <section id="score-breakdown" class="hidden">
         <div class="space-y-1">
           <div id="shrink-coverage-row" class="flex justify-between text-sm hidden">
-            <span class="text-gray-500">縮小カバー率（100%発動時）</span>
+            <span class="text-gray-500">縮小カバー率（最大発動時）</span>
             <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
           </div>
           <div id="shrink-expected-row" class="flex justify-between text-sm hidden">
@@ -1382,13 +1387,14 @@
                 <th class="text-left py-1 px-1">カード名</th>
                 <th class="text-left py-1 px-1">スキル</th>
                 <th class="text-right py-1 px-1">スキル期待値</th>
+                <th class="text-right py-1 px-1">スキル最大発動回数</th>
                 <th class="text-right py-1 px-1">スキル論理最高値</th>
               </tr>
             </thead>
             <tbody id="skill-per-card-body"></tbody>
             <tfoot id="skill-per-card-foot"></tfoot>
           </table>
-          <p class="text-xs text-gray-400 mt-2">※ 複数の判定縮小スキルが共存する場合、max rate 合成は考慮しないためカード単独寄与の目安です</p>
+          <p class="text-xs text-gray-400 mt-2">※ 複数の判定縮小スキルが共存する場合、値は按分されます</p>
         </div>
       </section>
       <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスキル詳細が表示されます</p>

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { Card } from '../../../src/lib/data/fetchCardsJson';
 import {
+  calcCardSkillMaxActivations,
   calcExpectedScore,
   calcMaxScore,
   calcMinScore,
@@ -665,6 +666,52 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
         grandTotal += sw + sc + bw + bc + mw + mc;
       }
       expect(grandTotal).toBe(1876289);
+    });
+  });
+});
+
+describe('calcCardSkillMaxActivations (単一カードのスキル最大発動数)', () => {
+  const notesCount = monsterGenerationSong.notes_count!;
+
+  it('スキル非所持カード(10th 環: BAD→Perfect)は 0 を返す', () => {
+    const team = computeTeam(centerDeck, [], monsterGenerationSong);
+    const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
+    expect(calcCardSkillMaxActivations(team, notes, notesCount, 0)).toBe(0);
+  });
+
+  it('空スロット(カード未配置)は 0 を返す', () => {
+    const team = computeTeam(centerDeck, [], monsterGenerationSong);
+    const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
+    expect(calcCardSkillMaxActivations(team, notes, notesCount, 3)).toBe(0);
+  });
+
+  it('タイマー(JokerFlag2 環 / count=16秒): floor(songDuration 104 / 16) = 6 回', () => {
+    const team = computeTeam(jokerFlag2Deck, [], monsterGenerationSong);
+    const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
+    expect(calcCardSkillMaxActivations(team, notes, notesCount, 0)).toBe(6);
+  });
+
+  it('スコアアップコンボ(屋外フェス2 壮五 / count=16ノート): floor(428 / 16) = 26 回', () => {
+    const team = computeTeam(outdoorFes2Deck, [], monsterGenerationSong);
+    const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED);
+    expect(calcCardSkillMaxActivations(team, notes, notesCount, 0)).toBe(26);
+  });
+
+  describe('判定縮小 2 枚構成(ID1952 フレンド count=20 / ID3597 メンバー1 count=23)', () => {
+    const team = computeTeam(threeCardDeck, tenthTamakiBroachs, monsterGenerationSong);
+    const exclusion = computeShrinkExclusion(team, computeGroupSizes(monsterGenerationSong));
+    const notes = flattenNotes(monsterGenerationSong, FLATTEN_SEED, exclusion);
+
+    it('フレンド(ID1952): floor(eligibleCount 407 / 20) = 20 回', () => {
+      expect(calcCardSkillMaxActivations(team, notes, notesCount, 5)).toBe(20);
+    });
+
+    it('メンバー1(ID3597): floor(eligibleCount 407 / 23) = 17 回', () => {
+      expect(calcCardSkillMaxActivations(team, notes, notesCount, 1)).toBe(17);
+    });
+
+    it('センター(10th 環: スキル非所持)は 0', () => {
+      expect(calcCardSkillMaxActivations(team, notes, notesCount, 0)).toBe(0);
     });
   });
 });
