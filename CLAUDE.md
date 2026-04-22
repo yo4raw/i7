@@ -24,6 +24,18 @@ npm run extract-fixtures # Google Sheets からテストフィクスチャ JSON 
 
 Node.js は `.nvmrc` で 22 を指定。テストや npm scripts をホストで実行する場合のみ Node.js 22 を要する。
 
+### ビルド所要時間の目安
+
+`npm run build` は 2779 ページを静的生成するため数分かかる。エージェントから起動する際のタイムアウト / sleep 目安:
+
+| 実測日 | 内訳 | 合計 |
+|--------|------|------|
+| 2026-04-22 | 主要ビルド 264s + `@playform/compress` 76s | **約 340 秒 (5.5 分)** |
+
+- Bash の `timeout` は **最低 420000 ms (7 分)** を確保する (デフォルト 120000 ms では不足)
+- `run_in_background: true` + `ScheduleWakeup` で待つ場合は初回 **300 秒後** を目安に、完了していなければさらに 120 秒後に再確認
+- 単体テスト (`npm run test:unit`) は約 1 秒 / フル Playwright E2E (`npm run test`) は build 込みで 5〜7 分
+
 ## Architecture
 
 IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Workers Static Assets にデプロイ）。
