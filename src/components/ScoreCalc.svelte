@@ -1427,7 +1427,7 @@
     </div>
 
     <section class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
-      <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">MC 平均スコア</div>
+      <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">平均スコア</div>
       <div id="final-result" class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">---</div>
       <div class="mt-3 text-center">
         <span class="text-[10px] text-gray-500">試行回数: </span>
@@ -1436,15 +1436,15 @@
     </section>
 
     <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">🎲 MC 統計</h2>
+      <h2 class="text-sm font-bold text-gray-700 mb-3">🎲 シミュレーション統計</h2>
       <section id="mc-results" class="hidden">
         <table class="w-full text-sm">
           <tbody>
             <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 最小</td><td id="mc-min" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">MC 最大</td><td id="mc-max" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">最小</td><td id="mc-min" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class="text-gray-500 py-1">中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 py-1">最大</td><td id="mc-max" class="text-right py-1"></td></tr>
             <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
             <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
             <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
@@ -1464,7 +1464,7 @@
 
       <div id="tab-panel-expected" data-tab-panel class="p-4 hidden">
         <section id="expected-score" class="hidden">
-          <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（MC の確率的揺れを含まない決定論的な値）</p>
+          <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（シミュレーションの確率的揺れを含まない決定論的な値）</p>
           <table class="w-full text-sm">
             <tbody>
               <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1"></td></tr>
