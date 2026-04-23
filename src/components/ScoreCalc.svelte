@@ -856,19 +856,24 @@
 
       _q('histogram-container').innerHTML = renderHistogramSvg(result.scores, result.minScore, result.maxScore, result.mean);
 
+      let sharedMin = Infinity, sharedMax = -Infinity;
+      for (const v of result.shrinkScores) {
+        if (v < sharedMin) sharedMin = v;
+        if (v > sharedMax) sharedMax = v;
+      }
+      for (const v of result.scoreUpScores) {
+        if (v < sharedMin) sharedMin = v;
+        if (v > sharedMax) sharedMax = v;
+      }
       const renderContributionHistogram = (values: number[], containerId: string, label: string, color: string) => {
         if (values.length === 0) {
           _q(containerId).innerHTML = '<span class="text-gray-400 text-xs">データなし</span>';
           return;
         }
-        let min = Infinity, max = -Infinity, sum = 0;
-        for (const v of values) {
-          if (v < min) min = v;
-          if (v > max) max = v;
-          sum += v;
-        }
+        let sum = 0;
+        for (const v of values) sum += v;
         const mean = sum / values.length;
-        _q(containerId).innerHTML = renderHistogramSvg(values, min, max, mean, { xAxisLabel: label, barColor: color });
+        _q(containerId).innerHTML = renderHistogramSvg(values, sharedMin, sharedMax, mean, { xAxisLabel: label, barColor: color });
       };
       renderContributionHistogram(result.shrinkScores, 'histogram-shrink', '縮小スキル寄与', '#10b981');
       renderContributionHistogram(result.scoreUpScores, 'histogram-scoreup', 'スコアアップ寄与', '#6366f1');
