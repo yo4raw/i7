@@ -1,0 +1,202 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ShrinkPlayground from '../../components/score/ShrinkPlayground.svelte';
+import {
+  overviewFlowSvg,
+  shrinkTimelineSvg,
+  excludeHeadSvg,
+  coverageDiagramSvg,
+  formulaDiagramSvg,
+  mcDistributionSvg,
+  simulateActivationsDeterministic,
+} from '../../lib/score/specDiagrams.ts';
+
+const base = import.meta.env.BASE_URL;
+
+// §2 静的タイムライン用のデモパラメータ（MONSTER GENERATiON + Card 1952 Lv5）
+const DEMO_NOTES = 428;
+const DEMO_DURATION = 104;
+const DEMO_EXCLUDE = 21;
+const demoActivations = simulateActivationsDeterministic({
+  count: 20, per: 40, value: 4,
+  notesCount: DEMO_NOTES, songDuration: DEMO_DURATION, excludeHead: DEMO_EXCLUDE,
+  seed: 7,
+});
+const timelineSvg = shrinkTimelineSvg({
+  count: 20, per: 40, value: 4,
+  notesCount: DEMO_NOTES, songDuration: DEMO_DURATION,
+  excludeHead: DEMO_EXCLUDE, activations: demoActivations,
+});
+
+// §3 先頭除外: 2ケース比較
+const excludeCaseA = excludeHeadSvg({ notes20: 21, minCount: 20, caseLabel: 'ケース A: notes_20 > minCount' });
+const excludeCaseB = excludeHeadSvg({ notes20: 20, minCount: 22, caseLabel: 'ケース B: notes_20 < minCount' });
+
+// §4 カバー率
+const coverageSvg = coverageDiagramSvg({
+  songDuration: 104,
+  segments: [
+    { label: 'Card 1952 (20ノート毎×4秒, 20回)', seconds: 80, color: '#f59e0b' },
+    { label: 'Card 3597 (23ノート毎×5秒, 17回)', seconds: 85, color: '#f97316' },
+  ],
+});
+
+// §5 スコア加算式
+const formulaSvg = formulaDiagramSvg();
+
+// §6 MC 分布デモ
+const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 });
+---
+
+<BaseLayout title="スコア計算 仕様解説">
+  <div class="flex items-baseline gap-3 mb-2 flex-wrap">
+    <h1 class="text-2xl font-bold">スコア計算 仕様解説</h1>
+    <a href={`${base}score-calc/`} class="text-sm text-indigo-600 hover:underline">← 計算ページへ戻る</a>
+  </div>
+  <p class="text-xs text-gray-500 mb-6">
+    本ページはスコア計算、特に<strong class="text-gray-700">判定縮小スキル</strong>の内部ロジックを
+    図で解説するものです。数値例は楽曲「MONSTER GENERATiON」(428ノート / 104秒) を基に記述しています。
+    有志による計測・推定値を含むため、ゲーム内の挙動と完全に一致することを保証するものではありません。
+  </p>
+
+  <nav class="bg-white rounded-lg shadow p-4 mb-6 text-sm">
+    <h2 class="text-sm font-bold text-indigo-700 mb-2">目次</h2>
+    <ol class="list-decimal pl-6 space-y-0.5 text-gray-700">
+      <li><a href="#overview" class="hover:underline text-indigo-600">スコア計算の全体像</a></li>
+      <li><a href="#shrink" class="hover:underline text-indigo-600">判定縮小スキルとは</a></li>
+      <li><a href="#exclude" class="hover:underline text-indigo-600">先頭除外ロジック</a></li>
+      <li><a href="#coverage" class="hover:underline text-indigo-600">カバー率の合算と 100% キャップ</a></li>
+      <li><a href="#formula" class="hover:underline text-indigo-600">縮小スコア加算式</a></li>
+      <li><a href="#montecarlo" class="hover:underline text-indigo-600">モンテカルロ分布のイメージ</a></li>
+    </ol>
+  </nav>
+
+  <section id="overview" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">1. スコア計算の全体像</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      スコアは大きく分けて <strong>チーム属性値 → 1ノーツ素点 → ライト倍率 → 縮小加算 → バッジ</strong> の順に
+      計算されます。属性値段階でアシスト (×1.2) を適用し、per-note 単位で floor することでゲーム内挙動と揃えます。
+      縮小スキルは経路の一部として「発動中ノーツの追加スコア」を別途加算します。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={overviewFlowSvg()} />
+    </div>
+  </section>
+
+  <section id="shrink" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">2. 判定縮小スキルとは</h2>
+    <p class="text-sm text-gray-700 mb-2">
+      判定縮小スキルは <strong>ノーツ数</strong>（<code class="px-1 bg-gray-100 rounded">count</code>）ごとに
+      <strong>確率</strong>（<code class="px-1 bg-gray-100 rounded">per</code>）% で発動し、
+      <strong>秒数</strong>（<code class="px-1 bg-gray-100 rounded">value</code>）だけ持続する間、叩いたノーツを
+      <strong>倍率</strong>（<code class="px-1 bg-gray-100 rounded">rate</code>、Lv5 で 1.6）でスコア加算するスキルです。
+    </p>
+    <p class="text-sm text-gray-700 mb-4">
+      下図はパラメータ例 <code class="px-1 bg-gray-100 rounded">ノーツ数=20 / 確率=40% / 秒数=4秒 / 倍率=1.6</code>
+      の発動タイムラインです。縦点線ごとに発動判定が行われ、コインが<span class="text-green-600 font-semibold">緑</span>
+      なら発動（<span class="text-amber-600 font-semibold">橙の塗り</span>で秒数ぶんカバー）、
+      <span class="text-gray-500">灰</span>なら不発を表します。先頭の<span class="text-gray-500 font-semibold">灰色領域</span>は
+      §3 で説明する <strong>先頭除外</strong> です。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={timelineSvg} />
+    </div>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">2-1. インタラクティブに試す</h3>
+    <p class="text-sm text-gray-700 mb-3">
+      <strong>ノーツ数</strong> / <strong>確率</strong> / <strong>秒数</strong> のスライダー、
+      <strong>「＋カード追加」</strong> ボタンで縮小スキル枚数の変更、
+      <strong>「別の試行」</strong> ボタンでシード変更ができます。
+      発動回数・カバー時間がデッキ構成でどう変わるか確認できます（実ゲームと同じ発動判定 + キューイング仕様を疑似的に再現、決定論シード付き）。
+    </p>
+    <ShrinkPlayground client:only="svelte" />
+
+    <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+      <strong>キューイング仕様</strong>：実ゲームでは複数の縮小スキルが同時刻に重複発動することはなく、先行スキルが終わってから後続スキルが連続発動します。そのためカバー時間は時間軸上で<strong>重ならず単純加算</strong>できます（曲全体を超えた分のみ切り捨て → §4 の 100% キャップの根拠）。
+    </div>
+  </section>
+
+  <section id="exclude" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">3. 先頭除外ロジック</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      判定縮小スキルは曲の最初のほうでは効果対象外になります。具体的には
+      <code class="px-1 bg-gray-100 rounded">excludeHead = max(notes_20 のノート数, デッキ内縮小スキルの count の最小値)</code>
+      までのノートが <strong>縮小倍率 rate の適用対象外</strong> です。ライト点灯前の演出区間
+      (<code class="px-1 bg-gray-100 rounded">notes_20</code>) と、最速で発動しうるタイミング
+      (<code class="px-1 bg-gray-100 rounded">minCount</code>) の<strong>大きい方</strong>が採用されます。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-3">
+      <Fragment set:html={excludeCaseA} />
+    </div>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={excludeCaseB} />
+    </div>
+    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+      <li>先頭除外は <strong>スコア寄与の計算</strong>（§5 の eligibleBaseScore）にのみ効き、UI 表示の「スキル最大発動回数」は <code class="px-1 bg-gray-100 rounded">notesCount</code> 全体で計算します。</li>
+      <li>縮小スキルが複数枚あるときは <code class="px-1 bg-gray-100 rounded">count</code> が最小のカードが基準になります。</li>
+    </ul>
+  </section>
+
+  <section id="coverage" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">4. カバー率の合算と 100% キャップ</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      各縮小スキルの <strong>最大縮小時間</strong>
+      <code class="px-1 bg-gray-100 rounded">floor(eligibleCount / count) × value</code>
+      を単純加算し、曲尺 (<code class="px-1 bg-gray-100 rounded">songDuration</code>) で割ったものがカバー率です。
+      キューイング仕様より区間は重ならないため単純合算で等価になり、<strong>100% を超えた分は切り捨て</strong>られます。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={coverageSvg} />
+    </div>
+    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+      <li>表示用の raw カバー率は 100% 超の値をそのまま表示（超過分は「計算対象外」と注記）。</li>
+      <li>内部計算用は <code class="px-1 bg-gray-100 rounded">min(raw, 1.0)</code> で 100% キャップ。</li>
+      <li>期待カバー率は <code class="px-1 bg-gray-100 rounded">Σ (numActivations × value × per/100) / songDuration</code> の単純加算版。</li>
+    </ul>
+  </section>
+
+  <section id="formula" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">5. 縮小スコア加算式</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      縮小スキルが曲全体に与える追加スコアは、以下の式で算出されます。
+      <code class="px-1 bg-gray-100 rounded">rate − 1.0</code> は「通常 1.0 倍を超える追加倍率」を意味し、
+      Lv5（rate=1.6）なら 0.6 倍分の加算となります。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={formulaSvg} />
+    </div>
+    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+      <li><strong class="text-indigo-700">eligibleBaseScore</strong>: 先頭除外後のノートのアシスト適用済み素点合計（<code class="px-1 bg-gray-100 rounded">note.group ≠ notes_20</code> のみ対象）。</li>
+      <li><strong class="text-amber-700">rate − 1.0</strong>: Lv1 (1.2) なら 0.2、Lv5 (1.6) なら 0.6。</li>
+      <li><strong class="text-emerald-700">coverageRate</strong>: §4 の内部カバー率（100% キャップ後）。期待値計算では期待カバー率を使用。</li>
+      <li>複数縮小スキルが重なっても倍率は <code class="px-1 bg-gray-100 rounded">rate</code> のまま（重ねがけなし）。</li>
+    </ul>
+  </section>
+
+  <section id="montecarlo" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">6. モンテカルロ分布のイメージ</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      スコア計算ページでは上記の期待値だけでなく、縮小スキルの確率発動を考慮した
+      <strong>モンテカルロシミュレーション</strong>（既定 100 試行）も実行しています。
+      試行ごとに発動の当たり外れが変わるため、スコアには揺らぎが生じます。
+      以下は縮小スキル 1 枚構成を 1000 試行した疑似分布（シード固定）です。赤線は平均値、左右の広がりは確率発動による揺らぎを示します。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={mcSvg} />
+    </div>
+    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+      <li>最小スコア = 縮小が一度も発動しないケース（§5 の coverageRate=0）。</li>
+      <li>最大スコア ≒ 全発動ケース（表示 raw カバー率が 100% 超なら内部は 100% キャップ）。</li>
+      <li>mean / stddev / p90 / mcMin / mcMax を本体ページでは表示しています。</li>
+    </ul>
+  </section>
+
+  <section class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">関連ページ</h2>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
+      <li>
+        <a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算ページに戻る</a>
+      </li>
+    </ul>
+  </section>
+</BaseLayout>
