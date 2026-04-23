@@ -9,17 +9,20 @@ const CHART_HEIGHT = 200;
 const MARGIN = { top: 20, right: 20, bottom: 40, left: 50 };
 const INNER_WIDTH = CHART_WIDTH - MARGIN.left - MARGIN.right;
 const INNER_HEIGHT = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
-const BIN_COUNT = 25;
+const BIN_COUNT = 75;
 
 export function renderHistogramSvg(
   scores: number[],
   minScore: number,
   maxScore: number,
   mean: number,
+  options?: { xAxisLabel?: string; barColor?: string },
 ): string {
   if (scores.length === 0 || maxScore <= minScore) {
     return '<span class="text-gray-400 text-xs">データなし</span>';
   }
+  const xAxisLabel = options?.xAxisLabel ?? 'スコア';
+  const barColor = options?.barColor ?? '#6366f1';
 
   const range = maxScore - minScore;
   const binWidth = range / BIN_COUNT;
@@ -46,7 +49,7 @@ export function renderHistogramSvg(
     const y = MARGIN.top + INNER_HEIGHT - barH;
     const binStart = Math.round(minScore + i * binWidth);
     const binEnd = Math.round(minScore + (i + 1) * binWidth);
-    return `<rect x="${x}" y="${y}" width="${barW - 1}" height="${barH}" fill="#6366f1" opacity="0.8">
+    return `<rect x="${x}" y="${y}" width="${barW - 1}" height="${barH}" fill="${barColor}" opacity="0.8">
       <title>${binStart.toLocaleString()}〜${binEnd.toLocaleString()}: ${count}回</title>
     </rect>`;
   }).join('\n    ');
@@ -78,7 +81,7 @@ export function renderHistogramSvg(
     <line x1="${MARGIN.left}" y1="${MARGIN.top}" x2="${MARGIN.left}" y2="${MARGIN.top + INNER_HEIGHT}" stroke="#d1d5db" stroke-width="1"/>`;
 
   // 軸ラベル
-  const axisLabels = `<text x="${CHART_WIDTH / 2}" y="${CHART_HEIGHT - 2}" text-anchor="middle" fill="#6b7280" font-size="10">スコア</text>
+  const axisLabels = `<text x="${CHART_WIDTH / 2}" y="${CHART_HEIGHT - 2}" text-anchor="middle" fill="#6b7280" font-size="10">${xAxisLabel}</text>
     <text x="12" y="${CHART_HEIGHT / 2}" text-anchor="middle" fill="#6b7280" font-size="10" transform="rotate(-90 12 ${CHART_HEIGHT / 2})">度数</text>`;
 
   return `<svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">

@@ -856,6 +856,23 @@
 
       _q('histogram-container').innerHTML = renderHistogramSvg(result.scores, result.minScore, result.maxScore, result.mean);
 
+      const renderContributionHistogram = (values: number[], containerId: string, label: string, color: string) => {
+        if (values.length === 0) {
+          _q(containerId).innerHTML = '<span class="text-gray-400 text-xs">データなし</span>';
+          return;
+        }
+        let min = Infinity, max = -Infinity, sum = 0;
+        for (const v of values) {
+          if (v < min) min = v;
+          if (v > max) max = v;
+          sum += v;
+        }
+        const mean = sum / values.length;
+        _q(containerId).innerHTML = renderHistogramSvg(values, min, max, mean, { xAxisLabel: label, barColor: color });
+      };
+      renderContributionHistogram(result.shrinkScores, 'histogram-shrink', '縮小スキル寄与', '#10b981');
+      renderContributionHistogram(result.scoreUpScores, 'histogram-scoreup', 'スコアアップ寄与', '#6366f1');
+
       const expected = calcExpectedScore(team, notes, selectedSong.notes_count || notes.length, scoreOptions);
       _q('expected-score').classList.remove('hidden');
       _q('exp-base').textContent = expected.baseScore.toLocaleString();
@@ -1455,6 +1472,16 @@
           </tbody>
         </table>
         <div id="histogram-container" class="mt-4"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <div class="text-xs text-gray-600 mb-1">縮小スキル寄与量の分布</div>
+            <div id="histogram-shrink"></div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-600 mb-1">スコアアップスキル寄与量の分布</div>
+            <div id="histogram-scoreup"></div>
+          </div>
+        </div>
       </section>
       <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとシミュレーション結果が表示されます</p>
     </section>
