@@ -1,6 +1,4 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [
-    "./worker-configuration.d.ts"
-  ]
+  "exclude": ["dist", "node_modules", "tmp", "_build", "deps", "test-results"]
 }
