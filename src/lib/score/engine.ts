@@ -330,6 +330,28 @@ export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
   return applyFinalBonus(total, team, options);
 }
 
+/**
+ * キューイング時の縮小区間を保持する内部型。
+ * 実ゲーム仕様（shrink-skill-spec.md §1-1）: 同時刻にオーバーラップせず、先行区間の終了後に連続発動する。
+ */
+interface ShrinkQueueItem {
+  durationNotes: number;
+  rate: number;
+  sourceCard: number;
+}
+
+interface ActiveShrink {
+  endNote: number;
+  rate: number;
+  sourceCard: number;
+}
+
+/** 縮小区間の持続ノート数を秒→ノート換算で算出（曲終了で自然に切り詰める前提） */
+function shrinkDurationNotes(valueSeconds: number, songDuration: number, totalNotes: number): number {
+  if (songDuration <= 0 || totalNotes <= 0) return 0;
+  return Math.floor((valueSeconds / songDuration) * totalNotes);
+}
+
 /** スキル全発動の最高スコア */
 export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const N = notes.length;
@@ -351,48 +373,57 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
     }
   }
 
-  // 通常スキル: 全タイミングで必ず発動
+  // 通常スキル: 全タイミングで必ず発動、縮小スキルはキューイング（§1-1）
   let total = 0;
   const counters = team.cards.map(() => 0);
-  const shrinkEndNotes = team.cards.map(() => 0);
+  let activeShrink: ActiveShrink | null = null;
+  const shrinkQueue: ShrinkQueueItem[] = [];
 
   for (let n = 0; n < N; n++) {
     const note = notes[n];
     let scoreUpSum = timerBonus[n];
 
+    // Phase A: 終了した active 区間を順次ドレインし、queue の次を繋げる
+    while (activeShrink && activeShrink.endNote <= n) {
+      const next = shrinkQueue.shift();
+      if (next) {
+        activeShrink = {
+          endNote: n + next.durationNotes,
+          rate: next.rate,
+          sourceCard: next.sourceCard,
+        };
+      } else {
+        activeShrink = null;
+      }
+    }
+
+    // Phase B: 各カードのトリガー判定（全成功）
     for (let c = 0; c < team.cards.length; c++) {
       const skill = team.cards[c].skill;
       if (!skill || skill.isTimer) continue;
       if (skill.count <= 0) continue;
 
-      // 判定縮小スキルは先頭除外ノート (note.excluded=true) では発動判定対象外
+      // 判定縮小スキルは先頭除外ノートでは発動判定対象外（§2）
       if (skill.isShrink && note.excluded) continue;
 
       counters[c]++;
       if (counters[c] >= skill.count) {
         counters[c] = 0;
         if (skill.isShrink) {
-          const noteTime = n / N * team.songDuration;
-          const shrinkDuration = skill.value;
-          const endNote = Math.min(
-            Math.floor(((noteTime + shrinkDuration) / team.songDuration) * N),
-            N,
-          );
-          shrinkEndNotes[c] = Math.max(shrinkEndNotes[c], endNote);
+          const durationNotes = shrinkDurationNotes(skill.value, team.songDuration, N);
+          if (activeShrink == null) {
+            activeShrink = { endNote: n + durationNotes, rate: skill.rate, sourceCard: c };
+          } else {
+            shrinkQueue.push({ durationNotes, rate: skill.rate, sourceCard: c });
+          }
         } else {
           scoreUpSum += skill.value;
         }
       }
     }
 
-    // 発動中の縮小スキルから max rate を採用（「いずれか発動中」判定・重ねがけなし、§1）
-    let activeRate = 0;
-    for (let c = 0; c < team.cards.length; c++) {
-      if (shrinkEndNotes[c] > n) {
-        const r = team.cards[c].skill?.rate ?? 0;
-        if (r > activeRate) activeRate = r;
-      }
-    }
+    // Phase C: rate 適用（「いずれか発動中」判定・重ねがけなし、§1）
+    const activeRate = (activeShrink && activeShrink.endNote > n) ? activeShrink.rate : 0;
 
     const noteScore = calcNoteScore(getAppeal(team, note.attribute, assist), note);
     const shrinkExtra = (activeRate > 0 && !note.excluded)
@@ -625,21 +656,37 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
     }
   }
 
-  // Phase 2: ノート順処理
+  // Phase 2: ノート順処理（縮小はキューイング、§1-1）
   let totalScore = 0;
   const counters = new Array<number>(cardCount).fill(0);
-  const shrinkEndNotes = new Array<number>(cardCount).fill(0);
+  let activeShrink: ActiveShrink | null = null;
+  const shrinkQueue: ShrinkQueueItem[] = [];
 
   for (let n = 0; n < N; n++) {
     const note = notes[n];
     let scoreUpSum = timerBonus[n];
 
+    // Phase A: 終了した active 区間を順次ドレインし、queue の次を繋げる
+    while (activeShrink && activeShrink.endNote <= n) {
+      const next = shrinkQueue.shift();
+      if (next) {
+        activeShrink = {
+          endNote: n + next.durationNotes,
+          rate: next.rate,
+          sourceCard: next.sourceCard,
+        };
+      } else {
+        activeShrink = null;
+      }
+    }
+
+    // Phase B: 各カードのトリガー判定（確率ロール）
     for (let c = 0; c < cardCount; c++) {
       const skill = team.cards[c].skill;
       if (!skill || skill.isTimer) continue;
       if (skill.count <= 0) continue;
 
-      // 判定縮小スキルは先頭除外ノート (note.excluded=true) では発動判定対象外
+      // 判定縮小スキルは先頭除外ノート (note.excluded=true) では発動判定対象外（§2）
       if (skill.isShrink && note.excluded) continue;
 
       counters[c]++;
@@ -648,13 +695,12 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
         if (rng.next() * 100 < skill.per) {
           activations[c]++;
           if (skill.isShrink) {
-            const noteTime = n / N * team.songDuration;
-            const shrinkDuration = skill.value;
-            const endNote = Math.min(
-              Math.floor(((noteTime + shrinkDuration) / team.songDuration) * N),
-              N,
-            );
-            shrinkEndNotes[c] = Math.max(shrinkEndNotes[c], endNote);
+            const durationNotes = shrinkDurationNotes(skill.value, team.songDuration, N);
+            if (activeShrink == null) {
+              activeShrink = { endNote: n + durationNotes, rate: skill.rate, sourceCard: c };
+            } else {
+              shrinkQueue.push({ durationNotes, rate: skill.rate, sourceCard: c });
+            }
           } else {
             scoreUpSum += skill.value;
             contributions[c] += skill.value;
@@ -664,14 +710,8 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       }
     }
 
-    // 発動中の縮小スキルから max rate を採用（「いずれか発動中」判定・重ねがけなし、§1）
-    let activeRate = 0;
-    for (let c = 0; c < cardCount; c++) {
-      if (shrinkEndNotes[c] > n) {
-        const r = team.cards[c].skill?.rate ?? 0;
-        if (r > activeRate) activeRate = r;
-      }
-    }
+    // Phase C: rate 適用（「いずれか発動中」判定・重ねがけなし、§1）
+    const activeRate = (activeShrink && activeShrink.endNote > n) ? activeShrink.rate : 0;
 
     const noteScoreBase = calcNoteScore(getAppeal(team, note.attribute, assist), note);
     const shrinkExtra = (activeRate > 0 && !note.excluded)
