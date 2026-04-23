@@ -38,6 +38,20 @@ test.describe('カード詳細ページ', () => {
     expect(count).toBeGreaterThanOrEqual(2);
   });
 
+  test('OGP / Twitter Card メタタグが出力される', async ({ page }) => {
+    const id = await getFirstCardId(page);
+    await page.goto(`${BASE}/cards/${id}/`);
+
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'article');
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', /^https:\/\/.+\/cards\/.+/);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/assets\/cards\/.+\.png$/);
+    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /^https:\/\/.+\/cards\/.+/);
+  });
+
   test('ステータスセクションにドーナツチャートが表示される', async ({ page }) => {
     const id = await getFirstCardId(page);
     await page.goto(`${BASE}/cards/${id}/`);

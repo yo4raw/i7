@@ -16,6 +16,9 @@ export async function getStaticPaths() {
 const { song } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
+const basePart = [song.artist, song.category].filter(Boolean).join(' / ');
+const ogDescription = song.song_type ? `${basePart}（${song.song_type}）` : basePart;
+
 // 属性比率の円グラフ用
 const sr = song.shout_ratio || 0;
 const br = song.beat_ratio || 0;
@@ -39,7 +42,12 @@ const infoRows = [
 ].filter(r => r.value != null && r.value !== '');
 ---
 
-<BaseLayout title={song.song_name || '楽曲詳細'}>
+<BaseLayout
+  title={song.song_name || '楽曲詳細'}
+  description={ogDescription}
+  image={songImageUrl(song.id)}
+  ogType="article"
+>
   <div class="mb-6">
     <a href={`${base}songs/`} class="text-indigo-600 hover:underline text-sm">&larr; 楽曲一覧に戻る</a>
   </div>
