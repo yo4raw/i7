@@ -78,6 +78,8 @@ export interface SimulationResult {
   mcMin: number;
   mcMax: number;
   cardStats: CardSkillStats[];
+  shrinkScores: number[];
+  scoreUpScores: number[];
 }
 
 export interface ScoreOptions {

@@ -576,6 +576,8 @@ interface RunOnceResult {
   score: number;
   activations: number[];
   contributions: number[];
+  shrinkScore: number;
+  scoreUpScore: number;
 }
 
 /** MC 1回分の実行 */
@@ -584,6 +586,8 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
   const cardCount = team.cards.length;
   const activations = new Array<number>(cardCount).fill(0);
   const contributions = new Array<number>(cardCount).fill(0);
+  let shrinkScore = 0;
+  let scoreUpScore = 0;
   const assist = options?.scoreUpAssist ?? false;
 
   // 期待縮小時間 (§2-2 按分用): 試行間で変わらない固定係数
@@ -615,6 +619,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
         if (noteIndex >= 0) {
           timerBonus[noteIndex] += skill.value;
           contributions[c] += skill.value;
+          scoreUpScore += skill.value;
         }
       }
     }
@@ -653,6 +658,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
           } else {
             scoreUpSum += skill.value;
             contributions[c] += skill.value;
+            scoreUpScore += skill.value;
           }
         }
       }
@@ -681,10 +687,11 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
           contributions[c] += shrinkExtra * (expectedShrinkTimes[c] / totalExpectedShrinkTime);
         }
       }
+      shrinkScore += shrinkExtra;
     }
   }
 
-  return { score: applyFinalBonus(totalScore, team, options), activations, contributions };
+  return { score: applyFinalBonus(totalScore, team, options), activations, contributions, shrinkScore, scoreUpScore };
 }
 
 /** MC シミュレーション実行（チャンク分割） */
@@ -701,6 +708,8 @@ export async function runSimulation(
 
   const rng = new XorShift128Plus(seed ?? Date.now());
   const scores: number[] = [];
+  const shrinkScores: number[] = [];
+  const scoreUpScores: number[] = [];
   const cardCount = team.cards.length;
   const totalActivations = new Array<number>(cardCount).fill(0);
   const totalContributions = new Array<number>(cardCount).fill(0);
@@ -710,6 +719,8 @@ export async function runSimulation(
     for (let j = i; j < end; j++) {
       const result = runOnce(team, notes, rng, options);
       scores.push(result.score);
+      shrinkScores.push(result.shrinkScore);
+      scoreUpScores.push(result.scoreUpScore);
       for (let c = 0; c < cardCount; c++) {
         totalActivations[c] += result.activations[c];
         totalContributions[c] += result.contributions[c];
@@ -760,6 +771,8 @@ export async function runSimulation(
     mcMin: sorted[0],
     mcMax: sorted[sorted.length - 1],
     cardStats,
+    shrinkScores,
+    scoreUpScores,
   };
 }
 
