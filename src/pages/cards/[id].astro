@@ -46,6 +46,9 @@ export async function getStaticPaths() {
 const { card, broachs, relatedEvents } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
+const descParts = [card.rarity, card.attribute, card.name].filter(Boolean).join(' ');
+const ogDescription = card.groupname ? `${descParts}（${card.groupname}）` : descParts;
+
 const infoRows = [
   { label: 'ID', value: card.ID },
   { label: 'カードID', value: card.cardID },
@@ -82,7 +85,12 @@ const otherSkills = [
 ].filter(r => r.value != null && r.value !== '');
 ---
 
-<BaseLayout title={card.cardname || 'カード詳細'}>
+<BaseLayout
+  title={card.cardname || 'カード詳細'}
+  description={ogDescription}
+  image={cardImageUrl(card.ID)}
+  ogType="article"
+>
   <div class="mb-6">
     <a href={`${base}cards/`} class="text-indigo-600 hover:underline text-sm">&larr; カード一覧に戻る</a>
   </div>

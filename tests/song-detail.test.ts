@@ -33,6 +33,20 @@ test.describe('楽曲詳細ページ', () => {
     await expect(page.getByText('アーティスト').first()).toBeVisible();
   });
 
+  test('OGP / Twitter Card メタタグが出力される', async ({ page }) => {
+    const href = await getFirstSongHref(page);
+    await page.goto(href!);
+
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'article');
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', /^https:\/\/.+\/songs\/.+/);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/assets\/songs\/.+\.png$/);
+    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /^https:\/\/.+\/songs\/.+/);
+  });
+
   test('属性比率チャートが表示される', async ({ page }) => {
     const href = await getFirstSongHref(page);
     await page.goto(href!);
