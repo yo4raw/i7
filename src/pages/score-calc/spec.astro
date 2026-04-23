@@ -56,11 +56,7 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
   <p class="text-xs text-gray-500 mb-6">
     本ページはスコア計算、特に<strong class="text-gray-700">判定縮小スキル</strong>の内部ロジックを
     図で解説するものです。数値例は楽曲「MONSTER GENERATiON」(428ノート / 104秒) を基に記述しています。
-    厳密仕様は
-    <a href="https://github.com/yo4raw/i7/blob/main/docs/score_calc_spec.md" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">score_calc_spec.md</a>
-    ・
-    <a href="https://github.com/yo4raw/i7/blob/main/docs/shrink-skill-spec.md" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">shrink-skill-spec.md</a>
-    を参照してください。
+    有志による計測・推定値を含むため、ゲーム内の挙動と完全に一致することを保証するものではありません。
   </p>
 
   <nav class="bg-white rounded-lg shadow p-4 mb-6 text-sm">
@@ -196,14 +192,8 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
   </section>
 
   <section class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">参考資料</h2>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">関連ページ</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
-      <li>
-        <a href="https://github.com/yo4raw/i7/blob/main/docs/score_calc_spec.md" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">docs/score_calc_spec.md</a> — スコア計算全体の仕様（属性値・ノート展開・アシスト・バッジ）
-      </li>
-      <li>
-        <a href="https://github.com/yo4raw/i7/blob/main/docs/shrink-skill-spec.md" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">docs/shrink-skill-spec.md</a> — 縮小スキルの詳細仕様（先頭除外・カバー率・期待値・MC）
-      </li>
       <li>
         <a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算ページに戻る</a>
       </li>

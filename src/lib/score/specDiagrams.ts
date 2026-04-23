@@ -182,7 +182,6 @@ export function simulateActivationsDeterministic(p: {
 
 /**
  * 複数枚の縮小スキルをキューイング仕様に従ってシミュレートする。
- * docs/shrink-skill-spec.md §1-1 に準拠:
  *  - 同時刻には重複発動しない
  *  - 発動中に他スキルのトリガーが来たら、先行スキル終了後に連続発動する
  *  - 曲全体を超えた分はキューから切り捨て
