@@ -831,6 +831,7 @@
       const scoreOptions: ScoreOptions = {
         scoreUpAssist: _q<HTMLInputElement>('opt-scoreup-assist').checked,
         scoreUpBadgeRate: parseFloat(_q<HTMLInputElement>('opt-scoreup-badge-rate').value) || 0,
+        maxShrinkCoverage: _q<HTMLInputElement>('opt-max-shrink-coverage').checked,
       };
 
       const result = await runSimulation(team, notes, iterations, (pct) => {
@@ -1428,7 +1429,7 @@
     </section>
 
     <div class="space-y-2">
-      <div class="flex items-center justify-end gap-2">
+      <div class="flex items-center justify-end gap-2 flex-wrap">
         <label for="mc-iterations-input" class="text-xs text-gray-500">シミュレーション回数</label>
         <input
           id="mc-iterations-input"
@@ -1439,6 +1440,10 @@
           value={MC_ITERATIONS}
         />
         <span class="text-xs text-gray-500">回</span>
+        <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="ON にすると縮小スキルの確率判定を常に成功扱いにし、縮小カバー率が最大値となる前提で MC シミュレーションを実行します">
+          <input type="checkbox" id="opt-max-shrink-coverage" class="rounded" />
+          <span>縮小全発動</span>
+        </label>
       </div>
       <button id="btn-calculate" type="button" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
         🧮 シミュレーション計算

@@ -135,6 +135,16 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
       <li>先頭除外は <strong>スコア寄与の計算</strong>（§5 の eligibleBaseScore）にのみ効き、UI 表示の「スキル最大発動回数」は <code class="px-1 bg-gray-100 rounded">notesCount</code> 全体で計算します。</li>
       <li>縮小スキルが複数枚あるときは <code class="px-1 bg-gray-100 rounded">count</code> が最小のカードが基準になります。</li>
     </ul>
+
+    <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded text-xs text-sky-900 space-y-1">
+      <p><strong>実データでの典型値</strong>（フィクスチャ 145 曲 / 縮小スキル 135 枚で実測）:</p>
+      <ul class="list-disc pl-5 space-y-0.5">
+        <li><code class="px-1 bg-white rounded">notes_20</code> はほぼ全曲で <strong>20 または 21</strong>（21 超はゼロ）。</li>
+        <li>Lv5 運用時の <code class="px-1 bg-white rounded">count</code> は <strong>20-22</strong> が約 77%。Lv1 運用時は <strong>23-25</strong> が約 64%。</li>
+        <li>結果として <code class="px-1 bg-white rounded">excludeHead</code> は <strong>Lv5 で概ね 20-22 ノート、Lv1 で 23-25 ノート</strong> になる。</li>
+      </ul>
+      <p>つまり「多くの縮小スキルは発動条件が <strong>20 ノーツ以上</strong> なので、<strong>20 ノーツ前後の直後から最初の縮小発動判定が始まる</strong>」ケースが一般的。<code class="px-1 bg-white rounded">notes_20</code> による除外と <code class="px-1 bg-white rounded">minCount</code> による「物理的に発動できない区間」の除外がほぼ重なるため、実質的には「縮小スキルが動き出せる直前までを除外している」挙動になります。</p>
+    </div>
   </section>
 
   <section id="coverage" class="bg-white rounded-lg shadow p-6 mb-6">
@@ -188,6 +198,19 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
       <li>最小スコア = 縮小が一度も発動しないケース（§5 の coverageRate=0）。</li>
       <li>最大スコア ≒ 全発動ケース（表示 raw カバー率が 100% 超なら内部は 100% キャップ）。</li>
       <li>mean / stddev / p90 / mcMin / mcMax を本体ページでは表示しています。</li>
+    </ul>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">6-1. 縮小全発動モード（最大カバー率前提）</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      スコア計算ページのシミュレーション回数入力欄の横にある <strong>「縮小全発動」</strong> チェックボックスを ON にすると、
+      MC 試行内で縮小スキルの確率ロール（<code class="px-1 bg-gray-100 rounded">per</code>% 判定）を
+      <strong>常に成功扱い</strong> にし、<strong>縮小カバー率が理論最大値となる前提のスコア分布</strong> を得られます。
+    </p>
+    <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-2">
+      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・カード別寄与等）。</li>
+      <li>§4 の「理論最大カバー率」「期待カバー率」、および「理論最高/最低スコア」「期待値スコア」の表示は<strong>従来通り</strong>（本チェックの影響を受けない）。</li>
+      <li>キューイング仕様（§2 末尾）は維持されるため、カバー率は引き続き <code class="px-1 bg-gray-100 rounded">songDuration</code> で 100% キャップされます。</li>
+      <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>
     </ul>
   </section>
 
