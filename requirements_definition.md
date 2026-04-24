@@ -270,32 +270,37 @@
 ## システム構成
 
 ### 技術スタック
-- **フロントエンド**: SvelteKit + TypeScript
-- **バックエンド**: SvelteKit（SSR）
-- **データベース**: PostgreSQL 16
-- **ORM**: Drizzle ORM
-- **スタイリング**: Tailwind CSS
-- **テスト**: Vitest
+- **フレームワーク**: Astro 6（静的サイトジェネレーター）+ TypeScript
+- **インタラクティブ UI**: Svelte 5（`client:only="svelte"` で部分的にハイドレート）
+- **データソース**: Google Spreadsheet（GViz JSON API）+ ゲームサーバー由来の CSV（イベント DB のみビルド時取込）
+- **スタイリング**: Tailwind CSS v4（`@tailwindcss/vite` プラグイン）
+- **テスト**: Vitest（単体）+ Playwright（E2E）
+- **デプロイ**: Cloudflare Workers Static Assets（リクエスト課金対象外、無料運用）
+- **CI/CD**: GitHub Actions（タグ push で自動デプロイ、`fetch-*` ワークフローで画像・イベント DB 自動取得）
 
 ### システムアーキテクチャ
+
+完全静的サイト。サーバーサイドランタイムを持たず、すべてのスコア計算・フィルタリング・ソートはクライアントサイド JavaScript で実行する。
+
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Client    │────▶│  SvelteKit  │────▶│ PostgreSQL  │
-│  (Browser)  │     │   Server    │     │  Database   │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   Static    │
-                    │   Assets    │
-                    └─────────────┘
+┌─────────────┐     ┌──────────────────────┐
+│   Client    │────▶│  Cloudflare Workers  │
+│  (Browser)  │     │   Static Assets      │
+└──────┬──────┘     │  (Astro build 出力)  │
+       │            └──────────────────────┘
+       │ GViz JSON API でクライアントサイドフェッチ
+       ▼
+┌─────────────────────────────┐
+│  Google Spreadsheet         │
+│  (カード / 楽曲 / 装備 マスター)  │
+└─────────────────────────────┘
 ```
 
-### API設計
-- **GET /api/cards**: カード一覧取得
-- **GET /api/cards/[id]**: カード詳細取得
-- **GET /api/songs**: 楽曲一覧取得
-- **GET /api/search**: 詳細検索
+### データ取得方式
+
+サーバーサイド API は存在せず、すべてクライアント側で Google Spreadsheet GViz API からマスターデータをフェッチする
+（イベント DB のみ GitHub Actions cron で取得した CSV を `public/events/events.csv` 経由でビルド時に読み込む）。
+詳細は CLAUDE.md「Architecture / Data Source」を参照。
 
 ## 開発・運用要件
 
@@ -322,15 +327,18 @@
 - データ更新は自動実行（1日4回）
 - 画像アップロードは管理者のみ
 
+## 実装済み機能（旧「今後の拡張計画」より）
+
+- **スコア計算機能**: モンテカルロシミュレーション + 算術期待値の併記。詳細は `docs/score_calc_spec.md` 参照
+- **チーム編成シミュレーター**: スコア計算ページ（`/score-calc`）に統合
+- **イベント情報連携**: イベント一覧（`/events`）+ スコア計算ページで開催中イベントの特効を自動反映
+- **保存デッキ機能**: localStorage ベースのデッキ管理（`/decks`）
+
 ## 今後の拡張計画
 
 ### 機能拡張
-- チーム編成シミュレーター
-- スコア計算機能
-- イベント情報連携
 - ユーザー投稿型レビュー
 
 ### データ拡張
-- 過去イベント情報
 - ガチャ確率情報
 - カード相性情報
