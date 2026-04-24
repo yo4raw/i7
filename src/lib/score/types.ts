@@ -86,6 +86,12 @@ export interface ScoreOptions {
   scoreUpAssist: boolean;
   /** スコアアップバッジの倍率（%）。例: 15 → ×1.15。0 / undefined ならバッジなし */
   scoreUpBadgeRate?: number;
+  /**
+   * true のとき MC シミュレーションで縮小スキルの確率判定を常に成功扱いにする。
+   * 縮小カバー率が理論最大値となる前提のスコア分布を算出する。
+   * 期待値計算・理論最高/最低スコアには影響しない。
+   */
+  maxShrinkCoverage?: boolean;
 }
 
 export interface CardSkillStats {

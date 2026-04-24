@@ -692,7 +692,9 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       counters[c]++;
       if (counters[c] >= skill.count) {
         counters[c] = 0;
-        if (rng.next() * 100 < skill.per) {
+        const roll = rng.next() * 100;
+        const alwaysTrigger = skill.isShrink && options?.maxShrinkCoverage === true;
+        if (alwaysTrigger || roll < skill.per) {
           activations[c]++;
           if (skill.isShrink) {
             const durationNotes = shrinkDurationNotes(skill.value, team.songDuration, N);
