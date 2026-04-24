@@ -11,7 +11,7 @@
 
 1. **`computeTeam()`** — デッキ 6 枠からチーム属性値を計算
 2. **`flattenNotes()`** — 楽曲のノート情報を 1 次元の `FlatNote[]` に展開
-3. **`runSimulation()`** — モンテカルロシミュレーション（既定 5000 回）でスコア分布を算出
+3. **`runSimulation()`** — モンテカルロシミュレーション（既定 100 回、UI から任意回数指定可）でスコア分布を算出
 4. **`calcExpectedScore()`** — 外部サイト準拠の算術期待値を算出（参考値）
 5. **`calcShrinkCoverage()`** — 判定縮小スキルのカバー率を算出
 
@@ -53,8 +53,8 @@
 | 定数 | 値 | 用途 |
 |------|-----|------|
 | `SCOREUP_ASSIST_RATE` | 0.2 | スコアアップアシスト: 属性値に +20% (×1.2) を適用 |
-| `DEFAULT_SCOREUP_BADGE_RATE` | 15 | バッジ倍率のデフォルト（%） |
-| `MC_ITERATIONS` | 5000 | MC シミュレーション既定回数 |
+| `DEFAULT_SCOREUP_BADGE_RATE` | 16 | バッジ倍率のデフォルト（%） |
+| `MC_ITERATIONS` | 100 | MC シミュレーション既定回数（UI から任意回数指定可） |
 | `MC_CHUNK_SIZE` | 50 | UI 応答性のためのチャンクサイズ |
 | `CENTER_SKILL_RATES` | UR=10 / SSR=7 | センタースキル増加率（%） |
 | `DEFAULT_CENTER_SKILL_RATE` | 6 | SR/R/N 用デフォルト |
@@ -458,15 +458,32 @@ interface ScoreOptions {
 
 | パス | 役割 |
 |------|-----|
-| `src/lib/score/engine.ts` | `computeTeam`, `runSimulation`, `calcMinScore`, `calcMaxScore`, `calcExpectedScore`, `calcShrinkCoverage`, `parseSkill`, `getCenterSkillRate` |
+| `src/lib/score/engine.ts` | `computeTeam`, `runSimulation`, `calcMinScore`, `calcMaxScore`, `calcExpectedScore`, `calcShrinkCoverage`, `parseSkill`, `getCenterSkillRate`, `calcCardSkillExpected`, `calcCardSkillMax`, `calcCardSkillMaxActivations` |
 | `src/lib/score/types.ts` | 型定義 |
 | `src/lib/score/constants.ts` | 定数 |
 | `src/lib/score/noteFlattener.ts` | `flattenNotes` |
+| `src/lib/score/shrinkExclusion.ts` | `computeGroupSizes`, `computeShrinkExclusion` |
 | `src/lib/score/rng.ts` | XorShift128Plus |
 | `src/lib/score/histogram.ts` | `renderHistogramSvg` |
 | `src/lib/score/broachResolver.ts` | `resolveDeckBroachs`, `calcBroachScoreBonus` |
+| `src/lib/score/skillFormatter.ts` | `formatSkillEffect` (UI 表示用文字列生成) |
+| `src/lib/score/specDiagrams.ts` | スコア計算仕様解説ページ用の SVG 生成・キューイング MC デモ |
 | `src/lib/data/eventBonusTiers.ts` | `EVENT_BONUS_MULTIPLIER` |
 | `src/pages/score-calc/index.astro` | スコア計算 UI |
+| `src/pages/score-calc/spec.astro` | スコア計算仕様解説ページ |
+
+### 15-1. カード単独表示用関数（カード詳細パネル向け）
+
+カード単独の寄与をカード詳細パネル等で表示する目的で、以下のカード単位ヘルパー関数を `engine.ts` に提供する。
+**全体スコア計算（`calcMinScore` / `calcMaxScore` / `runSimulation` / `calcExpectedScore`）には使用されない**。
+
+| 関数 | 戻り値 | 概要 |
+|------|--------|------|
+| `calcCardSkillMaxActivations(team, notesCount, slotIndex)` | スキル最大発動回数 | タイマー: `floor(songDuration / count)` / それ以外: `floor(notesCount / count)`。先頭除外は考慮しない（`docs/shrink-skill-spec.md §2`） |
+| `calcCardSkillExpected(team, notes, notesCount, slotIndex, options)` | 単一カード期待値 | スコアアップ系: `floor(maxAct × per/100 × value)` / 縮小: 当該カードのみが縮小持つと仮定して `eligibleBaseScore × (rate − 1.0) × min(numAct × value × per/100, songDuration) / songDuration` を floor |
+| `calcCardSkillMax(team, notes, notesCount, slotIndex, options)` | 単一カード論理最高値 | スコアアップ系: `maxAct × value` / 縮小: 当該カードのみが縮小持つと仮定して `eligibleBaseScore × (rate − 1.0) × min(numAct × value, songDuration) / songDuration` を floor |
+
+**注意**: 縮小系のカード単独関数は「自分以外に縮小スキルが無い」前提で計算するため、デッキに複数縮小カードがある場合の合計とはキューイング・カバー率上限の影響で必ずしも一致しない。あくまで **カードごとの相対比較・寄与確認のための表示用近似値** である。
 
 ## 16. 計算例（楽曲 ID2: MONSTER GENERATiON）
 
@@ -509,57 +526,68 @@ interface ScoreOptions {
 | Chorus Light 6 | ×3.0 | 21 | 14 | 47 | 11 | 49 | 15 | 157 |
 | **合計** | — | **97** | **23** | **151** | **14** | **107** | **36** | **428** |
 
-#### 1 ノートあたりのスコア算出式
+#### 1 ノートあたりのスコア算出式（§5 の 2 段 floor 準拠）
 
-`ノート数 × floor(倍率 × 各対象属性値 × (白なら2.5% | 色なら3%))`
+```
+perNoteBase = floor(team[attr] × NOTE_RATE[type])           // 属性値段階で 1 段目 floor
+ノーツ得点  = floor(perNoteBase × LIGHT_MULTIPLIER[group])  // ステージ倍率乗算後に 2 段目 floor
+```
+
+**事前に計算する 1 ノーツ素点 `perNoteBase`** (倍率 ×1.0 時の値):
+
+| 属性 | white (×0.025) | color (×0.030) |
+|------|---------------:|---------------:|
+| Shout (3,898) | floor(3,898 × 0.025) = **97** | floor(3,898 × 0.030) = **116** |
+| Beat (13,410) | floor(13,410 × 0.025) = **335** | floor(13,410 × 0.030) = **402** |
+| Melody (4,611) | floor(4,611 × 0.025) = **115** | floor(4,611 × 0.030) = **138** |
 
 **Notes 2.0 (×1.0 / 最初の20ノーツ, 縮小スキル対象外)**:
 
-- M白 (15 * floor(4,611 * 1.0 * 2.5%)) = 1,725
-- M色 (6 * floor(4,611 * 1.0 * 3%)) = 828
+- M白 15 × floor(115 × 1.0) = 15 × 115 = 1,725
+- M色 6 × floor(138 × 1.0) = 6 × 138 = 828
 - 小計: 2,553
 
 **Light 2 (×1.0)**:
 
-- M白 (10 * floor(4,611 * 1.0 * 2.5%)) = 1,150
-- M色 (4 * floor(4,611 * 1.0 * 3%)) = 552
+- M白 10 × floor(115 × 1.0) = 10 × 115 = 1,150
+- M色 4 × floor(138 × 1.0) = 4 × 138 = 552
 - 小計: 1,702
 
 **Light 3 (×1.1)**:
 
-- B白 (2 * floor(13,410 * 1.1 * 2.5%)) = 736
-- M白 (33 * floor(4,611 * 1.1 * 2.5%)) = 4,158
-- M色 (11 * floor(4,611 * 1.1 * 3%)) = 1,672
-- 小計: 6,566
+- B白 2 × floor(335 × 1.1) = 2 × 368 = 736
+- M白 33 × floor(115 × 1.1) = 33 × 126 = 4,158
+- M色 11 × floor(138 × 1.1) = 11 × 151 = 1,661
+- 小計: 6,555
 
 **Light 4 (×1.2)**:
 
-- B白 (46 * floor(13,410 * 1.2 * 2.5%)) = 18,492
+- B白 46 × floor(335 × 1.2) = 46 × 402 = 18,492
 - 小計: 18,492
 
 **Light 5 (×1.3)**:
 
-- B白 (47 * floor(13,410 * 1.3 * 2.5%)) = 20,445
-- B色 (2 * floor(13,410 * 1.3 * 3%)) = 1,044
+- B白 47 × floor(335 × 1.3) = 47 × 435 = 20,445
+- B色 2 × floor(402 × 1.3) = 2 × 522 = 1,044
 - 小計: 21,489
 
 **Light 6 (×1.5)**:
 
-- S白 (76 * floor(3,898 * 1.5 * 2.5%)) = 11,096
-- S色 (9 * floor(3,898 * 1.5 * 3%)) = 1,575
-- B白 (9 * floor(13,410 * 1.5 * 2.5%)) = 4,518
-- B色 (1 * floor(13,410 * 1.5 * 3%)) = 603
-- 小計: 17,792
+- S白 76 × floor(97 × 1.5) = 76 × 145 = 11,020
+- S色 9 × floor(116 × 1.5) = 9 × 174 = 1,566
+- B白 9 × floor(335 × 1.5) = 9 × 502 = 4,518
+- B色 1 × floor(402 × 1.5) = 1 × 603 = 603
+- 小計: 17,707
 
 **Chorus Light 6 (×3.0)**:
 
-- S白 (21 * floor(3,898 * 3.0 * 2.5%)) = 6,132
-- S色 (14 * floor(3,898 * 3.0 * 3%)) = 4,900
-- B白 (47 * floor(13,410 * 3.0 * 2.5%)) = 47,235
-- B色 (11 * floor(13,410 * 3.0 * 3%)) = 13,266
-- M白 (49 * floor(4,611 * 3.0 * 2.5%)) = 16,905
-- M色 (15 * floor(4,611 * 3.0 * 3%)) = 6,210
-- 小計: 94,648
+- S白 21 × floor(97 × 3.0) = 21 × 291 = 6,111
+- S色 14 × floor(116 × 3.0) = 14 × 348 = 4,872
+- B白 47 × floor(335 × 3.0) = 47 × 1,005 = 47,235
+- B色 11 × floor(402 × 3.0) = 11 × 1,206 = 13,266
+- M白 49 × floor(115 × 3.0) = 49 × 345 = 16,905
+- M色 15 × floor(138 × 3.0) = 15 × 414 = 6,210
+- 小計: 94,599
 
 #### スコア合計
 
@@ -567,15 +595,16 @@ interface ScoreOptions {
 |---------|----:|
 | Notes 2.0 | 2,553 |
 | Light 2 | 1,702 |
-| Light 3 | 6,566 |
+| Light 3 | 6,555 |
 | Light 4 | 18,492 |
 | Light 5 | 21,489 |
-| Light 6 | 17,792 |
-| Chorus Light 6 | 94,648 |
-| **合計** | **163,242** |
+| Light 6 | 17,707 |
+| Chorus Light 6 | 94,599 |
+| **合計** | **163,097** |
 
 スキル (BAD→Perfect) はスコア寄与なし、固定ブローチも種類 4 (GROUP / 属性値加算型) のため `broachScoreBonus = 0`。
-したがって仕様通りに計算した場合 `calcMinScore = calcMaxScore = MC 全 scores = 163,242` となる。
+したがって仕様通りに計算した場合 `calcMinScore = calcMaxScore = MC 全 scores = 163,097` となる
+（`tests/unit/score/engine.test.ts` の検算ケースと一致）。
 
 #### 最終スコア（§3-7 / `docs/shrink-skill-spec.md §1` 準拠）
 
@@ -587,27 +616,35 @@ SCOREUPアシストは **属性値段階で ×1.2 (floor)** を適用する（§
 - teamBeat_assisted   = floor(13,410 × 1.2) = floor(16,092.0) = **16,092**
 - teamMelody_assisted = floor(4,611 × 1.2)  = floor(5,533.2)  = **5,533**
 
+**1 ノーツ素点 `perNoteBase` (アシスト後・倍率 ×1.0 時)**:
+
+| 属性 | white (×0.025) | color (×0.030) |
+|------|---------------:|---------------:|
+| Shout (4,677) | **116** | **140** |
+| Beat (16,092) | **402** | **482** |
+| Melody (5,533) | **138** | **165** |
+
 **各グループの per-note 再計算（アシスト後）**:
 
 | グループ | 倍率 | 合計 |
 |---------|-----:|-----:|
 | Notes 2.0 | ×1.0 | 3,060 (M白 15×138 + M色 6×165) |
 | Light 2 | ×1.0 | 2,040 |
-| Light 3 | ×1.1 | 7,902 |
-| Light 4 | ×1.2 | 22,172 |
-| Light 5 | ×1.3 | 25,788 |
-| Light 6 | ×1.5 | 21,341 |
-| Chorus Light 6 | ×3.0 | 113,581 |
-| **合計 (アシスト ON)** | — | **195,884** |
+| Light 3 | ×1.1 | 7,858 (B白 2×442 + M白 33×151 + M色 11×181) |
+| Light 4 | ×1.2 | 22,172 (B白 46×482) |
+| Light 5 | ×1.3 | 25,786 (B白 47×522 + B色 2×626) |
+| Light 6 | ×1.5 | 21,264 (S白 76×174 + S色 9×210 + B白 9×603 + B色 1×723) |
+| Chorus Light 6 | ×3.0 | 113,487 (S白 21×348 + S色 14×420 + B白 47×1,206 + B色 11×1,446 + M白 49×414 + M色 15×495) |
+| **合計 (アシスト ON)** | — | **195,667** |
 
 **計算例まとめ**:
 
 | 適用条件 | 計算 | 最終スコア |
 |---------|-----|----------:|
-| なし (基本スコアのみ) | 163,242 | **163,242** |
-| SCOREUPアシストのみ | アシスト属性値で per-note 再計算 | **195,884** |
-| SCOREUPバッジ (15) のみ | `floor(163,242 × 1.15)` | **187,728** |
-| アシスト + バッジ (15) | `floor(195,884 × 1.15)` = `floor(225,266.6)` | **225,266** |
+| なし (基本スコアのみ) | 163,097 | **163,097** |
+| SCOREUPアシストのみ | アシスト属性値で per-note 再計算 | **195,667** |
+| SCOREUPバッジ (15) のみ | `floor(163,097 × 1.15)` = `floor(187,561.55)` | **187,561** |
+| アシスト + バッジ (15) | `floor(195,667 × 1.15)` = `floor(225,017.05)` | **225,017** |
 
 ### 16-2. センター ID3414 + フレンド ID1952（縮小スキル 1 枚）
 
@@ -644,55 +681,63 @@ SCOREUPアシストは **属性値段階で ×1.2 (floor)** を適用する（§
 
 Card 1952 には紐付く固定ブローチが無いため、broach 加算は Card 3414 の Beat+4,500 のみ。`broachScoreBonus = 0` (broach_type=4 は属性値加算型)。
 
-#### 基本スコア（縮小全不発時）の内訳
+#### 基本スコア（縮小全不発時）の内訳（§5 の 2 段 floor 準拠）
+
+**1 ノーツ素点 `perNoteBase` (アシストなし・倍率 ×1.0 時)**:
+
+| 属性 | white (×0.025) | color (×0.030) |
+|------|---------------:|---------------:|
+| Shout (8,589) | floor(8,589 × 0.025) = **214** | floor(8,589 × 0.030) = **257** |
+| Beat (18,077) | floor(18,077 × 0.025) = **451** | floor(18,077 × 0.030) = **542** |
+| Melody (13,504) | floor(13,504 × 0.025) = **337** | floor(13,504 × 0.030) = **405** |
 
 **Notes 2.0 (×1.0 / 最初の20ノーツ, 縮小スキル対象外)**:
 
-- M白 (15 * floor(13,504 * 1.0 * 2.5%)) = 15 × 337 = 5,055
-- M色 (6 * floor(13,504 * 1.0 * 3%))   = 6 × 405 = 2,430
+- M白 15 × floor(337 × 1.0) = 15 × 337 = 5,055
+- M色 6 × floor(405 × 1.0) = 6 × 405 = 2,430
 - 小計: 7,485
 
 **Light 2 (×1.0)**:
 
-- M白 (10 * floor(13,504 * 1.0 * 2.5%)) = 10 × 337 = 3,370
-- M色 (4 * floor(13,504 * 1.0 * 3%))   = 4 × 405 = 1,620
+- M白 10 × floor(337 × 1.0) = 10 × 337 = 3,370
+- M色 4 × floor(405 × 1.0) = 4 × 405 = 1,620
 - 小計: 4,990
 
 **Light 3 (×1.1)**:
 
-- B白 (2 * floor(18,077 * 1.1 * 2.5%))  = 2 × 497 = 994
-- M白 (33 * floor(13,504 * 1.1 * 2.5%)) = 33 × 371 = 12,243
-- M色 (11 * floor(13,504 * 1.1 * 3%))   = 11 × 445 = 4,895
-- 小計: 18,132
+- B白 2 × floor(451 × 1.1) = 2 × 496 = 992
+- M白 33 × floor(337 × 1.1) = 33 × 370 = 12,210
+- M色 11 × floor(405 × 1.1) = 11 × 445 = 4,895
+- 小計: 18,097
 
 **Light 4 (×1.2)**:
 
-- B白 (46 * floor(18,077 * 1.2 * 2.5%)) = 46 × 542 = 24,932
-- 小計: 24,932
+- B白 46 × floor(451 × 1.2) = 46 × 541 = 24,886
+- 小計: 24,886
 
 **Light 5 (×1.3)**:
 
-- B白 (47 * floor(18,077 * 1.3 * 2.5%)) = 47 × 587 = 27,589
-- B色 (2 * floor(18,077 * 1.3 * 3%))    = 2 × 705 = 1,410
-- 小計: 28,999
+- B白 47 × floor(451 × 1.3) = 47 × 586 = 27,542
+- B色 2 × floor(542 × 1.3) = 2 × 704 = 1,408
+- 小計: 28,950
 
 **Light 6 (×1.5)**:
 
-- S白 (76 * floor(8,589 * 1.5 * 2.5%))  = 76 × 322 = 24,472
-- S色 (9 * floor(8,589 * 1.5 * 3%))     = 9 × 386 = 3,474
-- B白 (9 * floor(18,077 * 1.5 * 2.5%))  = 9 × 677 = 6,093
-- B色 (1 * floor(18,077 * 1.5 * 3%))    = 1 × 813 = 813
-- 小計: 34,852
+- S白 76 × floor(214 × 1.5) = 76 × 321 = 24,396
+- S色 9 × floor(257 × 1.5) = 9 × 385 = 3,465
+- B白 9 × floor(451 × 1.5) = 9 × 676 = 6,084
+- B色 1 × floor(542 × 1.5) = 1 × 813 = 813
+- 小計: 34,758
 
 **Chorus Light 6 (×3.0)**:
 
-- S白 (21 * floor(8,589 * 3.0 * 2.5%))  = 21 × 644 = 13,524
-- S色 (14 * floor(8,589 * 3.0 * 3%))    = 14 × 773 = 10,822
-- B白 (47 * floor(18,077 * 3.0 * 2.5%)) = 47 × 1,355 = 63,685
-- B色 (11 * floor(18,077 * 3.0 * 3%))   = 11 × 1,626 = 17,886
-- M白 (49 * floor(13,504 * 3.0 * 2.5%)) = 49 × 1,012 = 49,588
-- M色 (15 * floor(13,504 * 3.0 * 3%))   = 15 × 1,215 = 18,225
-- 小計: 173,730
+- S白 21 × floor(214 × 3.0) = 21 × 642 = 13,482
+- S色 14 × floor(257 × 3.0) = 14 × 771 = 10,794
+- B白 47 × floor(451 × 3.0) = 47 × 1,353 = 63,591
+- B色 11 × floor(542 × 3.0) = 11 × 1,626 = 17,886
+- M白 49 × floor(337 × 3.0) = 49 × 1,011 = 49,539
+- M色 15 × floor(405 × 3.0) = 15 × 1,215 = 18,225
+- 小計: 173,517
 
 **基本スコア合計**:
 
@@ -700,12 +745,15 @@ Card 1952 には紐付く固定ブローチが無いため、broach 加算は Ca
 |---------|----:|
 | Notes 2.0 | 7,485 |
 | Light 2 | 4,990 |
-| Light 3 | 18,132 |
-| Light 4 | 24,932 |
-| Light 5 | 28,999 |
-| Light 6 | 34,852 |
-| Chorus Light 6 | 173,730 |
-| **合計 (= `calcMinScore`)** | **293,120** |
+| Light 3 | 18,097 |
+| Light 4 | 24,886 |
+| Light 5 | 28,950 |
+| Light 6 | 34,758 |
+| Chorus Light 6 | 173,517 |
+| **合計 (= `calcMinScore`)** | **292,683** |
+
+`tests/unit/score/engine.test.ts` の検算ケースと一致。`calcMaxScore` は **419,581**、
+`calcExpectedScore.finalScore` は **345,334** （いずれも同テストで検証済み）。
 
 #### 縮小の計算ロジック（2 枚構成）
 

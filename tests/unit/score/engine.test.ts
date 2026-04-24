@@ -14,7 +14,7 @@ import {
   getCenterSkillRate,
   runSimulation,
 } from '../../../src/lib/score/engine';
-import { CENTER_SKILL_RATES, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE, TRAIN_BONUS } from '../../../src/lib/score/constants';
+import { CENTER_SKILL_RATES, MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE, TRAIN_BONUS } from '../../../src/lib/score/constants';
 import { allBroachs, findBroachsByCardId, findCardById, findSongById } from '../../fixtures';
 
 /** 10th Anniversary 四葉環 (UR / Beat / BAD→Perfect スキル) */
@@ -26,7 +26,6 @@ const tenthTamakiBroachs = findBroachsByCardId(2484);
 
 const FLATTEN_SEED = 42;
 const MC_SEED = 42;
-const MC_ITERATIONS = 100;
 
 const emptyDeck: (Card | null)[] = [null, null, null, null, null, null];
 const centerDeck: (Card | null)[] = [tenthTamakiMainCard, null, null, null, null, null];
