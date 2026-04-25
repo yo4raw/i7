@@ -64,11 +64,19 @@ const infoRows = [
   { label: 'ストーリー', value: card.story },
 ].filter(r => r.value != null && r.value !== '');
 
+const trainCount = Number(card.sp_time) || 0;
+const trainStep = Number(card.sp_value) || 0;
+const trainTotal = trainCount * trainStep;
+const hasTraining = trainCount > 0 && trainStep > 0;
+
 const stats = [
   { label: 'Shout', min: card.shout_min || 0, max: card.shout_max || 0, color: ATTR_HEX.Shout },
   { label: 'Beat', min: card.beat_min || 0, max: card.beat_max || 0, color: ATTR_HEX.Beat },
   { label: 'Melody', min: card.melody_min || 0, max: card.melody_max || 0, color: ATTR_HEX.Melody },
-];
+].map(s => ({
+  ...s,
+  untrained: hasTraining && s.label === card.attribute ? s.max - trainTotal : null,
+}));
 
 const apSkillLevels = [];
 if (card.ap_skill_name) {
@@ -85,8 +93,6 @@ if (card.ap_skill_name) {
 
 const otherSkills = [
   { label: 'センタースキル', value: card.ct_skill },
-  { label: 'SPスキル時間', value: card.sp_time },
-  { label: 'SPスキル値', value: card.sp_value },
   { label: 'コメント', value: card.comment },
 ].filter(r => r.value != null && r.value !== '');
 ---
@@ -154,10 +160,23 @@ const otherSkills = [
                       <span class="w-2 h-2 rounded-full flex-shrink-0" style={`background:${s.color}`}></span>
                       <span class="font-medium text-sm w-16">{s.label}</span>
                       <span class="text-sm text-gray-500 w-10 text-right">{pct}%</span>
-                      <span class="text-sm text-right flex-1">{s.min.toLocaleString()} ~ {s.max.toLocaleString()}</span>
+                      <span class="text-sm text-right flex-1">
+                        {s.min.toLocaleString()} / {s.max.toLocaleString()}
+                        {s.untrained != null && (
+                          <span class="text-xs text-gray-500 ml-1">（未特訓 {s.untrained.toLocaleString()}）</span>
+                        )}
+                      </span>
                     </div>
                   );
                 })}
+                {hasTraining && (
+                  <div class="flex items-center gap-3">
+                    <span class="w-2 h-2 flex-shrink-0"></span>
+                    <span class="font-medium text-sm w-16">特訓</span>
+                    <span class="text-sm text-gray-500 w-10 text-right"></span>
+                    <span class="text-sm text-right flex-1">{trainCount}回 / +{trainTotal.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -193,23 +212,13 @@ const otherSkills = [
         {card.ap_skill_req && <p><strong>発動条件:</strong> {card.ap_skill_req}</p>}
       </div>
       {apSkillLevels.length > 0 && (
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-gray-50 text-left">
-                <th class="px-3 py-2 w-16">Lv</th>
-                <th class="px-3 py-2">効果</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              {apSkillLevels.map(lv => (
-                <tr>
-                  <td class="px-3 py-2">Lv{lv.lv}</td>
-                  <td class="px-3 py-2">{formatSkillEffect(card.ap_skill_type, card.ap_skill_req, { count: lv.count, per: lv.per, value: lv.value, rate: lv.rate })}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div class="text-sm space-y-1">
+          {apSkillLevels.map(lv => (
+            <div>
+              <span class="font-medium text-gray-600">【Lv{lv.lv}】</span>
+              {formatSkillEffect(card.ap_skill_type, card.ap_skill_req, { count: lv.count, per: lv.per, value: lv.value, rate: lv.rate })}
+            </div>
+          ))}
         </div>
       )}
     </section>
