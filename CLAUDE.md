@@ -211,6 +211,14 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 - **Context7**: Astro・Tailwind CSS・Svelte 等のライブラリやフレームワークに関する作業では、必ず Context7 で最新の公式ドキュメントを参照してから実装する
 - **Serena**: コードベースのシンボル解析・ナビゲーション・リファクタリングには Serena を使用する。ファイル全体を読む前に `get_symbols_overview` や `find_symbol` で必要な箇所を特定し、効率的に作業する
 
+## カード表示参考
+
+カードの表示で判断が難しい場合は
+`https://i7.yo4raw.com/cards/{id}/`
+が　
+`https://i7.step-on-dream.net/card.php?ID={id}`
+に該当するので参考にする
+
 ## Workflow
 
 作業完了後は以下を自動で行うこと:
