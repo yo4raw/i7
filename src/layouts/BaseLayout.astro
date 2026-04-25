@@ -3,15 +3,23 @@ import { execSync } from 'node:child_process';
 import '../styles/global.css';
 import { SITE_NAME } from '../lib/constants.ts';
 import HeaderNav from '../components/HeaderNav.svelte';
+import JsonLd from '../components/seo/JsonLd.astro';
+
+interface Breadcrumb {
+  name: string;
+  url: string;
+}
 
 interface Props {
   title: string;
   description?: string;
   image?: string;
   ogType?: 'website' | 'article';
+  jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
+  breadcrumbs?: Breadcrumb[];
 }
 
-const { title, description, image, ogType = 'website' } = Astro.props;
+const { title, description, image, ogType = 'website', jsonLd, breadcrumbs } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
 const DEFAULT_DESCRIPTION = 'アイドリッシュセブン カードデータベース';
@@ -19,6 +27,41 @@ const desc = description ?? DEFAULT_DESCRIPTION;
 const fullTitle = `${title} | ${SITE_NAME}`;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
 const ogImage = image ? new URL(image, Astro.site).toString() : undefined;
+
+const siteUrl = Astro.site!.toString();
+
+const websiteLd: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE_NAME,
+  url: siteUrl,
+  inLanguage: 'ja',
+  description: DEFAULT_DESCRIPTION,
+};
+
+const organizationLd: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: SITE_NAME,
+  url: siteUrl,
+};
+
+const breadcrumbLd = breadcrumbs && breadcrumbs.length > 0
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbs.map((b, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: b.name,
+        item: new URL(b.url, Astro.site).toString(),
+      })),
+    }
+  : null;
+
+const extraJsonLd: Array<Record<string, unknown>> = jsonLd
+  ? Array.isArray(jsonLd) ? jsonLd : [jsonLd]
+  : [];
 
 let version = 'dev';
 try {
@@ -50,6 +93,11 @@ try {
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={desc} />
     {ogImage && <meta name="twitter:image" content={ogImage} />}
+    <!-- JSON-LD Structured Data -->
+    <JsonLd data={websiteLd} />
+    <JsonLd data={organizationLd} />
+    {breadcrumbLd && <JsonLd data={breadcrumbLd} />}
+    {extraJsonLd.map((d) => <JsonLd data={d} />)}
     <!-- Google Tag Manager -->
     <script is:inline>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -65,6 +113,22 @@ try {
     <!-- End Google Tag Manager (noscript) -->
     <HeaderNav base={base} client:load />
     <main class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <nav aria-label="Breadcrumb" class="mb-4">
+          <ol class="flex flex-wrap items-center gap-1.5 text-sm text-gray-500">
+            {breadcrumbs.map((b, i) => (
+              <li class="flex items-center gap-1.5 min-w-0">
+                {i > 0 && <span aria-hidden="true" class="text-gray-300">/</span>}
+                {i === breadcrumbs.length - 1 ? (
+                  <span aria-current="page" class="text-gray-700 truncate">{b.name}</span>
+                ) : (
+                  <a href={b.url} class="hover:text-indigo-600 hover:underline">{b.name}</a>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
       <slot />
     </main>
     <footer class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center">

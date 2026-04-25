@@ -54,7 +54,7 @@
 <div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid {borderColor}; background: {bg}">
   <div class="flex gap-3 cursor-pointer" onclick={handleRowClick} role="presentation">
     <div class="flex-shrink-0">
-      <img src={thumb} alt="" class="w-12 h-auto rounded" loading="lazy" />
+      <img src={thumb} alt={card.cardname || ''} class="w-12 h-auto rounded" loading="lazy" />
     </div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-1 mb-1">

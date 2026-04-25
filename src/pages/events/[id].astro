@@ -39,6 +39,38 @@ interface Props {
 const { event, goldCards, silverCards, bronzeCards } = Astro.props as Props;
 const base = import.meta.env.BASE_URL;
 
+const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
+const ogDescription = `${event.eventname}（${event.eventtype}）の特効カード・期間・ボーナス情報。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
+const ogImageCard = goldCards[0] || silverCards[0] || bronzeCards[0];
+const ogImage = ogImageCard?.ID != null ? cardThumbUrl(ogImageCard.ID) : undefined;
+
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'イベント情報', url: `${base}events/` },
+  { name: event.eventname, url: `${base}events/${event.id}/` },
+];
+
+const eventLd: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name: event.eventname,
+  description: event.comment || ogDescription,
+  startDate: `${event.start_date}T17:00:00+09:00`,
+  endDate: `${event.end_date}T17:00:00+09:00`,
+  eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+  eventStatus: 'https://schema.org/EventScheduled',
+  location: {
+    '@type': 'VirtualLocation',
+    url: 'https://app.idolish7.com/',
+  },
+  organizer: {
+    '@type': 'Organization',
+    name: 'アイドリッシュセブン',
+  },
+  url: new URL(`${base}events/${event.id}/`, Astro.site).toString(),
+  ...(ogImage ? { image: new URL(ogImage, Astro.site).toString() } : {}),
+};
+
 interface TierView {
   key: 'gold' | 'silver' | 'bronze';
   label: string;
@@ -76,10 +108,15 @@ const tiers: TierView[] = [
 ];
 ---
 
-<BaseLayout title={event.eventname}>
-  <a href={`${base}events/`} class="text-sm text-indigo-600 hover:underline">← イベント一覧へ戻る</a>
-
-  <div class="mt-2 mb-6">
+<BaseLayout
+  title={event.eventname}
+  description={ogDescription}
+  image={ogImage}
+  ogType="article"
+  breadcrumbs={breadcrumbs}
+  jsonLd={eventLd}
+>
+  <div class="mb-6">
     <div class="flex items-center gap-3 flex-wrap">
       <h1 class="text-2xl font-bold">{event.eventname}</h1>
       <EventStatusBadge
@@ -127,7 +164,7 @@ const tiers: TierView[] = [
               >
                 <img
                   src={cardThumbUrl(card.ID!)}
-                  alt=""
+                  alt={card.cardname || ''}
                   class="w-12 h-auto rounded flex-shrink-0"
                   loading="lazy"
                 />

@@ -19,6 +19,22 @@ const base = import.meta.env.BASE_URL;
 const basePart = [song.artist, song.category].filter(Boolean).join(' / ');
 const ogDescription = song.song_type ? `${basePart}（${song.song_type}）` : basePart;
 
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: '楽曲一覧', url: `${base}songs/` },
+  { name: song.song_name || `楽曲 ${song.id}`, url: `${base}songs/${song.id}/` },
+];
+
+const musicLd: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'MusicComposition',
+  name: song.song_name,
+  ...(song.artist ? { composer: { '@type': 'MusicGroup', name: song.artist } } : {}),
+  ...(song.category ? { inAlbum: { '@type': 'MusicAlbum', name: song.category } } : {}),
+  image: new URL(songImageUrl(song.id), Astro.site).toString(),
+  url: new URL(`${base}songs/${song.id}/`, Astro.site).toString(),
+};
+
 // 属性比率の円グラフ用
 const sr = song.shout_ratio || 0;
 const br = song.beat_ratio || 0;
@@ -47,11 +63,9 @@ const infoRows = [
   description={ogDescription}
   image={songImageUrl(song.id)}
   ogType="article"
+  breadcrumbs={breadcrumbs}
+  jsonLd={musicLd}
 >
-  <div class="mb-6">
-    <a href={`${base}songs/`} class="text-indigo-600 hover:underline text-sm">&larr; 楽曲一覧に戻る</a>
-  </div>
-
   <!-- 基本情報 -->
   <div class="bg-white rounded-lg shadow p-6 mb-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
