@@ -55,8 +55,8 @@ jobs:
           GAP_COUNT=$(echo "$GAP_IDS" | grep -c -E '^[0-9]+$' || true)
           echo "Incomplete IDs in existing range: $GAP_COUNT"
 
-          # 3. Combine: scan IDs first, then gap IDs (deduplicated)
-          MISSING_IDS=$(printf '%s\n%s' "$SCAN_IDS" "$GAP_IDS" | awk 'NF && !seen[$0]++')
+          # 3. Combine: gap IDs first (heal existing dataset), then forward scan (deduplicated)
+          MISSING_IDS=$(printf '%s\n%s' "$GAP_IDS" "$SCAN_IDS" | awk 'NF && !seen[$0]++')
 
           MISSING_COUNT=$(echo "$MISSING_IDS" | grep -c -E '^[0-9]+$' || true)
           echo "IDs to process (total): $MISSING_COUNT"
