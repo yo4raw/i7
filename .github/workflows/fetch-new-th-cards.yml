@@ -19,47 +19,35 @@ jobs:
         id: fetch
         shell: bash
         run: |
-          # Build the list of card IDs from public/assets/cards/
-          CARD_IDS=$(ls public/assets/cards/*.png \
+          EXISTING_IDS=$(ls public/assets/th_cards/*.png \
             | xargs -n1 basename \
             | sed 's/\.png$//' \
             | grep -E '^[0-9]+$' \
             | sort -n)
 
-          CARD_COUNT=$(echo "$CARD_IDS" | wc -l | tr -d ' ')
-          echo "Cards in public/assets/cards/: $CARD_COUNT"
+          MIN_ID=$(echo "$EXISTING_IDS" | head -1)
+          MAX_ID=$(echo "$EXISTING_IDS" | tail -1)
+          EXISTING_COUNT=$(echo "$EXISTING_IDS" | wc -l | tr -d ' ')
+          echo "Current range: $MIN_ID ~ $MAX_ID ($EXISTING_COUNT files)"
 
-          # Build the list of thumbnail IDs already present
-          TH_IDS=""
-          TH_COUNT=0
-          if ls public/assets/th_cards/*.png &>/dev/null; then
-            TH_IDS=$(ls public/assets/th_cards/*.png \
-              | xargs -n1 basename \
-              | sed 's/\.png$//' \
-              | grep -E '^[0-9]+$' \
-              | sort -n)
-            TH_COUNT=$(echo "$TH_IDS" | wc -l | tr -d ' ')
-          fi
-          echo "Thumbnails in public/assets/th_cards/: $TH_COUNT"
+          # 1. Forward scan (highest priority: max+1 ~ max+500)
+          SCAN_IDS=$(seq $((MAX_ID + 1)) $((MAX_ID + 500)))
 
-          # Determine which IDs need thumbnails
-          if [ "$TH_COUNT" -eq 0 ]; then
-            # Backfill mode: all card IDs in descending order (newest first)
-            MISSING_IDS=$(echo "$CARD_IDS" | sort -rn)
-            MODE="backfill"
-          else
-            # Sync mode: backfill missing thumbnails for existing cards (newest first)
-            MISSING_IDS=$(comm -23 <(echo "$CARD_IDS" | sort) <(echo "$TH_IDS" | sort) | sort -rn)
+          # 2. Gap fill (descending = newest gaps first)
+          FULL_RANGE=$(seq $MIN_ID $MAX_ID)
+          GAP_IDS=$(comm -23 <(echo "$FULL_RANGE" | sort) <(echo "$EXISTING_IDS" | sort) | sort -rn)
 
-            MODE="sync"
-          fi
+          GAP_COUNT=$(echo "$GAP_IDS" | grep -c -E '^[0-9]+$' || true)
+          echo "Gaps in existing range: $GAP_COUNT"
+
+          # 3. Combine: scan IDs first, then gap IDs (deduplicated)
+          MISSING_IDS=$(printf '%s\n%s' "$SCAN_IDS" "$GAP_IDS" | awk 'NF && !seen[$0]++')
 
           MISSING_COUNT=$(echo "$MISSING_IDS" | grep -c -E '^[0-9]+$' || true)
-          echo "Mode: $MODE"
           echo "IDs to fetch (total): $MISSING_COUNT"
 
-          # Limit batch size to 1000 per run
-          BATCH_LIMIT=1000
+          # Limit batch size to 500 per run
+          BATCH_LIMIT=500
           if [ "$MISSING_COUNT" -gt "$BATCH_LIMIT" ]; then
             MISSING_IDS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$')
             MISSING_IDS=$(echo "$MISSING_IDS" | head -n "$BATCH_LIMIT")
@@ -70,11 +58,11 @@ jobs:
 
           if [ "$MISSING_COUNT" -eq 0 ]; then
             echo "downloaded=0" >> "$GITHUB_OUTPUT"
-            echo "mode=$MODE" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Fetch thumbnails in parallel
+          mkdir -p public/assets/th_cards
+
           fetch_thumbnail() {
             local ID=$1
             local URL="https://i7.step-on-dream.net/img/cards/th/${ID}.png"
@@ -99,37 +87,37 @@ jobs:
           export -f fetch_thumbnail
 
           RESULTS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$' \
-            | xargs -P 10 -I {} bash -c 'fetch_thumbnail "$@"' _ {} \
-            | tee /dev/stderr || true)
+            | xargs -P 10 -I {} bash -c 'fetch_thumbnail "$@"' _ {} || true)
 
           DOWNLOADED=$(echo "$RESULTS" | grep -c "^OK:" || true)
           NEW_IDS=$(echo "$RESULTS" | grep "^OK:" | sed 's/^OK://' | sort -n | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g' || true)
 
-          echo "Total downloaded: $DOWNLOADED"
+          echo "Total new thumbnails downloaded: $DOWNLOADED"
           echo "downloaded=$DOWNLOADED" >> "$GITHUB_OUTPUT"
-          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          echo "new_ids=$NEW_IDS" >> "$GITHUB_OUTPUT"
-          echo "missing_count=$MISSING_COUNT" >> "$GITHUB_OUTPUT"
+          echo "max_id=$MAX_ID" >> "$GITHUB_OUTPUT"
+          echo "new_end=$((MAX_ID + 500))" >> "$GITHUB_OUTPUT"
+          echo "gap_count=$GAP_COUNT" >> "$GITHUB_OUTPUT"
+          echo "new_ids=${NEW_IDS}" >> "$GITHUB_OUTPUT"
 
       - name: Create Pull Request
         id: cpr
         if: steps.fetch.outputs.downloaded != '0'
         uses: peter-evans/create-pull-request@v8
         with:
-          commit-message: "Add thumbnail card images (${{ steps.fetch.outputs.downloaded }} files)"
+          add-paths: public/assets/th_cards/
+          commit-message: "Add thumbnail card images: ${{ steps.fetch.outputs.new_ids }}"
           branch: auto/add-th-cards-${{ github.run_id }}
           delete-branch: true
-          title: "Add ${{ steps.fetch.outputs.downloaded }} thumbnail card image(s)"
+          title: "Add ${{ steps.fetch.outputs.downloaded }} new thumbnail card image(s)"
           body: |
             ## Summary
-            Automatically fetched thumbnail card images from the source server.
+            Automatically fetched new thumbnail card images from the source server.
 
-            - **Mode**: ${{ steps.fetch.outputs.mode }}
-            - **IDs attempted**: ${{ steps.fetch.outputs.missing_count }}
-            - **Successfully downloaded**: ${{ steps.fetch.outputs.downloaded }}
-            - **New thumbnail IDs**: ${{ steps.fetch.outputs.new_ids }}
-
-            > Thumbnails are stored in `public/assets/th_cards/` and sourced from `cards/th/{id}.png`.
+            - **Previous max ID**: ${{ steps.fetch.outputs.max_id }}
+            - **Scanned range**: ${{ steps.fetch.outputs.max_id }}+1 ~ ${{ steps.fetch.outputs.new_end }}
+            - **Gaps checked**: ${{ steps.fetch.outputs.gap_count }}
+            - **New thumbnails**: ${{ steps.fetch.outputs.new_ids }}
+            - **Count**: ${{ steps.fetch.outputs.downloaded }}
 
       - name: Auto-merge PR
         if: steps.cpr.outputs.pull-request-number
