@@ -92,6 +92,12 @@ export interface ScoreOptions {
    * 期待値計算・理論最高/最低スコアには影響しない。
    */
   maxShrinkCoverage?: boolean;
+  /**
+   * true のとき MC シミュレーションでスコアアップスキル（タイマー型含む）の
+   * 確率判定を常に成功扱いにする。スコアアップが理論最大発動回数となる前提の
+   * スコア分布を算出する。期待値計算・理論最高/最低スコアには影響しない。
+   */
+  maxScoreUpCoverage?: boolean;
 }
 
 export interface CardSkillStats {

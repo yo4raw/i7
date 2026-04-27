@@ -643,8 +643,9 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
     if (!skill || !skill.isTimer || skill.count <= 0) continue;
 
     const maxAct = Math.floor(team.songDuration / skill.count);
+    const alwaysTrigger = options?.maxScoreUpCoverage === true;
     for (let a = 1; a <= maxAct; a++) {
-      if (rng.next() * 100 < skill.per) {
+      if (alwaysTrigger || rng.next() * 100 < skill.per) {
         activations[c]++;
         const t = a * skill.count;
         const noteIndex = Math.min(Math.floor((t / team.songDuration) * N), N - 1);
@@ -694,7 +695,8 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       if (counters[c] >= skill.count) {
         counters[c] = 0;
         const roll = rng.next() * 100;
-        const alwaysTrigger = skill.isShrink && options?.maxShrinkCoverage === true;
+        const alwaysTrigger = (skill.isShrink && options?.maxShrinkCoverage === true)
+          || (!skill.isShrink && options?.maxScoreUpCoverage === true);
         if (alwaysTrigger || roll < skill.per) {
           activations[c]++;
           if (skill.isShrink) {
