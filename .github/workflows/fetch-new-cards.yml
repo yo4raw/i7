@@ -64,7 +64,8 @@ jobs:
           # Limit batch size to 500 IDs per run (each ID may fetch full + thumbnail)
           BATCH_LIMIT=500
           if [ "$MISSING_COUNT" -gt "$BATCH_LIMIT" ]; then
-            MISSING_IDS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$' | head -n "$BATCH_LIMIT")
+            MISSING_IDS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$')
+            MISSING_IDS=$(echo "$MISSING_IDS" | head -n "$BATCH_LIMIT")
             MISSING_COUNT=$BATCH_LIMIT
             echo "Batch limited to: $BATCH_LIMIT"
           fi
