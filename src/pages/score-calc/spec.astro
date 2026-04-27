@@ -212,6 +212,19 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
       <li>キューイング仕様（§2 末尾）は維持されるため、カバー率は引き続き <code class="px-1 bg-gray-100 rounded">songDuration</code> で 100% キャップされます。</li>
       <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>
     </ul>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">6-2. スコアアップ全発動モード（最大発動回数前提）</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      シミュレーション回数入力欄の横にある <strong>「スコアアップ全発動」</strong> チェックボックスを ON にすると、
+      MC 試行内で <strong>スコアアップスキル（コンボ型・タイマー型を含む）</strong> の確率ロール（<code class="px-1 bg-gray-100 rounded">per</code>% 判定）を
+      <strong>常に成功扱い</strong> にし、<strong>スコアアップが理論最大発動回数となる前提のスコア分布</strong> を得られます。
+    </p>
+    <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-2">
+      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・カード別寄与等）。</li>
+      <li>「理論最高/最低スコア」「期待値スコア」「期待発動回数」の表示は<strong>従来通り</strong>（本チェックの影響を受けない）。</li>
+      <li>判定縮小スキルには影響しない。縮小も全発動させたい場合は「縮小全発動」と併用する。</li>
+      <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>
+    </ul>
   </section>
 
   <section class="bg-white rounded-lg shadow p-6 mb-6">
