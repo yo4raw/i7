@@ -61,8 +61,8 @@ jobs:
           MISSING_COUNT=$(echo "$MISSING_IDS" | grep -c -E '^[0-9]+$' || true)
           echo "IDs to process (total): $MISSING_COUNT"
 
-          # Limit batch size to 500 IDs per run (each ID may fetch full + thumbnail)
-          BATCH_LIMIT=500
+          # Limit batch size to 1500 IDs per run (full + thumbnail per ID, gap fill + forward scan)
+          BATCH_LIMIT=1500
           if [ "$MISSING_COUNT" -gt "$BATCH_LIMIT" ]; then
             MISSING_IDS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$')
             MISSING_IDS=$(echo "$MISSING_IDS" | head -n "$BATCH_LIMIT")
