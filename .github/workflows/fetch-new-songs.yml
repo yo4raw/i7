@@ -1,0 +1,84 @@
+name: Fetch new song images
+
+on:
+  schedule:
+    # Every Sunday 18:00 UTC (= Monday 03:00 JST)
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch-songs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Fetch missing song images
+        id: fetch
+        shell: bash
+        run: |
+          set -e -o pipefail
+          mkdir -p public/assets/songs
+          node scripts/fetch-song-images.mjs
+
+          NEW_FILES=$(git ls-files --others --exclude-standard public/assets/songs/ || true)
+          NEW_COUNT=$(printf '%s\n' "$NEW_FILES" | grep -c '\.png$' || true)
+          NEW_IDS=$(printf '%s\n' "$NEW_FILES" \
+            | grep -oE '[0-9]+\.png$' \
+            | sed 's/\.png$//' \
+            | sort -n \
+            | paste -sd ', ' - || true)
+
+          echo "Downloaded: $NEW_COUNT"
+          echo "New IDs: $NEW_IDS"
+          echo "downloaded=$NEW_COUNT" >> "$GITHUB_OUTPUT"
+          echo "new_ids=$NEW_IDS" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        id: cpr
+        if: steps.fetch.outputs.downloaded != '0'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: public/assets/songs/
+          commit-message: "Add song images: ${{ steps.fetch.outputs.new_ids }}"
+          branch: auto/add-songs-${{ github.run_id }}
+          delete-branch: true
+          title: "Add song image(s): ${{ steps.fetch.outputs.downloaded }} file(s)"
+          body: |
+            ## Summary
+            Automatically fetched new song cover images from IDOLiSH7 Wiki.
+
+            - **Downloaded**: ${{ steps.fetch.outputs.downloaded }}
+            - **New IDs**: ${{ steps.fetch.outputs.new_ids }}
+
+      - name: Auto-merge PR
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --delete-branch
+
+      - name: Bump tag and trigger release/deploy
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          set -e -o pipefail
+          git fetch --tags origin
+          LATEST=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          MAJOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f3)
+          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          echo "Latest: $LATEST  ->  New: $NEW_TAG"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git fetch origin main
+          git tag "$NEW_TAG" origin/main
+          git push origin "$NEW_TAG"
