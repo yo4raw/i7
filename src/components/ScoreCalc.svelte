@@ -289,7 +289,7 @@
         container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
         container.style.borderColor = attrColor;
         container.innerHTML = `
-          <img src="${cardThumbUrl(card.ID!)}" alt="" class="w-full max-w-[60px] h-auto rounded mb-1"
+          <img src="${cardThumbUrl(card.ID!)}" alt="${card.cardname || ''}" class="w-full max-w-[60px] h-auto rounded mb-1"
             onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
           <div class="flex gap-0.5 mb-1">
             <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
@@ -626,7 +626,7 @@
         const total = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
 
         return `<div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border-b border-gray-100" data-pick-card="${card.ID}">
-          <img src="${cardThumbUrl(card.ID!)}" alt="" class="w-10 h-auto rounded flex-shrink-0" loading="lazy" />
+          <img src="${cardThumbUrl(card.ID!)}" alt="${card.cardname || ''}" class="w-10 h-auto rounded flex-shrink-0" loading="lazy" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1">
               <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>

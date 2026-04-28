@@ -484,7 +484,7 @@
             <div>
               <div class="text-[10px] text-center {labelColor} font-bold mb-1">{slotLabel}</div>
               <div class="border-2 rounded-lg p-1.5 flex flex-col items-center min-h-[120px]" style="border-color:{attrColor}">
-                <img src={cardThumbUrl(card.ID!)} alt="" class="w-full max-w-[60px] h-auto rounded mb-1" loading="lazy" />
+                <img src={cardThumbUrl(card.ID!)} alt={card.cardname || ''} class="w-full max-w-[60px] h-auto rounded mb-1" loading="lazy" />
                 <div class="flex gap-0.5 mb-1">
                   <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded {rarityClass}">{card.rarity || '?'}</span>
                   <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded {attrBgClass}">{attr}</span>

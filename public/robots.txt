@@ -1,4 +1,6 @@
 User-agent: *
-Allow: /
+# フィルタ・ページネーション系のクエリ URL はクロール対象外
+# (canonical は pathname を指しているため検索評価は本体 URL に集約される)
+Disallow: /*?
 
 Sitemap: https://i7.yo4raw.com/sitemap-index.xml
