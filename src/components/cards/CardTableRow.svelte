@@ -75,7 +75,7 @@
   onclick={handleRowClick}
 >
   <td class="px-3 py-2">
-    <img src={thumb} alt="" class="w-12 h-auto rounded" loading="lazy" />
+    <img src={thumb} alt={card.cardname || ''} class="w-12 h-auto rounded" loading="lazy" />
   </td>
   <td class="px-3 py-2">{card.ID}</td>
   <td class="px-3 py-2" onclick={handleNameClick} role="presentation">

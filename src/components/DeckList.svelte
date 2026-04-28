@@ -113,7 +113,7 @@
               {@const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300'}
               <div class="flex flex-col items-center">
                 <div class="text-[9px] {labelClass} mb-0.5">{label}</div>
-                <img src={cardThumbUrl(card.ID!)} alt="" class="w-10 h-auto rounded" loading="lazy" />
+                <img src={cardThumbUrl(card.ID!)} alt={card.cardname || ''} class="w-10 h-auto rounded" loading="lazy" />
                 <div class="flex gap-0.5 mt-0.5">
                   <span class="px-0.5 py-px text-[7px] font-bold text-white rounded {rarityClass}">{card.rarity || '?'}</span>
                   <span class="px-0.5 py-px text-[7px] font-bold text-white rounded {attrBgClass}">{attr}</span>

@@ -22,7 +22,7 @@ interface Props {
 const { title, description, image, ogType = 'website', jsonLd, breadcrumbs } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
-const DEFAULT_DESCRIPTION = 'アイドリッシュセブン カードデータベース';
+const DEFAULT_DESCRIPTION = 'アイドリッシュセブン (アイナナ) のカード・楽曲・イベントを検索できるデータベース。スコア計算・所持カード管理・特効カード一覧などの便利ツールも提供します。';
 const desc = description ?? DEFAULT_DESCRIPTION;
 const fullTitle = `${title} | ${SITE_NAME}`;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
@@ -37,6 +37,14 @@ const websiteLd: Record<string, unknown> = {
   url: siteUrl,
   inLanguage: 'ja',
   description: DEFAULT_DESCRIPTION,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${siteUrl}cards/?q={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 const organizationLd: Record<string, unknown> = {
@@ -76,6 +84,7 @@ try {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f46e5" />
     <meta name="description" content={desc} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="canonical" href={canonicalUrl} />
