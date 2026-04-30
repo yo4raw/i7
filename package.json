@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
-    "@astrojs/svelte": "^8.0.5",
+    "@astrojs/svelte": "^8.1.0",
     "@tailwindcss/vite": "^4.2.2",
     "astro": "^6.1.9",
     "svelte": "^5.55.4",
