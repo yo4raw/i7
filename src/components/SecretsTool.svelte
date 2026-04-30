@@ -835,7 +835,7 @@
                     {@const tierMark = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : ''}
                     {@const slotMark = i === 0 ? '★' : i === 5 ? '✦' : ''}
                     {@const slotColor = i === 0 ? 'text-indigo-600' : i === 5 ? 'text-amber-600' : 'text-gray-400'}
-                    <div class="flex-shrink-0 flex flex-col items-center" title={`${SLOT_LABELS[i]}: ${card.cardname || ''} (${card.name || ''})`}>
+                    <div class="flex-shrink-0 flex flex-col items-center w-20" title={`${SLOT_LABELS[i]}: ${card.cardname || ''} (${card.name || ''})`}>
                       <div class="text-[10px] {slotColor} font-bold leading-none">{slotMark}{tierMark}</div>
                       <img
                         src={cardThumbUrl(card.ID!)}
@@ -844,6 +844,8 @@
                         style="border-color:{attrColor}"
                         loading="lazy"
                       />
+                      <div class="mt-0.5 text-[9px] leading-tight text-center w-full truncate" style="color:{attrColor}">{card.cardname || ''}</div>
+                      <div class="text-[8px] leading-tight text-center w-full truncate text-gray-400">{card.name || ''}</div>
                     </div>
                   {/if}
                 {/each}
