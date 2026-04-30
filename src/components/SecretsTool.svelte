@@ -17,6 +17,7 @@
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
+  import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
 
   type LiveEvent = EventForBonus & { eventname: string };
 
@@ -65,6 +66,7 @@
   let evalMode = $state<'expected' | 'max'>('expected');
   let scoreUpAssist = $state(false);
   let scoreUpBadgeRate = $state(0);
+  let ownedOnly = $state(false);
   let now = $state(Date.now());
 
   let searching = $state(false);
@@ -82,6 +84,7 @@
     refreshData('cards', fetchCardsJson, (fresh) => { allCards = fresh as Card[]; });
     refreshData('songs', async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())), (fresh) => { allSongs = fresh as Song[]; });
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => { allBroachs = fresh as FixedBroach[]; });
+    reloadCardCounts();
   });
 
   const selectedSong = $derived(selectedSongId ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
@@ -100,6 +103,12 @@
   const goldCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'gold'));
   const silverCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'silver'));
 
+  const cardCounts = $derived(allCounts());
+  const ownedCountOf = (card: Card): number => (card.ID == null ? 0 : cardCounts[String(card.ID)] ?? 0);
+  const ownedCandidates = $derived(currentCandidates.filter((c) => ownedCountOf(c) >= 1));
+  const ownedGoldCount = $derived(goldCandidates.filter((c) => ownedCountOf(c) >= 1).length);
+  const ownedSilverCount = $derived(silverCandidates.filter((c) => ownedCountOf(c) >= 1).length);
+
   function binomial(n: number, k: number): number {
     if (k < 0 || k > n) return 0;
     if (k === 0 || k === n) return 1;
@@ -111,18 +120,54 @@
   function multichoose(n: number, k: number): number {
     return binomial(n + k - 1, k);
   }
-  // (center, friend) は UR/UR でセンタースキルレートが等しいため入れ替え対称
-  // (member1..4) は team 値計算に位置依存性がないため多重集合
-  const comboCount = $derived(
-    currentCandidates.length >= 1
-      ? multichoose(currentCandidates.length, 2) * multichoose(currentCandidates.length, 4)
-      : 0
-  );
+  // 各カード i の出現上限を limits[i] とした k-多重集合の総数
+  // = ∏(1 + x + ... + x^{limits[i]}) における x^k の係数
+  function countMultisetsWithLimits(limits: number[], k: number): number {
+    let poly: number[] = [1];
+    for (const lim of limits) {
+      const newLen = Math.min(poly.length + lim, k + 1);
+      const next = new Array<number>(newLen).fill(0);
+      for (let d = 0; d < poly.length; d++) {
+        if (poly[d] === 0) continue;
+        const jMax = Math.min(lim, k - d);
+        for (let j = 0; j <= jMax; j++) next[d + j] += poly[d];
+      }
+      poly = next;
+    }
+    return poly[k] ?? 0;
+  }
 
-  const searchDisabled = $derived(!selectedSong || currentCandidates.length < 1 || searching);
+  // ownedOnly 時の有効組合せ数:
+  //   各 owned カードを center に置いた時の「残り所持枚数で 4-多重集合」の総和 × フレンド候補数
+  // ownedOnly=false 時:
+  //   (center, friend) は UR/UR で対称、(member1..4) は多重集合 → multichoose(N,2)×multichoose(N,4)
+  const comboCount = $derived.by(() => {
+    if (ownedOnly) {
+      if (ownedCandidates.length < 1 || currentCandidates.length < 1) return 0;
+      const limits = ownedCandidates.map((c) => ownedCountOf(c));
+      let centerSum = 0;
+      for (let ci = 0; ci < ownedCandidates.length; ci++) {
+        const adjusted = limits.slice();
+        adjusted[ci] -= 1;
+        centerSum += countMultisetsWithLimits(adjusted, 4);
+      }
+      return centerSum * currentCandidates.length;
+    }
+    return currentCandidates.length >= 1
+      ? multichoose(currentCandidates.length, 2) * multichoose(currentCandidates.length, 4)
+      : 0;
+  });
+
+  const searchDisabled = $derived(
+    !selectedSong || currentCandidates.length < 1 || searching
+      || (ownedOnly && ownedCandidates.length < 1)
+      || (ownedOnly && comboCount === 0)
+  );
   const searchDisabledReason = $derived(
     !selectedSong ? '楽曲を選択してください'
       : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR カードがありません'
+      : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR カードがありません'
+      : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : ''
   );
 
@@ -209,57 +254,105 @@
 
     const candidates = currentCandidates;
     const N = candidates.length;
+    const ownedSlice = ownedCandidates;
+    const Nowned = ownedSlice.length;
+    const ownedLimitMap = new Map<number, number>();
+    for (const c of ownedSlice) ownedLimitMap.set(c.ID!, ownedCountOf(c));
     const deck: (Card | null)[] = new Array(6).fill(null);
     let evaluated = 0;
     const YIELD_EVERY = 3000;
     const t0 = performance.now();
-    // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称 → 多重集合で列挙
-    // (member1..4) も team 値計算上の位置依存性がないため多重集合で列挙
-    outer:
-    for (const boost of multisetIndices(N, 2)) {
-      deck[0] = candidates[boost[0]];
-      deck[5] = candidates[boost[1]];
-      for (const members of multisetIndices(N, 4)) {
-        deck[1] = candidates[members[0]];
-        deck[2] = candidates[members[1]];
-        deck[3] = candidates[members[2]];
-        deck[4] = candidates[members[3]];
 
-        const tiers = buildTiersFromDeck(deck);
-        const team = computeTeam(
-          deck, allBroachs, selectedSong, tiers, trained, undefined, emptyShared, skillLevels, rabbit
-        );
-        const exclusion = computeShrinkExclusion(team, groupSizes);
-        const notes = flattenNotes(selectedSong, 42, exclusion);
-        let score = 0;
-        const rec: DeckRecord = {
-          cardIds: [deck[0]!.ID!, deck[1]!.ID!, deck[2]!.ID!, deck[3]!.ID!, deck[4]!.ID!, deck[5]!.ID!],
-          score: 0,
-        };
-        if (evalMode === 'expected') {
-          const e = calcExpectedScore(team, notes, notesCount, scoreOptions);
-          score = e.finalScore;
-          rec.baseScore = e.baseScore;
-          rec.scoreUpExpected = e.scoreUpExpected;
-          rec.shrinkExpected = e.shrinkExpected;
-          rec.liveEndScore = e.liveEndScore;
-          rec.finalScore = e.finalScore;
-        } else {
-          score = calcMaxScore(team, notes, scoreOptions);
-          rec.finalScore = score;
+    const evaluateDeck = (): DeckRecord => {
+      const tiers = buildTiersFromDeck(deck);
+      const team = computeTeam(
+        deck, allBroachs, selectedSong, tiers, trained, undefined, emptyShared, skillLevels, rabbit
+      );
+      const exclusion = computeShrinkExclusion(team, groupSizes);
+      const notes = flattenNotes(selectedSong, 42, exclusion);
+      const rec: DeckRecord = {
+        cardIds: [deck[0]!.ID!, deck[1]!.ID!, deck[2]!.ID!, deck[3]!.ID!, deck[4]!.ID!, deck[5]!.ID!],
+        score: 0,
+      };
+      let score = 0;
+      if (evalMode === 'expected') {
+        const e = calcExpectedScore(team, notes, notesCount, scoreOptions);
+        score = e.finalScore;
+        rec.baseScore = e.baseScore;
+        rec.scoreUpExpected = e.scoreUpExpected;
+        rec.shrinkExpected = e.shrinkExpected;
+        rec.liveEndScore = e.liveEndScore;
+        rec.finalScore = e.finalScore;
+      } else {
+        score = calcMaxScore(team, notes, scoreOptions);
+        rec.finalScore = score;
+      }
+      rec.score = score;
+      return rec;
+    };
+
+    const reportProgress = async () => {
+      const pct = Math.min(100, Math.round((evaluated / Math.max(1, totalEvals)) * 100));
+      progressPct = pct;
+      const speed = evaluated / ((performance.now() - t0) / 1000);
+      const etaSec = Math.max(0, (totalEvals - evaluated) / Math.max(1, speed));
+      progressText = `探索中… ${pct}% (${evaluated.toLocaleString()} / ${totalEvals.toLocaleString()}, 残り約 ${formatElapsed(etaSec * 1000)}, 暫定 1位: ${top[0] ? top[0].score.toLocaleString() : '-'})`;
+      await new Promise<void>((r) => setTimeout(r, 0));
+    };
+
+    if (ownedOnly) {
+      // 所持カードで検索: center + member1..4 を所持枚数の範囲内で組合せ、フレンドは全候補
+      // (center, friend) 対称性は所持プールが非対称なため利用しない
+      outer1:
+      for (let ci = 0; ci < Nowned; ci++) {
+        deck[0] = ownedSlice[ci];
+        for (const members of multisetIndices(Nowned, 4)) {
+          deck[1] = ownedSlice[members[0]];
+          deck[2] = ownedSlice[members[1]];
+          deck[3] = ownedSlice[members[2]];
+          deck[4] = ownedSlice[members[3]];
+
+          // 5 スロット内の所持枚数違反を skip
+          const usage = new Map<number, number>();
+          for (let i = 0; i < 5; i++) {
+            const id = deck[i]!.ID!;
+            usage.set(id, (usage.get(id) ?? 0) + 1);
+          }
+          let valid = true;
+          for (const [id, n] of usage) {
+            if (n > (ownedLimitMap.get(id) ?? 0)) { valid = false; break; }
+          }
+          if (!valid) continue;
+
+          for (let fi = 0; fi < N; fi++) {
+            deck[5] = candidates[fi];
+            pushTop(evaluateDeck());
+            evaluated++;
+            if (evaluated % YIELD_EVERY === 0) {
+              await reportProgress();
+              if (abortRequested) break outer1;
+            }
+          }
         }
-        rec.score = score;
-        pushTop(rec);
-        evaluated++;
-
-        if (evaluated % YIELD_EVERY === 0) {
-          const pct = Math.min(100, Math.round((evaluated / totalEvals) * 100));
-          progressPct = pct;
-          const speed = evaluated / ((performance.now() - t0) / 1000);
-          const etaSec = Math.max(0, (totalEvals - evaluated) / Math.max(1, speed));
-          progressText = `探索中… ${pct}% (${evaluated.toLocaleString()} / ${totalEvals.toLocaleString()}, 残り約 ${formatElapsed(etaSec * 1000)}, 暫定 1位: ${top[0] ? top[0].score.toLocaleString() : '-'})`;
-          await new Promise<void>((r) => setTimeout(r, 0));
-          if (abortRequested) break outer;
+      }
+    } else {
+      // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称 → 多重集合で列挙
+      // (member1..4) も team 値計算上の位置依存性がないため多重集合で列挙
+      outer2:
+      for (const boost of multisetIndices(N, 2)) {
+        deck[0] = candidates[boost[0]];
+        deck[5] = candidates[boost[1]];
+        for (const members of multisetIndices(N, 4)) {
+          deck[1] = candidates[members[0]];
+          deck[2] = candidates[members[1]];
+          deck[3] = candidates[members[2]];
+          deck[4] = candidates[members[3]];
+          pushTop(evaluateDeck());
+          evaluated++;
+          if (evaluated % YIELD_EVERY === 0) {
+            await reportProgress();
+            if (abortRequested) break outer2;
+          }
         }
       }
     }
@@ -392,10 +485,10 @@
       </ul>
       <div class="mb-2">
         <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-400 mr-1">金特効</span>
-        <b>{goldCandidates.length}</b> 枚
+        <b>{goldCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedGoldCount}）</span>{/if}
         <span class="ml-3 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-700 border border-gray-400 mr-1">銀特効</span>
-        <b>{silverCandidates.length}</b> 枚
-        <span class="ml-3">候補合計 <b>{currentCandidates.length}</b> 枚 → 評価する組合せ 約 <b>{comboCount.toLocaleString()}</b> 通り</span>
+        <b>{silverCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedSilverCount}）</span>{/if}
+        <span class="ml-3">候補合計 <b>{currentCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedCandidates.length}）</span>{/if} → 評価する組合せ <b>{comboCount.toLocaleString()}</b> 通り</span>
       </div>
       <details class="mt-2">
         <summary class="cursor-pointer text-[11px] text-indigo-600">候補カードを展開</summary>
@@ -449,6 +542,12 @@
       <span>SCOREUPバッジ</span>
       <input type="number" bind:value={scoreUpBadgeRate} class="w-16 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" />
       <span>%</span>
+    </label>
+  </div>
+  <div class="mt-3 border-t pt-3">
+    <label class="flex items-center gap-2 text-xs">
+      <input type="checkbox" bind:checked={ownedOnly} class="rounded" />
+      <span><b>所持カードで検索</b> — センター + メンバー4枚を所持枚数の範囲内で組合せ、フレンドは全候補から評価します</span>
     </label>
   </div>
 </section>
