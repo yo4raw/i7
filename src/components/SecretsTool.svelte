@@ -7,6 +7,7 @@
   import type { ScoreOptions } from '../lib/score/types';
   import { normalizeAttribute } from '../lib/score/types';
   import { computeTeam, calcMaxScore, calcExpectedScore, flattenNotes, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
+  import { resolveDeckBroachs } from '../lib/score/broachResolver';
   import { buildLiveTierMap, isEventLive, BONUS_LABEL, BONUS_CLASS } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../lib/constants';
@@ -424,14 +425,33 @@
   }
 
   // 詳細用の計算
-  const bestTeam = $derived.by(() => {
+  const bestContext = $derived.by(() => {
     if (!lastResult || !selectedSong) return null;
     const deck = lastResult.best.cardIds.map(getCardById);
     const tiers = buildTiersFromDeck(deck);
     const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     const trained: boolean[] = [true, true, true, true, true, true];
-    return computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
+    const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
+    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong, undefined);
+    return { team, deck, resolvedBroachs };
   });
+  const bestTeam = $derived(bestContext?.team ?? null);
+
+  type ResolvedBroachItem = NonNullable<ReturnType<NonNullable<ReturnType<typeof resolveDeckBroachs>['get']>>>[number];
+  function broachLabel(rb: ResolvedBroachItem): string {
+    const br = rb.broach;
+    const mult = (rb.active ? rb.multiplier : 1) ?? 1;
+    const stats: string[] = [];
+    if (br.shout) stats.push(`S+${(br.shout * mult).toLocaleString()}`);
+    if (br.beat) stats.push(`B+${(br.beat * mult).toLocaleString()}`);
+    if (br.melody) stats.push(`M+${(br.melody * mult).toLocaleString()}`);
+    if (br.score) stats.push(`スコア+${br.score}`);
+    const statStr = stats.join('/');
+    const baseLabel = br.condition
+      ? `${br.condition}${statStr ? ' ' + statStr : ''}`
+      : statStr || `ブローチ#${br.id ?? '?'}`;
+    return br.broach_type === 5 && rb.active && mult > 1 ? `${baseLabel}（${mult}枚）` : baseLabel;
+  }
 </script>
 
 <section class="bg-white rounded-lg shadow p-4 mb-4">
@@ -652,10 +672,11 @@
               <th class="text-right py-1 px-1 text-blue-500">Melody</th>
               <th class="text-left py-1 px-1">スキル</th>
               <th class="text-left py-1 px-1">効果</th>
+              <th class="text-left py-1 px-1">固定ブローチ</th>
             </tr>
           </thead>
           <tbody>
-            {#if bestTeam}
+            {#if bestTeam && bestContext}
               {#each DISPLAY_ORDER as i}
                 {@const dc = bestTeam.cards.find((x) => x.slotIndex === i)}
                 {@const card = getCardById(result.best.cardIds[i])}
@@ -666,6 +687,7 @@
                   {@const sl = getApSkillLevel(card, 5)}
                   {@const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl)}
                   {@const labelColor = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
+                  {@const slotBroachs = bestContext.resolvedBroachs.get(i) ?? []}
                   <tr class="border-t">
                     <td class="py-1 px-1 text-[10px] {labelColor}">{SLOT_LABELS[i]}</td>
                     <td class="py-1 px-1">
@@ -673,20 +695,41 @@
                       <div class="text-[10px] text-gray-400">{card.name || ''}</div>
                     </td>
                     <td class="py-1 px-1 text-center {bonusClass}">{bonusLabel}</td>
-                    <td class="py-1 px-1 text-right text-red-500">{dc.shout_max.toLocaleString()}</td>
-                    <td class="py-1 px-1 text-right text-green-500">{dc.beat_max.toLocaleString()}</td>
-                    <td class="py-1 px-1 text-right text-blue-500">{dc.melody_max.toLocaleString()}</td>
+                    <td class="py-1 px-1 text-right text-red-500">
+                      {dc.shout_max.toLocaleString()}{#if dc.broachShout > 0}<div class="text-[9px] text-purple-600">+{dc.broachShout.toLocaleString()}</div>{/if}
+                    </td>
+                    <td class="py-1 px-1 text-right text-green-500">
+                      {dc.beat_max.toLocaleString()}{#if dc.broachBeat > 0}<div class="text-[9px] text-purple-600">+{dc.broachBeat.toLocaleString()}</div>{/if}
+                    </td>
+                    <td class="py-1 px-1 text-right text-blue-500">
+                      {dc.melody_max.toLocaleString()}{#if dc.broachMelody > 0}<div class="text-[9px] text-purple-600">+{dc.broachMelody.toLocaleString()}</div>{/if}
+                    </td>
                     <td class="py-1 px-1">{card.ap_skill_type || '-'}</td>
                     <td class="py-1 px-1">{skillEffect}</td>
+                    <td class="py-1 px-1">
+                      {#if slotBroachs.length === 0}
+                        <span class="text-[10px] text-gray-300">—</span>
+                      {:else}
+                        {#each slotBroachs as rb}
+                          {#if rb.broach.broach_type === 8}
+                            <div class="text-[9px] text-gray-400 line-through" title="オート専用・計算対象外">🔮 {broachLabel(rb)}</div>
+                          {:else if rb.active}
+                            <div class="text-[9px] text-purple-700">🔮 {broachLabel(rb)}</div>
+                          {:else}
+                            <div class="text-[9px] text-gray-400" title="条件未達">🔮 {broachLabel(rb)}</div>
+                          {/if}
+                        {/each}
+                      {/if}
+                    </td>
                   </tr>
                 {/if}
               {/each}
               <tr class="border-t-2 font-bold text-xs">
-                <td colspan="3" class="py-1 px-1 text-right">チーム合計</td>
+                <td colspan="3" class="py-1 px-1 text-right">チーム合計（ブローチ込み）</td>
                 <td class="py-1 px-1 text-right text-red-500">{bestTeam.Shout.toLocaleString()}</td>
                 <td class="py-1 px-1 text-right text-green-500">{bestTeam.Beat.toLocaleString()}</td>
                 <td class="py-1 px-1 text-right text-blue-500">{bestTeam.Melody.toLocaleString()}</td>
-                <td colspan="2"></td>
+                <td colspan="3"></td>
               </tr>
             {/if}
           </tbody>
@@ -709,6 +752,9 @@
           {/if}
           {#if result.best.liveEndScore != null}
             <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td class="text-right py-1">{result.best.liveEndScore.toLocaleString()}</td></tr>
+          {/if}
+          {#if bestTeam && bestTeam.broachScoreBonus > 0}
+            <tr><td class="text-gray-500 py-1">固定ブローチ スコア加算</td><td class="text-right py-1">+{bestTeam.broachScoreBonus.toLocaleString()}</td></tr>
           {/if}
           <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td class="text-right py-1 font-bold">{result.best.score.toLocaleString()}</td></tr>
         </tbody>
