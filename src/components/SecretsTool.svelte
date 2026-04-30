@@ -785,13 +785,24 @@
                   {@const bonusLabel = BONUS_LABEL[tier]}
                   {@const bonusClass = BONUS_CLASS[tier]}
                   <tr class="border-t">
-                    <td class="py-1 px-1">{rank + 1}</td>
-                    <td class="py-1 px-1">
-                      <div style="color:{attrColor}">{card.cardname || ''}</div>
-                      <div class="text-[10px] text-gray-400">{card.name || ''}</div>
+                    <td class="py-1 px-1 align-middle">{rank + 1}</td>
+                    <td class="py-1 px-1 align-middle">
+                      <div class="flex items-center gap-2">
+                        <img
+                          src={cardThumbUrl(card.ID!)}
+                          alt={card.cardname || ''}
+                          class="w-10 h-auto rounded border flex-shrink-0"
+                          style="border-color:{attrColor}"
+                          loading="lazy"
+                        />
+                        <div class="min-w-0">
+                          <div class="truncate" style="color:{attrColor}">{card.cardname || ''}</div>
+                          <div class="text-[10px] text-gray-400 truncate">{card.name || ''}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td class="py-1 px-1 text-center {bonusClass}">{bonusLabel}</td>
-                    <td class="py-1 px-1 text-right font-bold">{f.score.toLocaleString()}</td>
+                    <td class="py-1 px-1 text-center align-middle {bonusClass}">{bonusLabel}</td>
+                    <td class="py-1 px-1 text-right font-bold align-middle">{f.score.toLocaleString()}</td>
                   </tr>
                 {/if}
               {/each}
@@ -802,38 +813,44 @@
     {/if}
 
     <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">🏅 上位候補 TOP 10</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-xs">
-          <thead>
-            <tr class="text-gray-500 border-b">
-              <th class="text-left py-1 px-1">#</th>
-              <th class="text-right py-1 px-1">スコア</th>
-              <th class="text-left py-1 px-1">編成（センター → メンバー → フレンド）</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each result.top as rec, rank}
-              <tr class="border-t">
-                <td class="py-1 px-1">{rank + 1}</td>
-                <td class="py-1 px-1 text-right font-bold">{rec.score.toLocaleString()}</td>
-                <td class="py-1 px-1">
-                  {#each rec.cardIds as cid, slot}
-                    {@const card = getCardById(cid)}
-                    {#if card}
-                      {@const attr = normalizeAttribute(card.attribute)}
-                      {@const attrColor = ATTR_HEX[attr] || '#6b7280'}
-                      {@const tier = currentTierMap.get(card.ID!) ?? 'none'}
-                      {@const tierMark = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : ''}
-                      {@const label = slot === 0 ? '★' : slot === 5 ? '✦' : ''}
-                      <span class="inline-block mr-1 mb-0.5 text-[10px]" style="color:{attrColor}">{label}{tierMark}{card.cardname || ''}</span>
-                    {/if}
-                  {/each}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      <h2 class="text-sm font-bold text-gray-700 mb-1">🏅 上位候補 TOP 10</h2>
+      <p class="text-[10px] text-gray-400 mb-3">スロット表記: ★センター / ✦フレンド / それ以外はメンバー</p>
+      <div class="space-y-2">
+        {#each result.top as rec, rank}
+          <div class="border rounded-lg p-2 flex items-center gap-3">
+            <div class="flex-shrink-0 w-8 text-center">
+              <div class="text-xs text-gray-400">#{rank + 1}</div>
+            </div>
+            <div class="flex-shrink-0 text-right">
+              <div class="text-sm font-bold text-indigo-700">{rec.score.toLocaleString()}</div>
+            </div>
+            <div class="flex-1 min-w-0 overflow-x-auto">
+              <div class="flex gap-1.5">
+                {#each DISPLAY_ORDER as i}
+                  {@const card = getCardById(rec.cardIds[i])}
+                  {#if card}
+                    {@const attr = normalizeAttribute(card.attribute)}
+                    {@const attrColor = ATTR_HEX[attr] || '#6b7280'}
+                    {@const tier = currentTierMap.get(card.ID!) ?? 'none'}
+                    {@const tierMark = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : ''}
+                    {@const slotMark = i === 0 ? '★' : i === 5 ? '✦' : ''}
+                    {@const slotColor = i === 0 ? 'text-indigo-600' : i === 5 ? 'text-amber-600' : 'text-gray-400'}
+                    <div class="flex-shrink-0 flex flex-col items-center" title={`${SLOT_LABELS[i]}: ${card.cardname || ''} (${card.name || ''})`}>
+                      <div class="text-[10px] {slotColor} font-bold leading-none">{slotMark}{tierMark}</div>
+                      <img
+                        src={cardThumbUrl(card.ID!)}
+                        alt={card.cardname || ''}
+                        class="w-9 h-auto rounded border mt-0.5"
+                        style="border-color:{attrColor}"
+                        loading="lazy"
+                      />
+                    </div>
+                  {/if}
+                {/each}
+              </div>
+            </div>
+          </div>
+        {/each}
       </div>
     </section>
 
