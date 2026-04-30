@@ -6,7 +6,7 @@
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
   import type { ScoreOptions } from '../lib/score/types';
   import { normalizeAttribute } from '../lib/score/types';
-  import { computeTeam, calcMaxScore, calcExpectedScore, flattenNotes } from '../lib/score/engine';
+  import { computeTeam, calcMaxScore, calcExpectedScore, flattenNotes, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
   import { buildLiveTierMap, isEventLive, BONUS_LABEL, BONUS_CLASS } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../lib/constants';
@@ -42,9 +42,14 @@
     shrinkExpected?: number;
     finalScore?: number;
   };
+  type FriendCandidate = {
+    cardId: number;
+    score: number;
+  };
   type SearchResult = {
     best: DeckRecord;
     top: DeckRecord[];
+    topFriends: FriendCandidate[];
     evaluated: number;
     elapsedMs: number;
     evalMode: 'expected' | 'max';
@@ -106,7 +111,13 @@
   function multichoose(n: number, k: number): number {
     return binomial(n + k - 1, k);
   }
-  const comboCount = $derived(currentCandidates.length >= 1 ? currentCandidates.length * currentCandidates.length * multichoose(currentCandidates.length, 4) : 0);
+  // (center, friend) は UR/UR でセンタースキルレートが等しいため入れ替え対称
+  // (member1..4) は team 値計算に位置依存性がないため多重集合
+  const comboCount = $derived(
+    currentCandidates.length >= 1
+      ? multichoose(currentCandidates.length, 2) * multichoose(currentCandidates.length, 4)
+      : 0
+  );
 
   const searchDisabled = $derived(!selectedSong || currentCandidates.length < 1 || searching);
   const searchDisabledReason = $derived(
@@ -176,12 +187,13 @@
       scoreUpBadgeRate,
     };
 
-    const notes = flattenNotes(selectedSong, 42);
+    const groupSizes = computeGroupSizes(selectedSong);
     const rabbit = loadRabbitNotes();
     const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     const trained: boolean[] = [true, true, true, true, true, true];
     const emptyShared: number[][] = [[], [], [], [], [], []];
-    const notesCount = selectedSong.notes_count || notes.length;
+    const notesCount = selectedSong.notes_count
+      || flattenNotes(selectedSong, 42).length;
 
     const TOP_K = 10;
     const top: DeckRecord[] = [];
@@ -201,51 +213,53 @@
     let evaluated = 0;
     const YIELD_EVERY = 3000;
     const t0 = performance.now();
+    // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称 → 多重集合で列挙
+    // (member1..4) も team 値計算上の位置依存性がないため多重集合で列挙
     outer:
-    for (let ci = 0; ci < N; ci++) {
-      deck[0] = candidates[ci];
-      for (let fi = 0; fi < N; fi++) {
-        deck[5] = candidates[fi];
-        for (const members of multisetIndices(N, 4)) {
-          deck[1] = candidates[members[0]];
-          deck[2] = candidates[members[1]];
-          deck[3] = candidates[members[2]];
-          deck[4] = candidates[members[3]];
+    for (const boost of multisetIndices(N, 2)) {
+      deck[0] = candidates[boost[0]];
+      deck[5] = candidates[boost[1]];
+      for (const members of multisetIndices(N, 4)) {
+        deck[1] = candidates[members[0]];
+        deck[2] = candidates[members[1]];
+        deck[3] = candidates[members[2]];
+        deck[4] = candidates[members[3]];
 
-          const tiers = buildTiersFromDeck(deck);
-          const team = computeTeam(
-            deck, allBroachs, selectedSong, tiers, trained, undefined, emptyShared, skillLevels, rabbit
-          );
-          let score = 0;
-          const rec: DeckRecord = {
-            cardIds: [deck[0]!.ID!, deck[1]!.ID!, deck[2]!.ID!, deck[3]!.ID!, deck[4]!.ID!, deck[5]!.ID!],
-            score: 0,
-          };
-          if (evalMode === 'expected') {
-            const e = calcExpectedScore(team, notes, notesCount, scoreOptions);
-            score = e.finalScore;
-            rec.baseScore = e.baseScore;
-            rec.scoreUpExpected = e.scoreUpExpected;
-            rec.shrinkExpected = e.shrinkExpected;
-            rec.liveEndScore = e.liveEndScore;
-            rec.finalScore = e.finalScore;
-          } else {
-            score = calcMaxScore(team, notes, scoreOptions);
-            rec.finalScore = score;
-          }
-          rec.score = score;
-          pushTop(rec);
-          evaluated++;
+        const tiers = buildTiersFromDeck(deck);
+        const team = computeTeam(
+          deck, allBroachs, selectedSong, tiers, trained, undefined, emptyShared, skillLevels, rabbit
+        );
+        const exclusion = computeShrinkExclusion(team, groupSizes);
+        const notes = flattenNotes(selectedSong, 42, exclusion);
+        let score = 0;
+        const rec: DeckRecord = {
+          cardIds: [deck[0]!.ID!, deck[1]!.ID!, deck[2]!.ID!, deck[3]!.ID!, deck[4]!.ID!, deck[5]!.ID!],
+          score: 0,
+        };
+        if (evalMode === 'expected') {
+          const e = calcExpectedScore(team, notes, notesCount, scoreOptions);
+          score = e.finalScore;
+          rec.baseScore = e.baseScore;
+          rec.scoreUpExpected = e.scoreUpExpected;
+          rec.shrinkExpected = e.shrinkExpected;
+          rec.liveEndScore = e.liveEndScore;
+          rec.finalScore = e.finalScore;
+        } else {
+          score = calcMaxScore(team, notes, scoreOptions);
+          rec.finalScore = score;
+        }
+        rec.score = score;
+        pushTop(rec);
+        evaluated++;
 
-          if (evaluated % YIELD_EVERY === 0) {
-            const pct = Math.min(100, Math.round((evaluated / totalEvals) * 100));
-            progressPct = pct;
-            const speed = evaluated / ((performance.now() - t0) / 1000);
-            const etaSec = Math.max(0, (totalEvals - evaluated) / Math.max(1, speed));
-            progressText = `探索中… ${pct}% (${evaluated.toLocaleString()} / ${totalEvals.toLocaleString()}, 残り約 ${formatElapsed(etaSec * 1000)}, 暫定 1位: ${top[0] ? top[0].score.toLocaleString() : '-'})`;
-            await new Promise<void>((r) => setTimeout(r, 0));
-            if (abortRequested) break outer;
-          }
+        if (evaluated % YIELD_EVERY === 0) {
+          const pct = Math.min(100, Math.round((evaluated / totalEvals) * 100));
+          progressPct = pct;
+          const speed = evaluated / ((performance.now() - t0) / 1000);
+          const etaSec = Math.max(0, (totalEvals - evaluated) / Math.max(1, speed));
+          progressText = `探索中… ${pct}% (${evaluated.toLocaleString()} / ${totalEvals.toLocaleString()}, 残り約 ${formatElapsed(etaSec * 1000)}, 暫定 1位: ${top[0] ? top[0].score.toLocaleString() : '-'})`;
+          await new Promise<void>((r) => setTimeout(r, 0));
+          if (abortRequested) break outer;
         }
       }
     }
@@ -255,9 +269,33 @@
     if (top.length === 0) {
       alert('評価できる組合せがありませんでした');
     } else {
+      // 最適編成の center + member1..4 を固定し、friend だけ全候補に切り替えて Top 5 を抽出
+      const best = top[0];
+      const fixed = best.cardIds.map((id) => candidates.find((c) => c.ID === id) ?? null);
+      const friendScores: FriendCandidate[] = [];
+      for (const cand of candidates) {
+        fixed[5] = cand;
+        const tiers = buildTiersFromDeck(fixed);
+        const team = computeTeam(
+          fixed, allBroachs, selectedSong, tiers, trained, undefined, emptyShared, skillLevels, rabbit
+        );
+        const exclusion = computeShrinkExclusion(team, groupSizes);
+        const notes = flattenNotes(selectedSong, 42, exclusion);
+        let score = 0;
+        if (evalMode === 'expected') {
+          score = calcExpectedScore(team, notes, notesCount, scoreOptions).finalScore;
+        } else {
+          score = calcMaxScore(team, notes, scoreOptions);
+        }
+        friendScores.push({ cardId: cand.ID!, score });
+      }
+      friendScores.sort((a, b) => b.score - a.score);
+      const topFriends = friendScores.slice(0, 5);
+
       lastResult = {
         best: top[0],
         top,
+        topFriends,
         evaluated,
         elapsedMs,
         evalMode,
@@ -577,6 +615,46 @@
         </tbody>
       </table>
     </section>
+
+    {#if result.topFriends && result.topFriends.length > 0}
+      <section class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-sm font-bold text-gray-700 mb-1">🤝 フレンド候補 TOP 5</h2>
+        <p class="text-[11px] text-gray-500 mb-3">最適編成のセンター + メンバー4枚を固定し、フレンドだけ差し替えた場合のスコア（高い順）。マッチング次第で 1 位フレンドが取れない場合の代替候補です。</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-gray-500 border-b">
+                <th class="text-left py-1 px-1">#</th>
+                <th class="text-left py-1 px-1">カード</th>
+                <th class="text-center py-1 px-1">特効</th>
+                <th class="text-right py-1 px-1">スコア</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each result.topFriends as f, rank}
+                {@const card = getCardById(f.cardId)}
+                {#if card}
+                  {@const attr = normalizeAttribute(card.attribute)}
+                  {@const attrColor = ATTR_HEX[attr] || '#6b7280'}
+                  {@const tier = currentTierMap.get(card.ID!) ?? 'none'}
+                  {@const bonusLabel = BONUS_LABEL[tier]}
+                  {@const bonusClass = BONUS_CLASS[tier]}
+                  <tr class="border-t">
+                    <td class="py-1 px-1">{rank + 1}</td>
+                    <td class="py-1 px-1">
+                      <div style="color:{attrColor}">{card.cardname || ''}</div>
+                      <div class="text-[10px] text-gray-400">{card.name || ''}</div>
+                    </td>
+                    <td class="py-1 px-1 text-center {bonusClass}">{bonusLabel}</td>
+                    <td class="py-1 px-1 text-right font-bold">{f.score.toLocaleString()}</td>
+                  </tr>
+                {/if}
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {/if}
 
     <section class="bg-white rounded-lg shadow p-4">
       <h2 class="text-sm font-bold text-gray-700 mb-3">🏅 上位候補 TOP 10</h2>
