@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process';
 import '../styles/global.css';
 import { SITE_NAME } from '../lib/constants.ts';
 import HeaderNav from '../components/HeaderNav.svelte';
+import FooterTools from '../components/FooterTools.svelte';
 import JsonLd from '../components/seo/JsonLd.astro';
 
 interface Breadcrumb {
@@ -140,8 +141,9 @@ try {
       )}
       <slot />
     </main>
-    <footer class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center">
+    <footer class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center gap-3">
       <a href={`${base}releases/`} class="hover:text-gray-600 hover:underline underline-offset-2">{version}</a>
+      <FooterTools client:load />
     </footer>
   </body>
 </html>
