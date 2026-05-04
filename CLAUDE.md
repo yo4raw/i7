@@ -127,9 +127,10 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 |-----------|------|
 | `src/lib/cardListRenderer.ts` | カード一覧のフィルタリング・ソート・ページネーション・所持数管理 |
 | `src/lib/donutChart.ts` | 属性比率のドーナツチャート描画 |
-| `src/lib/storage.ts` | localStorage ラッパー（所持数・保存デッキなど） |
+| `src/lib/storage.ts` | localStorage ラッパー。キー一覧は `STORAGE_KEYS` で集中管理（新しいキー追加時はここに追記） |
 | `src/lib/ui.ts` | UI 共通ヘルパー |
 | `src/lib/score/` | スコア計算エンジン（モンテカルロシミュレーション） |
+| `src/components/FooterTools.svelte` | フッターからの localStorage エクスポート/インポート UI |
 
 スコア計算エンジンの主要コンポーネント:
 
@@ -159,6 +160,20 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | イベント一覧 | `src/pages/events/index.astro` | ビルド時プリレンダリング（`fetchEventsCsv` を build 時に読込） |
 | イベント詳細 | `src/pages/events/[id].astro` | `getStaticPaths()` による動的ルート |
 | ラビットノート | `src/pages/rabbit-note/index.astro` | ビルド時プリレンダリング |
+
+### User Data Backup
+
+ユーザーデータ（所持カード・保存デッキ等）はすべて localStorage に保存される。キーは `src/lib/storage.ts` の `STORAGE_KEYS` で集中管理:
+
+| キー | 用途 |
+|------|------|
+| `i7_card_counts` | 所持カード数 |
+| `i7_rabbit_notes` | ラビットノート |
+| `i7_selected_songs` | 選択楽曲 |
+| `i7_saved_decks` | 保存デッキ |
+| `i7_score_calc_state` | スコア計算画面の状態 |
+
+`src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
 
 ### Deployment
 
