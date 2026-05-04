@@ -8,10 +8,10 @@
 
   const links: Array<{ href: string; label: string }> = [
     { href: base, label: 'ホーム' },
-    { href: `${base}cards/`, label: 'カード一覧' },
+    { href: `${base}cards/`, label: '衣装一覧' },
     { href: `${base}songs/`, label: '楽曲一覧' },
     { href: `${base}events/`, label: 'イベント情報' },
-    { href: `${base}mycard/`, label: '所持カード' },
+    { href: `${base}mycard/`, label: '所持衣装' },
     { href: `${base}score-calc/`, label: 'スコア計算' },
     { href: `${base}rabbit-note/`, label: 'ラビットノート' },
     { href: `${base}decks/`, label: '保存デッキ' },

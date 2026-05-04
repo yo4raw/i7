@@ -199,7 +199,7 @@
       <input
         type="text"
         id="search-text"
-        placeholder="カード名/キャラ名"
+        placeholder="衣装名/キャラ名"
         value={text}
         oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
         class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -309,7 +309,7 @@
         <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
           <th class="px-3 py-2 w-16">画像</th>
           <th class="px-3 py-2">ID</th>
-          <th class="px-3 py-2">カード名</th>
+          <th class="px-3 py-2">衣装名</th>
           <th class="px-3 py-2">キャラ</th>
           <th class="px-3 py-2">レア</th>
           <th class="px-3 py-2">属性</th>
@@ -365,6 +365,6 @@
       読み込み中…
     </span>
   {:else if filtered.length > 0}
-    <span class="text-sm text-gray-400">すべてのカードを表示しました</span>
+    <span class="text-sm text-gray-400">すべての衣装を表示しました</span>
   {/if}
 </div>

@@ -289,7 +289,7 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
     coins.push(
       `<circle cx="${x}" cy="${cy}" r="5"
                fill="${a.fired ? '#22c55e' : '#9ca3af'}" stroke="white" stroke-width="1.5">
-         <title>カード${ci + 1}: ${a.fired ? '発動' : '不発'} (note=${a.start})</title>
+         <title>衣装${ci + 1}: ${a.fired ? '発動' : '不発'} (note=${a.start})</title>
        </circle>`
     );
   }
@@ -308,7 +308,7 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
     const x2 = xScale(a.end);
     return `<rect x="${x1}" y="${barY}" width="${x2 - x1}" height="${barH}"
                   fill="${CARD_COLORS[ci]}" opacity="0.85">
-              <title>カード${ci + 1}: 発動区間 ${a.start}-${a.end}</title>
+              <title>衣装${ci + 1}: 発動区間 ${a.start}-${a.end}</title>
             </rect>`;
   }).join('\n');
 
@@ -332,7 +332,7 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
   const totalCoverCapped = Math.min(totalCoverRaw, p.songDuration);
   const coverPct = ((totalCoverCapped / p.songDuration) * 100).toFixed(1);
   const summary = cards.map((c, i) =>
-    `カード${i + 1} (${c.count}ノーツ/${c.per}%/${c.value}秒): ${firedPerCard[i]}/${triggersPerCard[i]}回 (${coverPerCard[i]}秒)`
+    `衣装${i + 1} (${c.count}ノーツ/${c.per}%/${c.value}秒): ${firedPerCard[i]}/${triggersPerCard[i]}回 (${coverPerCard[i]}秒)`
   ).join(' ／ ');
 
   return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="縮小スキルのタイムライン">

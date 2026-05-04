@@ -7,15 +7,15 @@ const base = import.meta.env.BASE_URL;
 <BaseLayout title="このサイトについて">
   <h1 class="text-2xl font-bold mb-2">このサイトについて</h1>
   <p class="text-sm text-gray-600 mb-8">
-    当サイト「i7 カードDB」は、スマートフォン向けゲーム『アイドリッシュセブン』のカード・楽曲・イベント情報をまとめた、ファンによる非公式のデータベースサイトです。
+    当サイト「i7マネ部屋(β)」は、スマートフォン向けゲーム『アイドリッシュセブン』の衣装・楽曲・イベント情報をまとめた、ファンによる非公式のデータベースサイトです。
   </p>
   <section class="bg-white rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">サイトの目的</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
-      <li>アイドリッシュセブンのカード・楽曲情報を検索・閲覧しやすい形で提供する</li>
+      <li>アイドリッシュセブンの衣装・楽曲情報を検索・閲覧しやすい形で提供する</li>
       <li>モンテカルロシミュレーションによるスコア計算など、プレイヤー向けのツールを提供する</li>
-      <li>開催中イベントの特効カード情報を一覧で確認できるようにする</li>
-      <li>所持カード・デッキ構成を手元で管理できる場を提供する</li>
+      <li>開催中イベントの特効衣装情報を一覧で確認できるようにする</li>
+      <li>所持衣装・デッキ構成を手元で管理できる場を提供する</li>
     </ul>
   </section>
 
@@ -25,7 +25,7 @@ const base = import.meta.env.BASE_URL;
       <div>
         <h3 class="font-semibold mb-1">データベース</h3>
         <ul class="list-disc pl-5 space-y-0.5">
-          <li><a href={`${base}cards/`} class="text-indigo-600 hover:underline">カード一覧・詳細</a></li>
+          <li><a href={`${base}cards/`} class="text-indigo-600 hover:underline">衣装一覧・詳細</a></li>
           <li><a href={`${base}songs/`} class="text-indigo-600 hover:underline">楽曲一覧・詳細</a></li>
           <li><a href={`${base}events/`} class="text-indigo-600 hover:underline">イベント情報</a></li>
         </ul>
@@ -33,7 +33,7 @@ const base = import.meta.env.BASE_URL;
       <div>
         <h3 class="font-semibold mb-1">プレイヤー向けツール</h3>
         <ul class="list-disc pl-5 space-y-0.5">
-          <li><a href={`${base}mycard/`} class="text-indigo-600 hover:underline">所持カード管理</a></li>
+          <li><a href={`${base}mycard/`} class="text-indigo-600 hover:underline">所持衣装管理</a></li>
           <li><a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算</a></li>
           <li><a href={`${base}rabbit-note/`} class="text-indigo-600 hover:underline">ラビットノート</a></li>
           <li><a href={`${base}decks/`} class="text-indigo-600 hover:underline">保存デッキ</a></li>
@@ -41,7 +41,7 @@ const base = import.meta.env.BASE_URL;
       </div>
     </div>
     <p class="text-xs text-gray-500 mt-4">
-      所持カード数・ラビットノート値・保存デッキなどのユーザーデータは、閲覧している端末の <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> にのみ保存されます。サーバーへは送信されません。
+      所持衣装数・ラビットノート値・保存デッキなどのユーザーデータは、閲覧している端末の <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> にのみ保存されます。サーバーへは送信されません。
     </p>
   </section>
 
@@ -79,7 +79,7 @@ const base = import.meta.env.BASE_URL;
         『アイドリッシュセブン』および関連するキャラクター・画像・楽曲・ロゴ等の著作権・商標権は、株式会社バンダイナムコオンライン、株式会社バンダイナムコエンターテインメント、株式会社バンダイナムコピクチャーズ、その他の権利者に帰属します。
       </li>
       <li>
-        カード画像は利用者の利便性のために各ゲームサーバーより取得・キャッシュしているものであり、画像そのものの権利は元の権利者に帰属します。画像・データの無断転載・商用利用はご遠慮ください。
+        衣装画像は利用者の利便性のために各ゲームサーバーより取得・キャッシュしているものであり、画像そのものの権利は元の権利者に帰属します。画像・データの無断転載・商用利用はご遠慮ください。
       </li>
       <li>
         当サイトに掲載されている数値・仕様・スコア計算結果は、有志による計測・推定値を含みます。ゲーム内の挙動と完全に一致することを保証するものではありません。
@@ -108,7 +108,7 @@ const base = import.meta.env.BASE_URL;
   <section class="bg-white rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">プライバシー</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
-      <li>所持カード・デッキ・ラビットノート値などのユーザー入力は、ブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
+      <li>所持衣装・デッキ・ラビットノート値などのユーザー入力は、ブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
       <li>データのエクスポート・完全削除はブラウザの設定または各ページ上のクリア機能から行えます。</li>
     </ul>
   </section>

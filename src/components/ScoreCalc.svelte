@@ -638,7 +638,7 @@
         </div>`;
       }).join('');
 
-      _q('modal-card-list').innerHTML = html || '<p class="text-sm text-gray-400 text-center py-8">該当するカードがありません</p>';
+      _q('modal-card-list').innerHTML = html || '<p class="text-sm text-gray-400 text-center py-8">該当する衣装がありません</p>';
 
       rootEl.querySelectorAll('[data-pick-card]').forEach(el => {
         el.addEventListener('click', () => {
@@ -912,13 +912,13 @@
 
       if (!selectedSong && !hasCards) {
         btn.disabled = true;
-        reason.textContent = '楽曲を選択し、カードを1枚以上配置してください';
+        reason.textContent = '楽曲を選択し、衣装を1枚以上配置してください';
       } else if (!selectedSong) {
         btn.disabled = true;
         reason.textContent = '楽曲を選択してください';
       } else if (!hasCards) {
         btn.disabled = true;
-        reason.textContent = 'カードを1枚以上配置してください';
+        reason.textContent = '衣装を1枚以上配置してください';
       } else {
         btn.disabled = false;
         reason.textContent = '';
@@ -1013,7 +1013,7 @@
 
     function saveDeck() {
       const hasCards = deck.some(c => c !== null);
-      if (!hasCards) { alert('デッキにカードを1枚以上セットしてください'); return; }
+      if (!hasCards) { alert('デッキに衣装を1枚以上セットしてください'); return; }
 
       const existing = loadSavedDecks();
       const defaultName = `デッキ ${existing.length + 1}`;
@@ -1345,7 +1345,7 @@
 
     <details id="card-detail-section" class="bg-white rounded-lg shadow p-4 hidden group" open>
       <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
-        <span>🧾 カード詳細</span>
+        <span>🧾 衣装詳細</span>
         <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </summary>
       <div class="overflow-x-auto">
@@ -1353,7 +1353,7 @@
           <thead>
             <tr class="text-gray-500 border-b">
               <th class="text-left py-1 px-1">スロット</th>
-              <th class="text-left py-1 px-1">カード名</th>
+              <th class="text-left py-1 px-1">衣装名</th>
               <th class="text-center py-1 px-1">特訓</th>
               <th class="text-center py-1 px-1">特効</th>
               <th class="text-right py-1 px-1 text-red-500">Shout</th>
@@ -1400,7 +1400,7 @@
             <thead>
               <tr class="text-gray-500 border-b">
                 <th class="text-left py-1 px-1">スロット</th>
-                <th class="text-left py-1 px-1">カード名</th>
+                <th class="text-left py-1 px-1">衣装名</th>
                 <th class="text-left py-1 px-1">スキル</th>
                 <th class="text-right py-1 px-1">スキル期待値</th>
                 <th class="text-right py-1 px-1">スキル最大発動回数</th>
@@ -1413,7 +1413,7 @@
           <p class="text-xs text-gray-400 mt-2">※ 複数の判定縮小スキルが共存する場合、値は按分されます</p>
         </div>
       </section>
-      <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定するとスキル詳細が表示されます</p>
+      <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲と衣装を設定するとスキル詳細が表示されます</p>
     </details>
 
     <section class="bg-white rounded-lg shadow p-4">
@@ -1530,7 +1530,7 @@
             <table class="w-full text-xs">
               <thead>
                 <tr class="text-gray-500 border-b">
-                  <th class="text-left py-1">カード名</th>
+                  <th class="text-left py-1">衣装名</th>
                   <th class="text-left py-1">スキル</th>
                   <th class="text-right py-1">発動率</th>
                   <th class="text-right py-1">平均発動</th>
@@ -1562,22 +1562,22 @@
             </tbody>
           </table>
         </section>
-        <p id="area-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲とカードを設定すると楽曲属性面積値が表示されます</p>
+        <p id="area-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲と衣装を設定すると楽曲属性面積値が表示されます</p>
       </div>
     </div>
   </div>
 
-  <!-- カード選択モーダル -->
+  <!-- 衣装選択モーダル -->
   <div id="card-picker-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50" id="modal-backdrop"></div>
     <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-lg shadow-xl max-h-[85vh] flex flex-col mx-4 sm:mx-auto">
       <div class="p-4 border-b flex-shrink-0">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="font-bold text-gray-700">カード選択 - <span id="modal-slot-label"></span></h3>
+          <h3 class="font-bold text-gray-700">衣装選択 - <span id="modal-slot-label"></span></h3>
           <button id="modal-close-x" type="button" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input type="text" id="modal-search" placeholder="カード名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
           <select id="modal-rarity" class="border border-gray-300 rounded px-2 py-1.5 text-sm">
             <option value="">レアリティ</option>
             <option value="UR">UR</option>
@@ -1595,7 +1595,7 @@
         <div class="mt-2 flex items-center gap-3">
           <label class="flex items-center gap-1 text-xs">
             <input type="checkbox" id="modal-owned-only" checked />
-            <span>所持カードのみ</span>
+            <span>所持衣装のみ</span>
           </label>
           <span id="modal-result-count" class="text-xs text-gray-500"></span>
         </div>

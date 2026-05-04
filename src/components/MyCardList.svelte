@@ -37,8 +37,8 @@
 
 {#if owned.length === 0}
   <div class="text-center py-12 text-gray-500">
-    <p class="text-lg mb-2">所持カードがありません</p>
-    <p class="text-sm"><a href={`${base}cards/`} class="text-indigo-600 hover:underline">カード一覧</a>で所持数を登録してください</p>
+    <p class="text-lg mb-2">所持衣装がありません</p>
+    <p class="text-sm"><a href={`${base}cards/`} class="text-indigo-600 hover:underline">衣装一覧</a>で所持数を登録してください</p>
   </div>
 {:else}
   <div>
@@ -55,7 +55,7 @@
           <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
             <th class="px-3 py-2 w-16">画像</th>
             <th class="px-3 py-2">ID</th>
-            <th class="px-3 py-2">カード名</th>
+            <th class="px-3 py-2">衣装名</th>
             <th class="px-3 py-2">キャラ</th>
             <th class="px-3 py-2">レア</th>
             <th class="px-3 py-2">属性</th>
