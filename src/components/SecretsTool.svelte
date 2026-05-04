@@ -166,8 +166,8 @@
   );
   const searchDisabledReason = $derived(
     !selectedSong ? '楽曲を選択してください'
-      : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR カードがありません'
-      : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR カードがありません'
+      : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR 衣装がありません'
+      : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR 衣装がありません'
       : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : ''
   );
@@ -511,7 +511,7 @@
         <span class="ml-3">候補合計 <b>{currentCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedCandidates.length}）</span>{/if} → 評価する組合せ <b>{comboCount.toLocaleString()}</b> 通り</span>
       </div>
       <details class="mt-2">
-        <summary class="cursor-pointer text-[11px] text-indigo-600">候補カードを展開</summary>
+        <summary class="cursor-pointer text-[11px] text-indigo-600">候補衣装を展開</summary>
         <div class="mt-2">
           <div class="text-[11px] font-bold text-yellow-700">金特効（{goldCandidates.length}枚）</div>
           <div>
@@ -567,7 +567,7 @@
   <div class="mt-3 border-t pt-3">
     <label class="flex items-center gap-2 text-xs">
       <input type="checkbox" bind:checked={ownedOnly} class="rounded" />
-      <span><b>所持カードで検索</b> — センター + メンバー4枚を所持枚数の範囲内で組合せ、フレンドは全候補から評価します</span>
+      <span><b>所持衣装で検索</b> — センター + メンバー4枚を所持枚数の範囲内で組合せ、フレンドは全候補から評価します</span>
     </label>
   </div>
 </section>
@@ -659,13 +659,13 @@
     </section>
 
     <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">🧾 カード詳細</h2>
+      <h2 class="text-sm font-bold text-gray-700 mb-3">🧾 衣装詳細</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
             <tr class="text-gray-500 border-b">
               <th class="text-left py-1 px-1">スロット</th>
-              <th class="text-left py-1 px-1">カード名</th>
+              <th class="text-left py-1 px-1">衣装名</th>
               <th class="text-center py-1 px-1">特効</th>
               <th class="text-right py-1 px-1 text-red-500">Shout</th>
               <th class="text-right py-1 px-1 text-green-500">Beat</th>
@@ -770,7 +770,7 @@
             <thead>
               <tr class="text-gray-500 border-b">
                 <th class="text-left py-1 px-1">#</th>
-                <th class="text-left py-1 px-1">カード</th>
+                <th class="text-left py-1 px-1">衣装</th>
                 <th class="text-center py-1 px-1">特効</th>
                 <th class="text-right py-1 px-1">スコア</th>
               </tr>

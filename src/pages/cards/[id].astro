@@ -51,13 +51,13 @@ const ogDescription = card.groupname ? `${descParts}（${card.groupname}）` : d
 
 const breadcrumbs = [
   { name: 'ホーム', url: base },
-  { name: 'カード一覧', url: `${base}cards/` },
-  { name: card.cardname || `カード ${card.ID}`, url: `${base}cards/${card.ID}/` },
+  { name: '衣装一覧', url: `${base}cards/` },
+  { name: card.cardname || `衣装 ${card.ID}`, url: `${base}cards/${card.ID}/` },
 ];
 
 const infoRows = [
   { label: 'ID', value: card.ID },
-  { label: 'カードID', value: card.cardID },
+  { label: '衣装ID', value: card.cardID },
   { label: 'キャラクター', value: card.name },
   { label: 'グループ', value: card.groupname },
   { label: '入手方法', value: card.get_type },
@@ -98,7 +98,7 @@ const otherSkills = [
 ---
 
 <BaseLayout
-  title={card.cardname || 'カード詳細'}
+  title={card.cardname || '衣装詳細'}
   description={ogDescription}
   image={cardImageUrl(card.ID)}
   ogType="article"

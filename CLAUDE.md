@@ -150,11 +150,11 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | ページ | ルート | 描画方式 |
 |--------|--------|----------|
 | ホーム | `src/pages/index.astro` | ビルド時プリレンダリング |
-| カード一覧 | `src/pages/cards/index.astro` | ビルド時 + クライアント JS（フィルタ/ソート/ページネーション/イベント特効表示） |
-| カード詳細 | `src/pages/cards/[id].astro` | `getStaticPaths()` による動的ルート |
+| 衣装一覧 | `src/pages/cards/index.astro` | ビルド時 + クライアント JS（フィルタ/ソート/ページネーション/イベント特効表示） |
+| 衣装詳細 | `src/pages/cards/[id].astro` | `getStaticPaths()` による動的ルート |
 | 楽曲一覧 | `src/pages/songs/index.astro` | ビルド時プリレンダリング |
 | 楽曲詳細 | `src/pages/songs/[id].astro` | `getStaticPaths()` による動的ルート |
-| 所持カード | `src/pages/mycard/index.astro` | ビルド時 + クライアント JS（localStorage ベースの所持数管理） |
+| 所持衣装 | `src/pages/mycard/index.astro` | ビルド時 + クライアント JS（localStorage ベースの所持数管理） |
 | スコア計算 | `src/pages/score-calc/index.astro` | ビルド時 + クライアント JS（モンテカルロシミュレーション、開催中イベントの特効反映） |
 | 保存デッキ | `src/pages/decks/index.astro` | ビルド時 + クライアント JS（localStorage ベースのデッキ管理） |
 | イベント一覧 | `src/pages/events/index.astro` | ビルド時プリレンダリング（`fetchEventsCsv` を build 時に読込） |
@@ -227,9 +227,15 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 - **Context7**: Astro・Tailwind CSS・Svelte 等のライブラリやフレームワークに関する作業では、必ず Context7 で最新の公式ドキュメントを参照してから実装する
 - **Serena**: コードベースのシンボル解析・ナビゲーション・リファクタリングには Serena を使用する。ファイル全体を読む前に `get_symbols_overview` や `find_symbol` で必要な箇所を特定し、効率的に作業する
 
-## カード表示参考
+## 用語ポリシー
 
-カードの表示で判断が難しい場合は
+ユーザー可視テキスト（HTML、ラベル、alert/placeholder、aria-label、SVG `<title>` など）では「カード」ではなく **「衣装」** を用いる。アイドリッシュセブンの用語に揃えるため。
+
+内部識別子（コード中の変数名・関数名・ファイル名・URL パス・localStorage キーなど）は引き続き `card` を使用する（例: `cards/[id].astro`、`i7_card_counts`、`fetchCardsJson.ts`、`CardList.svelte`）。
+
+## 衣装表示参考
+
+衣装の表示で判断が難しい場合は
 `https://i7.yo4raw.com/cards/{id}/`
 が　
 `https://i7.step-on-dream.net/card.php?ID={id}`

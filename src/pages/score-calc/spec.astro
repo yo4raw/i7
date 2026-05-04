@@ -105,7 +105,7 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
     <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">2-1. インタラクティブに試す</h3>
     <p class="text-sm text-gray-700 mb-3">
       <strong>ノーツ数</strong> / <strong>確率</strong> / <strong>秒数</strong> のスライダー、
-      <strong>「＋カード追加」</strong> ボタンで縮小スキル枚数の変更、
+      <strong>「＋衣装追加」</strong> ボタンで縮小スキル枚数の変更、
       <strong>「別の試行」</strong> ボタンでシード変更ができます。
       発動回数・カバー時間がデッキ構成でどう変わるか確認できます（実ゲームと同じ発動判定 + キューイング仕様を疑似的に再現、決定論シード付き）。
     </p>
@@ -133,7 +133,7 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
     </div>
     <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
       <li>先頭除外は <strong>スコア寄与の計算</strong>（§5 の eligibleBaseScore）にのみ効き、UI 表示の「スキル最大発動回数」は <code class="px-1 bg-gray-100 rounded">notesCount</code> 全体（タイマー型は <code class="px-1 bg-gray-100 rounded">songDuration</code> 全体）で計算します。</li>
-      <li>縮小スキルが複数枚あるときは <code class="px-1 bg-gray-100 rounded">count</code> が最小のカードが基準になります。</li>
+      <li>縮小スキルが複数枚あるときは <code class="px-1 bg-gray-100 rounded">count</code> が最小の衣装が基準になります。</li>
     </ul>
 
     <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded text-xs text-sky-900 space-y-1">
@@ -207,7 +207,7 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
       <strong>常に成功扱い</strong> にし、<strong>縮小カバー率が理論最大値となる前提のスコア分布</strong> を得られます。
     </p>
     <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-2">
-      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・カード別寄与等）。</li>
+      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・衣装別寄与等）。</li>
       <li>§4 の「理論最大カバー率」「期待カバー率」、および「理論最高/最低スコア」「期待値スコア」の表示は<strong>従来通り</strong>（本チェックの影響を受けない）。</li>
       <li>キューイング仕様（§2 末尾）は維持されるため、カバー率は引き続き <code class="px-1 bg-gray-100 rounded">songDuration</code> で 100% キャップされます。</li>
       <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>
@@ -220,7 +220,7 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
       <strong>常に成功扱い</strong> にし、<strong>スコアアップが理論最大発動回数となる前提のスコア分布</strong> を得られます。
     </p>
     <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-2">
-      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・カード別寄与等）。</li>
+      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・衣装別寄与等）。</li>
       <li>「理論最高/最低スコア」「期待値スコア」「期待発動回数」の表示は<strong>従来通り</strong>（本チェックの影響を受けない）。</li>
       <li>判定縮小スキルには影響しない。縮小も全発動させたい場合は「縮小全発動」と併用する。</li>
       <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>

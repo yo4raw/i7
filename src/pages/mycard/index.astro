@@ -8,8 +8,8 @@ const allCards = await fetchCardsJson() as any[];
 const base = import.meta.env.BASE_URL;
 ---
 
-<BaseLayout title="所持カード一覧">
-  <h1 class="text-2xl font-bold mb-6">所持カード一覧</h1>
+<BaseLayout title="所持衣装一覧">
+  <h1 class="text-2xl font-bold mb-6">所持衣装一覧</h1>
 
   <MyCardList cards={allCards} base={base} thumbUrl={CARD_THUMB_BASE_URL} client:load />
 </BaseLayout>

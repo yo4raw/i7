@@ -40,7 +40,7 @@ const { event, goldCards, silverCards, bronzeCards } = Astro.props as Props;
 const base = import.meta.env.BASE_URL;
 
 const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
-const ogDescription = `${event.eventname}（${event.eventtype}）の特効カード・期間・ボーナス情報。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
+const ogDescription = `${event.eventname}（${event.eventtype}）の特効衣装・期間・ボーナス情報。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
 const ogImageCard = goldCards[0] || silverCards[0] || bronzeCards[0];
 const ogImage = ogImageCard?.ID != null ? cardThumbUrl(ogImageCard.ID) : undefined;
 
@@ -149,7 +149,7 @@ const tiers: TierView[] = [
       )}
 
       {t.cards.length === 0 ? (
-        <p class="text-sm text-gray-400">対象カードなし</p>
+        <p class="text-sm text-gray-400">対象衣装なし</p>
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           {t.cards.map(card => {

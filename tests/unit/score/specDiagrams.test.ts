@@ -49,7 +49,7 @@ describe('specDiagrams', () => {
         notesCount: 428, songDuration: 104, excludeHead: 21, activations: acts,
       });
       expect(isValidSvg(svg)).toBe(true);
-      expect(svg).toContain('カード1 (20ノーツ/40%/4秒)');
+      expect(svg).toContain('衣装1 (20ノーツ/40%/4秒)');
       expect(svg).toContain('先頭除外 21ノート');
     });
     it('先頭除外が 0 のときは除外矩形を描画しない', () => {
@@ -228,8 +228,8 @@ describe('specDiagrams', () => {
         notesCount: 428, songDuration: 104, excludeHead: 21, activations: acts,
       });
       expect(isValidSvg(svg)).toBe(true);
-      expect(svg).toContain('カード1 (20ノーツ/40%/4秒)');
-      expect(svg).toContain('カード2 (23ノーツ/39%/5秒)');
+      expect(svg).toContain('衣装1 (20ノーツ/40%/4秒)');
+      expect(svg).toContain('衣装2 (23ノーツ/39%/5秒)');
     });
   });
 });

@@ -68,7 +68,7 @@
         disabled={cards.length >= MAX_CARDS}
         aria-label="縮小スキルを追加"
       >
-        ＋カード追加
+        ＋衣装追加
       </button>
       <button
         type="button"
@@ -84,14 +84,14 @@
     <div class="bg-white rounded border border-gray-200 p-3">
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold" style="color: {CARD_COLORS[i]}">
-          ■ カード {i + 1}
+          ■ 衣装 {i + 1}
         </span>
         {#if cards.length > 1}
           <button
             type="button"
             class="text-xs text-gray-500 hover:text-red-600"
             onclick={() => removeCard(i)}
-            aria-label="このカードを削除"
+            aria-label="この衣装を削除"
           >
             × 削除
           </button>
