@@ -105,8 +105,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 | ワークフロー | スケジュール (UTC / JST) | 内容 |
 |-------------|-------------------------|------|
-| `fetch-new-cards.yml` | 03:00 UTC | 新規カード画像の前方スキャン + ギャップ埋め |
-| `fetch-new-th-cards.yml` | 04:00 UTC | サムネイル画像のバックフィル・同期 |
+| `fetch-new-cards.yml` | 03:00 UTC | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め |
 | `fetch-gap-cards.yml` | 05:00 UTC | カード ID ギャップの補完 |
 | `fetch-event-db.yml` | 19:00 UTC (JST 04:00) | イベント DB CSV を `public/events/events.csv` に取得 |
 | `fetch-new-songs.yml` | 18:00 UTC (日曜・JST 月曜 03:00) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得 |
@@ -144,6 +143,8 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | `histogram.ts` | スコア分布のヒストグラム描画 |
 | `broachResolver.ts` | 固有ブローチ・共有ブローチの効果解決 |
 | `skillFormatter.ts` | スキル表示文字列の生成 |
+| `shrinkExclusion.ts` | 縮小スキルの並び順検証ロジック |
+| `specDiagrams.ts` | スキル仕様可視化用ダイアグラム生成 |
 
 ### Page Patterns
 
@@ -160,6 +161,9 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | イベント一覧 | `src/pages/events/index.astro` | ビルド時プリレンダリング（`fetchEventsCsv` を build 時に読込） |
 | イベント詳細 | `src/pages/events/[id].astro` | `getStaticPaths()` による動的ルート |
 | ラビットノート | `src/pages/rabbit-note/index.astro` | ビルド時プリレンダリング |
+| About | `src/pages/about/index.astro` | ビルド時プリレンダリング |
+| リリースノート | `src/pages/releases/index.astro` | ビルド時プリレンダリング |
+| Max スコア探索 | `src/pages/secrets/max-score-finder/index.astro` | ビルド時 + クライアント JS（実験的ツール） |
 
 ### User Data Backup
 
@@ -205,6 +209,7 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 | `song-list.test.ts` | 楽曲一覧 |
 | `song-detail.test.ts` | 楽曲詳細 |
 | `mycard.test.ts` | 所持カード |
+| `score-calc-spec.test.ts` | スコア計算ページのスキル仕様表示 |
 
 テスト実行時は `npm run preview`（ビルド + ローカルサーバー）が自動起動される。
 
@@ -215,6 +220,8 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 | テスト | 対象 |
 |--------|-----|
 | `tests/unit/score/engine.test.ts` | `src/lib/score/engine.ts` のシミュレーションロジック |
+| `tests/unit/score/shrinkExclusion.test.ts` | `src/lib/score/shrinkExclusion.ts` の縮小スキル並び順検証 |
+| `tests/unit/score/specDiagrams.test.ts` | `src/lib/score/specDiagrams.ts` のダイアグラム生成 |
 
 #### テストフィクスチャ
 
