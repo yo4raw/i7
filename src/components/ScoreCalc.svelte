@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getApSkillLevel, type Card } from '../lib/data/fetchCardsJson';
+  import { getApSkillLevel, SKILL_TYPE, type Card } from '../lib/data/fetchCardsJson';
   import { formatSkillEffect } from '../lib/score/skillFormatter';
   import type { Song } from '../lib/data/fetchSongsJson';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
@@ -202,6 +202,30 @@
       const slotDummySong = selectedSong || { song_name: '' } as any;
       const slotResolvedMap = resolveDeckBroachs(deck, allBroachs, slotDummySong);
 
+      // 縮小スキルの並び順警告: 発動優先度 メンバー1(idx=1) → センター(idx=0) → メンバー2(idx=2)
+      // の順に強い縮小スキルが配置されているかを検証
+      const PRIORITY_SLOTS = [1, 0, 2] as const;
+      const shrinkStrengths = PRIORITY_SLOTS.map(si => {
+        const c = deck[si];
+        if (!c) return 0;
+        const t = c.ap_skill_type;
+        if (!t) return 0;
+        const isShrink = t === SKILL_TYPE.SHRINK || t.startsWith(SKILL_TYPE.SHRINK_PREFIX);
+        if (!isShrink) return 0;
+        const sl = getApSkillLevel(c, deckSkillLevels[si]);
+        return (sl.rate ?? 0) * (sl.per ?? 0);
+      });
+      const sortedDesc = [...shrinkStrengths].sort((a, b) => b - a);
+      const hasAnyShrink = shrinkStrengths.some(v => v > 0);
+      const misplacedSlots = new Set<number>();
+      if (hasAnyShrink) {
+        for (let pi = 0; pi < PRIORITY_SLOTS.length; pi++) {
+          if (shrinkStrengths[pi] !== sortedDesc[pi]) {
+            misplacedSlots.add(PRIORITY_SLOTS[pi]);
+          }
+        }
+      }
+
       for (let i = 0; i < 6; i++) {
         const card = deck[i];
         const container = rootEl.querySelector<HTMLElement>(`[data-slot-btn="${i}"]`);
@@ -286,6 +310,10 @@
           }
         }
 
+        const shrinkWarningHtml = misplacedSlots.has(i)
+          ? `<div class="mt-1 w-full text-[8px] bg-amber-50 border border-amber-300 rounded px-1 py-0.5 text-amber-700 text-center" title="縮小スキルの並び順が最適ではありません。発動優先度はメンバー1 → センター → メンバー2 の順なので、強い縮小スキル（倍率×発動率）ほど優先度の高いスロットに配置するとスコアが伸びやすくなります。">⚠️ 並び順</div>`
+          : '';
+
         container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
         container.style.borderColor = attrColor;
         container.innerHTML = `
@@ -306,7 +334,7 @@
           </select>
           <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot="${i}">
             ${[1, 2, 3, 4, 5].map(lv => `<option value="${lv}"${currentSkillLv === lv ? ' selected' : ''}>スキルLv${lv}</option>`).join('')}
-          </select>${broachLabelHtml}${sharedBroachHtml}`;
+          </select>${shrinkWarningHtml}${broachLabelHtml}${sharedBroachHtml}`;
       }
 
       rootEl.querySelectorAll('.bonus-tier-select').forEach(el => {
@@ -343,6 +371,7 @@
           const sel = e.target as HTMLSelectElement;
           const slot = Number(sel.dataset.skillSlot);
           deckSkillLevels[slot] = Number(sel.value) as 1 | 2 | 3 | 4 | 5;
+          renderDeckSlots();
           renderCardDetailTable();
           recalculate();
           saveState();
