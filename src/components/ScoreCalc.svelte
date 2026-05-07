@@ -198,6 +198,145 @@
       anchor.href = `${base}songs/${selectedSong.id}/`;
     }
 
+    const DRAG_THRESHOLD = 6;
+    const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-indigo-400', 'ring-offset-1'];
+
+    function swapDeckSlots(a: number, b: number) {
+      if (a === b) return;
+      if (a < 0 || a > 4 || b < 0 || b > 4) return;
+      [deck[a], deck[b]] = [deck[b], deck[a]];
+      [deckBonusTiers[a], deckBonusTiers[b]] = [deckBonusTiers[b], deckBonusTiers[a]];
+      [deckTrained[a], deckTrained[b]] = [deckTrained[b], deckTrained[a]];
+      [deckSharedBroachs[a], deckSharedBroachs[b]] = [deckSharedBroachs[b], deckSharedBroachs[a]];
+      [deckSkillLevels[a], deckSkillLevels[b]] = [deckSkillLevels[b], deckSkillLevels[a]];
+      renderDeckSlots();
+      renderCardDetailTable();
+      recalculate();
+      saveState();
+    }
+
+    function clearDropHighlight() {
+      rootEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
+        el.classList.remove(...DRAG_DROP_HIGHLIGHT);
+      });
+    }
+
+    function findDropTargetSlot(x: number, y: number): number | null {
+      const elem = document.elementFromPoint(x, y) as HTMLElement | null;
+      if (!elem) return null;
+      const slotEl = elem.closest<HTMLElement>('[data-slot-btn]');
+      if (!slotEl) return null;
+      const slot = Number(slotEl.dataset.slotBtn);
+      if (Number.isNaN(slot)) return null;
+      return slot;
+    }
+
+    function highlightDropTarget(x: number, y: number, sourceSlot: number) {
+      clearDropHighlight();
+      const target = findDropTargetSlot(x, y);
+      if (target === null || target === sourceSlot || target === 5) return;
+      const targetEl = rootEl.querySelector<HTMLElement>(`[data-slot-btn="${target}"]`);
+      if (targetEl) targetEl.classList.add(...DRAG_DROP_HIGHLIGHT);
+    }
+
+    let activeDragGhost: HTMLElement | null = null;
+    let activeDragGhostSize: { w: number; h: number } | null = null;
+
+    function createDragGhost(src: HTMLElement, x: number, y: number): HTMLElement {
+      const rect = src.getBoundingClientRect();
+      const ghost = src.cloneNode(true) as HTMLElement;
+      ghost.style.position = 'fixed';
+      ghost.style.left = '0';
+      ghost.style.top = '0';
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.height = `${rect.height}px`;
+      ghost.style.pointerEvents = 'none';
+      ghost.style.opacity = '0.75';
+      ghost.style.zIndex = '9999';
+      ghost.style.transform = `translate3d(${x - rect.width / 2}px, ${y - rect.height / 2}px, 0)`;
+      ghost.style.transition = 'none';
+      ghost.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.25)';
+      document.body.appendChild(ghost);
+      activeDragGhost = ghost;
+      activeDragGhostSize = { w: rect.width, h: rect.height };
+      return ghost;
+    }
+
+    function moveDragGhost(x: number, y: number) {
+      if (!activeDragGhost || !activeDragGhostSize) return;
+      const { w, h } = activeDragGhostSize;
+      activeDragGhost.style.transform = `translate3d(${x - w / 2}px, ${y - h / 2}px, 0)`;
+    }
+
+    function destroyDragGhost() {
+      if (activeDragGhost) {
+        activeDragGhost.remove();
+        activeDragGhost = null;
+        activeDragGhostSize = null;
+      }
+    }
+
+    function attachSlotPointerHandlers() {
+      rootEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
+        const slot = Number(el.dataset.slotBtn);
+        el.style.touchAction = 'none';
+        el.addEventListener('pointerdown', (ev: PointerEvent) => {
+          if (ev.button !== undefined && ev.button !== 0) return;
+          const t = ev.target as HTMLElement;
+          if (t.closest('select, input, label.trained-label')) return;
+
+          const startX = ev.clientX;
+          const startY = ev.clientY;
+          const isFriend = slot === 5;
+          const hasCard = deck[slot] !== null;
+          let dragging = false;
+          let pointerId = ev.pointerId;
+
+          const onMove = (e: PointerEvent) => {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (!dragging) {
+              if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+              if (isFriend || !hasCard) return;
+              dragging = true;
+              try { el.setPointerCapture(pointerId); } catch { /* noop */ }
+              createDragGhost(el, e.clientX, e.clientY);
+              document.body.style.cursor = 'grabbing';
+              el.style.opacity = '0.4';
+            }
+            moveDragGhost(e.clientX, e.clientY);
+            highlightDropTarget(e.clientX, e.clientY, slot);
+          };
+
+          const finish = (e: PointerEvent | null, dropped: boolean) => {
+            el.removeEventListener('pointermove', onMove);
+            el.removeEventListener('pointerup', onUp);
+            el.removeEventListener('pointercancel', onCancel);
+            try { el.releasePointerCapture(pointerId); } catch { /* noop */ }
+            clearDropHighlight();
+            destroyDragGhost();
+            document.body.style.cursor = '';
+            el.style.opacity = '';
+            if (!dragging) {
+              openCardPicker(slot);
+              return;
+            }
+            if (!dropped || !e) return;
+            const target = findDropTargetSlot(e.clientX, e.clientY);
+            if (target === null || target === slot || target === 5) return;
+            swapDeckSlots(slot, target);
+          };
+
+          const onUp = (e: PointerEvent) => finish(e, true);
+          const onCancel = (e: PointerEvent) => finish(e, false);
+
+          el.addEventListener('pointermove', onMove);
+          el.addEventListener('pointerup', onUp);
+          el.addEventListener('pointercancel', onCancel);
+        });
+      });
+    }
+
     function renderDeckSlots() {
       const slotDummySong = selectedSong || { song_name: '' } as any;
       const slotResolvedMap = resolveDeckBroachs(deck, allBroachs, slotDummySong);
@@ -314,7 +453,8 @@
           ? `<div class="mt-1 w-full text-[8px] bg-amber-50 border border-amber-300 rounded px-1 py-0.5 text-amber-700 text-center" title="縮小スキルの並び順が最適ではありません。発動優先度はメンバー1 → センター → メンバー2 の順なので、強い縮小スキル（倍率×発動率）ほど優先度の高いスロットに配置するとスコアが伸びやすくなります。">⚠️ 並び順</div>`
           : '';
 
-        container.className = 'slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center cursor-pointer min-h-[120px] transition-colors';
+        const cursorClass = i === 5 ? 'cursor-pointer' : 'cursor-grab';
+        container.className = `slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
         container.style.borderColor = attrColor;
         container.innerHTML = `
           <img src="${cardThumbUrl(card.ID!)}" alt="${card.cardname || ''}" class="w-full max-w-[60px] h-auto rounded mb-1"
@@ -1177,12 +1317,7 @@
     initResultPlaceholders();
     initSongSelect();
 
-    rootEl.querySelectorAll('[data-slot-btn]').forEach(el => {
-      el.addEventListener('click', () => {
-        const slot = Number((el as HTMLElement).dataset.slotBtn);
-        openCardPicker(slot);
-      });
-    });
+    attachSlotPointerHandlers();
 
     _q('modal-backdrop').addEventListener('click', closeCardPicker);
     _q('modal-close').addEventListener('click', closeCardPicker);
