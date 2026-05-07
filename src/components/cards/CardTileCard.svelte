@@ -32,12 +32,10 @@
   }
 </script>
 
-{#if pageMarker != null}
-  <div data-page-marker={pageMarker} aria-hidden="true"></div>
-{/if}
 <div
   class="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col"
   style="border-top:3px solid {borderColor}"
+  data-page-marker={pageMarker ?? undefined}
 >
   <button
     type="button"
