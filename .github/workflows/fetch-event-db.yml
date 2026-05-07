@@ -2,8 +2,7 @@ name: Fetch event DB
 
 on:
   schedule:
-    # JST 04:00 = UTC 19:00 (前日)
-    - cron: '0 19 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:

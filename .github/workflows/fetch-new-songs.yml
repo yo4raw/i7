@@ -2,8 +2,7 @@ name: Fetch new song images
 
 on:
   schedule:
-    # Every Sunday 18:00 UTC (= Monday 03:00 JST)
-    - cron: '0 18 * * 0'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
