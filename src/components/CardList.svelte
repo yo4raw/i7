@@ -4,8 +4,12 @@
   import { buildLiveTierMap, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
+  import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import CardTableRow from './cards/CardTableRow.svelte';
   import CardMobileCard from './cards/CardMobileCard.svelte';
+  import CardTileCard from './cards/CardTileCard.svelte';
+
+  type ViewMode = 'list' | 'tile';
 
   type Props = {
     cards: CardListItem[];
@@ -31,6 +35,7 @@
   let sortBy = $state('id-desc');
   let visiblePages = $state(1);
   let currentVisiblePage = $state(1);
+  let viewMode = $state<ViewMode>('list');
   let ready = $state(false);
 
   const filtered = $derived.by(() => {
@@ -87,6 +92,7 @@
     if (hasAnyLive && bonusSet.size) params.set('bonus', [...bonusSet].join(','));
     if (sortBy !== 'id-desc') params.set('sort', sortBy);
     if (currentVisiblePage > 1) params.set('page', String(currentVisiblePage));
+    if (viewMode !== 'list') params.set('view', viewMode);
 
     const qs = params.toString();
     history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
@@ -105,6 +111,20 @@
     const target = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : 1;
     visiblePages = target;
     currentVisiblePage = target;
+
+    // ビューモードは URL > localStorage > デフォルト の優先順位で復元
+    const viewParam = params.get('view');
+    if (viewParam === 'tile' || viewParam === 'list') {
+      viewMode = viewParam;
+    } else {
+      const stored = loadJson<ViewMode | null>(STORAGE_KEYS.CARD_LIST_VIEW_MODE, null);
+      viewMode = stored === 'tile' ? 'tile' : 'list';
+    }
+  }
+
+  function setViewMode(mode: ViewMode) {
+    viewMode = mode;
+    saveJson(STORAGE_KEYS.CARD_LIST_VIEW_MODE, mode);
   }
 
   function filterByName(name: string) {
@@ -174,9 +194,10 @@
   // フィルタが変わったら URL 更新
   $effect(() => {
     if (!ready) return;
-    // ダーティ参照: フィルタ/ソート/ページ
+    // ダーティ参照: フィルタ/ソート/ページ/ビューモード
     void text; void raritySet; void attributeSet; void characterSet;
     void skillSet; void bonusSet; void sortBy; void currentVisiblePage;
+    void viewMode;
     updateUrlParams();
   });
 
@@ -296,63 +317,97 @@
       </select>
     </div>
   </div>
-  <div class="mt-3 flex items-center gap-3">
+  <div class="mt-3 flex items-center gap-3 flex-wrap">
     <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
     <span class="text-sm text-gray-500">{resultCountText}</span>
+    <div class="ml-auto inline-flex rounded border border-gray-300 overflow-hidden text-xs" role="group" aria-label="表示モード切替">
+      <button
+        type="button"
+        class="px-3 py-1 {viewMode === 'list' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+        aria-pressed={viewMode === 'list'}
+        onclick={() => setViewMode('list')}
+      >
+        <span aria-hidden="true">☰</span> リスト
+      </button>
+      <button
+        type="button"
+        class="px-3 py-1 border-l border-gray-300 {viewMode === 'tile' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+        aria-pressed={viewMode === 'tile'}
+        onclick={() => setViewMode('tile')}
+      >
+        <span aria-hidden="true">▦</span> タイル
+      </button>
+    </div>
   </div>
 </div>
 
 <div>
-  <div class="hidden md:block overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
-          <th class="px-3 py-2 w-16">画像</th>
-          <th class="px-3 py-2">ID</th>
-          <th class="px-3 py-2">衣装名</th>
-          <th class="px-3 py-2">キャラ</th>
-          <th class="px-3 py-2">レア</th>
-          <th class="px-3 py-2">属性</th>
-          {#if hasAnyLive}
-            <th class="px-3 py-2">特効</th>
-          {/if}
-          <th class="px-3 py-2 w-20">属性比率</th>
-          <th class="px-3 py-2 text-right">Shout</th>
-          <th class="px-3 py-2 text-right">Beat</th>
-          <th class="px-3 py-2 text-right">Melody</th>
-          <th class="px-3 py-2">スキル</th>
-          <th class="px-3 py-2 w-28 text-center">所持数</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each visible as card, idx (card.ID)}
-          <CardTableRow
-            {card}
-            {base}
-            {thumbUrl}
-            bonusTier={tierMap.get(card.ID)}
-            enableNameFilter
-            showBonusCell={hasAnyLive}
-            pageMarker={idx % pageSize === 0 ? Math.floor(idx / pageSize) + 1 : null}
-            onFilterByName={filterByName}
-          />
-        {/each}
-      </tbody>
-    </table>
-  </div>
-  <div class="md:hidden space-y-3">
-    {#each visible as card, idx (card.ID)}
-      <CardMobileCard
-        {card}
-        {base}
-        {thumbUrl}
-        bonusTier={tierMap.get(card.ID)}
-        enableNameFilter
-        pageMarker={idx % pageSize === 0 ? Math.floor(idx / pageSize) + 1 : null}
-        onFilterByName={filterByName}
-      />
-    {/each}
-  </div>
+  {#if viewMode === 'tile'}
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      {#each visible as card, idx (card.ID)}
+        <CardTileCard
+          {card}
+          {base}
+          {thumbUrl}
+          bonusTier={tierMap.get(card.ID)}
+          enableNameFilter
+          pageMarker={idx % pageSize === 0 ? Math.floor(idx / pageSize) + 1 : null}
+          onFilterByName={filterByName}
+        />
+      {/each}
+    </div>
+  {:else}
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+            <th class="px-3 py-2 w-16">画像</th>
+            <th class="px-3 py-2">ID</th>
+            <th class="px-3 py-2">衣装名</th>
+            <th class="px-3 py-2">キャラ</th>
+            <th class="px-3 py-2">レア</th>
+            <th class="px-3 py-2">属性</th>
+            {#if hasAnyLive}
+              <th class="px-3 py-2">特効</th>
+            {/if}
+            <th class="px-3 py-2 w-20">属性比率</th>
+            <th class="px-3 py-2 text-right">Shout</th>
+            <th class="px-3 py-2 text-right">Beat</th>
+            <th class="px-3 py-2 text-right">Melody</th>
+            <th class="px-3 py-2">スキル</th>
+            <th class="px-3 py-2 w-28 text-center">所持数</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each visible as card, idx (card.ID)}
+            <CardTableRow
+              {card}
+              {base}
+              {thumbUrl}
+              bonusTier={tierMap.get(card.ID)}
+              enableNameFilter
+              showBonusCell={hasAnyLive}
+              pageMarker={idx % pageSize === 0 ? Math.floor(idx / pageSize) + 1 : null}
+              onFilterByName={filterByName}
+            />
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    <div class="md:hidden space-y-3">
+      {#each visible as card, idx (card.ID)}
+        <CardMobileCard
+          {card}
+          {base}
+          {thumbUrl}
+          bonusTier={tierMap.get(card.ID)}
+          enableNameFilter
+          pageMarker={idx % pageSize === 0 ? Math.floor(idx / pageSize) + 1 : null}
+          onFilterByName={filterByName}
+        />
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <div bind:this={sentinelEl} class="mt-6 flex justify-center py-8">
