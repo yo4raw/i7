@@ -103,12 +103,12 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 画像・イベント DB はゲームサーバー (`i7.step-on-dream.net`) から GitHub Actions の cron ワークフローで自動取得され、PR として追加される:
 
-| ワークフロー | スケジュール (UTC / JST) | 内容 |
-|-------------|-------------------------|------|
-| `fetch-new-cards.yml` | 03:00 UTC | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め |
-| `fetch-gap-cards.yml` | 05:00 UTC | カード ID ギャップの補完 |
-| `fetch-event-db.yml` | 19:00 UTC (JST 04:00) | イベント DB CSV を `public/events/events.csv` に取得 |
-| `fetch-new-songs.yml` | 18:00 UTC (日曜・JST 月曜 03:00) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得 |
+| ワークフロー | スケジュール | 内容 |
+|-------------|------------|------|
+| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め |
+| `fetch-gap-cards.yml` | 毎時 00 分 (UTC) | カード ID ギャップの補完 |
+| `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
+| `fetch-new-songs.yml` | 毎時 00 分 (UTC) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得 |
 
 楽曲ジャケット画像は `public/assets/songs/` に配置される（`SONG_IMAGE_BASE_URL` 経由で参照）。Wiki クローラー本体は `scripts/fetch-song-images.mjs`。
 
