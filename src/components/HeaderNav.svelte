@@ -5,22 +5,57 @@
   let { base }: Props = $props();
 
   let mobileOpen = $state(false);
+  let scoreCalcOpen = $state(false);
+  let scoreCalcMobileOpen = $state(false);
+  let scoreCalcWrapper: HTMLLIElement | undefined = $state();
 
-  const links: Array<{ href: string; label: string }> = [
+  type LinkItem = { href: string; label: string };
+  type DropdownItem = { label: string; children: LinkItem[] };
+  type NavItem = LinkItem | DropdownItem;
+
+  const isDropdown = (item: NavItem): item is DropdownItem => 'children' in item;
+
+  const items: NavItem[] = [
     { href: base, label: 'ホーム' },
     { href: `${base}cards/`, label: '衣装一覧' },
     { href: `${base}songs/`, label: '楽曲一覧' },
     { href: `${base}events/`, label: 'イベント情報' },
     { href: `${base}mycard/`, label: '所持衣装' },
-    { href: `${base}score-calc/`, label: 'スコア計算' },
+    {
+      label: 'スコア計算',
+      children: [
+        { href: `${base}score-calc/`, label: 'スコア計算' },
+        { href: `${base}score-calc/max-score-finder/`, label: '編成組合計算' },
+      ],
+    },
     { href: `${base}rabbit-note/`, label: 'ラビットノート' },
     { href: `${base}decks/`, label: '保存デッキ' },
   ];
 
   $effect(() => {
-    const handler = (e: Event) => e.preventDefault();
-    document.addEventListener('contextmenu', handler);
-    return () => document.removeEventListener('contextmenu', handler);
+    const contextHandler = (e: Event) => e.preventDefault();
+    document.addEventListener('contextmenu', contextHandler);
+
+    const clickHandler = (e: MouseEvent) => {
+      if (!scoreCalcWrapper) return;
+      if (!scoreCalcWrapper.contains(e.target as Node)) {
+        scoreCalcOpen = false;
+      }
+    };
+    document.addEventListener('click', clickHandler);
+
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        scoreCalcOpen = false;
+      }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    return () => {
+      document.removeEventListener('contextmenu', contextHandler);
+      document.removeEventListener('click', clickHandler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   });
 </script>
 
@@ -39,14 +74,69 @@
       </svg>
     </button>
     <ul class="hidden md:flex gap-6 text-sm font-medium">
-      {#each links as { href, label }}
-        <li><a {href} class="hover:text-indigo-200 transition-colors">{label}</a></li>
+      {#each items as item}
+        {#if isDropdown(item)}
+          <li class="relative" bind:this={scoreCalcWrapper}>
+            <button
+              type="button"
+              class="hover:text-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+              aria-haspopup="menu"
+              aria-expanded={scoreCalcOpen}
+              onclick={() => (scoreCalcOpen = !scoreCalcOpen)}
+            >
+              {item.label}
+              <svg class="w-3 h-3 transition-transform" class:rotate-180={scoreCalcOpen} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {#if scoreCalcOpen}
+              <ul role="menu" class="absolute left-0 top-full mt-2 min-w-44 bg-white text-gray-800 rounded-md shadow-lg ring-1 ring-black/10 py-1 z-50">
+                {#each item.children as child}
+                  <li role="none">
+                    <a
+                      role="menuitem"
+                      href={child.href}
+                      class="block px-4 py-2 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      {child.label}
+                    </a>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </li>
+        {:else}
+          <li><a href={item.href} class="hover:text-indigo-200 transition-colors">{item.label}</a></li>
+        {/if}
       {/each}
     </ul>
   </nav>
   <ul class="flex-col gap-2 px-4 pb-3 text-sm font-medium md:hidden" class:hidden={!mobileOpen} class:flex={mobileOpen}>
-    {#each links as { href, label }}
-      <li><a {href} class="block py-1 hover:text-indigo-200">{label}</a></li>
+    {#each items as item}
+      {#if isDropdown(item)}
+        <li>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between py-1 hover:text-indigo-200"
+            aria-expanded={scoreCalcMobileOpen}
+            onclick={() => (scoreCalcMobileOpen = !scoreCalcMobileOpen)}
+          >
+            <span>{item.label}</span>
+            <svg class="w-3 h-3 transition-transform" class:rotate-180={scoreCalcMobileOpen} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {#if scoreCalcMobileOpen}
+            <ul class="pl-4 flex flex-col gap-1 mt-1">
+              {#each item.children as child}
+                <li><a href={child.href} class="block py-1 hover:text-indigo-200">{child.label}</a></li>
+              {/each}
+            </ul>
+          {/if}
+        </li>
+      {:else}
+        <li><a href={item.href} class="block py-1 hover:text-indigo-200">{item.label}</a></li>
+      {/if}
     {/each}
   </ul>
 </header>

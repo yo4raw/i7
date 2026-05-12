@@ -163,7 +163,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | ラビットノート | `src/pages/rabbit-note/index.astro` | ビルド時プリレンダリング |
 | About | `src/pages/about/index.astro` | ビルド時プリレンダリング |
 | リリースノート | `src/pages/releases/index.astro` | ビルド時プリレンダリング |
-| Max スコア探索 | `src/pages/secrets/max-score-finder/index.astro` | ビルド時 + クライアント JS（実験的ツール） |
+| 編成組合計算 | `src/pages/score-calc/max-score-finder/index.astro` | ビルド時 + クライアント JS（理論値最大編成探索） |
 
 ### User Data Backup
 
