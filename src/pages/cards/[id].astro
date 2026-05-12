@@ -107,7 +107,7 @@ const otherSkills = [
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <div class="md:col-span-1">
       <img src={cardImageUrl(card.ID)} alt={card.cardname || ''}
-           class="w-full rounded-lg shadow-md bg-gray-200"
+           class="w-full rounded-lg shadow-md bg-gray-200 dark:bg-slate-700"
            loading="lazy"
            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 280%22><rect width=%22200%22 height=%22280%22 fill=%22%23e5e7eb%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2216%22>No Image</text></svg>'" />
     </div>
@@ -119,10 +119,10 @@ const otherSkills = [
           {card.cardname || ''}
         </h1>
         <table class="w-full text-sm">
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
             {infoRows.map(row => (
               <tr>
-                <td class="py-2 pr-4 font-medium text-gray-500 w-1/3">{row.label}</td>
+                <td class="py-2 pr-4 font-medium text-gray-500 dark:text-slate-400 w-1/3">{row.label}</td>
                 <td class="py-2">{row.value}</td>
               </tr>
             ))}
@@ -148,7 +148,7 @@ const otherSkills = [
           centerText: { label: '合計', value: total.toLocaleString() },
         });
         return (
-          <section class="bg-white rounded-lg shadow p-4">
+          <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
             <h2 class="text-lg font-semibold mb-3">ステータス</h2>
             <div class="flex flex-col sm:flex-row items-center gap-4">
               <div class="w-28 h-28 relative flex-shrink-0" set:html={chartHtml} />
@@ -159,11 +159,11 @@ const otherSkills = [
                     <div class="flex items-center gap-3">
                       <span class="w-2 h-2 rounded-full flex-shrink-0" style={`background:${s.color}`}></span>
                       <span class="font-medium text-sm w-16">{s.label}</span>
-                      <span class="text-sm text-gray-500 w-10 text-right">{pct}%</span>
+                      <span class="text-sm text-gray-500 dark:text-slate-400 w-10 text-right">{pct}%</span>
                       <span class="text-sm text-right flex-1">
                         {s.min.toLocaleString()} / {s.max.toLocaleString()}
                         {s.untrained != null && (
-                          <span class="text-xs text-gray-500 ml-1">（未特訓 {s.untrained.toLocaleString()}）</span>
+                          <span class="text-xs text-gray-500 dark:text-slate-400 ml-1">（未特訓 {s.untrained.toLocaleString()}）</span>
                         )}
                       </span>
                     </div>
@@ -173,7 +173,7 @@ const otherSkills = [
                   <div class="flex items-center gap-3">
                     <span class="w-2 h-2 flex-shrink-0"></span>
                     <span class="font-medium text-sm w-16">特訓</span>
-                    <span class="text-sm text-gray-500 w-10 text-right"></span>
+                    <span class="text-sm text-gray-500 dark:text-slate-400 w-10 text-right"></span>
                     <span class="text-sm text-right flex-1">{trainCount}回 / +{trainTotal.toLocaleString()}</span>
                   </div>
                 )}
@@ -185,13 +185,13 @@ const otherSkills = [
 
       {/* その他スキル */}
       {otherSkills.length > 0 && (
-        <section class="bg-white rounded-lg shadow p-4">
+        <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
           <h2 class="text-lg font-semibold mb-3">その他スキル</h2>
           <table class="w-full text-sm">
-            <tbody class="divide-y divide-gray-100">
+            <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
               {otherSkills.map(row => (
                 <tr>
-                  <td class="py-2 pr-4 font-medium text-gray-500 w-1/3">{row.label}</td>
+                  <td class="py-2 pr-4 font-medium text-gray-500 dark:text-slate-400 w-1/3">{row.label}</td>
                   <td class="py-2">{row.value}</td>
                 </tr>
               ))}
@@ -204,9 +204,9 @@ const otherSkills = [
 
   <!-- APスキル -->
   {card.ap_skill_name && (
-    <section class="bg-white rounded-lg shadow p-6 mb-6">
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
       <h2 class="text-lg font-semibold mb-4">APスキル</h2>
-      <div class="mb-3 text-sm text-gray-600">
+      <div class="mb-3 text-sm text-gray-600 dark:text-slate-300">
         <p><strong>スキル名:</strong> {card.ap_skill_name}</p>
         {card.ap_skill_type && <p><strong>タイプ:</strong> {card.ap_skill_type}</p>}
         {card.ap_skill_req && <p><strong>発動条件:</strong> {card.ap_skill_req}</p>}
@@ -215,7 +215,7 @@ const otherSkills = [
         <div class="text-sm space-y-1">
           {apSkillLevels.map(lv => (
             <div>
-              <span class="font-medium text-gray-600">【Lv{lv.lv}】</span>
+              <span class="font-medium text-gray-600 dark:text-slate-300">【Lv{lv.lv}】</span>
               {formatSkillEffect(card.ap_skill_type, card.ap_skill_req, { count: lv.count, per: lv.per, value: lv.value, rate: lv.rate })}
             </div>
           ))}
@@ -227,7 +227,7 @@ const otherSkills = [
 
   <!-- ブローチ情報 -->
   {broachs.length > 0 && (
-    <section class="bg-white rounded-lg shadow p-6 mb-6" id="broach-section">
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6" id="broach-section">
       <h2 class="text-lg font-semibold mb-4">固有ブローチ</h2>
       <div class="space-y-3">
         {broachs.map((b: any) => (
@@ -238,7 +238,7 @@ const otherSkills = [
               <span class={ATTR_TEXT_CLASS.Beat}>Beat: {b.beat ?? '-'}</span>
               <span class={ATTR_TEXT_CLASS.Melody}>Melody: {b.melody ?? '-'}</span>
             </div>
-            {b.condition && <p class="text-xs text-gray-500 mt-1">条件: {b.condition}{b.group ? `（${b.group}）` : ''}</p>}
+            {b.condition && <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">条件: {b.condition}{b.group ? `（${b.group}）` : ''}</p>}
           </div>
         ))}
       </div>

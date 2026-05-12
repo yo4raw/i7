@@ -33,13 +33,13 @@
 </script>
 
 <div
-  class="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col"
+  class="bg-white dark:bg-slate-800 rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col"
   style="border-top:3px solid {borderColor}"
   data-page-marker={pageMarker ?? undefined}
 >
   <button
     type="button"
-    class="block w-full bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    class="block w-full bg-gray-50 dark:bg-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
     onclick={handleImageClick}
     aria-label="{card.cardname || ''} の詳細を表示"
   >
@@ -66,9 +66,9 @@
         onclick={handleNameClick}
       >{card.cardname || ''}</button>
     </p>
-    <p class="text-xs text-gray-500 leading-tight">{card.name || ''}</p>
+    <p class="text-xs text-gray-500 dark:text-slate-400 leading-tight">{card.name || ''}</p>
     <div class="mt-auto flex items-center justify-between border-t pt-1.5">
-      <span class="text-[10px] text-gray-500">所持</span>
+      <span class="text-[10px] text-gray-500 dark:text-slate-400">所持</span>
       <CountInput cardId={card.ID} />
     </div>
   </div>

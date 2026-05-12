@@ -90,7 +90,7 @@
               </svg>
             </button>
             {#if scoreCalcOpen}
-              <ul role="menu" class="absolute left-0 top-full mt-2 min-w-44 bg-white text-gray-800 rounded-md shadow-lg ring-1 ring-black/10 py-1 z-50">
+              <ul role="menu" class="absolute left-0 top-full mt-2 min-w-44 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-100 rounded-md shadow-lg ring-1 ring-black/10 py-1 z-50">
                 {#each item.children as child}
                   <li role="none">
                     <a

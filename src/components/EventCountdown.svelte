@@ -55,18 +55,18 @@
     <ul class="space-y-2">
       {#each events as ev (ev.id)}
         {@const s = status(ev)}
-        <li class="event-item bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <li class="event-item bg-white dark:bg-slate-800 rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <a href={`${base}events/${ev.id}/`} class="text-indigo-700 font-semibold hover:underline">
               {ev.eventname}
             </a>
-            <div class="text-xs text-gray-500 mt-0.5">
+            <div class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
               {ev.eventtype} / {ev.start_date} 17:00 〜 {ev.end_date} 17:00 (JST)
             </div>
           </div>
           <div class="flex items-center gap-3 text-xs">
             <span class="inline-block px-2 py-0.5 rounded font-semibold {s.className}">{s.text}</span>
-            <span class="text-gray-500">{s.remain}</span>
+            <span class="text-gray-500 dark:text-slate-400">{s.remain}</span>
           </div>
         </li>
       {/each}

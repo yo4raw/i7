@@ -40,14 +40,14 @@ const base = import.meta.env.BASE_URL;
 <BaseLayout title="ホーム">
   <section class="mb-8">
     <h1 class="text-2xl font-bold mb-2">i7マネ部屋(β)</h1>
-    <p class="text-sm text-gray-600">
+    <p class="text-sm text-gray-600 dark:text-slate-300">
       当サイト「{SITE_NAME}」は、スマートフォン向けゲーム『アイドリッシュセブン』の衣装・楽曲・イベント情報をまとめた、ファンによる<strong>非公式</strong>のデータベースサイトです。
     </p>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-6 mb-8">
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-8">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">サイトの目的</h2>
-    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
+    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-slate-200">
       <li>アイドリッシュセブンの衣装・楽曲情報を検索・閲覧しやすい形で提供する</li>
       <li>モンテカルロシミュレーションによるスコア計算など、プレイヤー向けのツールを提供する</li>
       <li>開催中イベントの特効衣装情報を一覧で確認できるようにする</li>
@@ -65,76 +65,76 @@ const base = import.meta.env.BASE_URL;
   <section class="mb-8">
     <div class="flex items-baseline justify-between mb-3">
       <h2 class="text-lg font-bold text-indigo-700">主な機能</h2>
-      <p class="text-xs text-gray-500">各ページはヘッダーナビゲーションからもアクセスできます</p>
+      <p class="text-xs text-gray-500 dark:text-slate-400">各ページはヘッダーナビゲーションからもアクセスできます</p>
     </div>
 
-    <h3 class="text-sm font-semibold text-gray-600 mb-2">データベース</h3>
+    <h3 class="text-sm font-semibold text-gray-600 dark:text-slate-300 mb-2">データベース</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
       <a href={`${base}cards/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">衣装一覧</h4>
-        <p class="text-xs text-gray-600 mb-3">レアリティ・属性・キャラクター・スキルタイプで絞り込み可能。開催中イベントの特効フィルタや所持数入力にも対応。</p>
-        <div class="text-2xl font-bold text-gray-800">{cards.length}<span class="text-sm text-gray-500 ml-1">枚</span></div>
+        <p class="text-xs text-gray-600 dark:text-slate-300 mb-3">レアリティ・属性・キャラクター・スキルタイプで絞り込み可能。開催中イベントの特効フィルタや所持数入力にも対応。</p>
+        <div class="text-2xl font-bold text-gray-800 dark:text-slate-100">{cards.length}<span class="text-sm text-gray-500 dark:text-slate-400 ml-1">枚</span></div>
       </a>
       <a href={`${base}songs/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">楽曲一覧</h4>
-        <p class="text-xs text-gray-600 mb-3">楽曲ごとのノーツ属性比率・Lv 別情報を確認。スコア計算へそのまま持ち込めます。</p>
-        <div class="text-2xl font-bold text-gray-800">{songs.length}<span class="text-sm text-gray-500 ml-1">曲</span></div>
+        <p class="text-xs text-gray-600 dark:text-slate-300 mb-3">楽曲ごとのノーツ属性比率・Lv 別情報を確認。スコア計算へそのまま持ち込めます。</p>
+        <div class="text-2xl font-bold text-gray-800 dark:text-slate-100">{songs.length}<span class="text-sm text-gray-500 dark:text-slate-400 ml-1">曲</span></div>
       </a>
       <a href={`${base}events/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">イベント情報</h4>
-        <p class="text-xs text-gray-600 mb-3">開催中・過去イベントの一覧と、各イベントの特効衣装・効果量を確認できます。</p>
-        <div class="text-2xl font-bold text-gray-800">{events.length}<span class="text-sm text-gray-500 ml-1">件</span></div>
+        <p class="text-xs text-gray-600 dark:text-slate-300 mb-3">開催中・過去イベントの一覧と、各イベントの特効衣装・効果量を確認できます。</p>
+        <div class="text-2xl font-bold text-gray-800 dark:text-slate-100">{events.length}<span class="text-sm text-gray-500 dark:text-slate-400 ml-1">件</span></div>
       </a>
     </div>
 
-    <h3 class="text-sm font-semibold text-gray-600 mb-2">プレイヤー向けツール</h3>
+    <h3 class="text-sm font-semibold text-gray-600 dark:text-slate-300 mb-2">プレイヤー向けツール</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <a href={`${base}mycard/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">所持衣装</h4>
-        <p class="text-xs text-gray-600">手元にある衣装の所持数を入力・集計。レアリティ別の所持状況も一目で確認。</p>
+        <p class="text-xs text-gray-600 dark:text-slate-300">手元にある衣装の所持数を入力・集計。レアリティ別の所持状況も一目で確認。</p>
       </a>
       <a href={`${base}score-calc/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">スコア計算</h4>
-        <p class="text-xs text-gray-600">デッキ・楽曲・ブローチを選び、モンテカルロシミュレーションでスコア分布を推定。</p>
+        <p class="text-xs text-gray-600 dark:text-slate-300">デッキ・楽曲・ブローチを選び、モンテカルロシミュレーションでスコア分布を推定。</p>
       </a>
       <a href={`${base}rabbit-note/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">ラビットノート</h4>
-        <p class="text-xs text-gray-600">ラビットノートの投入レベルを入力し、スコア計算のベーススコアへ自動反映。</p>
+        <p class="text-xs text-gray-600 dark:text-slate-300">ラビットノートの投入レベルを入力し、スコア計算のベーススコアへ自動反映。</p>
       </a>
       <a href={`${base}decks/`}
-         class="block bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+         class="block bg-white dark:bg-slate-800 rounded-lg shadow p-5 hover:shadow-md transition-shadow">
         <h4 class="text-base font-semibold text-indigo-700 mb-1">保存デッキ</h4>
-        <p class="text-xs text-gray-600">構築したデッキを端末の localStorage に保存・呼び出し。名前を付けて使い分け可能。</p>
+        <p class="text-xs text-gray-600 dark:text-slate-300">構築したデッキを端末の localStorage に保存・呼び出し。名前を付けて使い分け可能。</p>
       </a>
     </div>
-    <p class="text-xs text-gray-500 mt-4">
-      所持衣装数・ラビットノート値・保存デッキなどのユーザーデータは、閲覧している端末の <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> にのみ保存されます。サーバーへは送信されません。
+    <p class="text-xs text-gray-500 dark:text-slate-400 mt-4">
+      所持衣装数・ラビットノート値・保存デッキなどのユーザーデータは、閲覧している端末の <code class="px-1 py-0.5 bg-gray-100 dark:bg-slate-800 rounded">localStorage</code> にのみ保存されます。サーバーへは送信されません。
     </p>
   </section>
 
   <section class="mb-8">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">衣装内訳</h2>
-    <div class="bg-white rounded-lg shadow p-5">
+    <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-5">
       <div class="flex flex-wrap gap-2">
         {rarityEntries.map(([rarity, count]) => (
-          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 text-sm">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-sm">
             <span class={`inline-block px-2 py-0.5 rounded text-xs font-bold text-white ${RARITY_BADGE_CLASSES[rarity] ?? 'bg-gray-400'}`}>{rarity}</span>
-            <span class="text-gray-700">{count}<span class="text-xs text-gray-500 ml-0.5">枚</span></span>
+            <span class="text-gray-700 dark:text-slate-200">{count}<span class="text-xs text-gray-500 dark:text-slate-400 ml-0.5">枚</span></span>
           </span>
         ))}
       </div>
     </div>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-6 mb-6">
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">謝辞</h2>
-    <dl class="text-sm text-gray-700 space-y-3 mb-4">
+    <dl class="text-sm text-gray-700 dark:text-slate-200 space-y-3 mb-4">
       <div class="flex flex-col sm:flex-row sm:gap-4">
         <dt class="font-semibold sm:w-40 shrink-0">各種データの取得元</dt>
         <dd>
@@ -148,10 +148,10 @@ const base = import.meta.env.BASE_URL;
         </dd>
       </div>
     </dl>
-    <p class="text-sm text-gray-700 mb-2">
+    <p class="text-sm text-gray-700 dark:text-slate-200 mb-2">
       本サイト作成の際、下記のお二人には多大なるお力添えをいただきました。感謝いたします。
     </p>
-    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
+    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-slate-200">
       <li>
         <a href="https://x.com/megoonarite" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@megoonarite</a>
       </li>
@@ -161,12 +161,12 @@ const base = import.meta.env.BASE_URL;
     </ul>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-6 mb-6">
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">お問い合わせ</h2>
-    <p class="text-sm text-gray-700 mb-2">
+    <p class="text-sm text-gray-700 dark:text-slate-200 mb-2">
       ご意見・ご要望・不具合報告・権利に関するお問い合わせは、以下のいずれかへお願いいたします。
     </p>
-    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
+    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-slate-200">
       <li>
         X : <a href="https://x.com/i7_tool" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">@i7_tool
 </a>
@@ -174,17 +174,17 @@ const base = import.meta.env.BASE_URL;
     </ul>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-6 mb-6">
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">プライバシー</h2>
-    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
-      <li>所持衣装・デッキ・ラビットノート値などのユーザー入力は、ブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-slate-200">
+      <li>所持衣装・デッキ・ラビットノート値などのユーザー入力は、ブラウザの <code class="px-1 py-0.5 bg-gray-100 dark:bg-slate-800 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
       <li>データのエクスポート・完全削除はブラウザの設定または各ページ上のクリア機能から行えます。</li>
     </ul>
   </section>
 
   <section class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
     <h2 class="text-lg font-bold text-yellow-800 mb-3">免責事項・権利表記</h2>
-    <ul class="list-disc pl-5 space-y-2 text-sm text-gray-800">
+    <ul class="list-disc pl-5 space-y-2 text-sm text-gray-800 dark:text-slate-100">
       <li>
         当サイトはアイドリッシュセブン運営・開発元とは一切関係のない、ファンによる<strong>非公式</strong>のデータベースサイトです。
       </li>

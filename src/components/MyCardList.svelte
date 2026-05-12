@@ -36,14 +36,14 @@
 </script>
 
 {#if owned.length === 0}
-  <div class="text-center py-12 text-gray-500">
+  <div class="text-center py-12 text-gray-500 dark:text-slate-400">
     <p class="text-lg mb-2">所持衣装がありません</p>
     <p class="text-sm"><a href={`${base}cards/`} class="text-indigo-600 hover:underline">衣装一覧</a>で所持数を登録してください</p>
   </div>
 {:else}
   <div>
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="flex items-center gap-4 text-sm text-gray-600">
+    <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-6">
+      <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-slate-300">
         <span>所持種類: {owned.length}種</span>
         <span>合計枚数: {totalOwnedCount}枚</span>
       </div>
@@ -52,7 +52,7 @@
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+          <tr class="bg-gray-100 dark:bg-slate-800 text-left text-xs text-gray-500 dark:text-slate-400 uppercase">
             <th class="px-3 py-2 w-16">画像</th>
             <th class="px-3 py-2">ID</th>
             <th class="px-3 py-2">衣装名</th>

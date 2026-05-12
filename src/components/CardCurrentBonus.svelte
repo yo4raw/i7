@@ -34,7 +34,7 @@
 </script>
 
 {#if liveHits.length > 0}
-  <section class="bg-white rounded-lg shadow p-4">
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
     <h2 class="text-lg font-semibold mb-3">🎯 現在開催中の特効</h2>
     <ul class="space-y-2 text-sm">
       {#each liveHits as h (h.id)}
@@ -44,7 +44,7 @@
             <span class="inline-block px-1.5 py-0.5 text-xs font-bold rounded border {def.selectClasses.join(' ')}">{def.shortLabel}</span>
           {/if}
           <a href={`${base}events/${h.id}/`} class="text-indigo-600 hover:underline font-medium">{h.eventname}</a>
-          <span class="text-xs text-gray-500">{h.start_date} 〜 {h.end_date}</span>
+          <span class="text-xs text-gray-500 dark:text-slate-400">{h.start_date} 〜 {h.end_date}</span>
         </li>
       {/each}
     </ul>

@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   SAVED_DECKS: 'i7_saved_decks',
   SCORE_CALC_STATE: 'i7_score_calc_state',
   CARD_LIST_VIEW_MODE: 'i7_card_list_view_mode',
+  THEME_MODE: 'i7_theme_mode',
 } as const;
 
 export function loadJson<T>(key: string, fallback: T): T {

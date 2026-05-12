@@ -63,7 +63,7 @@
 
 <div>
   {#each CHARACTER_GROUPS as group}
-    <section class="bg-white rounded-lg shadow mb-4 border-l-4 {GROUP_COLORS[group.name] || ''}">
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 border-l-4 {GROUP_COLORS[group.name] || ''}">
       <h2 class="text-lg font-bold px-4 pt-4 pb-2">{group.name}</h2>
       <div class="px-4 pb-4 space-y-3">
         {#each group.members as member}
@@ -82,7 +82,7 @@
                     min="0"
                     max="99999"
                     value={val || ''}
-                    class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right {attr.border} focus:outline-none focus:ring-1"
+                    class="w-full border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm text-right {attr.border} focus:outline-none focus:ring-1"
                     placeholder="0"
                     onchange={(e) => setValue(member, attr.key, parseInt((e.currentTarget as HTMLInputElement).value, 10) || 0)}
                   />
@@ -98,6 +98,6 @@
 
 <div class="mt-6 flex gap-3">
   <button type="button" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-lg" onclick={onSave}>保存</button>
-  <button type="button" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-lg" onclick={onClear}>全てクリア</button>
+  <button type="button" class="px-5 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 shadow-lg" onclick={onClear}>全てクリア</button>
   <span class="self-center text-sm text-green-600 font-medium transition-opacity duration-300" style:opacity={feedbackVisible ? 1 : 0}>{feedback}</span>
 </div>

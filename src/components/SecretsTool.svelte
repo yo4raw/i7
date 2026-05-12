@@ -454,12 +454,12 @@
   }
 </script>
 
-<section class="bg-white rounded-lg shadow p-4 mb-4">
-  <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
+<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4">
+  <label for="song-select" class="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-2">🎵 楽曲</label>
   <select
     id="song-select"
     bind:value={selectedSongId}
-    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
   >
     <option value="">楽曲を選択</option>
     {#if pickedSongs.length > 0}
@@ -478,12 +478,12 @@
     {/each}
   </select>
   {#if selectedSong}
-    <div class="mt-3 text-xs text-gray-600">
+    <div class="mt-3 text-xs text-gray-600 dark:text-slate-300">
       <div class="flex flex-wrap gap-3">
         <span><b>{selectedSong.song_name}</b></span>
-        <span class="text-gray-400">|</span>
+        <span class="text-gray-400 dark:text-slate-500">|</span>
         <span>{selectedSong.difficulty || '-'} / {selectedSong.duration || '?'}秒 / {(selectedSong.notes_count || 0).toLocaleString()}ノーツ</span>
-        <span class="text-gray-400">|</span>
+        <span class="text-gray-400 dark:text-slate-500">|</span>
         <span style="color:{ATTR_HEX.Shout}">Shout {Math.round((selectedSong.shout_ratio || 0) * 100)}%</span>
         <span style="color:{ATTR_HEX.Beat}">Beat {Math.round((selectedSong.beat_ratio || 0) * 100)}%</span>
         <span style="color:{ATTR_HEX.Melody}">Melody {Math.round((selectedSong.melody_ratio || 0) * 100)}%</span>
@@ -492,23 +492,23 @@
   {/if}
 </section>
 
-<section class="bg-white rounded-lg shadow p-4 mb-4">
-  <h2 class="text-sm font-bold text-gray-700 mb-2">📅 現在開催中のイベント</h2>
-  <div class="text-xs text-gray-600">
+<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4">
+  <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-2">📅 現在開催中のイベント</h2>
+  <div class="text-xs text-gray-600 dark:text-slate-300">
     {#if currentLiveEvents.length === 0}
-      <p class="text-gray-400">現在開催中のイベントはありません。</p>
+      <p class="text-gray-400 dark:text-slate-500">現在開催中のイベントはありません。</p>
     {:else}
       <ul class="mb-2 list-disc pl-5">
         {#each currentLiveEvents as ev}
-          <li class="mb-0.5"><b>{ev.eventname}</b> <span class="text-gray-400 text-[11px]">({ev.start_date} 〜 {ev.end_date} 17:00)</span></li>
+          <li class="mb-0.5"><b>{ev.eventname}</b> <span class="text-gray-400 dark:text-slate-500 text-[11px]">({ev.start_date} 〜 {ev.end_date} 17:00)</span></li>
         {/each}
       </ul>
       <div class="mb-2">
         <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-400 mr-1">金特効</span>
-        <b>{goldCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedGoldCount}）</span>{/if}
-        <span class="ml-3 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-700 border border-gray-400 mr-1">銀特効</span>
-        <b>{silverCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedSilverCount}）</span>{/if}
-        <span class="ml-3">候補合計 <b>{currentCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedCandidates.length}）</span>{/if} → 評価する組合せ <b>{comboCount.toLocaleString()}</b> 通り</span>
+        <b>{goldCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 dark:text-slate-500 text-[10px]">（所持 {ownedGoldCount}）</span>{/if}
+        <span class="ml-3 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 border border-gray-400 dark:border-slate-500 mr-1">銀特効</span>
+        <b>{silverCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 dark:text-slate-500 text-[10px]">（所持 {ownedSilverCount}）</span>{/if}
+        <span class="ml-3">候補合計 <b>{currentCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 dark:text-slate-500 text-[10px]">（所持 {ownedCandidates.length}）</span>{/if} → 評価する組合せ <b>{comboCount.toLocaleString()}</b> 通り</span>
       </div>
       <details class="mt-2">
         <summary class="cursor-pointer text-[11px] text-indigo-600">候補衣装を展開</summary>
@@ -519,24 +519,24 @@
               {@const attr = normalizeAttribute(c.attribute)}
               {@const attrColor = ATTR_HEX[attr] || '#6b7280'}
               <span class="inline-flex items-center gap-1 mr-1 mb-1 px-1.5 py-0.5 text-[10px] rounded border" style="border-color:{attrColor}; color:{attrColor}">
-                {c.cardname || ''}<span class="text-gray-400">({c.name || ''})</span>
+                {c.cardname || ''}<span class="text-gray-400 dark:text-slate-500">({c.name || ''})</span>
               </span>
             {/each}
             {#if goldCandidates.length > 30}
-              <span class="text-[10px] text-gray-400">…他 {goldCandidates.length - 30}枚</span>
+              <span class="text-[10px] text-gray-400 dark:text-slate-500">…他 {goldCandidates.length - 30}枚</span>
             {/if}
           </div>
-          <div class="mt-2 text-[11px] font-bold text-gray-500">銀特効（{silverCandidates.length}枚）</div>
+          <div class="mt-2 text-[11px] font-bold text-gray-500 dark:text-slate-400">銀特効（{silverCandidates.length}枚）</div>
           <div>
             {#each silverCandidates.slice(0, 30) as c}
               {@const attr = normalizeAttribute(c.attribute)}
               {@const attrColor = ATTR_HEX[attr] || '#6b7280'}
               <span class="inline-flex items-center gap-1 mr-1 mb-1 px-1.5 py-0.5 text-[10px] rounded border" style="border-color:{attrColor}; color:{attrColor}">
-                {c.cardname || ''}<span class="text-gray-400">({c.name || ''})</span>
+                {c.cardname || ''}<span class="text-gray-400 dark:text-slate-500">({c.name || ''})</span>
               </span>
             {/each}
             {#if silverCandidates.length > 30}
-              <span class="text-[10px] text-gray-400">…他 {silverCandidates.length - 30}枚</span>
+              <span class="text-[10px] text-gray-400 dark:text-slate-500">…他 {silverCandidates.length - 30}枚</span>
             {/if}
           </div>
         </div>
@@ -545,11 +545,11 @@
   </div>
 </section>
 
-<section class="bg-white rounded-lg shadow p-4 mb-4">
+<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4">
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
     <div>
-      <label for="eval-mode" class="block text-xs text-gray-500 mb-1">評価指標</label>
-      <select id="eval-mode" bind:value={evalMode} class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+      <label for="eval-mode" class="block text-xs text-gray-500 dark:text-slate-400 mb-1">評価指標</label>
+      <select id="eval-mode" bind:value={evalMode} class="w-full border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
         <option value="expected">算術期待値（推奨）</option>
         <option value="max">理論最大値（全スキル発動）</option>
       </select>
@@ -560,7 +560,7 @@
     </label>
     <label class="flex items-center gap-2 text-xs">
       <span>SCOREUPバッジ</span>
-      <input type="number" bind:value={scoreUpBadgeRate} class="w-16 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" />
+      <input type="number" bind:value={scoreUpBadgeRate} class="w-16 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm" min="0" max="100" step="1" />
       <span>%</span>
     </label>
   </div>
@@ -593,10 +593,10 @@
   {/if}
   {#if searching}
     <div>
-      <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
         <div class="bg-indigo-600 h-2 rounded-full transition-all" style="width: {progressPct}%"></div>
       </div>
-      <p class="text-xs text-gray-500 mt-1 text-center">{progressText}</p>
+      <p class="text-xs text-gray-500 dark:text-slate-400 mt-1 text-center">{progressText}</p>
     </div>
   {/if}
 </div>
@@ -606,25 +606,25 @@
   {@const modeLabel = result.evalMode === 'expected' ? '算術期待値（最終リザルト）' : '理論最大値（全スキル発動）'}
   <section class="space-y-4">
     <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
-      <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">理論値最大編成</div>
+      <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest text-center">理論値最大編成</div>
       <div class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">{result.best.score.toLocaleString()}</div>
-      <div class="text-center text-xs text-gray-500 mt-1">
+      <div class="text-center text-xs text-gray-500 dark:text-slate-400 mt-1">
         {result.aborted ? `${modeLabel} ※探索中断` : modeLabel}
       </div>
       <div class="mt-3 grid grid-cols-2 gap-4 text-center text-xs">
         <div>
-          <div class="text-gray-500">評価済み組合せ</div>
-          <div class="font-bold text-gray-700 text-base">{result.evaluated.toLocaleString()}</div>
+          <div class="text-gray-500 dark:text-slate-400">評価済み組合せ</div>
+          <div class="font-bold text-gray-700 dark:text-slate-200 text-base">{result.evaluated.toLocaleString()}</div>
         </div>
         <div>
-          <div class="text-gray-500">計算時間</div>
-          <div class="font-bold text-gray-700 text-base">{formatElapsed(result.elapsedMs)}</div>
+          <div class="text-gray-500 dark:text-slate-400">計算時間</div>
+          <div class="font-bold text-gray-700 dark:text-slate-200 text-base">{formatElapsed(result.elapsedMs)}</div>
         </div>
       </div>
     </div>
 
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">🎴 最適編成</h2>
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+      <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-3">🎴 最適編成</h2>
       <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {#each DISPLAY_ORDER as i}
           {@const card = getCardById(result.best.cardIds[i])}
@@ -646,24 +646,24 @@
                   <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded {rarityClass}">{card.rarity || '?'}</span>
                   <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded {attrBgClass}">{attr}</span>
                 </div>
-                <div class="text-[9px] text-gray-600 text-center truncate w-full" title={card.cardname || ''}>{card.cardname || ''}</div>
-                <div class="text-[8px] text-gray-400 text-center">{card.name || ''}</div>
+                <div class="text-[9px] text-gray-600 dark:text-slate-300 text-center truncate w-full" title={card.cardname || ''}>{card.cardname || ''}</div>
+                <div class="text-[8px] text-gray-400 dark:text-slate-500 text-center">{card.name || ''}</div>
                 <div class="mt-1 text-[9px] {bonusClass}">{bonusLabel}</div>
               </div>
             </div>
           {:else}
-            <div class="text-center text-gray-400">空</div>
+            <div class="text-center text-gray-400 dark:text-slate-500">空</div>
           {/if}
         {/each}
       </div>
     </section>
 
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">🧾 衣装詳細</h2>
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+      <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-3">🧾 衣装詳細</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-gray-500 border-b">
+            <tr class="text-gray-500 dark:text-slate-400 border-b">
               <th class="text-left py-1 px-1">スロット</th>
               <th class="text-left py-1 px-1">衣装名</th>
               <th class="text-center py-1 px-1">特効</th>
@@ -692,7 +692,7 @@
                     <td class="py-1 px-1 text-[10px] {labelColor}">{SLOT_LABELS[i]}</td>
                     <td class="py-1 px-1">
                       <div>{card.cardname || ''}</div>
-                      <div class="text-[10px] text-gray-400">{card.name || ''}</div>
+                      <div class="text-[10px] text-gray-400 dark:text-slate-500">{card.name || ''}</div>
                     </td>
                     <td class="py-1 px-1 text-center {bonusClass}">{bonusLabel}</td>
                     <td class="py-1 px-1 text-right text-red-500">
@@ -708,15 +708,15 @@
                     <td class="py-1 px-1">{skillEffect}</td>
                     <td class="py-1 px-1">
                       {#if slotBroachs.length === 0}
-                        <span class="text-[10px] text-gray-300">—</span>
+                        <span class="text-[10px] text-gray-300 dark:text-slate-600">—</span>
                       {:else}
                         {#each slotBroachs as rb}
                           {#if rb.broach.broach_type === 8}
-                            <div class="text-[9px] text-gray-400 line-through" title="オート専用・計算対象外">🔮 {broachLabel(rb)}</div>
+                            <div class="text-[9px] text-gray-400 dark:text-slate-500 line-through" title="オート専用・計算対象外">🔮 {broachLabel(rb)}</div>
                           {:else if rb.active}
                             <div class="text-[9px] text-purple-700">🔮 {broachLabel(rb)}</div>
                           {:else}
-                            <div class="text-[9px] text-gray-400" title="条件未達">🔮 {broachLabel(rb)}</div>
+                            <div class="text-[9px] text-gray-400 dark:text-slate-500" title="条件未達">🔮 {broachLabel(rb)}</div>
                           {/if}
                         {/each}
                       {/if}
@@ -737,38 +737,38 @@
       </div>
     </section>
 
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">📊 スコア内訳</h2>
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+      <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-3">📊 スコア内訳</h2>
       <table class="w-full text-sm">
         <tbody>
           {#if result.best.baseScore != null}
-            <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td class="text-right py-1">{result.best.baseScore.toLocaleString()}</td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">属性値による楽曲スコア</td><td class="text-right py-1">{result.best.baseScore.toLocaleString()}</td></tr>
           {/if}
           {#if result.best.scoreUpExpected != null}
-            <tr><td class="text-gray-500 py-1">スコアアップ期待値</td><td class="text-right py-1">{result.best.scoreUpExpected.toLocaleString()}</td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">スコアアップ期待値</td><td class="text-right py-1">{result.best.scoreUpExpected.toLocaleString()}</td></tr>
           {/if}
           {#if result.best.shrinkExpected != null}
-            <tr><td class="text-gray-500 py-1">判定縮小期待値</td><td class="text-right py-1">{result.best.shrinkExpected.toLocaleString()}</td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">判定縮小期待値</td><td class="text-right py-1">{result.best.shrinkExpected.toLocaleString()}</td></tr>
           {/if}
           {#if result.best.liveEndScore != null}
-            <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td class="text-right py-1">{result.best.liveEndScore.toLocaleString()}</td></tr>
+            <tr class="border-t"><td class="text-gray-500 dark:text-slate-400 py-1">ライブ終了時スコア</td><td class="text-right py-1">{result.best.liveEndScore.toLocaleString()}</td></tr>
           {/if}
           {#if bestTeam && bestTeam.broachScoreBonus > 0}
-            <tr><td class="text-gray-500 py-1">固定ブローチ スコア加算</td><td class="text-right py-1">+{bestTeam.broachScoreBonus.toLocaleString()}</td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">固定ブローチ スコア加算</td><td class="text-right py-1">+{bestTeam.broachScoreBonus.toLocaleString()}</td></tr>
           {/if}
-          <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td class="text-right py-1 font-bold">{result.best.score.toLocaleString()}</td></tr>
+          <tr><td class="text-gray-500 dark:text-slate-400 py-1 font-bold">最終リザルト</td><td class="text-right py-1 font-bold">{result.best.score.toLocaleString()}</td></tr>
         </tbody>
       </table>
     </section>
 
     {#if result.topFriends && result.topFriends.length > 0}
-      <section class="bg-white rounded-lg shadow p-4">
-        <h2 class="text-sm font-bold text-gray-700 mb-1">🤝 フレンド候補 TOP 5</h2>
-        <p class="text-[11px] text-gray-500 mb-3">最適編成のセンター + メンバー4枚を固定し、フレンドだけ差し替えた場合のスコア（高い順）。マッチング次第で 1 位フレンドが取れない場合の代替候補です。</p>
+      <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+        <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-1">🤝 フレンド候補 TOP 5</h2>
+        <p class="text-[11px] text-gray-500 dark:text-slate-400 mb-3">最適編成のセンター + メンバー4枚を固定し、フレンドだけ差し替えた場合のスコア（高い順）。マッチング次第で 1 位フレンドが取れない場合の代替候補です。</p>
         <div class="overflow-x-auto">
           <table class="w-full text-xs">
             <thead>
-              <tr class="text-gray-500 border-b">
+              <tr class="text-gray-500 dark:text-slate-400 border-b">
                 <th class="text-left py-1 px-1">#</th>
                 <th class="text-left py-1 px-1">衣装</th>
                 <th class="text-center py-1 px-1">特効</th>
@@ -797,7 +797,7 @@
                         />
                         <div class="min-w-0">
                           <div class="truncate" style="color:{attrColor}">{card.cardname || ''}</div>
-                          <div class="text-[10px] text-gray-400 truncate">{card.name || ''}</div>
+                          <div class="text-[10px] text-gray-400 dark:text-slate-500 truncate">{card.name || ''}</div>
                         </div>
                       </div>
                     </td>
@@ -812,14 +812,14 @@
       </section>
     {/if}
 
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-1">🏅 上位候補 TOP 10</h2>
-      <p class="text-[10px] text-gray-400 mb-3">スロット表記: ★センター / ✦フレンド / それ以外はメンバー</p>
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+      <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-1">🏅 上位候補 TOP 10</h2>
+      <p class="text-[10px] text-gray-400 dark:text-slate-500 mb-3">スロット表記: ★センター / ✦フレンド / それ以外はメンバー</p>
       <div class="space-y-2">
         {#each result.top as rec, rank}
           <div class="border rounded-lg p-2 flex items-center gap-3">
             <div class="flex-shrink-0 w-8 text-center">
-              <div class="text-xs text-gray-400">#{rank + 1}</div>
+              <div class="text-xs text-gray-400 dark:text-slate-500">#{rank + 1}</div>
             </div>
             <div class="flex-shrink-0 text-right">
               <div class="text-sm font-bold text-indigo-700">{rec.score.toLocaleString()}</div>
@@ -845,7 +845,7 @@
                         loading="lazy"
                       />
                       <div class="mt-0.5 text-[9px] leading-tight text-center w-full truncate" style="color:{attrColor}">{card.cardname || ''}</div>
-                      <div class="text-[8px] leading-tight text-center w-full truncate text-gray-400">{card.name || ''}</div>
+                      <div class="text-[8px] leading-tight text-center w-full truncate text-gray-400 dark:text-slate-500">{card.name || ''}</div>
                     </div>
                   {/if}
                 {/each}
