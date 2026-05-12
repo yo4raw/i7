@@ -88,6 +88,11 @@ try {
     <meta name="theme-color" content="#4f46e5" />
     <meta name="description" content={desc} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="apple-touch-icon" href={`${base}apple-touch-icon.png`} />
+    <link rel="manifest" href={`${base}manifest.webmanifest`} />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="i7マネ部屋" />
     <link rel="canonical" href={canonicalUrl} />
     <title>{fullTitle}</title>
     <!-- OGP -->
@@ -108,6 +113,14 @@ try {
     <JsonLd data={organizationLd} />
     {breadcrumbLd && <JsonLd data={breadcrumbLd} />}
     {extraJsonLd.map((d) => <JsonLd data={d} />)}
+    <!-- Service Worker 登録 (PWA / オフライン対応) -->
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+        });
+      }
+    </script>
     <!-- Google Tag Manager -->
     <script is:inline>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
