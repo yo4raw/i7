@@ -23,6 +23,7 @@
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
+  import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
 
   type EventForBonus = {
     id: number;
@@ -1164,6 +1165,51 @@
       if (state) applyState(state);
     }
 
+    function tryRestoreFromUrl(): boolean {
+      if (typeof window === 'undefined') return false;
+      const search = window.location.search;
+      if (!search) return false;
+      const params = new URLSearchParams(search);
+      if (!params.has('dv')) return false;
+      const decoded = decodeParamsToDeck(params);
+      if (!decoded) return false;
+      applyState(decoded);
+      saveState();
+      window.history.replaceState(null, '', window.location.pathname);
+      return true;
+    }
+
+    async function shareDeckUrl() {
+      const state = buildStateObject();
+      if (isDeckEmpty(state)) {
+        alert('編成が空です。楽曲や衣装を選んでから共有してください。');
+        return;
+      }
+      const params = encodeDeckToParams(state);
+      const url = `${window.location.origin}${base}score-calc/?${params.toString()}`;
+      const btn = _q<HTMLButtonElement>('btn-share-url');
+      const originalLabel = btn.textContent;
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          copied = true;
+        }
+      } catch {
+        copied = false;
+      }
+      if (copied) {
+        btn.textContent = '✅ コピーしました';
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.textContent = originalLabel;
+          btn.disabled = false;
+        }, 2000);
+      } else {
+        window.prompt('URL を選択してコピーしてください', url);
+      }
+    }
+
     type SavedDeck = {
       id: string;
       name: string;
@@ -1347,6 +1393,7 @@
 
     _q('btn-save-deck').addEventListener('click', saveDeck);
     _q('btn-load-deck').addEventListener('click', showLoadDropdown);
+    _q('btn-share-url').addEventListener('click', shareDeckUrl);
     document.addEventListener('click', bodyClickHandler);
 
     _q('btn-calculate').addEventListener('click', runMC);
@@ -1363,7 +1410,9 @@
       updateShrinkCoverage(team, selectedSong);
     });
 
-    restoreState();
+    if (!tryRestoreFromUrl()) {
+      restoreState();
+    }
     updateCalcButton();
 
     refreshData('cards', fetchCardsJson, (fresh) => {
@@ -1458,6 +1507,7 @@
         <div class="relative flex gap-2">
           <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors">保存</button>
           <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">読込</button>
+          <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー">🔗 URLコピー</button>
           <div id="load-deck-dropdown" class="hidden absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
         </div>
       </div>
