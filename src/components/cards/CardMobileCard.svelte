@@ -73,19 +73,19 @@
       <p class="font-medium text-sm truncate" onclick={handleNameClick} role="presentation">
         <span class="text-indigo-600 hover:underline cursor-pointer">{card.cardname || ''}</span>
       </p>
-      <p class="text-xs text-gray-500">{card.name || ''}</p>
+      <p class="text-xs text-gray-500 dark:text-slate-400">{card.name || ''}</p>
       <div class="flex items-center gap-2 mt-1">
         {@html donut}
         <div class="flex gap-2 text-xs">
-          <span class={ATTR_TEXT_CLASS.Shout}>S:{s} <span class="text-gray-400">{sPct}%</span></span>
-          <span class={ATTR_TEXT_CLASS.Beat}>B:{b} <span class="text-gray-400">{bPct}%</span></span>
-          <span class={ATTR_TEXT_CLASS.Melody}>M:{m} <span class="text-gray-400">{mPct}%</span></span>
+          <span class={ATTR_TEXT_CLASS.Shout}>S:{s} <span class="text-gray-400 dark:text-slate-500">{sPct}%</span></span>
+          <span class={ATTR_TEXT_CLASS.Beat}>B:{b} <span class="text-gray-400 dark:text-slate-500">{bPct}%</span></span>
+          <span class={ATTR_TEXT_CLASS.Melody}>M:{m} <span class="text-gray-400 dark:text-slate-500">{mPct}%</span></span>
         </div>
       </div>
     </div>
   </div>
   <div class="mt-2 flex items-center justify-between border-t pt-2">
-    <span class="text-xs text-gray-500">所持数</span>
+    <span class="text-xs text-gray-500 dark:text-slate-400">所持数</span>
     <CountInput cardId={card.ID} />
   </div>
 </div>

@@ -117,22 +117,22 @@
   }
 </script>
 
-<div class="bg-white rounded-lg shadow p-4 mb-6">
+<div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-6">
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
     <div>
-      <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">イベント名検索</label>
+      <label for="search-text" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">イベント名検索</label>
       <input
         id="search-text"
         type="text"
         placeholder="イベント名"
         value={text}
         oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
     </div>
     <div>
-      <label for="search-type" class="block text-xs font-medium text-gray-500 mb-1">イベントタイプ</label>
-      <select id="search-type" bind:value={typeFilter} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <label for="search-type" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">イベントタイプ</label>
+      <select id="search-type" bind:value={typeFilter} class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="">すべて</option>
         {#each eventTypes as t}
           <option value={t}>{t}</option>
@@ -140,8 +140,8 @@
       </select>
     </div>
     <div>
-      <label for="search-status" class="block text-xs font-medium text-gray-500 mb-1">状態</label>
-      <select id="search-status" bind:value={statusFilter} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <label for="search-status" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">状態</label>
+      <select id="search-status" bind:value={statusFilter} class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="">すべて</option>
         <option value="live">実施中</option>
         <option value="upcoming">開催予定</option>
@@ -151,16 +151,16 @@
   </div>
   <div class="mt-3 flex items-center gap-3">
     <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
-    <span class="text-sm text-gray-500">{filtered.length}件を表示</span>
+    <span class="text-sm text-gray-500 dark:text-slate-400">{filtered.length}件を表示</span>
   </div>
 </div>
 
-<p class="text-xs text-gray-500 mb-3">※ 終了時刻は各イベント終了日の 17:00 (JST) として扱います。</p>
+<p class="text-xs text-gray-500 dark:text-slate-400 mb-3">※ 終了時刻は各イベント終了日の 17:00 (JST) として扱います。</p>
 
 <div class="hidden md:block overflow-x-auto">
   <table class="w-full text-sm">
     <thead>
-      <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+      <tr class="bg-gray-100 dark:bg-slate-800 text-left text-xs text-gray-500 dark:text-slate-400 uppercase">
         <th class="px-3 py-2 w-40">状態</th>
         <th class="px-3 py-2">イベント名</th>
         <th class="px-3 py-2 w-56">イベントタイプ</th>
@@ -168,7 +168,7 @@
         <th class="px-3 py-2 w-44">終了 (17:00)</th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-gray-100">
+    <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
       {#each filtered as { ev, status, remainText, remainClass } (ev.id)}
         <tr class={rowClass(status)}>
           <td class="px-3 py-2 align-top">
@@ -178,9 +178,9 @@
             {/if}
           </td>
           <td class="px-3 py-2 font-medium"><a href={`${base}events/${ev.id}/`} class="text-indigo-600 hover:underline">{ev.eventname}</a></td>
-          <td class="px-3 py-2 text-xs text-gray-600">{ev.eventtype}</td>
-          <td class="px-3 py-2 text-xs text-gray-700">{ev.start_date}</td>
-          <td class="px-3 py-2 text-xs text-gray-700">{ev.end_date}</td>
+          <td class="px-3 py-2 text-xs text-gray-600 dark:text-slate-300">{ev.eventtype}</td>
+          <td class="px-3 py-2 text-xs text-gray-700 dark:text-slate-200">{ev.start_date}</td>
+          <td class="px-3 py-2 text-xs text-gray-700 dark:text-slate-200">{ev.end_date}</td>
         </tr>
       {/each}
     </tbody>
@@ -189,7 +189,7 @@
 
 <div class="md:hidden space-y-3">
   {#each filtered as { ev, status, remainText, remainClass } (ev.id)}
-    <div class="rounded-lg shadow p-3 bg-white {rowClass(status)}">
+    <div class="rounded-lg shadow p-3 bg-white dark:bg-slate-800 {rowClass(status)}">
       <div class="flex items-start justify-between gap-2 mb-1">
         <a href={`${base}events/${ev.id}/`} class="font-medium text-sm flex-1 text-indigo-600 hover:underline">{ev.eventname}</a>
         <span class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-semibold {badgeClass(status)}">{badgeText(status)}</span>
@@ -197,8 +197,8 @@
       {#if remainText}
         <div class="text-xs mb-1 {remainClass}">{remainText}</div>
       {/if}
-      <p class="text-xs text-gray-600">{ev.eventtype}</p>
-      <p class="text-xs text-gray-700 mt-1">
+      <p class="text-xs text-gray-600 dark:text-slate-300">{ev.eventtype}</p>
+      <p class="text-xs text-gray-700 dark:text-slate-200 mt-1">
         <span>{ev.start_date}</span>
         <span class="mx-1">〜</span>
         <span>{ev.end_date} 17:00</span>

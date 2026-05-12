@@ -416,11 +416,11 @@
             const isAutoOnly = br.broach_type === 8;
 
             if (isAutoOnly) {
-              return `<div class="mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center line-through" title="${label}（オート専用・計算対象外）">🔮 ${label}（オート専用）</div>`;
+              return `<div class="mt-1 w-full text-[8px] bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-1 py-0.5 text-gray-400 dark:text-slate-500 truncate text-center line-through" title="${label}（オート専用・計算対象外）">🔮 ${label}（オート専用）</div>`;
             } else if (isActive) {
               return `<div class="mt-1 w-full text-[8px] bg-purple-50 border border-purple-200 rounded px-1 py-0.5 text-purple-700 truncate text-center" title="${label}">🔮 ${label}</div>`;
             } else {
-              return `<div class="mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center" title="${label}（条件未達）">🔮 ${label}</div>`;
+              return `<div class="mt-1 w-full text-[8px] bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-1 py-0.5 text-gray-400 dark:text-slate-500 truncate text-center" title="${label}（条件未達）">🔮 ${label}</div>`;
             }
           }).join('');
         }
@@ -464,16 +464,16 @@
             <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
             <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBgClass}">${attr}</span>
           </div>
-          <div class="text-[9px] text-gray-600 text-center truncate w-full" title="${card.cardname || ''}">${card.cardname || ''}</div>
-          <div class="text-[8px] text-gray-400 text-center">${card.name || ''}</div>
-          <label class="trained-label mt-1 flex items-center gap-1 text-[9px] text-gray-600 cursor-pointer">
+          <div class="text-[9px] text-gray-600 dark:text-slate-300 text-center truncate w-full" title="${card.cardname || ''}">${card.cardname || ''}</div>
+          <div class="text-[8px] text-gray-400 dark:text-slate-500 text-center">${card.name || ''}</div>
+          <label class="trained-label mt-1 flex items-center gap-1 text-[9px] text-gray-600 dark:text-slate-300 cursor-pointer">
             <input type="checkbox" class="trained-check w-3 h-3" data-trained-slot="${i}"${trainedChecked ? ' checked' : ''} />
             <span>特訓済</span>
           </label>
-          <select class="bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-bonus-slot="${i}">
+          <select class="bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 dark:border-slate-600 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-bonus-slot="${i}">
             ${EVENT_BONUS_TIERS.map(t => `<option value="${t.key}"${currentTier === t.key ? ' selected' : ''}>${t.optionLabel}</option>`).join('')}
           </select>
-          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot="${i}">
+          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 dark:border-slate-600 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot="${i}">
             ${[1, 2, 3, 4, 5].map(lv => `<option value="${lv}"${currentSkillLv === lv ? ' selected' : ''}>スキルLv${lv}</option>`).join('')}
           </select>${shrinkWarningHtml}${broachLabelHtml}${sharedBroachHtml}`;
       }
@@ -621,7 +621,7 @@
           <td class="py-1 px-1 text-[10px] ${i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}">${SLOT_LABELS[i]}</td>
           <td class="py-1 px-1">
             <div>${card.cardname || ''}</div>
-            <div class="text-[10px] text-gray-400">${card.name || ''}</div>
+            <div class="text-[10px] text-gray-400 dark:text-slate-500">${card.name || ''}</div>
           </td>
           <td class="py-1 px-1 text-center ${trainedClass}">${trainedLabel}</td>
           <td class="py-1 px-1 text-center ${bonusClass}">${bonusLabel}</td>
@@ -680,8 +680,8 @@
       const noteBeatColor   = Math.floor(deckBeat   * NOTE_RATE.color);
       const noteMelodyColor = Math.floor(deckMelody * NOTE_RATE.color);
 
-      _q('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold text-xs">
-        <td colspan="4" class="py-1 px-1 text-right text-gray-700">単純属性値計</td>
+      _q('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs">
+        <td colspan="4" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">単純属性値計</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${totalShout.toLocaleString()}</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${totalBeat.toLocaleString()}</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${totalMelody.toLocaleString()}</td>
@@ -710,28 +710,28 @@
         <td class="py-1 px-1 text-right">${friendMelody > 0 ? `+${friendMelody.toLocaleString()}` : '-'}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
-      </tr>` : ''}${scoreUpAssistEnabled ? `<tr class="border-t-2 border-gray-300 font-bold text-xs text-emerald-600">
+      </tr>` : ''}${scoreUpAssistEnabled ? `<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs text-emerald-600">
         <td colspan="4" class="py-1 px-1 text-right">ScoreUPアシスト (+${assistPct}%)</td>
         <td class="py-1 px-1 text-right">${assistShout > 0 ? `+${assistShout.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${assistBeat > 0 ? `+${assistBeat.toLocaleString()}` : '-'}</td>
         <td class="py-1 px-1 text-right">${assistMelody > 0 ? `+${assistMelody.toLocaleString()}` : '-'}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
-      </tr>` : ''}<tr class="border-t-2 border-gray-300 font-bold text-xs">
-        <td colspan="4" class="py-1 px-1 text-right text-gray-700">デッキ合計</td>
+      </tr>` : ''}<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs">
+        <td colspan="4" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">デッキ合計</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${deckShout.toLocaleString()}</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${deckBeat.toLocaleString()}</td>
         <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${deckMelody.toLocaleString()}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
-      </tr><tr class="text-xs text-gray-500">
+      </tr><tr class="text-xs text-gray-500 dark:text-slate-400">
         <td colspan="4" class="py-0.5 px-1 text-right">⚪🟢/1ノーツ</td>
         <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${noteShoutWhite.toLocaleString()}</td>
         <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${noteBeatWhite.toLocaleString()}</td>
         <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${noteMelodyWhite.toLocaleString()}</td>
         <td colspan="3"></td>
         <td colspan="2"></td>
-      </tr><tr class="text-xs text-gray-500">
+      </tr><tr class="text-xs text-gray-500 dark:text-slate-400">
         <td colspan="4" class="py-0.5 px-1 text-right">🔵🔴/1ノーツ</td>
         <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${noteShoutColor.toLocaleString()}</td>
         <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${noteBeatColor.toLocaleString()}</td>
@@ -795,7 +795,7 @@
         const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
         const total = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
 
-        return `<div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border-b border-gray-100" data-pick-card="${card.ID}">
+        return `<div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-slate-900 cursor-pointer border-b border-gray-100 dark:border-slate-800" data-pick-card="${card.ID}">
           <img src="${cardThumbUrl(card.ID!)}" alt="${card.cardname || ''}" class="w-10 h-auto rounded flex-shrink-0" loading="lazy" />
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1">
@@ -803,12 +803,12 @@
               <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBgClass}">${attr}</span>
               <span class="text-xs font-medium truncate">${card.cardname || ''}</span>
             </div>
-            <div class="text-[10px] text-gray-500">${card.name || ''} | 合計: ${total.toLocaleString()} | ${card.ap_skill_type || '-'}</div>
+            <div class="text-[10px] text-gray-500 dark:text-slate-400">${card.name || ''} | 合計: ${total.toLocaleString()} | ${card.ap_skill_type || '-'}</div>
           </div>
         </div>`;
       }).join('');
 
-      _q('modal-card-list').innerHTML = html || '<p class="text-sm text-gray-400 text-center py-8">該当する衣装がありません</p>';
+      _q('modal-card-list').innerHTML = html || '<p class="text-sm text-gray-400 dark:text-slate-500 text-center py-8">該当する衣装がありません</p>';
 
       rootEl.querySelectorAll('[data-pick-card]').forEach(el => {
         el.addEventListener('click', () => {
@@ -892,7 +892,7 @@
           <td class="py-1 px-1 text-[10px] ${slotCls}">${SLOT_LABELS[i]}</td>
           <td class="py-1 px-1">
             <div>${card.cardname || ''}</div>
-            <div class="text-[10px] text-gray-400">${card.name || ''}</div>
+            <div class="text-[10px] text-gray-400 dark:text-slate-500">${card.name || ''}</div>
           </td>
           <td class="py-1 px-1">${card.ap_skill_type || '-'}</td>
           <td class="py-1 px-1 text-right">${exp > 0 ? exp.toLocaleString() : '-'}</td>
@@ -906,8 +906,8 @@
       }
       _q('skill-per-card-section').classList.remove('hidden');
       _q('skill-per-card-body').innerHTML = rows.join('');
-      _q('skill-per-card-foot').innerHTML = `<tr class="border-t-2 border-gray-300 font-bold">
-        <td colspan="3" class="py-1 px-1 text-right text-gray-700">合計</td>
+      _q('skill-per-card-foot').innerHTML = `<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold">
+        <td colspan="3" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">合計</td>
         <td class="py-1 px-1 text-right">${totalExp.toLocaleString()}</td>
         <td class="py-1 px-1 text-right">${totalActivations.toLocaleString()}</td>
         <td class="py-1 px-1 text-right">${totalMax.toLocaleString()}</td>
@@ -1039,7 +1039,7 @@
       }
       const renderContributionHistogram = (values: number[], containerId: string, label: string, color: string) => {
         if (values.length === 0) {
-          _q(containerId).innerHTML = '<span class="text-gray-400 text-xs">データなし</span>';
+          _q(containerId).innerHTML = '<span class="text-gray-400 dark:text-slate-500 text-xs">データなし</span>';
           return;
         }
         let sum = 0;
@@ -1265,19 +1265,19 @@
 
       const decks = loadSavedDecks();
       if (decks.length === 0) {
-        dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">保存されたデッキがありません</div>';
+        dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 dark:text-slate-500 text-center">保存されたデッキがありません</div>';
       } else {
         const items = decks.slice().reverse().map(d => {
           const date = new Date(d.updatedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
           const cardCount = (d.state.deckIds || []).filter((id: number | null) => id != null).length;
-          return `<div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0" data-deck-id="${d.id}">
+          return `<div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 dark:border-slate-800 last:border-0" data-deck-id="${d.id}">
             <div class="min-w-0 flex-1">
-              <div class="text-xs font-medium text-gray-700 truncate">${d.name}</div>
-              <div class="text-[10px] text-gray-400">${date} / ${cardCount}枚</div>
+              <div class="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">${d.name}</div>
+              <div class="text-[10px] text-gray-400 dark:text-slate-500">${date} / ${cardCount}枚</div>
             </div>
           </div>`;
         }).join('');
-        dropdown.innerHTML = items + `<a href="${base}decks/" class="block text-center text-[10px] text-indigo-500 hover:text-indigo-700 py-2 border-t border-gray-100">デッキ管理ページ →</a>`;
+        dropdown.innerHTML = items + `<a href="${base}decks/" class="block text-center text-[10px] text-indigo-500 hover:text-indigo-700 py-2 border-t border-gray-100 dark:border-slate-800">デッキ管理ページ →</a>`;
       }
 
       dropdown.classList.remove('hidden');
@@ -1450,21 +1450,21 @@
 
 <div bind:this={rootEl}>
   <!-- 楽曲サマリーバー（全幅・横長） -->
-  <section class="bg-white rounded-lg shadow p-4 mb-4">
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4">
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
       <div class="min-w-0">
-        <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
-        <select id="song-select" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <label for="song-select" class="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-2">🎵 楽曲</label>
+        <select id="song-select" class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="">楽曲を選択</option>
         </select>
         <div id="song-info" class="mt-3 hidden">
           <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
-            <div><dt class="text-gray-500 text-[10px]">曲名</dt><dd id="song-name-val" class="font-medium truncate"></dd></div>
-            <div><dt class="text-gray-500 text-[10px]">アーティスト</dt><dd id="song-artist" class="font-medium truncate"></dd></div>
-            <div><dt class="text-gray-500 text-[10px]">楽曲種類</dt><dd id="song-type" class="font-medium"></dd></div>
-            <div><dt class="text-gray-500 text-[10px]">ノーツ数</dt><dd id="song-notes" class="font-medium"></dd></div>
-            <div><dt class="text-gray-500 text-[10px]">秒数</dt><dd id="song-duration-val" class="font-medium"></dd></div>
-            <div><dt class="text-gray-500 text-[10px]">構成</dt><dd id="song-attr-counts"></dd></div>
+            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">曲名</dt><dd id="song-name-val" class="font-medium truncate"></dd></div>
+            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">アーティスト</dt><dd id="song-artist" class="font-medium truncate"></dd></div>
+            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">楽曲種類</dt><dd id="song-type" class="font-medium"></dd></div>
+            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">ノーツ数</dt><dd id="song-notes" class="font-medium"></dd></div>
+            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">秒数</dt><dd id="song-duration-val" class="font-medium"></dd></div>
+            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">構成</dt><dd id="song-attr-counts"></dd></div>
           </dl>
           <div class="mt-2 text-right">
             <a id="song-detail-anchor" href="#" class="text-xs text-indigo-600 hover:underline">楽曲詳細を見る →</a>
@@ -1479,72 +1479,72 @@
   </section>
 
   <!-- スキルオプション（折りたたみ可、デフォルト開） -->
-  <details class="bg-white rounded-lg shadow mb-4 group" open>
-    <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
+  <details class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 group" open>
+    <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 dark:text-slate-200 flex items-center justify-between select-none">
       <span>⚙️ スキルオプション</span>
-      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </summary>
-    <div class="px-4 pb-4 border-t border-gray-100 pt-3">
+    <div class="px-4 pb-4 border-t border-gray-100 dark:border-slate-800 pt-3">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <label class="flex items-center gap-2">
           <input type="checkbox" id="opt-scoreup-assist" class="rounded" />
           <span>SCOREUPアシスト（属性値 ×1.2）</span>
         </label>
         <label class="flex items-center gap-2">
-          <span class="text-xs text-gray-500 whitespace-nowrap">SCOREUPバッジ倍率</span>
-          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="16" />
-          <span class="text-xs text-gray-500">%</span>
+          <span class="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">SCOREUPバッジ倍率</span>
+          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm" min="0" max="100" step="1" value="16" />
+          <span class="text-xs text-gray-500 dark:text-slate-400">%</span>
         </label>
       </div>
-      <p class="text-[11px] text-gray-400 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
+      <p class="text-[11px] text-gray-400 dark:text-slate-500 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
     </div>
   </details>
 
   <div class="space-y-4">
-    <section class="bg-white rounded-lg shadow p-4">
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
+        <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200">🎴 デッキ編成</h2>
         <div class="relative flex gap-2">
           <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors">保存</button>
-          <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">読込</button>
+          <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors">読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー">🔗 URLコピー</button>
-          <div id="load-deck-dropdown" class="hidden absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
+          <div id="load-deck-dropdown" class="hidden absolute right-0 top-full mt-1 w-64 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
         </div>
       </div>
       <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="deck-slots">
         <div class="deck-slot" data-slot="1">
-          <div class="text-[10px] text-center text-gray-500 mb-1">メンバー1</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="1">
-            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 mt-1">選択</span>
+          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー1</div>
+          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="1">
+            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
           </div>
         </div>
         <div class="deck-slot" data-slot="2">
-          <div class="text-[10px] text-center text-gray-500 mb-1">メンバー2</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="2">
-            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 mt-1">選択</span>
+          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー2</div>
+          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="2">
+            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
           </div>
         </div>
         <div class="deck-slot" data-slot="0">
           <div class="text-[10px] text-center text-indigo-600 font-bold mb-1">センター</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="0">
-            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 mt-1">選択</span>
+          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="0">
+            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
           </div>
         </div>
         <div class="deck-slot" data-slot="3">
-          <div class="text-[10px] text-center text-gray-500 mb-1">メンバー3</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="3">
-            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 mt-1">選択</span>
+          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー3</div>
+          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="3">
+            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
           </div>
         </div>
         <div class="deck-slot" data-slot="4">
-          <div class="text-[10px] text-center text-gray-500 mb-1">メンバー4</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="4">
-            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 mt-1">選択</span>
+          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー4</div>
+          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="4">
+            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
           </div>
         </div>
         <div class="deck-slot" data-slot="5">
@@ -1557,15 +1557,15 @@
       </div>
     </section>
 
-    <details id="card-detail-section" class="bg-white rounded-lg shadow p-4 hidden group" open>
-      <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
+    <details id="card-detail-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 hidden group" open>
+      <summary class="cursor-pointer text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center justify-between select-none mb-3">
         <span>🧾 衣装詳細</span>
-        <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </summary>
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-gray-500 border-b">
+            <tr class="text-gray-500 dark:text-slate-400 border-b">
               <th class="text-left py-1 px-1">スロット</th>
               <th class="text-left py-1 px-1">衣装名</th>
               <th class="text-center py-1 px-1">特訓</th>
@@ -1584,35 +1584,35 @@
           <tfoot id="card-detail-foot"></tfoot>
         </table>
       </div>
-      <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
+      <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
     </details>
 
-    <details id="breakdown-section" class="bg-white rounded-lg shadow p-4 group" open>
-      <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
+    <details id="breakdown-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 group" open>
+      <summary class="cursor-pointer text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center justify-between select-none mb-3">
         <span>📊 スキル詳細</span>
-        <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </summary>
       <section id="score-breakdown" class="hidden">
         <div class="space-y-1">
           <div id="shrink-coverage-row" class="flex justify-between text-sm hidden">
-            <span class="text-gray-500">縮小カバー率（最大発動時）</span>
+            <span class="text-gray-500 dark:text-slate-400">縮小カバー率（最大発動時）</span>
             <span id="shrink-coverage-val" class="font-medium text-orange-600"></span>
           </div>
           <div id="shrink-expected-row" class="flex justify-between text-sm hidden">
-            <span class="text-gray-500">縮小カバー率（期待値）</span>
+            <span class="text-gray-500 dark:text-slate-400">縮小カバー率（期待値）</span>
             <span id="shrink-expected-val" class="font-medium text-orange-600"></span>
           </div>
         </div>
-        <p id="shrink-exclusion-note" class="text-xs text-gray-400 mt-2 hidden">※ 最初の<span id="shrink-exclusion-count" class="font-medium">0</span>ノーツは縮小の計算対象外です</p>
-        <div id="shrink-offset-row" class="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500 hidden">
+        <p id="shrink-exclusion-note" class="text-xs text-gray-400 dark:text-slate-500 mt-2 hidden">※ 最初の<span id="shrink-exclusion-count" class="font-medium">0</span>ノーツは縮小の計算対象外です</p>
+        <div id="shrink-offset-row" class="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500 dark:text-slate-400 hidden">
           <label for="shrink-offset-input">先頭</label>
-          <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-right" />
+          <input type="number" id="shrink-offset-input" value="0" min="0" step="1" class="w-12 border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 text-right" />
           <span>秒除外</span>
         </div>
         <div id="skill-per-card-section" class="mt-4 border-t pt-3 hidden">
           <table class="w-full text-xs">
             <thead>
-              <tr class="text-gray-500 border-b">
+              <tr class="text-gray-500 dark:text-slate-400 border-b">
                 <th class="text-left py-1 px-1">スロット</th>
                 <th class="text-left py-1 px-1">衣装名</th>
                 <th class="text-left py-1 px-1">スキル</th>
@@ -1624,42 +1624,42 @@
             <tbody id="skill-per-card-body"></tbody>
             <tfoot id="skill-per-card-foot"></tfoot>
           </table>
-          <p class="text-xs text-gray-400 mt-2">※ 複数の判定縮小スキルが共存する場合、値は按分されます</p>
+          <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">※ 複数の判定縮小スキルが共存する場合、値は按分されます</p>
         </div>
       </section>
-      <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲と衣装を設定するとスキル詳細が表示されます</p>
+      <p id="breakdown-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6">楽曲と衣装を設定するとスキル詳細が表示されます</p>
     </details>
 
-    <section class="bg-white rounded-lg shadow p-4">
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
       <div class="grid grid-cols-2 gap-4 text-center">
         <div>
-          <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最低</div>
-          <div id="score-min" class="text-base md:text-lg font-bold text-gray-700 mt-1">-</div>
+          <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest">理論最低</div>
+          <div id="score-min" class="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 mt-1">-</div>
         </div>
         <div>
-          <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最高</div>
-          <div id="score-max" class="text-base md:text-lg font-bold text-gray-700 mt-1">-</div>
+          <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest">理論最高</div>
+          <div id="score-max" class="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 mt-1">-</div>
         </div>
       </div>
     </section>
 
     <div class="space-y-2">
       <div class="flex items-center justify-end gap-2 flex-wrap">
-        <label for="mc-iterations-input" class="text-xs text-gray-500">シミュレーション回数</label>
+        <label for="mc-iterations-input" class="text-xs text-gray-500 dark:text-slate-400">シミュレーション回数</label>
         <input
           id="mc-iterations-input"
           type="number"
           min="1"
           step="1"
-          class="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          class="w-28 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           value={MC_ITERATIONS}
         />
-        <span class="text-xs text-gray-500">回</span>
-        <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="ON にすると縮小スキルの確率判定を常に成功扱いにし、縮小カバー率が最大値となる前提で MC シミュレーションを実行します">
+        <span class="text-xs text-gray-500 dark:text-slate-400">回</span>
+        <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-300 cursor-pointer select-none" title="ON にすると縮小スキルの確率判定を常に成功扱いにし、縮小カバー率が最大値となる前提で MC シミュレーションを実行します">
           <input type="checkbox" id="opt-max-shrink-coverage" class="rounded" />
           <span>縮小全発動</span>
         </label>
-        <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="ON にするとスコアアップスキル（タイマー型含む）の確率判定を常に成功扱いにし、スコアアップが理論最大発動回数となる前提で MC シミュレーションを実行します">
+        <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-300 cursor-pointer select-none" title="ON にするとスコアアップスキル（タイマー型含む）の確率判定を常に成功扱いにし、スコアアップが理論最大発動回数となる前提で MC シミュレーションを実行します">
           <input type="checkbox" id="opt-max-scoreup-coverage" class="rounded" />
           <span>スコアアップ全発動</span>
         </label>
@@ -1669,73 +1669,73 @@
       </button>
       <p id="calc-disabled-reason" class="text-xs text-center text-amber-600"></p>
       <div id="progress-container" class="hidden">
-        <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
           <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
         </div>
-        <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">計算中...</p>
+        <p id="progress-text" class="text-xs text-gray-500 dark:text-slate-400 mt-1 text-center">計算中...</p>
       </div>
     </div>
 
     <section class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
-      <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">平均スコア</div>
+      <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest text-center">平均スコア</div>
       <div id="final-result" class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">---</div>
       <div class="mt-3 text-center">
-        <span class="text-[10px] text-gray-500">試行回数: </span>
-        <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700">-</span>
+        <span class="text-[10px] text-gray-500 dark:text-slate-400">試行回数: </span>
+        <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700 dark:text-slate-200">-</span>
       </div>
     </section>
 
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 mb-3">🎲 シミュレーション統計</h2>
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+      <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-3">🎲 シミュレーション統計</h2>
       <section id="mc-results" class="hidden">
         <table class="w-full text-sm">
           <tbody>
-            <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">最小</td><td id="mc-min" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
-            <tr><td class="text-gray-500 py-1">中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">最大</td><td id="mc-max" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
-            <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
-            <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">最小</td><td id="mc-min" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">平均</td><td id="mc-mean" class="text-right py-1 font-bold"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">中央値</td><td id="mc-median" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">最大</td><td id="mc-max" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1"></td></tr>
+            <tr class="border-t"><td class="text-gray-500 dark:text-slate-400 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1"></td></tr>
+            <tr><td class="text-gray-500 dark:text-slate-400 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1"></td></tr>
           </tbody>
         </table>
         <div id="histogram-container" class="mt-4"></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
-            <div class="text-xs text-gray-600 mb-1">縮小スキル寄与量の分布</div>
+            <div class="text-xs text-gray-600 dark:text-slate-300 mb-1">縮小スキル寄与量の分布</div>
             <div id="histogram-shrink"></div>
           </div>
           <div>
-            <div class="text-xs text-gray-600 mb-1">スコアアップスキル寄与量の分布</div>
+            <div class="text-xs text-gray-600 dark:text-slate-300 mb-1">スコアアップスキル寄与量の分布</div>
             <div id="histogram-scoreup"></div>
           </div>
         </div>
       </section>
-      <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとシミュレーション結果が表示されます</p>
+      <p id="mc-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6">計算を実行するとシミュレーション結果が表示されます</p>
     </section>
 
-    <div class="bg-white rounded-lg shadow">
+    <div class="bg-white dark:bg-slate-800 rounded-lg shadow">
       <div class="flex border-b overflow-x-auto" role="tablist" aria-label="結果タブ">
-        <button type="button" data-tab="expected" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">📈 期待値</button>
-        <button type="button" data-tab="skills" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">⚡ スキル発動</button>
-        <button type="button" data-tab="area" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-indigo-600 transition-colors">🎵 面積値</button>
+        <button type="button" data-tab="expected" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-indigo-600 transition-colors">📈 期待値</button>
+        <button type="button" data-tab="skills" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-indigo-600 transition-colors">⚡ スキル発動</button>
+        <button type="button" data-tab="area" class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 border-transparent text-gray-500 dark:text-slate-400 hover:text-indigo-600 transition-colors">🎵 面積値</button>
       </div>
 
       <div id="tab-panel-expected" data-tab-panel class="p-4 hidden">
         <section id="expected-score" class="hidden">
-          <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（シミュレーションの確率的揺れを含まない決定論的な値）</p>
+          <p class="text-[11px] text-gray-500 dark:text-slate-400 mb-3">外部サイト準拠の単純期待値（シミュレーションの確率的揺れを含まない決定論的な値）</p>
           <table class="w-full text-sm">
             <tbody>
-              <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1"></td></tr>
-              <tr><td class="text-gray-500 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1"></td></tr>
-              <tr><td class="text-gray-500 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1"></td></tr>
-              <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1"></td></tr>
-              <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold"></td></tr>
+              <tr><td class="text-gray-500 dark:text-slate-400 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 dark:text-slate-400 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 dark:text-slate-400 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1"></td></tr>
+              <tr class="border-t"><td class="text-gray-500 dark:text-slate-400 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1"></td></tr>
+              <tr><td class="text-gray-500 dark:text-slate-400 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold"></td></tr>
             </tbody>
           </table>
         </section>
-        <p id="expected-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行すると算術期待値が表示されます</p>
+        <p id="expected-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6">計算を実行すると算術期待値が表示されます</p>
       </div>
 
       <div id="tab-panel-skills" data-tab-panel class="p-4 hidden">
@@ -1743,7 +1743,7 @@
           <div class="overflow-x-auto">
             <table class="w-full text-xs">
               <thead>
-                <tr class="text-gray-500 border-b">
+                <tr class="text-gray-500 dark:text-slate-400 border-b">
                   <th class="text-left py-1">衣装名</th>
                   <th class="text-left py-1">スキル</th>
                   <th class="text-right py-1">発動率</th>
@@ -1755,14 +1755,14 @@
             </table>
           </div>
         </section>
-        <p id="skills-placeholder" class="text-xs text-gray-400 text-center py-6">計算を実行するとスキル発動統計が表示されます</p>
+        <p id="skills-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6">計算を実行するとスキル発動統計が表示されます</p>
       </div>
 
       <div id="tab-panel-area" data-tab-panel class="p-4 hidden">
         <section id="area-values-section" class="hidden">
           <table class="w-full text-xs">
             <thead>
-              <tr class="text-gray-500">
+              <tr class="text-gray-500 dark:text-slate-400">
                 <th class="text-left py-1">属性</th>
                 <th class="text-right py-1">白ノート</th>
                 <th class="text-right py-1">色ノート</th>
@@ -1776,7 +1776,7 @@
             </tbody>
           </table>
         </section>
-        <p id="area-placeholder" class="text-xs text-gray-400 text-center py-6">楽曲と衣装を設定すると楽曲属性面積値が表示されます</p>
+        <p id="area-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6">楽曲と衣装を設定すると楽曲属性面積値が表示されます</p>
       </div>
     </div>
   </div>
@@ -1784,22 +1784,22 @@
   <!-- 衣装選択モーダル -->
   <div id="card-picker-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/50" id="modal-backdrop"></div>
-    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-lg shadow-xl max-h-[85vh] flex flex-col mx-4 sm:mx-auto">
+    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-h-[85vh] flex flex-col mx-4 sm:mx-auto">
       <div class="p-4 border-b flex-shrink-0">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="font-bold text-gray-700">衣装選択 - <span id="modal-slot-label"></span></h3>
-          <button id="modal-close-x" type="button" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <h3 class="font-bold text-gray-700 dark:text-slate-200">衣装選択 - <span id="modal-slot-label"></span></h3>
+          <button id="modal-close-x" type="button" class="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 text-xl leading-none">&times;</button>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <select id="modal-rarity" class="border border-gray-300 rounded px-2 py-1.5 text-sm">
+          <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <select id="modal-rarity" class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
             <option value="">レアリティ</option>
             <option value="UR">UR</option>
             <option value="SSR">SSR</option>
             <option value="SR">SR</option>
             <option value="R">R</option>
           </select>
-          <select id="modal-attribute" class="border border-gray-300 rounded px-2 py-1.5 text-sm">
+          <select id="modal-attribute" class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
             <option value="">属性</option>
             <option value="Shout">Shout</option>
             <option value="Beat">Beat</option>
@@ -1811,13 +1811,13 @@
             <input type="checkbox" id="modal-owned-only" checked />
             <span>所持衣装のみ</span>
           </label>
-          <span id="modal-result-count" class="text-xs text-gray-500"></span>
+          <span id="modal-result-count" class="text-xs text-gray-500 dark:text-slate-400"></span>
         </div>
       </div>
       <div id="modal-card-list" class="overflow-y-auto flex-1 p-2"></div>
       <div class="p-3 border-t flex justify-between flex-shrink-0">
         <button id="modal-clear" type="button" class="text-sm text-red-500 hover:underline">枠をクリア</button>
-        <button id="modal-close" type="button" class="px-4 py-1.5 bg-gray-200 rounded text-sm hover:bg-gray-300">閉じる</button>
+        <button id="modal-close" type="button" class="px-4 py-1.5 bg-gray-200 dark:bg-slate-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-slate-600">閉じる</button>
       </div>
     </div>
   </div>

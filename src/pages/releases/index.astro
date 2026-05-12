@@ -53,21 +53,21 @@ try {
 
 <BaseLayout title="リリース履歴">
   <h1 class="text-2xl font-bold mb-2">リリース履歴</h1>
-  <p class="text-sm text-gray-500 mb-6">git タグごとに、前タグからのコミット差分を表示しています。</p>
+  <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">git タグごとに、前タグからのコミット差分を表示しています。</p>
 
   {releases.length === 0 && (
-    <p class="text-gray-500">リリース情報を取得できませんでした。</p>
+    <p class="text-gray-500 dark:text-slate-400">リリース情報を取得できませんでした。</p>
   )}
 
   <ul class="space-y-6">
     {releases.map((r) => (
-      <li class="border-b border-gray-200 pb-4">
+      <li class="border-b border-gray-200 dark:border-slate-700 pb-4">
         <div class="flex items-baseline justify-between flex-wrap gap-2 mb-2">
           <h2 class="text-lg font-semibold text-indigo-700">{r.tag}</h2>
-          {r.date && <time class="text-sm text-gray-500">{r.date}</time>}
+          {r.date && <time class="text-sm text-gray-500 dark:text-slate-400">{r.date}</time>}
         </div>
         {r.commits.length === 0 ? (
-          <p class="text-sm text-gray-400">差分コミットなし</p>
+          <p class="text-sm text-gray-400 dark:text-slate-500">差分コミットなし</p>
         ) : (
           <ul class="list-disc list-outside pl-5 space-y-1 text-sm">
             {r.commits.map((c) => (

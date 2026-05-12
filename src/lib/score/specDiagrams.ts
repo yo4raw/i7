@@ -16,10 +16,10 @@ const COLOR = {
   shrink: '#f59e0b',    // amber-500（縮小枝）
   shrinkDark: '#b45309',// amber-700
   emerald: '#10b981',   // emerald-500（カバー率）
-  exclude: '#d1d5db',   // gray-300（先頭除外領域）
-  grid: '#e5e7eb',      // gray-200（目盛）
-  text: '#374151',      // gray-700
-  muted: '#6b7280',     // gray-500
+  exclude: 'var(--chart-exclude-border)',  // light: #d1d5db / dark: #475569
+  grid: 'var(--chart-grid)',                // light: #e5e7eb / dark: #334155
+  text: 'var(--chart-text)',                // light: #374151 / dark: #cbd5e1
+  muted: 'var(--chart-axis-label)',         // light: #6b7280 / dark: #94a3b8
 } as const;
 
 function escapeXml(s: string): string {
@@ -288,7 +288,7 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
     }
     coins.push(
       `<circle cx="${x}" cy="${cy}" r="5"
-               fill="${a.fired ? '#22c55e' : '#9ca3af'}" stroke="white" stroke-width="1.5">
+               fill="${a.fired ? '#22c55e' : 'var(--chart-mute-fill)'}" stroke="white" stroke-width="1.5">
          <title>衣装${ci + 1}: ${a.fired ? '発動' : '不発'} (note=${a.start})</title>
        </circle>`
     );
@@ -431,7 +431,7 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   // ベースバー (songDuration = 100% の尺)
   const baseBar = `
     <rect x="${M.left}" y="${M.top}" width="${xScale(p.songDuration) - M.left}" height="${barH}"
-          fill="#f3f4f6" stroke="${COLOR.grid}" stroke-width="1"/>
+          fill="var(--chart-exclude-bg)" stroke="${COLOR.grid}" stroke-width="1"/>
     <text x="${M.left + 6}" y="${M.top + barH / 2 + 4}"
           fill="${COLOR.muted}" font-size="10">songDuration = ${p.songDuration}秒 (100%)</text>
   `;

@@ -77,7 +77,7 @@
 </script>
 
 {#if decks.length === 0}
-  <div class="text-center py-12 text-gray-500">
+  <div class="text-center py-12 text-gray-500 dark:text-slate-400">
     <p class="text-lg mb-2">保存されたデッキがありません</p>
     <p class="text-sm"><a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算</a>でデッキを保存してください</p>
   </div>
@@ -87,17 +87,17 @@
       {@const song = d.state.songId != null ? songs.find((s) => s.id === d.state.songId) : null}
       {@const songName = song?.song_name ?? null}
       {@const cardCount = (d.state.deckIds || []).filter((id) => id != null).length}
-      <div class="bg-white rounded-lg shadow p-4">
+      <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
         <div class="flex items-start justify-between mb-3">
           <div class="min-w-0 flex-1">
-            <h2 class="text-sm font-bold text-gray-800 truncate">{d.name}</h2>
-            <div class="text-[10px] text-gray-400 mt-0.5">
+            <h2 class="text-sm font-bold text-gray-800 dark:text-slate-100 truncate">{d.name}</h2>
+            <div class="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">
               {formatDate(d.updatedAt)} / {cardCount}枚{songName ? ` / ${songName}` : ''}
             </div>
           </div>
           <div class="flex gap-2 flex-shrink-0 ml-3">
             <button type="button" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors" onclick={() => loadDeckToCalc(d.id)}>読み込む</button>
-            <button type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors" onclick={() => renameDeck(d.id)}>名前変更</button>
+            <button type="button" class="text-xs px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors" onclick={() => renameDeck(d.id)}>名前変更</button>
             <button type="button" class="text-xs px-2 py-1 bg-red-50 text-red-500 rounded hover:bg-red-100 transition-colors" onclick={() => deleteDeck(d.id)}>削除</button>
           </div>
         </div>
@@ -118,13 +118,13 @@
                   <span class="px-0.5 py-px text-[7px] font-bold text-white rounded {rarityClass}">{card.rarity || '?'}</span>
                   <span class="px-0.5 py-px text-[7px] font-bold text-white rounded {attrBgClass}">{attr}</span>
                 </div>
-                <div class="text-[8px] text-gray-500 truncate max-w-[60px] text-center" title={card.cardname || ''}>{card.cardname || ''}</div>
+                <div class="text-[8px] text-gray-500 dark:text-slate-400 truncate max-w-[60px] text-center" title={card.cardname || ''}>{card.cardname || ''}</div>
               </div>
             {:else}
               <div class="flex flex-col items-center">
                 <div class="text-[9px] {labelClass} mb-0.5">{label}</div>
-                <div class="w-10 h-14 bg-gray-100 rounded flex items-center justify-center">
-                  <span class="text-gray-300 text-lg">-</span>
+                <div class="w-10 h-14 bg-gray-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                  <span class="text-gray-300 dark:text-slate-600 text-lg">-</span>
                 </div>
               </div>
             {/if}

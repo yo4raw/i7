@@ -157,21 +157,21 @@
   }
 </script>
 
-<div class="bg-white rounded-lg shadow p-4 mb-6">
+<div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-6">
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <div>
-      <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">曲名検索</label>
+      <label for="search-text" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">曲名検索</label>
       <input
         id="search-text"
         type="text"
         placeholder="曲名/アーティスト"
         bind:value={text}
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
     </div>
     <div>
-      <label for="search-group" class="block text-xs font-medium text-gray-500 mb-1">グループ</label>
-      <select id="search-group" bind:value={group} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <label for="search-group" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">グループ</label>
+      <select id="search-group" bind:value={group} class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="">すべて</option>
         {#each categories as c}
           <option value={c}>{c}</option>
@@ -179,8 +179,8 @@
       </select>
     </div>
     <div>
-      <label for="search-stars" class="block text-xs font-medium text-gray-500 mb-1">難易度（星）</label>
-      <select id="search-stars" bind:value={stars} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <label for="search-stars" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">難易度（星）</label>
+      <select id="search-stars" bind:value={stars} class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="">すべて</option>
         <option value="1">★☆☆☆☆</option>
         <option value="2">★★☆☆☆</option>
@@ -190,8 +190,8 @@
       </select>
     </div>
     <div>
-      <label for="sort-by" class="block text-xs font-medium text-gray-500 mb-1">ソート</label>
-      <select id="sort-by" bind:value={sortBy} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <label for="sort-by" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">ソート</label>
+      <select id="sort-by" bind:value={sortBy} class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="default">デフォルト</option>
         <option value="name-asc">曲名（A→Z）</option>
         <option value="notes-desc">ノーツ数（多い順）</option>
@@ -205,7 +205,7 @@
   </div>
   <div class="mt-3 flex items-center gap-3">
     <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
-    <span class="text-sm text-gray-500">{filtered.length}曲を表示</span>
+    <span class="text-sm text-gray-500 dark:text-slate-400">{filtered.length}曲を表示</span>
     {#if selectedSongIds.size > 0}
       <span class="text-sm text-indigo-600 font-medium">{selectedSongIds.size}曲を選択中</span>
     {/if}
@@ -216,7 +216,7 @@
   <div class="hidden md:block overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
-        <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
+        <tr class="bg-gray-100 dark:bg-slate-800 text-left text-xs text-gray-500 dark:text-slate-400 uppercase">
           <th class="px-2 py-2 w-8">
             <input
               type="checkbox"
@@ -236,7 +236,7 @@
           <th class="px-3 py-2 w-48">属性比率</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100">
+      <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
         {#each filtered as song (song.id)}
           {@const sr = song.shout_ratio || 0}
           {@const br = song.beat_ratio || 0}
@@ -277,14 +277,14 @@
               {#if sr || br || mr}
                 <div class="flex items-center gap-2">
                   {@html attrDonutSvg(sr, br, mr, { sizeClass: 'w-10 h-10 flex-shrink-0' })}
-                  <div class="text-[10px] text-gray-500 leading-tight">
+                  <div class="text-[10px] text-gray-500 dark:text-slate-400 leading-tight">
                     <span style="color:{ATTR_HEX.Shout}">S:{Math.round(sr * 100)}%</span>
                     <span style="color:{ATTR_HEX.Beat}">B:{Math.round(br * 100)}%</span>
                     <span style="color:{ATTR_HEX.Melody}">M:{Math.round(mr * 100)}%</span>
                   </div>
                 </div>
               {:else}
-                <span class="text-gray-400 text-xs">-</span>
+                <span class="text-gray-400 dark:text-slate-500 text-xs">-</span>
               {/if}
             </td>
           </tr>
@@ -319,8 +319,8 @@
           </div>
           <div class="flex-1">
             <p class="font-medium text-sm text-indigo-600">{song.song_name || ''}</p>
-            <p class="text-xs text-gray-500">{song.artist || ''} / {song.category || ''}</p>
-            <div class="flex gap-3 mt-1 text-xs text-gray-600">
+            <p class="text-xs text-gray-500 dark:text-slate-400">{song.artist || ''} / {song.category || ''}</p>
+            <div class="flex gap-3 mt-1 text-xs text-gray-600 dark:text-slate-300">
               <span>{song.difficulty || ''}{song.stars ? ' ' + starsText(song.stars) : ''}</span>
               <span>Notes: {(song.notes_count || 0).toLocaleString()}</span>
               <span>{song.duration || '-'}秒</span>
@@ -329,14 +329,14 @@
               {#if sr || br || mr}
                 <div class="flex items-center gap-2">
                   {@html attrDonutSvg(sr, br, mr, { sizeClass: 'w-10 h-10 flex-shrink-0' })}
-                  <div class="text-[10px] text-gray-500 leading-tight">
+                  <div class="text-[10px] text-gray-500 dark:text-slate-400 leading-tight">
                     <span style="color:{ATTR_HEX.Shout}">S:{Math.round(sr * 100)}%</span>
                     <span style="color:{ATTR_HEX.Beat}">B:{Math.round(br * 100)}%</span>
                     <span style="color:{ATTR_HEX.Melody}">M:{Math.round(mr * 100)}%</span>
                   </div>
                 </div>
               {:else}
-                <span class="text-gray-400 text-xs">-</span>
+                <span class="text-gray-400 dark:text-slate-500 text-xs">-</span>
               {/if}
             </div>
           </div>

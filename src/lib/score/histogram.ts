@@ -65,7 +65,7 @@ export function renderHistogramSvg(
     const val = minScore + (range * i) / labelCount;
     const x = MARGIN.left + (INNER_WIDTH * i) / labelCount;
     const label = Math.round(val).toLocaleString();
-    return `<text x="${x}" y="${MARGIN.top + INNER_HEIGHT + 16}" text-anchor="middle" fill="#6b7280" font-size="9">${label}</text>`;
+    return `<text x="${x}" y="${MARGIN.top + INNER_HEIGHT + 16}" text-anchor="middle" fill="var(--chart-axis-label)" font-size="9">${label}</text>`;
   }).join('\n    ');
 
   // Y軸ラベル
@@ -73,16 +73,16 @@ export function renderHistogramSvg(
   const yLabels = Array.from({ length: yTicks + 1 }, (_, i) => {
     const count = Math.round((maxCount * i) / yTicks);
     const y = MARGIN.top + INNER_HEIGHT - (INNER_HEIGHT * i) / yTicks;
-    return `<text x="${MARGIN.left - 6}" y="${y + 3}" text-anchor="end" fill="#6b7280" font-size="9">${count}</text>`;
+    return `<text x="${MARGIN.left - 6}" y="${y + 3}" text-anchor="end" fill="var(--chart-axis-label)" font-size="9">${count}</text>`;
   }).join('\n    ');
 
   // 軸線
-  const axes = `<line x1="${MARGIN.left}" y1="${MARGIN.top + INNER_HEIGHT}" x2="${MARGIN.left + INNER_WIDTH}" y2="${MARGIN.top + INNER_HEIGHT}" stroke="#d1d5db" stroke-width="1"/>
-    <line x1="${MARGIN.left}" y1="${MARGIN.top}" x2="${MARGIN.left}" y2="${MARGIN.top + INNER_HEIGHT}" stroke="#d1d5db" stroke-width="1"/>`;
+  const axes = `<line x1="${MARGIN.left}" y1="${MARGIN.top + INNER_HEIGHT}" x2="${MARGIN.left + INNER_WIDTH}" y2="${MARGIN.top + INNER_HEIGHT}" stroke="var(--chart-grid)" stroke-width="1"/>
+    <line x1="${MARGIN.left}" y1="${MARGIN.top}" x2="${MARGIN.left}" y2="${MARGIN.top + INNER_HEIGHT}" stroke="var(--chart-grid)" stroke-width="1"/>`;
 
   // 軸ラベル
-  const axisLabels = `<text x="${CHART_WIDTH / 2}" y="${CHART_HEIGHT - 2}" text-anchor="middle" fill="#6b7280" font-size="10">${xAxisLabel}</text>
-    <text x="12" y="${CHART_HEIGHT / 2}" text-anchor="middle" fill="#6b7280" font-size="10" transform="rotate(-90 12 ${CHART_HEIGHT / 2})">度数</text>`;
+  const axisLabels = `<text x="${CHART_WIDTH / 2}" y="${CHART_HEIGHT - 2}" text-anchor="middle" fill="var(--chart-axis-label)" font-size="10">${xAxisLabel}</text>
+    <text x="12" y="${CHART_HEIGHT / 2}" text-anchor="middle" fill="var(--chart-axis-label)" font-size="10" transform="rotate(-90 12 ${CHART_HEIGHT / 2})">度数</text>`;
 
   return `<svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
     ${axes}
