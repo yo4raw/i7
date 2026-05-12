@@ -26,10 +26,16 @@ const eventsForBonus = allEvents.map(e => ({
 }));
 
 const base = import.meta.env.BASE_URL;
+
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'スコア計算', url: `${base}score-calc/` },
+  { name: '編成組合計算', url: `${base}score-calc/max-score-finder/` },
+];
 ---
 
-<BaseLayout title="Secrets">
-  <h1 class="text-2xl font-bold mb-4">🔐 Secrets - 理論値最大編成探索</h1>
+<BaseLayout title="編成組合計算" breadcrumbs={breadcrumbs}>
+  <h1 class="text-2xl font-bold mb-4">編成組合計算 — 理論値最大編成探索</h1>
   <p class="text-xs text-gray-500 mb-4">
     楽曲を選択すると、開催中イベントの <b>金特効</b> / <b>銀特効</b> の UR 衣装のみを対象に、理論期待値が最大となる 6 枚編成（フレンド含む）を総当たりで探索します。
     <br />同じ衣装を複数スロットに配置することも許容します（例: 金特効を複数スロットに重複装備）。
