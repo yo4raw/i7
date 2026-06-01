@@ -1,0 +1,160 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import EventShareImage from '../../../components/EventShareImage.svelte';
+import { fetchEventsCsv, formatEffectSummary, type EventRow, type EventSpecialTier } from '../../../lib/data/fetchEventsCsv';
+import { fetchCardsJson, type Card } from '../../../lib/data/fetchCardsJson';
+import { ATTR_BADGE_BG, RARITY_BADGE_CLASSES, SITE_NAME } from '../../../lib/constants';
+import { cardThumbUrl } from '../../../lib/ui';
+
+export async function getStaticPaths() {
+  const [events, cards] = await Promise.all([
+    fetchEventsCsv(),
+    fetchCardsJson(),
+  ]);
+  const cardMap = new Map<number, Card>();
+  for (const c of cards as Card[]) {
+    if (c.ID != null) cardMap.set(c.ID, c);
+  }
+  const pick = (ids: number[]): Card[] =>
+    ids.map(id => cardMap.get(id)).filter((c): c is Card => !!c);
+
+  return (events as EventRow[]).map(ev => ({
+    params: { id: String(ev.id) },
+    props: {
+      event: ev,
+      goldCards: pick(ev.gold.cardIds),
+      silverCards: pick(ev.silver.cardIds),
+    },
+  }));
+}
+
+interface Props {
+  event: EventRow;
+  goldCards: Card[];
+  silverCards: Card[];
+}
+
+const { event, goldCards, silverCards } = Astro.props as Props;
+const base = import.meta.env.BASE_URL;
+
+const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
+const description = `${event.eventname}（${event.eventtype}）の金特効・銀特効衣装まとめ（SNS共有用）。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
+const ogImageCard = goldCards[0] || silverCards[0];
+const ogImage = ogImageCard?.ID != null ? cardThumbUrl(ogImageCard.ID) : undefined;
+
+// ダウンロード画像のファイル名（拡張子なし）。ファイル名に使えない文字を除去
+const safeName = event.eventname.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+const shareFilename = `${event.id}_${safeName}_特効衣装`;
+
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'イベント情報', url: `${base}events/` },
+  { name: event.eventname, url: `${base}events/${event.id}/` },
+  { name: 'SNS共有', url: `${base}events/${event.id}/share/` },
+];
+
+interface TierView {
+  key: 'gold' | 'silver';
+  label: string;
+  cards: Card[];
+  tier: EventSpecialTier;
+  headerClass: string;
+  badgeClass: string;
+}
+
+const tiers: TierView[] = [
+  {
+    key: 'gold',
+    label: '金特効衣装',
+    cards: goldCards,
+    tier: event.gold,
+    headerClass: 'bg-yellow-400 text-yellow-950 dark:bg-yellow-500 dark:text-yellow-950',
+    badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-400 dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-600',
+  },
+  {
+    key: 'silver',
+    label: '銀特効衣装',
+    cards: silverCards,
+    tier: event.silver,
+    headerClass: 'bg-gray-300 text-gray-800 dark:bg-slate-500 dark:text-slate-50',
+    badgeClass: 'bg-gray-200 text-gray-700 border-gray-400 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-500',
+  },
+];
+---
+
+<BaseLayout
+  title={`${event.eventname} 特効衣装`}
+  description={description}
+  image={ogImage}
+  ogType="article"
+  breadcrumbs={breadcrumbs}
+>
+  <div class="mb-3 flex items-center justify-between gap-3 flex-wrap max-w-3xl">
+    <p class="text-sm text-gray-600 dark:text-slate-300">
+      下の枠をスクリーンショット、または右のボタンで画像保存して SNS でシェアできます（金特効・銀特効の特効衣装まとめ）。
+    </p>
+    <EventShareImage filename={shareFilename} client:load />
+  </div>
+
+  <!-- スクショ対象パネル -->
+  <div id="share-panel" class="max-w-3xl rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden bg-white dark:bg-slate-800">
+    <!-- ヘッダー帯 -->
+    <div class="bg-indigo-600 dark:bg-indigo-700 text-white px-4 py-3">
+      <div class="flex items-baseline justify-between gap-2 flex-wrap">
+        <h1 class="text-lg sm:text-xl font-bold leading-snug">{event.eventname}</h1>
+        <span class="text-xs font-semibold text-indigo-100 whitespace-nowrap">{SITE_NAME}</span>
+      </div>
+      <div class="mt-1 text-xs text-indigo-100 space-x-2">
+        <span>{event.eventtype}</span>
+        <span>/</span>
+        <span>{event.start_date} 17:00 〜 {event.end_date} 17:00 (JST)</span>
+      </div>
+    </div>
+
+    <div class="p-3 sm:p-4 space-y-5">
+      {tiers.map(t => (
+        <section>
+          <div class="flex items-center gap-2 flex-wrap mb-2">
+            <span class={`inline-block px-3 py-0.5 rounded-full text-sm font-bold ${t.headerClass}`}>{t.label}</span>
+            <span class="text-xs text-gray-500 dark:text-slate-400">{t.cards.length} 着</span>
+            {formatEffectSummary(t.tier) && (
+              <span class="text-xs text-gray-600 dark:text-slate-300">{formatEffectSummary(t.tier)}</span>
+            )}
+          </div>
+
+          {t.cards.length === 0 ? (
+            <p class="text-sm text-gray-400 dark:text-slate-500">対象衣装なし</p>
+          ) : (
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {t.cards.map(card => {
+                const attr = card.attribute || '';
+                const rarity = card.rarity || '';
+                const attrBg = ATTR_BADGE_BG[attr] || 'bg-gray-400';
+                const rarityBg = RARITY_BADGE_CLASSES[rarity] || 'bg-gray-300';
+                return (
+                  <div class="flex flex-col">
+                    <div class="relative rounded overflow-hidden border border-gray-200 dark:border-slate-700">
+                      <img
+                        src={cardThumbUrl(card.ID!)}
+                        alt={card.cardname || ''}
+                        class="w-full h-auto block"
+                        width="200"
+                        height="300"
+                      />
+                      <div class="absolute top-0.5 left-0.5 flex gap-0.5">
+                        <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityBg}`}>{rarity || '?'}</span>
+                        {attr && <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
+                      </div>
+                    </div>
+                    <div class="mt-1 text-[11px] leading-tight font-medium text-gray-800 dark:text-slate-100 line-clamp-2">{card.cardname || '-'}</div>
+                    <div class="text-[10px] text-gray-500 dark:text-slate-400 truncate">{card.name || ''}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
