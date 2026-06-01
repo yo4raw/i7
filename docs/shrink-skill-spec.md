@@ -63,10 +63,11 @@ noteScoreShrunk   = floor(noteScoreAssisted × rate)
 
 ### 2-1. アルゴリズム
 
-1. `minCount = min(デッキ内縮小スキルの count)`（縮小スキル 1 枚の場合はその count）
+1. `minCount = min(デッキ内縮小スキルの最初の発動位置)`（Perfect / コンボ型は `count` ノート、タイマー型は `floor(count秒 / songDuration × notesCount)` ノート）
 2. `excludeHead = max(notes_20 グループのノート数, minCount)`
 3. `eligibleCount = notesCount − excludeHead`
 4. 各縮小スキル `i` の**縮小スコア寄与計算用の発動回数**: `floor(eligibleCount / count_i)`
+  - **判定縮小（タイマー）** は `count` が秒数なので `floor(songDuration / count_i)`
 5. UI 表示の「**スキル最大発動回数**」(`calcCardSkillMaxActivations`) は先頭除外を考慮せず以下を用いる:
    - **判定縮小（タイマー）** (`SKILL_TYPE.SHRINK_TIMER`): `count` は秒数なので `floor(songDuration / count_i)`
    - **判定縮小（Perfect / コンボ）**: `count` はノート数なので `floor(notesCount / count_i)`

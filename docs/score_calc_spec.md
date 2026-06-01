@@ -399,10 +399,11 @@ rawExpectedCoverageRate = rawExpectedCoveredSeconds / effectiveSeconds  // 100% 
 |------------------------------|-------------|----------|-----------|------|
 | `スコアアップ（タイマー）` | `timerScoreUp` | true | false | 一定秒毎に発動、発動タイミングのノート 1 個に `value` 点を 1 回加算 |
 | `判定縮小スコアアップ` | `shrink` | false | true | N ノーツ毎に発動、`value` 秒間縮小効果 |
+| `判定縮小（タイマー）` | `shrink` | true | true | 一定秒毎に発動、`value` 秒間縮小効果 |
 | `MISS→Good` / `BAD以上をPerfectに変更` / `null` | — | — | — | シミュ対象外（除外） |
 | その他（スコアアップ） | `scoreUp` | false | false | N ノーツ毎に発動、発動タイミングのノート 1 個に `value` 点を 1 回加算 |
 
-スキルレベル 1〜5 は `getApSkillLevel(card, skillLevel)` で取得し、`count / per / value` が変化する。
+スキルレベル 1〜5 は `getApSkillLevel(card, skillLevel)` で取得し、`count / per / value` が変化する。Lv5 の `count / per / value / rate` が 0 のカードはデータ未整備を意味するため、指定レベルが無効値の場合は最大有効レベルへフォールバックして計算する。
 
 ## 12. データ型リファレンス
 

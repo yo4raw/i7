@@ -2,6 +2,7 @@ import type { Song, SongNoteGroup } from '../data/fetchSongsJson';
 import type { ComputedTeam } from './types';
 import { ATTRS } from '../constants';
 import { LIGHT_MULTIPLIER } from './constants';
+import { SKILL_TYPE } from '../data/fetchCardsJson';
 
 /**
  * 縮小スキル先頭除外仕様。
@@ -64,14 +65,22 @@ export function computeShrinkExclusion(
     totalExcluded: 0,
   };
 
-  const shrinkCounts: number[] = [];
+  const notesCount = Object.values(groupSizes).reduce((sum, size) => sum + size, 0);
+  const shrinkFirstTriggerNotes: number[] = [];
   for (const dc of team.cards) {
     const skill = dc.skill;
-    if (skill?.isShrink && skill.count > 0) shrinkCounts.push(skill.count);
+    if (!skill?.isShrink || skill.count <= 0) continue;
+    if (skill.originalType === SKILL_TYPE.SHRINK_TIMER) {
+      if (team.songDuration > 0 && notesCount > 0) {
+        shrinkFirstTriggerNotes.push(Math.floor((skill.count / team.songDuration) * notesCount));
+      }
+    } else {
+      shrinkFirstTriggerNotes.push(skill.count);
+    }
   }
-  if (shrinkCounts.length === 0) return empty;
+  if (shrinkFirstTriggerNotes.length === 0) return empty;
 
-  const minCount = Math.min(...shrinkCounts);
+  const minCount = Math.min(...shrinkFirstTriggerNotes);
   const notes20Size = groupSizes.notes_20 ?? 0;
   const target = Math.max(notes20Size, minCount);
 

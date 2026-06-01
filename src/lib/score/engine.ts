@@ -27,7 +27,11 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
   // 判定補助系スキルはスコアに影響しないため null を返す
   if (!type || type === SKILL_TYPE.MISS_TO_GOOD || type === SKILL_TYPE.BAD_TO_PERFECT) return null;
 
-  const sl = getApSkillLevel(card, skillLevel);
+  const isShrink = type === SKILL_TYPE.SHRINK || type.startsWith(SKILL_TYPE.SHRINK_PREFIX);
+  const resolvedSkillLevel = resolveEffectiveSkillLevel(card, skillLevel, isShrink);
+  if (resolvedSkillLevel == null) return null;
+
+  const sl = getApSkillLevel(card, resolvedSkillLevel);
   const count = sl.count;
   const per = sl.per;
   const value = sl.value;
@@ -35,12 +39,11 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
 
   if (count == null || per == null) return null;
 
-  const isTimer = type === SKILL_TYPE.SCOREUP_TIMER;
-  const isShrink = type === SKILL_TYPE.SHRINK || type.startsWith(SKILL_TYPE.SHRINK_PREFIX);
+  const isTimer = type === SKILL_TYPE.SCOREUP_TIMER || type === SKILL_TYPE.SHRINK_TIMER;
 
   let skillType: CardSkill['skillType'] = 'scoreUp';
-  if (isTimer) skillType = 'timerScoreUp';
-  else if (isShrink) skillType = 'shrink';
+  if (isShrink) skillType = 'shrink';
+  else if (isTimer) skillType = 'timerScoreUp';
 
   return {
     cardIndex: slotIndex,
@@ -54,6 +57,27 @@ function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5
     isShrink,
     spTime: card.sp_time || 0,
   };
+}
+
+function isUsableSkillLevel(card: Card, level: 1 | 2 | 3 | 4 | 5, isShrink: boolean): boolean {
+  const sl = getApSkillLevel(card, level);
+  if (!sl.count || !sl.per || !sl.value) return false;
+  if (isShrink && !sl.rate) return false;
+  return true;
+}
+
+function resolveEffectiveSkillLevel(
+  card: Card,
+  requested: 1 | 2 | 3 | 4 | 5,
+  isShrink: boolean,
+): 1 | 2 | 3 | 4 | 5 | null {
+  if (isUsableSkillLevel(card, requested, isShrink)) return requested;
+  for (let level = 5; level >= 1; level--) {
+    if (isUsableSkillLevel(card, level as 1 | 2 | 3 | 4 | 5, isShrink)) {
+      return level as 1 | 2 | 3 | 4 | 5;
+    }
+  }
+  return null;
 }
 
 /** レアリティからセンタースキル増加率を取得する */
@@ -290,15 +314,12 @@ export function calcShrinkCoverage(
   if (effectiveSeconds <= 0) return zero;
   if (notesCount <= 0) return { ...zero, effectiveSeconds };
 
-  // 縮小判定対象ノート数 (先頭除外分 excludeHeadCount を引いたもの)
-  const eligibleCount = Math.max(0, notesCount - excludeHeadCount);
-
   // 各スキルの発動回数 × 持続秒 (と × 確率) を単純加算
   let rawCoveredSeconds = 0;
   let rawExpectedCoveredSeconds = 0;
   for (const dc of shrinkCards) {
     const skill = dc.skill!;
-    const numActivations = Math.floor(eligibleCount / skill.count);
+    const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludeHeadCount);
     rawCoveredSeconds += numActivations * skill.value;
     rawExpectedCoveredSeconds += numActivations * skill.value * (skill.per / 100);
   }
@@ -352,13 +373,56 @@ function shrinkDurationNotes(valueSeconds: number, songDuration: number, totalNo
   return Math.floor((valueSeconds / songDuration) * totalNotes);
 }
 
+function isShrinkTimer(skill: CardSkill): boolean {
+  return skill.isShrink && skill.originalType === SKILL_TYPE.SHRINK_TIMER;
+}
+
+function calcNoteIndexAtTime(seconds: number, songDuration: number, totalNotes: number): number {
+  if (songDuration <= 0 || totalNotes <= 0) return -1;
+  return Math.min(Math.floor((seconds / songDuration) * totalNotes), totalNotes - 1);
+}
+
+function calcShrinkActivationCount(
+  skill: CardSkill,
+  team: ComputedTeam,
+  notesCount: number,
+  excludeHeadCount: number,
+): number {
+  if (skill.count <= 0) return 0;
+  if (isShrinkTimer(skill)) {
+    return team.songDuration > 0 ? Math.floor(team.songDuration / skill.count) : 0;
+  }
+  const eligibleCount = Math.max(0, notesCount - excludeHeadCount);
+  return Math.floor(eligibleCount / skill.count);
+}
+
+function enqueueShrink(
+  queue: ShrinkQueueItem[],
+  activeShrink: ActiveShrink | null,
+  startNote: number,
+  durationNotes: number,
+  rate: number,
+  sourceCard: number,
+): ActiveShrink | null {
+  if (durationNotes <= 0) return activeShrink;
+  if (activeShrink == null) {
+    return { endNote: startNote + durationNotes, rate, sourceCard };
+  }
+  queue.push({ durationNotes, rate, sourceCard });
+  return activeShrink;
+}
+
 /** スキル全発動の最高スコア */
 export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const N = notes.length;
   const assist = options?.scoreUpAssist ?? false;
 
-  // タイマースキル: 全タイミングで必ず発動、発動1回につき value 点を起点ノートに加算
+  // タイマー型スコアアップ: 全タイミングで必ず発動、発動1回につき value 点を起点ノートに加算
   const timerBonus = new Array<number>(N).fill(0);
+  const timerShrinkTriggers = Array.from(
+    { length: N },
+    (): { cardIndex: number; durationNotes: number; rate: number }[] => [],
+  );
   for (const dc of team.cards) {
     const skill = dc.skill;
     if (!skill || !skill.isTimer || skill.count <= 0) continue;
@@ -366,8 +430,14 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
     const maxAct = Math.floor(team.songDuration / skill.count);
     for (let a = 1; a <= maxAct; a++) {
       const t = a * skill.count;
-      const noteIndex = Math.min(Math.floor((t / team.songDuration) * N), N - 1);
-      if (noteIndex >= 0) {
+      const noteIndex = calcNoteIndexAtTime(t, team.songDuration, N);
+      if (noteIndex >= 0 && skill.isShrink) {
+        timerShrinkTriggers[noteIndex].push({
+          cardIndex: dc.slotIndex,
+          durationNotes: shrinkDurationNotes(skill.value, team.songDuration, N),
+          rate: skill.rate,
+        });
+      } else if (noteIndex >= 0) {
         timerBonus[noteIndex] += skill.value;
       }
     }
@@ -397,6 +467,17 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
       }
     }
 
+    for (const trigger of timerShrinkTriggers[n]) {
+      activeShrink = enqueueShrink(
+        shrinkQueue,
+        activeShrink,
+        n,
+        trigger.durationNotes,
+        trigger.rate,
+        trigger.cardIndex,
+      );
+    }
+
     // Phase B: 各カードのトリガー判定（全成功）
     for (let c = 0; c < team.cards.length; c++) {
       const skill = team.cards[c].skill;
@@ -411,11 +492,7 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
         counters[c] = 0;
         if (skill.isShrink) {
           const durationNotes = shrinkDurationNotes(skill.value, team.songDuration, N);
-          if (activeShrink == null) {
-            activeShrink = { endNote: n + durationNotes, rate: skill.rate, sourceCard: c };
-          } else {
-            shrinkQueue.push({ durationNotes, rate: skill.rate, sourceCard: c });
-          }
+          activeShrink = enqueueShrink(shrinkQueue, activeShrink, n, durationNotes, skill.rate, c);
         } else {
           scoreUpSum += skill.value;
         }
@@ -528,9 +605,8 @@ export function calcCardSkillExpected(
   const effectiveSeconds = team.songDuration;
   if (effectiveSeconds <= 0) return 0;
   const excludedCount = notes.filter(n => n.excluded).length;
-  const eligibleCount = notesCount - excludedCount;
-  if (eligibleCount <= 0) return 0;
-  const numActivations = Math.floor(eligibleCount / skill.count);
+  const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludedCount);
+  if (numActivations <= 0) return 0;
   const expectedSec = Math.min(
     numActivations * skill.value * (skill.per / 100),
     effectiveSeconds,
@@ -561,7 +637,7 @@ export function calcCardSkillMaxActivations(
   const dc = team.cards.find(c => c.slotIndex === slotIndex);
   if (!dc || !dc.skill || dc.skill.count <= 0) return 0;
   const skill = dc.skill;
-  const isTimerBased = skill.isTimer || skill.originalType === SKILL_TYPE.SHRINK_TIMER;
+  const isTimerBased = skill.isTimer || isShrinkTimer(skill);
   const denom = isTimerBased ? team.songDuration : notesCount;
   if (denom <= 0) return 0;
   return Math.floor(denom / skill.count);
@@ -590,9 +666,8 @@ export function calcCardSkillMax(
   const effectiveSeconds = team.songDuration;
   if (effectiveSeconds <= 0) return 0;
   const excludedCount = notes.filter(n => n.excluded).length;
-  const eligibleCount = notesCount - excludedCount;
-  if (eligibleCount <= 0) return 0;
-  const numActivations = Math.floor(eligibleCount / skill.count);
+  const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludedCount);
+  if (numActivations <= 0) return 0;
   const maxSec = Math.min(numActivations * skill.value, effectiveSeconds);
   const coverageRate = maxSec / effectiveSeconds;
 
@@ -630,26 +705,38 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
   for (let c = 0; c < cardCount; c++) {
     const s = team.cards[c].skill;
     if (!s?.isShrink || s.count <= 0) continue;
-    const numAct = Math.floor(eligibleCount / s.count);
+    const numAct = calcShrinkActivationCount(s, team, N, excludedCount);
     const expSec = numAct * s.value * (s.per / 100);
     expectedShrinkTimes[c] = expSec;
     totalExpectedShrinkTime += expSec;
   }
 
-  // Phase 1: タイマースキル (1 発動で起点ノートに value 点を 1 回加算)
+  // Phase 1: タイマー型スキル
   const timerBonus = new Array<number>(N).fill(0);
+  const timerShrinkTriggers = Array.from(
+    { length: N },
+    (): { cardIndex: number; durationNotes: number; rate: number }[] => [],
+  );
   for (let c = 0; c < cardCount; c++) {
     const skill = team.cards[c].skill;
     if (!skill || !skill.isTimer || skill.count <= 0) continue;
 
     const maxAct = Math.floor(team.songDuration / skill.count);
-    const alwaysTrigger = options?.maxScoreUpCoverage === true;
+    const alwaysTrigger = skill.isShrink
+      ? options?.maxShrinkCoverage === true
+      : options?.maxScoreUpCoverage === true;
     for (let a = 1; a <= maxAct; a++) {
       if (alwaysTrigger || rng.next() * 100 < skill.per) {
         activations[c]++;
         const t = a * skill.count;
-        const noteIndex = Math.min(Math.floor((t / team.songDuration) * N), N - 1);
-        if (noteIndex >= 0) {
+        const noteIndex = calcNoteIndexAtTime(t, team.songDuration, N);
+        if (noteIndex >= 0 && skill.isShrink) {
+          timerShrinkTriggers[noteIndex].push({
+            cardIndex: c,
+            durationNotes: shrinkDurationNotes(skill.value, team.songDuration, N),
+            rate: skill.rate,
+          });
+        } else if (noteIndex >= 0) {
           timerBonus[noteIndex] += skill.value;
           contributions[c] += skill.value;
           scoreUpScore += skill.value;
@@ -682,6 +769,17 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
       }
     }
 
+    for (const trigger of timerShrinkTriggers[n]) {
+      activeShrink = enqueueShrink(
+        shrinkQueue,
+        activeShrink,
+        n,
+        trigger.durationNotes,
+        trigger.rate,
+        trigger.cardIndex,
+      );
+    }
+
     // Phase B: 各カードのトリガー判定（確率ロール）
     for (let c = 0; c < cardCount; c++) {
       const skill = team.cards[c].skill;
@@ -701,11 +799,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, op
           activations[c]++;
           if (skill.isShrink) {
             const durationNotes = shrinkDurationNotes(skill.value, team.songDuration, N);
-            if (activeShrink == null) {
-              activeShrink = { endNote: n + durationNotes, rate: skill.rate, sourceCard: c };
-            } else {
-              shrinkQueue.push({ durationNotes, rate: skill.rate, sourceCard: c });
-            }
+            activeShrink = enqueueShrink(shrinkQueue, activeShrink, n, durationNotes, skill.rate, c);
           } else {
             scoreUpSum += skill.value;
             contributions[c] += skill.value;
