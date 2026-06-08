@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import EventSharePanel from '../../../../components/EventSharePanel.astro';
+import { fetchEventsCsv, type EventRow } from '../../../../lib/data/fetchEventsCsv';
+import { fetchCardsJson, type Card } from '../../../../lib/data/fetchCardsJson';
+import { cardThumbUrl } from '../../../../lib/ui';
+
+const RARITY = 'UR' as const;
+
+export async function getStaticPaths() {
+  const [events, cards] = await Promise.all([
+    fetchEventsCsv(),
+    fetchCardsJson(),
+  ]);
+  const cardMap = new Map<number, Card>();
+  for (const c of cards as Card[]) {
+    if (c.ID != null) cardMap.set(c.ID, c);
+  }
+  const pick = (ids: number[]): Card[] =>
+    ids
+      .map(id => cardMap.get(id))
+      .filter((c): c is Card => !!c && c.rarity === 'UR');
+
+  return (events as EventRow[])
+    .map(ev => {
+      const goldCards = pick(ev.gold.cardIds);
+      const silverCards = pick(ev.silver.cardIds);
+      return { ev, goldCards, silverCards };
+    })
+    .filter(({ goldCards, silverCards }) => goldCards.length > 0 || silverCards.length > 0)
+    .map(({ ev, goldCards, silverCards }) => ({
+      params: { id: String(ev.id) },
+      props: { event: ev, goldCards, silverCards },
+    }));
+}
+
+interface Props {
+  event: EventRow;
+  goldCards: Card[];
+  silverCards: Card[];
+}
+
+const { event, goldCards, silverCards } = Astro.props as Props;
+const base = import.meta.env.BASE_URL;
+
+const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
+const description = `${event.eventname}（${event.eventtype}）の ${RARITY} 金特効・銀特効衣装まとめ（SNS共有用）。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
+const ogImageCard = goldCards[0] || silverCards[0];
+const ogImage = ogImageCard?.ID != null ? cardThumbUrl(ogImageCard.ID) : undefined;
+
+// ダウンロード画像のファイル名（拡張子なし）。ファイル名に使えない文字を除去
+const safeName = event.eventname.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+const shareFilename = `${event.id}_${safeName}_${RARITY}特効衣装`;
+
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'イベント情報', url: `${base}events/` },
+  { name: event.eventname, url: `${base}events/${event.id}/` },
+  { name: `SNS共有 (${RARITY})`, url: `${base}events/${event.id}/share/ur/` },
+];
+---
+
+<BaseLayout
+  title={`${event.eventname} ${RARITY}特効衣装`}
+  description={description}
+  image={ogImage}
+  ogType="article"
+  breadcrumbs={breadcrumbs}
+>
+  <EventSharePanel
+    event={event}
+    goldCards={goldCards}
+    silverCards={silverCards}
+    rarity={RARITY}
+    shareFilename={shareFilename}
+  />
+</BaseLayout>
