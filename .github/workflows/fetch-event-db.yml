@@ -89,6 +89,9 @@ jobs:
           NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
           echo "Latest: $LATEST  ->  New: $NEW_TAG"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          # actions/checkout が永続化した GITHUB_TOKEN の認証ヘッダを除去し、RELEASE_PAT で push する。
+          # （GITHUB_TOKEN 由来の push は deploy.yml をトリガーしないため、PAT を確実に使わせる）
+          git config --local --unset-all http."https://github.com/".extraheader 2>/dev/null || true
           git fetch origin main
           git tag "$NEW_TAG" origin/main
           git push origin "$NEW_TAG"
