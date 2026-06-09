@@ -24,8 +24,6 @@
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
-  import { computeTachibanaResult, TACHIBANA_DEFAULT_OPTIONS, type TachibanaResult } from '../lib/score/tachibana';
-
   type EventForBonus = {
     id: number;
     start_date: string;
@@ -840,7 +838,6 @@
         _q('shrink-coverage-row').classList.add('hidden');
         _q('shrink-expected-row').classList.add('hidden');
         _q('skill-per-card-section').classList.add('hidden');
-        _q('tachibana-result').classList.add('hidden');
         _q('final-result').textContent = '---';
         simulationResult = null;
         return;
@@ -874,51 +871,6 @@
       _q('final-result').textContent = '---';
       simulationResult = null;
 
-      // たちばなさんロジック（チェックON時のみ）
-      renderTachibanaResult(team);
-    }
-
-    function renderTachibanaResult(team: ComputedTeam) {
-      const enabled = _q<HTMLInputElement>('opt-tachibana')?.checked ?? false;
-      const panel = _q('tachibana-result');
-      if (!enabled || !selectedSong) {
-        panel.classList.add('hidden');
-        return;
-      }
-      const result: TachibanaResult = computeTachibanaResult(team, selectedSong, {
-        ...TACHIBANA_DEFAULT_OPTIONS,
-        scoreUpFullActivation: _q<HTMLInputElement>('opt-tachibana-scoreup-full').checked,
-        scoreUpProbabilityBoost: _q<HTMLInputElement>('opt-tachibana-scoreup-boost').checked,
-        scoreUpProbabilityBoostValue: parseFloat(_q<HTMLInputElement>('opt-tachibana-scoreup-boost-val').value) || 0,
-        shrinkFullActivation: _q<HTMLInputElement>('opt-tachibana-shrink-full').checked,
-        excludeNotes20: _q<HTMLInputElement>('opt-tachibana-exclude-notes20').checked,
-        specialEffectActive: _q<HTMLInputElement>('opt-tachibana-special-effect').checked,
-        scoreUpBadgeRate: parseFloat(_q<HTMLInputElement>('opt-scoreup-badge-rate').value) || 0,
-      });
-      panel.classList.remove('hidden');
-      _q('tachi-attr').textContent = result.attributeScore.toLocaleString();
-      _q('tachi-scoreup').textContent = result.scoreUpScore.toLocaleString();
-      _q('tachi-shrink').textContent = result.shrinkScore.toLocaleString();
-      _q('tachi-liveend').textContent = result.liveEndScore.toLocaleString();
-      _q('tachi-final').textContent = result.finalScore.toLocaleString();
-      const coverage = result.shrinkCoverage;
-      const coverageMsg = coverage > 1
-        ? `縮小発動時間カバー率 ${(coverage * 100).toFixed(1)}% — 楽曲時間を超過しているため per-card 重み付け配分で計算しています`
-        : `縮小発動時間カバー率 ${(coverage * 100).toFixed(1)}%`;
-      _q('tachi-shrink-coverage').textContent = coverage > 0 ? coverageMsg : '';
-      const rows = result.cards.map((c, i) => {
-        const slotCls = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500';
-        const slotLabel = i === 0 ? 'C' : i === 5 ? 'F' : String(i);
-        return `<tr class="border-t">
-          <td class="py-1 px-1 text-[10px] ${slotCls}">${slotLabel}</td>
-          <td class="py-1 px-1">${c.cardName}</td>
-          <td class="py-1 px-1 text-[10px] text-gray-500">${c.skillTypeLabel}</td>
-          <td class="py-1 px-1 text-right">${c.attributeScore.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right">${c.scoreUpScore > 0 ? c.scoreUpScore.toLocaleString() : '-'}</td>
-          <td class="py-1 px-1 text-right">${c.shrinkScore > 0 ? c.shrinkScore.toLocaleString() : '-'}</td>
-        </tr>`;
-      }).join('');
-      _q('tachi-cards-body').innerHTML = rows;
     }
 
     function renderSkillPerCard(team: ComputedTeam, notes: FlatNote[], notesCount: number, options: ScoreOptions) {
@@ -1144,19 +1096,6 @@
     }
 
     function buildStateObject() {
-      const tachibana = (() => {
-        const el = rootEl.querySelector<HTMLInputElement>('#opt-tachibana');
-        if (!el) return undefined;
-        return {
-          enabled: el.checked,
-          scoreUpFull: _q<HTMLInputElement>('opt-tachibana-scoreup-full').checked,
-          scoreUpBoost: _q<HTMLInputElement>('opt-tachibana-scoreup-boost').checked,
-          scoreUpBoostVal: parseFloat(_q<HTMLInputElement>('opt-tachibana-scoreup-boost-val').value) || 0,
-          shrinkFull: _q<HTMLInputElement>('opt-tachibana-shrink-full').checked,
-          excludeNotes20: _q<HTMLInputElement>('opt-tachibana-exclude-notes20').checked,
-          specialEffect: _q<HTMLInputElement>('opt-tachibana-special-effect').checked,
-        };
-      })();
       const badgeRateEl = rootEl.querySelector<HTMLInputElement>('#opt-scoreup-badge-rate');
       const badgeRate = badgeRateEl ? (parseFloat(badgeRateEl.value) || 0) : undefined;
       return {
@@ -1166,7 +1105,6 @@
         trained: [...deckTrained],
         sharedBroachs: deckSharedBroachs.map(a => [...a]),
         skillLevels: [...deckSkillLevels],
-        tachibana,
         badgeRate,
       };
     }
@@ -1216,21 +1154,6 @@
       }
       for (let i = 0; i < 6; i++) {
         validateSharedBroachs(i);
-      }
-      // たちばなさんロジック オプション復元
-      if (state.tachibana) {
-        const t = state.tachibana;
-        const tachibanaCheckbox = _q<HTMLInputElement>('opt-tachibana');
-        const tachibanaSubOptions = _q('tachibana-options');
-        tachibanaCheckbox.checked = !!t.enabled;
-        if (t.enabled) tachibanaSubOptions.classList.remove('hidden');
-        else tachibanaSubOptions.classList.add('hidden');
-        if (typeof t.scoreUpFull === 'boolean') _q<HTMLInputElement>('opt-tachibana-scoreup-full').checked = t.scoreUpFull;
-        if (typeof t.scoreUpBoost === 'boolean') _q<HTMLInputElement>('opt-tachibana-scoreup-boost').checked = t.scoreUpBoost;
-        if (typeof t.scoreUpBoostVal === 'number') _q<HTMLInputElement>('opt-tachibana-scoreup-boost-val').value = String(t.scoreUpBoostVal);
-        if (typeof t.shrinkFull === 'boolean') _q<HTMLInputElement>('opt-tachibana-shrink-full').checked = t.shrinkFull;
-        if (typeof t.excludeNotes20 === 'boolean') _q<HTMLInputElement>('opt-tachibana-exclude-notes20').checked = t.excludeNotes20;
-        if (typeof t.specialEffect === 'boolean') _q<HTMLInputElement>('opt-tachibana-special-effect').checked = t.specialEffect;
       }
       if (typeof state.badgeRate === 'number') {
         const el = _q<HTMLInputElement>('opt-scoreup-badge-rate');
@@ -1488,31 +1411,6 @@
     });
     _q('opt-scoreup-badge-rate').addEventListener('input', () => { recalculate(); saveState(); });
 
-    // たちばなさんロジック チェックボックス・サブオプション
-    const tachibanaCheckbox = _q<HTMLInputElement>('opt-tachibana');
-    const tachibanaSubOptions = _q('tachibana-options');
-    tachibanaCheckbox.addEventListener('change', () => {
-      if (tachibanaCheckbox.checked) {
-        tachibanaSubOptions.classList.remove('hidden');
-      } else {
-        tachibanaSubOptions.classList.add('hidden');
-      }
-      recalculate();
-      saveState();
-    });
-    for (const id of [
-      'opt-tachibana-scoreup-full',
-      'opt-tachibana-scoreup-boost',
-      'opt-tachibana-scoreup-boost-val',
-      'opt-tachibana-shrink-full',
-      'opt-tachibana-exclude-notes20',
-      'opt-tachibana-special-effect',
-    ]) {
-      const el = _q<HTMLInputElement>(id);
-      const evt = el.type === 'number' ? 'input' : 'change';
-      el.addEventListener(evt, () => { recalculate(); saveState(); });
-    }
-
     _q('shrink-offset-input').addEventListener('input', () => {
       if (!selectedSong || deck.filter(c => c !== null).length === 0) return;
       const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
@@ -1606,36 +1504,6 @@
         </label>
       </div>
       <p class="text-[11px] text-gray-400 dark:text-slate-500 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
-      <div class="mt-3 pt-3 border-t border-gray-100 dark:border-slate-800">
-        <label class="flex items-center gap-2 text-sm" title="ON にすると、たちばなさん作のスプレッドシート計算ツール（https://ota-life.com/id7-score-tool/）と同じ式で属性値スコア・スコアアップスキル・縮小スキルを計算して表示します">
-          <input type="checkbox" id="opt-tachibana" class="rounded" />
-          <span>たちばなさんロジックで計算する</span>
-        </label>
-        <div id="tachibana-options" class="hidden mt-2 ml-6 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600 dark:text-slate-300">
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="opt-tachibana-scoreup-full" class="rounded" checked />
-            <span>スコアアップフル発動 (確率 100% 扱い)</span>
-          </label>
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="opt-tachibana-scoreup-boost" class="rounded" />
-            <span>スコアアップ確率UP</span>
-            <input type="number" id="opt-tachibana-scoreup-boost-val" class="w-12 border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 text-xs" min="0" max="100" step="1" value="10" />
-            <span>%</span>
-          </label>
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="opt-tachibana-shrink-full" class="rounded" checked />
-            <span>縮小フル発動 (確率 100% 扱い)</span>
-          </label>
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="opt-tachibana-exclude-notes20" class="rounded" />
-            <span>20ノーツ加算なし (β)</span>
-          </label>
-          <label class="flex items-center gap-2 md:col-span-2">
-            <input type="checkbox" id="opt-tachibana-special-effect" class="rounded" />
-            <span>特効を入れる (デッキ属性値に追加で ×1.2)</span>
-          </label>
-        </div>
-      </div>
     </div>
   </details>
 
@@ -1822,42 +1690,6 @@
         <span class="text-[10px] text-gray-500 dark:text-slate-400">試行回数: </span>
         <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700 dark:text-slate-200">-</span>
       </div>
-    </section>
-
-    <!-- たちばなさんロジック結果パネル（チェックON時にのみ表示） -->
-    <section id="tachibana-result" class="hidden bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-      <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-3 flex items-center gap-2">
-        🌸 たちばなさんロジック計算結果
-        <a href="https://ota-life.com/id7-score-tool/" target="_blank" rel="noopener noreferrer" class="text-[10px] font-normal text-indigo-500 hover:underline">参照元</a>
-      </h2>
-      <table class="w-full text-sm">
-        <tbody>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1">属性値スコア</td><td id="tachi-attr" class="text-right py-1"></td></tr>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1">スコアアップスキル</td><td id="tachi-scoreup" class="text-right py-1"></td></tr>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1">縮小スキル</td><td id="tachi-shrink" class="text-right py-1"></td></tr>
-          <tr class="border-t"><td class="text-gray-500 dark:text-slate-400 py-1">ライブ終了時</td><td id="tachi-liveend" class="text-right py-1"></td></tr>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1 font-bold">最終リザルト</td><td id="tachi-final" class="text-right py-1 font-bold text-indigo-700 dark:text-indigo-300 text-base"></td></tr>
-        </tbody>
-      </table>
-      <p id="tachi-shrink-coverage" class="text-[11px] text-gray-500 dark:text-slate-400 mt-2"></p>
-      <details class="mt-3">
-        <summary class="cursor-pointer text-xs text-gray-500 dark:text-slate-400 select-none">カードごとの内訳</summary>
-        <div class="overflow-x-auto mt-2">
-          <table class="w-full text-xs">
-            <thead>
-              <tr class="text-gray-500 dark:text-slate-400 border-b">
-                <th class="text-left py-1">枠</th>
-                <th class="text-left py-1">衣装</th>
-                <th class="text-left py-1">スキル</th>
-                <th class="text-right py-1">属性値</th>
-                <th class="text-right py-1">スコアUP</th>
-                <th class="text-right py-1">縮小</th>
-              </tr>
-            </thead>
-            <tbody id="tachi-cards-body"></tbody>
-          </table>
-        </div>
-      </details>
     </section>
 
     <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
