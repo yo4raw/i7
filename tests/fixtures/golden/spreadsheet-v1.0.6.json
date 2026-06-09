@@ -1,6 +1,6 @@
 [
   {
-    "label": "UR6枚-最大値モード#1",
+    "label": "UR6枚#1",
     "version": "1.0.6",
     "deck": [1950, 1952, 1493, 1196, 1198, 1362],
     "center": 2,
@@ -15,7 +15,13 @@
     "duration": 92,
     "badgeRate": 16,
     "assist": false,
-    "expected": null,
+    "expected": {
+      "attr": 2388497,
+      "scoreUp": 298535,
+      "shrink": 1051457,
+      "liveEnd": 3738489,
+      "final": 4336647
+    },
     "max": {
       "attr": 2388497,
       "scoreUp": 698524,
