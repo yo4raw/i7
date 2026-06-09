@@ -16,6 +16,12 @@ describe('スプレッドシート v1.0.6 オラクル — ①ポート忠実性
       it(`${gc.label}: 縮小スキル(max)`, () => {
         expect(runOracle(input, 'max').shrink).toBe(gc.max!.shrink);
       });
+      it(`${gc.label}: ライブ終了時(max)`, () => {
+        expect(runOracle(input, 'max').liveEnd).toBe(gc.max!.liveEnd);
+      });
+      it(`${gc.label}: 最終リザルト(max)`, () => {
+        expect(runOracle(input, 'max').final).toBe(gc.max!.final);
+      });
     }
     if (gc.expected) {
       it(`${gc.label}: 属性値スコア (expected)`, () => {
@@ -26,6 +32,12 @@ describe('スプレッドシート v1.0.6 オラクル — ①ポート忠実性
       });
       it(`${gc.label}: 縮小スキル(expected)`, () => {
         expect(runOracle(input, 'expected').shrink).toBe(gc.expected!.shrink);
+      });
+      it(`${gc.label}: ライブ終了時(expected)`, () => {
+        expect(runOracle(input, 'expected').liveEnd).toBe(gc.expected!.liveEnd);
+      });
+      it(`${gc.label}: 最終リザルト(expected)`, () => {
+        expect(runOracle(input, 'expected').final).toBe(gc.expected!.final);
       });
     }
   }
