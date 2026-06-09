@@ -10,10 +10,16 @@ describe('スプレッドシート v1.0.6 オラクル — ①ポート忠実性
       it(`${gc.label}: 属性値スコア (max)`, () => {
         expect(runOracle(input, 'max').attr).toBe(gc.max!.attr);
       });
+      it(`${gc.label}: スコアアップ(max)`, () => {
+        expect(runOracle(input, 'max').scoreUp).toBe(gc.max!.scoreUp);
+      });
     }
     if (gc.expected) {
       it(`${gc.label}: 属性値スコア (expected)`, () => {
         expect(runOracle(input, 'expected').attr).toBe(gc.expected!.attr);
+      });
+      it(`${gc.label}: スコアアップ(expected)`, () => {
+        expect(runOracle(input, 'expected').scoreUp).toBe(gc.expected!.scoreUp);
       });
     }
   }
