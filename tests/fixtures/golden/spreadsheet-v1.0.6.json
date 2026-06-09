@@ -10,11 +10,12 @@
     "broachs": [],
     "sharedBroachs": [[], [], [], [], [], []],
     "rabbitNotes": {},
+    "eventTiers": ["silver", "silver", "silver", "silver", "silver", "silver"],
     "songId": 60,
     "notes": 461,
     "duration": 92,
     "badgeRate": 16,
-    "assist": false,
+    "assist": true,
     "expected": {
       "attr": 2388497,
       "scoreUp": 298535,

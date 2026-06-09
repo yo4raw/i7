@@ -19,6 +19,8 @@ export interface GoldenCase {
   broachs: number[];
   sharedBroachs: number[][];
   rabbitNotes: Record<string, unknown>;
+  /** カード別イベント特効ランク（採取時の実入力）。省略時は全カード none 扱い。 */
+  eventTiers?: ('none' | 'bronze' | 'silver' | 'gold')[];
   songId: number;
   notes: number;
   duration: number;
