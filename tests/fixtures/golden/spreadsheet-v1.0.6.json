@@ -1,0 +1,27 @@
+[
+  {
+    "label": "UR6枚-最大値モード#1",
+    "version": "1.0.6",
+    "deck": [1950, 1952, 1493, 1196, 1198, 1362],
+    "center": 2,
+    "friend": 5,
+    "trained": [true, true, true, true, true, true],
+    "skillLevels": [5, 5, 5, 5, 5, 5],
+    "broachs": [],
+    "sharedBroachs": [[], [], [], [], [], []],
+    "rabbitNotes": {},
+    "songId": 60,
+    "notes": 461,
+    "duration": 92,
+    "badgeRate": 16,
+    "assist": false,
+    "expected": null,
+    "max": {
+      "attr": 2388497,
+      "scoreUp": 698524,
+      "shrink": 1194247,
+      "liveEnd": 4281268,
+      "final": 4966270
+    }
+  }
+]
