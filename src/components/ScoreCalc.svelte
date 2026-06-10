@@ -21,7 +21,7 @@
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
-  import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
+  import { fetchSongsJson, filterValidSongs, filterAllowedSongs, SONG_NOTE_GROUP_KEYS } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
   type Props = {
@@ -144,10 +144,9 @@
       _q('song-name-val').textContent = selectedSong.song_name || '-';
       _q('song-artist').textContent = selectedSong.artist || '-';
       _q('song-notes').textContent = (selectedSong.notes_count || 0).toLocaleString();
-      const NOTE_GROUPS: (keyof Song)[] = ['notes_20', 'light_2', 'light_3', 'light_4', 'light_5', 'light_6', 'chorus_light_5', 'chorus_light_6'];
       let sCount = 0, bCount = 0, mCount = 0;
-      for (const gk of NOTE_GROUPS) {
-        const g = selectedSong[gk] as any;
+      for (const gk of SONG_NOTE_GROUP_KEYS) {
+        const g = selectedSong[gk];
         if (!g) continue;
         sCount += (g.shout_white || 0) + (g.shout_color || 0);
         bCount += (g.beat_white || 0) + (g.beat_color || 0);
@@ -310,7 +309,7 @@
     }
 
     function renderDeckSlots() {
-      const slotDummySong = selectedSong || { song_name: '' } as any;
+      const slotDummySong = selectedSong || { song_name: '' };
       const slotResolvedMap = resolveDeckBroachs(deck, allBroachs, slotDummySong);
 
       // 縮小スキルの並び順警告: 発動優先度 メンバー1(idx=1) → センター(idx=0) → メンバー2(idx=2)
@@ -527,7 +526,7 @@
       }
       _q('card-detail-section').classList.remove('hidden');
 
-      const dummySong = selectedSong || { song_name: '' } as any;
+      const dummySong = selectedSong || { song_name: '' };
       const resolvedMap = resolveDeckBroachs(deck, allBroachs, dummySong);
 
       const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
@@ -930,8 +929,9 @@
       let bWhiteWeighted = 0, bColorWeighted = 0;
       let mWhiteWeighted = 0, mColorWeighted = 0;
 
-      for (const [groupKey, mult] of Object.entries(LIGHT_MULTIPLIER)) {
-        const g = (song as any)[groupKey];
+      for (const gk of SONG_NOTE_GROUP_KEYS) {
+        const mult = LIGHT_MULTIPLIER[gk];
+        const g = song[gk];
         if (!g) continue;
         sWhiteWeighted += (g.shout_white || 0) * mult;
         sColorWeighted += (g.shout_color || 0) * mult;
