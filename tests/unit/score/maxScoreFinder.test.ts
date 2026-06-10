@@ -7,9 +7,13 @@ import {
   multisetIndices,
   multisetIndicesOrEmpty,
   isShrinkCard,
+  createSearchContext,
+  countCombos,
+  type SearchInput,
 } from '../../../src/lib/score/maxScoreFinder';
 import type { Card } from '../../../src/lib/data/fetchCardsJson';
-import { allCards } from '../../fixtures';
+import type { EventBonusTier } from '../../../src/lib/data/eventBonusTiers';
+import { allCards, allBroachs, findSongById } from '../../fixtures';
 
 describe('組合せ数学ユーティリティ', () => {
   it('binomial: C(5,2)=10, C(4,0)=1, C(3,5)=0, C(-1,0)=0', () => {
@@ -76,5 +80,83 @@ describe('isShrinkCard', () => {
     expect(isShrinkCard(fake('判定縮小（タイマー）'))).toBe(true);
     expect(isShrinkCard(fake('スコアアップ'))).toBe(false);
     expect(isShrinkCard(fake(null))).toBe(false);
+  });
+});
+
+/** テスト用候補: 縮小持ち UR 3 枚 + 非縮小 UR 4 枚 */
+const urPool = allCards.filter((c) => c.rarity === 'UR' && c.ID != null && c.ap_skill_type);
+const shrinkUr = urPool.filter((c) => isShrinkCard(c)).slice(0, 3);
+const nonShrinkUr = urPool.filter((c) => !isShrinkCard(c)).slice(0, 4);
+const testCandidates = [...shrinkUr, ...nonShrinkUr];
+const testSong = findSongById(2); // MONSTER GENERATiON (EXPERT+)
+const testTiers: Record<string, EventBonusTier> = Object.fromEntries(
+  testCandidates.map((c) => [String(c.ID), 'gold' as EventBonusTier])
+);
+
+function buildInput(overrides: Partial<SearchInput> = {}): SearchInput {
+  return {
+    evalMode: 'expected',
+    ownedOnly: false,
+    shrinkPairOnly: false,
+    scoreOptions: { scoreUpAssist: false, scoreUpBadgeRate: 0 },
+    candidates: testCandidates,
+    ownedCounts: {},
+    song: testSong,
+    broachs: allBroachs,
+    tierByCardId: testTiers,
+    rabbitNotes: {},
+    ...overrides,
+  };
+}
+
+describe('createSearchContext', () => {
+  it('縮小/非縮小・所持候補を分割し、notesCount を解決する', () => {
+    const ownedCounts = {
+      [String(testCandidates[0].ID)]: 2,
+      [String(testCandidates[3].ID)]: 1,
+    };
+    const ctx = createSearchContext(buildInput({ ownedCounts }));
+    expect(ctx.candidates.length).toBe(7);
+    expect(ctx.shrink.length).toBe(3);
+    expect(ctx.nonShrink.length).toBe(4);
+    expect(ctx.owned.length).toBe(2);
+    expect(ctx.ownedLimit.get(testCandidates[0].ID!)).toBe(2);
+    expect(ctx.notesCount).toBeGreaterThan(0);
+  });
+});
+
+describe('countCombos', () => {
+  it('通常モード: multichoose(N,2) × multichoose(N,4)', () => {
+    const ctx = createSearchContext(buildInput());
+    expect(countCombos(ctx)).toBe(multichoose(7, 2) * multichoose(7, 4)); // 28 × 210 = 5880
+  });
+
+  it('縮小2枚条件: s2 ごとのペア数 × メンバー組合せの合計', () => {
+    const ctx = createSearchContext(buildInput({ shrinkPairOnly: true }));
+    // S=3, T=4:
+    //   s2=0: H(4,2)=10 ペア × H(3,2)=6 × H(4,2)=10 = 600
+    //   s2=1: 3×4=12 ペア × H(3,1)=3 × H(4,3)=20 = 720
+    //   s2=2: H(3,2)=6 ペア × H(3,0)=1 × H(4,4)=35 = 210
+    expect(countCombos(ctx)).toBe(600 + 720 + 210);
+  });
+
+  it('所持衣装検索: センターごとの上限付き 4-多重集合 × フレンド候補数', () => {
+    // 2 種を各 1 枚ずつ所持 → センター+メンバー4枚 (計5枠) は枚数不足で 0 通り
+    const fewOwned = {
+      [String(testCandidates[0].ID)]: 1,
+      [String(testCandidates[1].ID)]: 1,
+    };
+    expect(countCombos(createSearchContext(buildInput({ ownedOnly: true, ownedCounts: fewOwned })))).toBe(0);
+
+    // 1 種 5 枚所持 → センター 1 通り × メンバー {同一カード×4} 1 通り × フレンド 7
+    const fiveOwned = { [String(testCandidates[0].ID)]: 5 };
+    expect(countCombos(createSearchContext(buildInput({ ownedOnly: true, ownedCounts: fiveOwned })))).toBe(7);
+  });
+
+  it('候補 0 枚なら全モードで 0', () => {
+    const empty = buildInput({ candidates: [] });
+    expect(countCombos(createSearchContext(empty))).toBe(0);
+    expect(countCombos(createSearchContext({ ...empty, shrinkPairOnly: true }))).toBe(0);
+    expect(countCombos(createSearchContext({ ...empty, ownedOnly: true }))).toBe(0);
   });
 });
