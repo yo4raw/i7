@@ -268,11 +268,22 @@ function calcNoteScore(appeal: number, note: FlatNote): number {
 }
 
 /**
+ * 先頭除外ノートに対応する秒数を、ノート密度一定の仮定で秒換算する。
+ * 縮小スキルは先頭除外区間で発動できないため、カバー率の分母 (実効秒数) から控除する。
+ */
+function shrinkHeadSeconds(songDuration: number, notesCount: number, excludeHeadCount: number): number {
+  if (notesCount <= 0) return 0;
+  return (excludeHeadCount / notesCount) * songDuration;
+}
+
+/**
  * 縮小カバー率を計算する (docs/shrink-skill-spec.md §3, §4 準拠)。
  *
  * 仕様:
  *  - 各縮小スキルの「発動回数 × 持続秒」を単純加算 (rawCoveredSeconds)
  *  - 各縮小スキルの「発動回数 × 持続秒 × per/100」を単純加算 (rawExpectedCoveredSeconds)
+ *  - 実効秒数 effectiveSeconds = songDuration − offsetSeconds − 先頭除外秒数
+ *    (先頭除外区間では縮小が発動できないため分母から控除する)
  *  - 内部計算用カバー率は effectiveSeconds で必ず 100% キャップ
  *  - 表示用 raw* は 100% 超過可 (UI 側で注記する)
  *
@@ -310,7 +321,8 @@ export function calcShrinkCoverage(
     rawExpectedCoverageRate: 0, rawExpectedCoveredSeconds: 0,
     effectiveSeconds: 0,
   };
-  const effectiveSeconds = team.songDuration - offsetSeconds;
+  const headSeconds = shrinkHeadSeconds(team.songDuration, notesCount, excludeHeadCount);
+  const effectiveSeconds = team.songDuration - offsetSeconds - headSeconds;
   if (effectiveSeconds <= 0) return zero;
   if (notesCount <= 0) return { ...zero, effectiveSeconds };
 
@@ -602,9 +614,9 @@ export function calcCardSkillExpected(
     return Math.floor(maxAct * (skill.per / 100) * skill.value);
   }
 
-  const effectiveSeconds = team.songDuration;
-  if (effectiveSeconds <= 0) return 0;
   const excludedCount = notes.filter(n => n.excluded).length;
+  const effectiveSeconds = team.songDuration - shrinkHeadSeconds(team.songDuration, notesCount, excludedCount);
+  if (effectiveSeconds <= 0) return 0;
   const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludedCount);
   if (numActivations <= 0) return 0;
   const expectedSec = Math.min(
@@ -663,9 +675,9 @@ export function calcCardSkillMax(
     return maxAct * skill.value;
   }
 
-  const effectiveSeconds = team.songDuration;
-  if (effectiveSeconds <= 0) return 0;
   const excludedCount = notes.filter(n => n.excluded).length;
+  const effectiveSeconds = team.songDuration - shrinkHeadSeconds(team.songDuration, notesCount, excludedCount);
+  if (effectiveSeconds <= 0) return 0;
   const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludedCount);
   if (numActivations <= 0) return 0;
   const maxSec = Math.min(numActivations * skill.value, effectiveSeconds);
