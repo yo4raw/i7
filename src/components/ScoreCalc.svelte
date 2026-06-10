@@ -20,11 +20,11 @@
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
-  import { cardTextMatches } from '../lib/cardFilter';
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs, SONG_NOTE_GROUP_KEYS } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
   import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS, DISPLAY_ORDER } from '../lib/score/deckState';
+  import CardPickerModal from './score/CardPickerModal.svelte';
   type Props = {
     cards: Card[];
     songs: Song[];
@@ -36,16 +36,18 @@
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events: initialEvents, base }: Props = $props();
 
   const deckState = $state(createEmptyDeckState());
+  let allCardsState = $state<Card[]>(initialCards);
 
   let rootEl: HTMLDivElement;
+  let picker: CardPickerModal | undefined;
 
-  // カード所持数のヘルパ（cardListRenderer由来の関数と同等）
-  function loadCounts(): Record<string, number> {
-    return loadJson<Record<string, number>>(STORAGE_KEYS.CARD_COUNTS, {});
-  }
+  // ピッカーのコールバック実体は onMount 閉包内で代入される
+  let handlePickImpl: (slot: number, card: Card) => void = () => {};
+  let handleClearImpl: (slot: number) => void = () => {};
+  function handlePick(slot: number, card: Card) { handlePickImpl(slot, card); }
+  function handleClear(slot: number) { handleClearImpl(slot); }
 
   onMount(() => {
-    let allCards: Card[] = initialCards;
     let allSongs: Song[] = initialSongs;
     let allBroachs: FixedBroach[] = initialBroachs;
     const allEventsForBonus: EventForBonus[] = initialEvents;
@@ -60,8 +62,20 @@
     const _q = <T extends HTMLElement = HTMLElement>(id: string): T => rootEl.querySelector<T>(`#${id}`) as T;
 
     let selectedSong: Song | null = null;
-    let activeModalSlot = -1;
     let simulationResult: SimulationResult | null = null;
+
+    handlePickImpl = (slot, card) => {
+      setCard(deckState, slot, card, defaultTierFor(card), allBroachs);
+      renderDeckSlots();
+      recalculate();
+      saveState();
+    };
+    handleClearImpl = (slot) => {
+      clearSlot(deckState, slot);
+      renderDeckSlots();
+      recalculate();
+      saveState();
+    };
 
     function getSelectedSongIds(): Set<number> {
       return new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
@@ -259,7 +273,7 @@
             document.body.style.cursor = '';
             el.style.opacity = '';
             if (!dragging) {
-              openCardPicker(slot);
+              picker!.open(slot, SLOT_LABELS[slot]);
               return;
             }
             if (!dropped || !e) return;
@@ -685,86 +699,6 @@
       </tr>`;
     }
 
-    function openCardPicker(slotIndex: number) {
-      activeModalSlot = slotIndex;
-      _q('modal-slot-label').textContent = SLOT_LABELS[slotIndex];
-
-      const ownedCheckbox = _q<HTMLInputElement>('modal-owned-only');
-      if (slotIndex === 5) {
-        ownedCheckbox.checked = false;
-      } else {
-        ownedCheckbox.checked = true;
-      }
-
-      _q<HTMLInputElement>('modal-search').value = '';
-      _q<HTMLSelectElement>('modal-rarity').value = '';
-      _q<HTMLSelectElement>('modal-attribute').value = '';
-
-      renderModalCards();
-      _q('card-picker-modal').classList.remove('hidden');
-      _q<HTMLInputElement>('modal-search').focus();
-    }
-
-    function closeCardPicker() {
-      _q('card-picker-modal').classList.add('hidden');
-      activeModalSlot = -1;
-    }
-
-    function renderModalCards() {
-      const text = _q<HTMLInputElement>('modal-search').value.toLowerCase();
-      const rarity = _q<HTMLSelectElement>('modal-rarity').value;
-      const attribute = _q<HTMLSelectElement>('modal-attribute').value;
-      const ownedOnly = _q<HTMLInputElement>('modal-owned-only').checked;
-      const counts = loadCounts();
-
-      let filtered = allCards.filter(card => {
-        if (ownedOnly && !(counts[String(card.ID)] >= 1)) return false;
-        if (!cardTextMatches(card, text)) return false;
-        if (rarity && card.rarity !== rarity) return false;
-        if (attribute && normalizeAttribute(card.attribute) !== attribute) return false;
-        return true;
-      });
-
-      filtered.sort((a, b) => (b.ID || 0) - (a.ID || 0));
-
-      _q('modal-result-count').textContent = `${filtered.length}件`;
-
-      const html = filtered.slice(0, 200).map(card => {
-        const attr = normalizeAttribute(card.attribute);
-        const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
-        const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
-        const total = (card.shout_max || 0) + (card.beat_max || 0) + (card.melody_max || 0);
-
-        return `<div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-slate-900 cursor-pointer border-b border-gray-100 dark:border-slate-800" data-pick-card="${card.ID}">
-          <img src="${cardThumbUrl(card.ID!)}" alt="${card.cardname || ''}" class="w-10 h-auto rounded flex-shrink-0" loading="lazy" />
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-1">
-              <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
-              <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBgClass}">${attr}</span>
-              <span class="text-xs font-medium truncate">${card.cardname || ''}</span>
-            </div>
-            <div class="text-[10px] text-gray-500 dark:text-slate-400">${card.name || ''} | 合計: ${total.toLocaleString()} | ${card.ap_skill_type || '-'}</div>
-          </div>
-        </div>`;
-      }).join('');
-
-      _q('modal-card-list').innerHTML = html || '<p class="text-sm text-gray-400 dark:text-slate-500 text-center py-8">該当する衣装がありません</p>';
-
-      rootEl.querySelectorAll('[data-pick-card]').forEach(el => {
-        el.addEventListener('click', () => {
-          const cardId = Number((el as HTMLElement).dataset.pickCard);
-          const card = allCards.find(c => c.ID === cardId);
-          if (card && activeModalSlot >= 0) {
-            setCard(deckState, activeModalSlot, card, defaultTierFor(card), allBroachs);
-            closeCardPicker();
-            renderDeckSlots();
-            recalculate();
-            saveState();
-          }
-        });
-      });
-    }
-
     function recalculate() {
       updateCalcButton();
       const filledCards = deckState.cards.filter(c => c !== null);
@@ -1088,7 +1022,7 @@
         for (let i = 0; i < 6; i++) {
           const id = state.deckIds[i];
           if (id != null) {
-            deckState.cards[i] = allCards.find(c => c.ID === id) || null;
+            deckState.cards[i] = allCardsState.find(c => c.ID === id) || null;
           }
         }
       }
@@ -1312,29 +1246,6 @@
 
     attachSlotPointerHandlers();
 
-    _q('modal-backdrop').addEventListener('click', closeCardPicker);
-    _q('modal-close').addEventListener('click', closeCardPicker);
-    _q('modal-close-x').addEventListener('click', closeCardPicker);
-    _q('modal-clear').addEventListener('click', () => {
-      if (activeModalSlot >= 0) {
-        clearSlot(deckState, activeModalSlot);
-        closeCardPicker();
-        renderDeckSlots();
-        recalculate();
-        saveState();
-      }
-    });
-
-    let modalDebounce: ReturnType<typeof setTimeout>;
-    _q('modal-search').addEventListener('input', () => {
-      clearTimeout(modalDebounce);
-      modalDebounce = setTimeout(renderModalCards, 200);
-    });
-    for (const id of ['modal-rarity', 'modal-attribute']) {
-      _q(id).addEventListener('change', renderModalCards);
-    }
-    _q('modal-owned-only').addEventListener('change', renderModalCards);
-
     _q('btn-save-deck').addEventListener('click', saveDeck);
     _q('btn-load-deck').addEventListener('click', showLoadDropdown);
     _q('btn-share-url').addEventListener('click', shareDeckUrl);
@@ -1360,8 +1271,8 @@
     updateCalcButton();
 
     refreshData('cards', fetchCardsJson, (fresh) => {
-      allCards = fresh as Card[];
-      deckState.cards = deckState.cards.map(c => c ? allCards.find(fc => fc.ID === c.ID) || null : null);
+      allCardsState = fresh as Card[];
+      deckState.cards = deckState.cards.map(c => c ? allCardsState.find(fc => fc.ID === c.ID) || null : null);
       renderDeckSlots();
       recalculate();
     });
@@ -1725,44 +1636,5 @@
     </div>
   </div>
 
-  <!-- 衣装選択モーダル -->
-  <div id="card-picker-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-black/50" id="modal-backdrop"></div>
-    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-h-[85vh] flex flex-col mx-4 sm:mx-auto">
-      <div class="p-4 border-b flex-shrink-0">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-bold text-gray-700 dark:text-slate-200">衣装選択 - <span id="modal-slot-label"></span></h3>
-          <button id="modal-close-x" type="button" class="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 text-xl leading-none">&times;</button>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <select id="modal-rarity" class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
-            <option value="">レアリティ</option>
-            <option value="UR">UR</option>
-            <option value="SSR">SSR</option>
-            <option value="SR">SR</option>
-            <option value="R">R</option>
-          </select>
-          <select id="modal-attribute" class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
-            <option value="">属性</option>
-            <option value="Shout">Shout</option>
-            <option value="Beat">Beat</option>
-            <option value="Melody">Melody</option>
-          </select>
-        </div>
-        <div class="mt-2 flex items-center gap-3">
-          <label class="flex items-center gap-1 text-xs">
-            <input type="checkbox" id="modal-owned-only" checked />
-            <span>所持衣装のみ</span>
-          </label>
-          <span id="modal-result-count" class="text-xs text-gray-500 dark:text-slate-400"></span>
-        </div>
-      </div>
-      <div id="modal-card-list" class="overflow-y-auto flex-1 p-2"></div>
-      <div class="p-3 border-t flex justify-between flex-shrink-0">
-        <button id="modal-clear" type="button" class="text-sm text-red-500 hover:underline">枠をクリア</button>
-        <button id="modal-close" type="button" class="px-4 py-1.5 bg-gray-200 dark:bg-slate-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-slate-600">閉じる</button>
-      </div>
-    </div>
-  </div>
+  <CardPickerModal bind:this={picker} allCards={allCardsState} onPick={handlePick} onClear={handleClear} />
 </div>
