@@ -27,6 +27,15 @@ export function songImageUrl(id: number | string): string {
   return `${SONG_IMAGE_BASE_URL}/${id}.png`;
 }
 
+/** ミリ秒を「123 ms」「12.34 秒」「1分 5.0秒」形式で整形する */
+export function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${ms} ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(2)} 秒`;
+  const m = Math.floor(s / 60);
+  return `${m}分 ${(s - m * 60).toFixed(1)}秒`;
+}
+
 /** 星 n 個 + 空星 (5-n) 個を文字列で返す。n が falsy なら空文字 */
 export function starsText(n: number | null | undefined): string {
   if (!n) return '';
