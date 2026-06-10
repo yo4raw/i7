@@ -16,7 +16,7 @@ export async function getStaticPaths() {
     if (c.ID != null) cardMap.set(c.ID, c);
   }
   const pick = (ids: number[]): Card[] =>
-    ids.map(id => cardMap.get(id)).filter((c): c is Card => !!c);
+    [...new Set(ids)].map(id => cardMap.get(id)).filter((c): c is Card => !!c);
 
   return (events as EventRow[]).map(ev => ({
     params: { id: String(ev.id) },
