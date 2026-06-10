@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { getApSkillLevel } from '../../lib/data/fetchCardsJson';
   import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
   import type { Song } from '../../lib/data/fetchSongsJson';
@@ -15,25 +14,12 @@
   import { loadRabbitNotes } from '../../lib/data/rabbitNote';
   import { ATTR_TEXT_CLASS } from '../../lib/ui';
 
-  let { deckState, selectedSong, allBroachs }: {
+  let { deckState, selectedSong, allBroachs, scoreUpAssist }: {
     deckState: DeckState;
     selectedSong: Song | null;
     allBroachs: FixedBroach[];
+    scoreUpAssist: boolean;
   } = $props();
-
-  // 親 (ScoreCalc) テンプレート内の #opt-scoreup-assist と同期する。
-  // 既存実装は renderCardDetailTable() 実行時にチェックボックスを直接読んでいたため、
-  // change イベントで $state に反映して同じタイミングで再描画する。
-  let scoreUpAssistEnabled = $state(false);
-
-  onMount(() => {
-    const el = document.getElementById('opt-scoreup-assist') as HTMLInputElement | null;
-    if (!el) return;
-    scoreUpAssistEnabled = el.checked;
-    const handler = () => { scoreUpAssistEnabled = el.checked; };
-    el.addEventListener('change', handler);
-    return () => el.removeEventListener('change', handler);
-  });
 
   type DetailRow = {
     i: number;
@@ -166,9 +152,9 @@
     const teamShout = baseShout + csShout;
     const teamBeat = baseBeat + csBeat;
     const teamMelody = baseMelody + csMelody;
-    const assistShout = scoreUpAssistEnabled ? Math.floor(teamShout * (1 + SCOREUP_ASSIST_RATE)) - teamShout : 0;
-    const assistBeat = scoreUpAssistEnabled ? Math.floor(teamBeat * (1 + SCOREUP_ASSIST_RATE)) - teamBeat : 0;
-    const assistMelody = scoreUpAssistEnabled ? Math.floor(teamMelody * (1 + SCOREUP_ASSIST_RATE)) - teamMelody : 0;
+    const assistShout = scoreUpAssist ? Math.floor(teamShout * (1 + SCOREUP_ASSIST_RATE)) - teamShout : 0;
+    const assistBeat = scoreUpAssist ? Math.floor(teamBeat * (1 + SCOREUP_ASSIST_RATE)) - teamBeat : 0;
+    const assistMelody = scoreUpAssist ? Math.floor(teamMelody * (1 + SCOREUP_ASSIST_RATE)) - teamMelody : 0;
     const assistPct = Math.round(SCOREUP_ASSIST_RATE * 100);
 
     const deckShout  = teamShout  + assistShout;
@@ -192,7 +178,7 @@
         centerRate, friendRate,
         centerShout, centerBeat, centerMelody,
         friendShout, friendBeat, friendMelody,
-        scoreUpAssistEnabled,
+        scoreUpAssist,
         assistPct, assistShout, assistBeat, assistMelody,
         deckShout, deckBeat, deckMelody,
         noteShoutWhite, noteBeatWhite, noteMelodyWhite,
@@ -289,7 +275,7 @@
               <td colspan="2"></td>
             </tr>
           {/if}
-          {#if f.scoreUpAssistEnabled}
+          {#if f.scoreUpAssist}
             <tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs text-emerald-600">
               <td colspan="4" class="py-1 px-1 text-right">ScoreUPアシスト (+{f.assistPct}%)</td>
               <td class="py-1 px-1 text-right">{f.assistShout > 0 ? `+${f.assistShout.toLocaleString()}` : '-'}</td>
