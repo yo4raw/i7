@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Card } from '../lib/data/fetchCardsJson';
-  import { getApSkillLevel } from '../lib/data/fetchCardsJson';
+  import { getApSkillLevel, SKILL_TYPE } from '../lib/data/fetchCardsJson';
   import { formatSkillEffect } from '../lib/score/skillFormatter';
   import type { Song } from '../lib/data/fetchSongsJson';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
@@ -68,6 +68,16 @@
   let scoreUpAssist = $state(false);
   let scoreUpBadgeRate = $state(0);
   let ownedOnly = $state(false);
+  let shrinkPairOnly = $state(false);
+
+  /** デッキ6枠中の判定縮小スキル持ち枚数を固定する条件 (shrinkPairOnly 有効時) */
+  const SHRINK_PAIR_TARGET = 2;
+
+  /** parseSkill (engine.ts) と同じ判定で「判定縮小スキル持ち」かどうかを返す */
+  const isShrinkCard = (c: Card | null): boolean => {
+    const t = c?.ap_skill_type;
+    return !!t && (t === SKILL_TYPE.SHRINK || t.startsWith(SKILL_TYPE.SHRINK_PREFIX));
+  };
   let now = $state(Date.now());
 
   let searching = $state(false);
@@ -103,6 +113,9 @@
 
   const goldCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'gold'));
   const silverCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'silver'));
+
+  const shrinkCandidates = $derived(currentCandidates.filter((c) => isShrinkCard(c)));
+  const nonShrinkCandidates = $derived(currentCandidates.filter((c) => !isShrinkCard(c)));
 
   const cardCounts = $derived(allCounts());
   const ownedCountOf = (card: Card): number => (card.ID == null ? 0 : cardCounts[String(card.ID)] ?? 0);
@@ -142,32 +155,72 @@
   //   各 owned カードを center に置いた時の「残り所持枚数で 4-多重集合」の総和 × フレンド候補数
   // ownedOnly=false 時:
   //   (center, friend) は UR/UR で対称、(member1..4) は多重集合 → multichoose(N,2)×multichoose(N,4)
+  // shrinkPairOnly 時: 縮小持ち / それ以外に分割し、6枠合計でちょうど SHRINK_PAIR_TARGET 枚になる組合せのみ数える
   const comboCount = $derived.by(() => {
     if (ownedOnly) {
       if (ownedCandidates.length < 1 || currentCandidates.length < 1) return 0;
-      const limits = ownedCandidates.map((c) => ownedCountOf(c));
-      let centerSum = 0;
-      for (let ci = 0; ci < ownedCandidates.length; ci++) {
-        const adjusted = limits.slice();
-        adjusted[ci] -= 1;
-        centerSum += countMultisetsWithLimits(adjusted, 4);
+      if (!shrinkPairOnly) {
+        const limits = ownedCandidates.map((c) => ownedCountOf(c));
+        let centerSum = 0;
+        for (let ci = 0; ci < ownedCandidates.length; ci++) {
+          const adjusted = limits.slice();
+          adjusted[ci] -= 1;
+          centerSum += countMultisetsWithLimits(adjusted, 4);
+        }
+        return centerSum * currentCandidates.length;
       }
-      return centerSum * currentCandidates.length;
+      // 縮小2枚条件: center の縮小有無 × フレンドの縮小有無 で残りメンバーの縮小枚数が決まる
+      let total = 0;
+      for (let ci = 0; ci < ownedCandidates.length; ci++) {
+        const center = ownedCandidates[ci];
+        const cs = isShrinkCard(center) ? 1 : 0;
+        const shrinkLimits: number[] = [];
+        const nonShrinkLimits: number[] = [];
+        for (const c of ownedCandidates) {
+          let lim = ownedCountOf(c);
+          if (c === center) lim -= 1;
+          (isShrinkCard(c) ? shrinkLimits : nonShrinkLimits).push(lim);
+        }
+        for (const fs of [0, 1]) {
+          const k = SHRINK_PAIR_TARGET - cs - fs;
+          if (k < 0 || k > 4) continue;
+          const friendPool = fs === 1 ? shrinkCandidates.length : nonShrinkCandidates.length;
+          if (friendPool < 1) continue;
+          total += countMultisetsWithLimits(shrinkLimits, k)
+            * countMultisetsWithLimits(nonShrinkLimits, 4 - k)
+            * friendPool;
+        }
+      }
+      return total;
     }
-    return currentCandidates.length >= 1
-      ? multichoose(currentCandidates.length, 2) * multichoose(currentCandidates.length, 4)
-      : 0;
+    if (currentCandidates.length < 1) return 0;
+    if (!shrinkPairOnly) {
+      return multichoose(currentCandidates.length, 2) * multichoose(currentCandidates.length, 4);
+    }
+    // 縮小2枚条件: (center, friend) ペア内の縮小枚数 s2 ごとにメンバーの縮小枚数 k が決まる
+    const S = shrinkCandidates.length;
+    const T = nonShrinkCandidates.length;
+    let total = 0;
+    for (let s2 = 0; s2 <= SHRINK_PAIR_TARGET; s2++) {
+      const k = SHRINK_PAIR_TARGET - s2;
+      if (k < 0 || k > 4) continue;
+      const pairs = s2 === 0 ? multichoose(T, 2) : s2 === 1 ? S * T : multichoose(S, 2);
+      total += pairs * multichoose(S, k) * multichoose(T, 4 - k);
+    }
+    return total;
   });
 
   const searchDisabled = $derived(
     !selectedSong || currentCandidates.length < 1 || searching
       || (ownedOnly && ownedCandidates.length < 1)
-      || (ownedOnly && comboCount === 0)
+      || comboCount === 0
   );
   const searchDisabledReason = $derived(
     !selectedSong ? '楽曲を選択してください'
       : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR 衣装がありません'
       : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR 衣装がありません'
+      : ownedOnly && comboCount === 0 && !shrinkPairOnly ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
+      : shrinkPairOnly && comboCount === 0 ? '判定縮小スキル持ちがちょうど2枚になる組合せが作れません（縮小持ち候補の不足など）'
       : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : ''
   );
@@ -201,6 +254,12 @@
       const v = idx[i] + 1;
       for (let j = i; j < k; j++) idx[j] = v;
     }
+  }
+
+  /** multisetIndices の k=0 対応版: k=0 のとき空組合せを 1 回だけ yield する */
+  function* multisetIndicesOrEmpty(N: number, k: number): Generator<number[]> {
+    if (k === 0) { yield []; return; }
+    yield* multisetIndices(N, k);
   }
 
   function formatElapsed(ms: number): string {
@@ -325,13 +384,61 @@
           }
           if (!valid) continue;
 
-          for (let fi = 0; fi < N; fi++) {
-            deck[5] = candidates[fi];
+          // 縮小2枚条件: スロット0-4の縮小枚数からフレンド候補を縮小持ち/それ以外に絞る
+          let friendPool = candidates;
+          if (shrinkPairOnly) {
+            let shrinkCount5 = 0;
+            for (let i = 0; i < 5; i++) {
+              if (isShrinkCard(deck[i])) shrinkCount5++;
+            }
+            if (shrinkCount5 === SHRINK_PAIR_TARGET) friendPool = nonShrinkCandidates;
+            else if (shrinkCount5 === SHRINK_PAIR_TARGET - 1) friendPool = shrinkCandidates;
+            else continue;
+          }
+
+          for (let fi = 0; fi < friendPool.length; fi++) {
+            deck[5] = friendPool[fi];
             pushTop(evaluateDeck());
             evaluated++;
             if (evaluated % YIELD_EVERY === 0) {
               await reportProgress();
               if (abortRequested) break outer1;
+            }
+          }
+        }
+      }
+    } else if (shrinkPairOnly) {
+      // 縮小2枚条件: 候補を縮小持ち S / それ以外 T に分割し、
+      // (center, friend) ペア内の縮小枚数 s2 → メンバーの縮小枚数 k = 2 − s2 として
+      // S から k 枚 + T から 4−k 枚の多重集合を直接列挙する（条件外の組合せは生成しない）
+      const S = shrinkCandidates;
+      const T = nonShrinkCandidates;
+      outer3:
+      for (let s2 = 0; s2 <= SHRINK_PAIR_TARGET; s2++) {
+        const k = SHRINK_PAIR_TARGET - s2;
+        if (k < 0 || k > 4) continue;
+        const pairGen: Generator<[Card, Card]> = (function* () {
+          if (s2 === 0) {
+            for (const p of multisetIndices(T.length, 2)) yield [T[p[0]], T[p[1]]] as [Card, Card];
+          } else if (s2 === 1) {
+            for (const s of S) for (const t of T) yield [s, t] as [Card, Card];
+          } else {
+            for (const p of multisetIndices(S.length, 2)) yield [S[p[0]], S[p[1]]] as [Card, Card];
+          }
+        })();
+        for (const [c0, c5] of pairGen) {
+          deck[0] = c0;
+          deck[5] = c5;
+          for (const sm of multisetIndicesOrEmpty(S.length, k)) {
+            for (const nm of multisetIndicesOrEmpty(T.length, 4 - k)) {
+              for (let i = 0; i < k; i++) deck[1 + i] = S[sm[i]];
+              for (let i = 0; i < 4 - k; i++) deck[1 + k + i] = T[nm[i]];
+              pushTop(evaluateDeck());
+              evaluated++;
+              if (evaluated % YIELD_EVERY === 0) {
+                await reportProgress();
+                if (abortRequested) break outer3;
+              }
             }
           }
         }
@@ -366,8 +473,19 @@
       // 最適編成の center + member1..4 を固定し、friend だけ全候補に切り替えて Top 5 を抽出
       const best = top[0];
       const fixed = best.cardIds.map((id) => candidates.find((c) => c.ID === id) ?? null);
+      // 縮小2枚条件: スロット0-4の縮小枚数を維持できるフレンドのみ差し替え候補にする
+      let friendSwapPool = candidates;
+      if (shrinkPairOnly) {
+        let fixedShrink = 0;
+        for (let i = 0; i < 5; i++) {
+          if (isShrinkCard(fixed[i])) fixedShrink++;
+        }
+        friendSwapPool = fixedShrink === SHRINK_PAIR_TARGET ? nonShrinkCandidates
+          : fixedShrink === SHRINK_PAIR_TARGET - 1 ? shrinkCandidates
+          : [];
+      }
       const friendScores: FriendCandidate[] = [];
-      for (const cand of candidates) {
+      for (const cand of friendSwapPool) {
         fixed[5] = cand;
         const tiers = buildTiersFromDeck(fixed);
         const team = computeTeam(
@@ -564,10 +682,14 @@
       <span>%</span>
     </label>
   </div>
-  <div class="mt-3 border-t pt-3">
+  <div class="mt-3 border-t pt-3 space-y-2">
     <label class="flex items-center gap-2 text-xs">
       <input type="checkbox" bind:checked={ownedOnly} class="rounded" />
       <span><b>所持衣装で検索</b> — センター + メンバー4枚を所持枚数の範囲内で組合せ、フレンドは全候補から評価します</span>
+    </label>
+    <label class="flex items-center gap-2 text-xs">
+      <input type="checkbox" bind:checked={shrinkPairOnly} class="rounded" />
+      <span><b>判定縮小2枚編成に限定</b> — フレンドを含む6枠中、判定縮小スキル持ちがちょうど2枚の組合せのみ探索します（縮小持ち候補 {shrinkCandidates.length} 枚）</span>
     </label>
   </div>
 </section>
