@@ -1,9 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EventStatusBadge from '../../components/EventStatusBadge.svelte';
+import EventBonusCardGrid from '../../components/EventBonusCardGrid.svelte';
 import { fetchEventsCsv, formatEffectSummary, type EventRow, type EventSpecialTier } from '../../lib/data/fetchEventsCsv';
 import { fetchCardsJson, type Card } from '../../lib/data/fetchCardsJson';
-import { ATTR_BADGE_BG, RARITY_BADGE_CLASSES } from '../../lib/constants';
 import { cardThumbUrl } from '../../lib/ui';
 
 export async function getStaticPaths() {
@@ -16,7 +16,7 @@ export async function getStaticPaths() {
     if (c.ID != null) cardMap.set(c.ID, c);
   }
   const pick = (ids: number[]): Card[] =>
-    ids.map(id => cardMap.get(id)).filter((c): c is Card => !!c);
+    [...new Set(ids)].map(id => cardMap.get(id)).filter((c): c is Card => !!c);
 
   return (events as EventRow[]).map(ev => ({
     params: { id: String(ev.id) },
@@ -135,52 +135,22 @@ const tiers: TierView[] = [
   </div>
 
   {tiers.map(t => (
-    <section class={`mb-6 rounded-lg bg-white shadow p-4 ${t.borderClass}`}>
-      <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-        <span class={`inline-block px-3 py-1 rounded text-sm font-bold border ${t.badgeClass}`}>{t.label}</span>
-        <span class="text-xs text-gray-500 dark:text-slate-400">対象 {t.cards.length} 枚</span>
-      </div>
-
-      {formatEffectSummary(t.tier) && (
-        <p class="text-sm text-gray-700 dark:text-slate-200 mb-2">{formatEffectSummary(t.tier)}</p>
-      )}
-      {t.key === 'bronze' && event.special3_member && (
-        <p class="text-xs text-gray-500 dark:text-slate-400 mb-3">対象: {event.special3_member}</p>
-      )}
-
-      {t.cards.length === 0 ? (
-        <p class="text-sm text-gray-400 dark:text-slate-500">対象衣装なし</p>
-      ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-          {t.cards.map(card => {
-            const attr = card.attribute || '';
-            const rarity = card.rarity || '';
-            const attrBg = ATTR_BADGE_BG[attr] || 'bg-gray-400';
-            const rarityBg = RARITY_BADGE_CLASSES[rarity] || 'bg-gray-300';
-            return (
-              <a
-                href={`${base}cards/${card.ID}/`}
-                class="flex items-center gap-2 p-2 rounded border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-900 hover:shadow-sm transition-shadow"
-              >
-                <img
-                  src={cardThumbUrl(card.ID!)}
-                  alt={card.cardname || ''}
-                  class="w-12 h-auto rounded flex-shrink-0"
-                  loading="lazy"
-                />
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-1 mb-0.5">
-                    <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityBg}`}>{rarity || '?'}</span>
-                    {attr && <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
-                  </div>
-                  <div class="text-xs font-medium truncate text-gray-800 dark:text-slate-100">{card.cardname || '-'}</div>
-                  <div class="text-[11px] text-gray-500 dark:text-slate-400 truncate">{card.name || ''}</div>
-                </div>
-              </a>
-            );
-          })}
-        </div>
-      )}
+    <section class={`mb-6 rounded-lg bg-white dark:bg-slate-800 shadow p-4 ${t.borderClass}`}>
+      <EventBonusCardGrid
+        label={t.label}
+        badgeClass={t.badgeClass}
+        effectSummary={formatEffectSummary(t.tier)}
+        targetNote={t.key === 'bronze' ? event.special3_member : ''}
+        cards={t.cards.map(c => ({
+          ID: c.ID!,
+          cardname: c.cardname || '',
+          name: c.name || '',
+          attribute: c.attribute || '',
+          rarity: c.rarity || '',
+        }))}
+        base={base}
+        client:load
+      />
     </section>
   ))}
 
