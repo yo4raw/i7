@@ -12,9 +12,9 @@ import {
 } from './types';
 import {
   CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
-  EVENT_BONUS_MULTIPLIER, TRAIN_BONUS,
+  TRAIN_BONUS,
 } from './constants';
-import type { EventBonusTier } from '../data/eventBonusTiers';
+import { EVENT_BONUS_MULTIPLIER, type EventBonusTier } from '../data/eventBonusTiers';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
 import { SHARED_BROACHS } from '../data/sharedBroachs';

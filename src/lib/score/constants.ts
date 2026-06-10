@@ -32,5 +32,3 @@ export const DEFAULT_CENTER_SKILL_RATE = 6;
 export const TRAIN_BONUS: Record<string, number> = {
   UR: 1800,
 };
-
-export { EVENT_BONUS_MULTIPLIER } from '../data/eventBonusTiers';

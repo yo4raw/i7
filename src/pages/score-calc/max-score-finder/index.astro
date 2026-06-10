@@ -4,7 +4,7 @@ import MaxScoreFinder from '../../../components/MaxScoreFinder.svelte';
 import { fetchCardsJson } from '../../../lib/data/fetchCardsJson';
 import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../../lib/data/fetchSongsJson';
 import { fetchFixedBroachsJson } from '../../../lib/data/fetchFixedBroachsJson';
-import { fetchEventsCsv } from '../../../lib/data/fetchEventsCsv';
+import { fetchEventsCsv, toEventForBonus } from '../../../lib/data/fetchEventsCsv';
 
 const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
   fetchCardsJson(),
@@ -15,15 +15,7 @@ const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
 
 const allSongs = filterAllowedSongs(filterValidSongs(allSongsRaw));
 
-const eventsForBonus = allEvents.map(e => ({
-  id: e.id,
-  eventname: e.eventname,
-  start_date: e.start_date,
-  end_date: e.end_date,
-  gold: e.gold.cardIds,
-  silver: e.silver.cardIds,
-  bronze: e.bronze.cardIds,
-}));
+const eventsForBonus = allEvents.map(toEventForBonus);
 
 const base = import.meta.env.BASE_URL;
 

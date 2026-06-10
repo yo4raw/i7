@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import type { EventForBonus } from './eventBonusTiers';
 
 export interface EventSpecialTier {
   cardIds: number[];
@@ -134,6 +135,19 @@ export async function fetchEventsCsv(): Promise<EventRow[]> {
     silver: readTier(r, 2),
     bronze: readTier(r, 3),
   })).filter(e => e.id > 0 && e.eventname && e.start_date && e.end_date);
+}
+
+/** EventRow をクライアントへ渡す特効ボーナス用の最小形に変換する（各ページで重複していた map を集約） */
+export function toEventForBonus(e: EventRow): EventForBonus & { eventname: string } {
+  return {
+    id: e.id,
+    eventname: e.eventname,
+    start_date: e.start_date,
+    end_date: e.end_date,
+    gold: e.gold.cardIds,
+    silver: e.silver.cardIds,
+    bronze: e.bronze.cardIds,
+  };
 }
 
 const EFFECT_LABEL: Record<string, string> = {
