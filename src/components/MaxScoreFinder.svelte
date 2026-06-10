@@ -17,8 +17,8 @@
     type DeckRecord,
     type FriendCandidate,
     type SearchInput,
-    type FinderWorkerResponse,
   } from '../lib/score/maxScoreFinder';
+  import { startWorkerSearch, type SearchPoolRun } from '../lib/score/searchWorkerPool';
   import { resolveDeckBroachs } from '../lib/score/broachResolver';
   import { buildLiveTierMap, isEventLive, BONUS_LABEL, BONUS_CLASS } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
@@ -78,7 +78,7 @@
   let progressText = $state('');
   let lastResult = $state<SearchResult | null>(null);
   let abortRequested = false;
-  let activeWorkers: Worker[] = [];
+  let activeRun: SearchPoolRun | null = null;
 
   $effect(() => {
     const id = setInterval(() => { now = Date.now(); }, 60_000);
@@ -88,8 +88,8 @@
   // アイランド破棄時に探索中の Worker を解放する (フルページ遷移では不要だが将来の SPA 化への保険)
   $effect(() => {
     return () => {
-      for (const w of activeWorkers) w.terminate();
-      activeWorkers = [];
+      activeRun?.terminate();
+      activeRun = null;
     };
   });
 
@@ -126,7 +126,7 @@
 
   /**
    * 現在の UI 状態から探索入力を構築する。
-   * $state プロキシは postMessage (structured clone) できないため
+   * $state プロキシは Worker へ structured clone で送信できないため
    * $state.snapshot でプレーン化する。
    */
   function buildSearchInput(): SearchInput | null {
@@ -227,14 +227,8 @@
     );
 
     const t0 = performance.now();
-    let evaluated = 0;
-    let provisionalBest: number | null = null;
-    const localTops: DeckRecord[][] = [];
-    let anyAborted = false;
-    const workers: Worker[] = [];
-    activeWorkers = workers; // requestAbort から abort メッセージを送るため探索中のみ共有
 
-    const updateProgress = () => {
+    const updateProgress = (evaluated: number, provisionalBest: number | null) => {
       const pct = Math.min(100, Math.round((evaluated / Math.max(1, totalEvals)) * 100));
       progressPct = pct;
       const speed = evaluated / ((performance.now() - t0) / 1000);
@@ -243,54 +237,9 @@
     };
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        if (chunks.length === 0) { resolve(); return; }
-        let nextChunk = 0;
-        let active = 0;
-
-        const dispatch = (w: Worker) => {
-          if (abortRequested || nextChunk >= chunks.length) {
-            if (active === 0) resolve();
-            return;
-          }
-          active++;
-          w.postMessage({ type: 'chunk', descriptor: chunks[nextChunk++] });
-        };
-
-        for (let i = 0; i < workerCount; i++) {
-          const w = new Worker(
-            new URL('../lib/score/maxScoreFinder.worker.ts', import.meta.url),
-            { type: 'module' },
-          );
-          workers.push(w);
-          w.onerror = (e) => reject(new Error(`探索 Worker でエラーが発生しました: ${e.message}`));
-          w.onmessage = (e: MessageEvent<FinderWorkerResponse>) => {
-            const msg = e.data;
-            if (msg.type === 'ready') {
-              dispatch(w);
-              return;
-            }
-            if (msg.type === 'progress') {
-              evaluated += msg.evaluatedDelta;
-              if (msg.localBestScore != null && (provisionalBest == null || msg.localBestScore > provisionalBest)) {
-                provisionalBest = msg.localBestScore;
-              }
-              updateProgress();
-              return;
-            }
-            if (msg.type === 'error') {
-              reject(new Error(`探索 Worker でエラーが発生しました: ${msg.message}`));
-              return;
-            }
-            // msg.type === 'result'
-            localTops.push(msg.topK);
-            if (msg.aborted) anyAborted = true;
-            active--;
-            dispatch(w);
-          };
-          w.postMessage({ type: 'init', input });
-        }
-      });
+      const run = startWorkerSearch(input, chunks, workerCount, updateProgress);
+      activeRun = run; // requestAbort / アイランド破棄から abort・terminate するため探索中のみ共有
+      const { localTops, evaluated, aborted } = await run.promise;
 
       const elapsedMs = Math.round(performance.now() - t0);
       const top = mergeTopK(localTops, TOP_K);
@@ -307,21 +256,20 @@
           evaluated,
           elapsedMs,
           evalMode: input.evalMode,
-          aborted: abortRequested || anyAborted,
+          aborted: abortRequested || aborted,
         };
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : '探索中にエラーが発生しました');
     } finally {
-      for (const w of workers) w.terminate();
-      activeWorkers = [];
+      activeRun = null;
       searching = false;
     }
   }
 
   function requestAbort() {
     abortRequested = true;
-    for (const w of activeWorkers) w.postMessage({ type: 'abort' });
+    activeRun?.abort();
   }
 
   function getCardById(id: number | null): Card | null {
