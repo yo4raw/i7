@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { CardListItem } from '../../lib/cardListData';
-  import { ATTR_BADGE_BG, ATTR_HEX, RARITY_BADGE_CLASSES } from '../../lib/constants';
+  import { ATTR_HEX } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import CountInput from './CountInput.svelte';
+  import RarityBadge from '../ui/RarityBadge.svelte';
+  import AttributeBadge from '../ui/AttributeBadge.svelte';
 
   type Props = {
     card: CardListItem;
@@ -47,12 +49,8 @@
   </button>
   <div class="p-2 flex flex-col gap-1 flex-1">
     <div class="flex flex-wrap items-center gap-1">
-      <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold text-white rounded {RARITY_BADGE_CLASSES[card.rarity] || 'bg-gray-300'}">
-        {card.rarity}
-      </span>
-      <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold text-white rounded {ATTR_BADGE_BG[card.attribute] || 'bg-gray-300'}">
-        {card.attribute || '?'}
-      </span>
+      <RarityBadge rarity={card.rarity} sizeClass="inline-block px-1.5 py-0.5 text-[10px]" />
+      <AttributeBadge attribute={card.attribute} sizeClass="inline-block px-1.5 py-0.5 text-[10px]" />
       {#if bonusDef}
         <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded border {bonusDef.selectClasses.join(' ')}">
           {bonusDef.shortLabel}

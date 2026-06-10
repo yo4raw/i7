@@ -22,7 +22,9 @@
   import { resolveDeckBroachs } from '../lib/score/broachResolver';
   import { buildLiveTierMap, isEventLive, BONUS_LABEL, BONUS_CLASS } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
-  import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../lib/constants';
+  import { ATTR_HEX } from '../lib/constants';
+  import RarityBadge from './ui/RarityBadge.svelte';
+  import AttributeBadge from './ui/AttributeBadge.svelte';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import { cardThumbUrl } from '../lib/ui';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
@@ -554,8 +556,6 @@
           {#if card}
             {@const attr = normalizeAttribute(card.attribute)}
             {@const attrColor = ATTR_HEX[attr] || '#6b7280'}
-            {@const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300'}
-            {@const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300'}
             {@const tier = currentTierMap.get(card.ID!) ?? 'none'}
             {@const bonusLabel = BONUS_LABEL[tier]}
             {@const bonusClass = BONUS_CLASS[tier]}
@@ -566,8 +566,8 @@
               <div class="border-2 rounded-lg p-1.5 flex flex-col items-center min-h-[120px]" style="border-color:{attrColor}">
                 <img src={cardThumbUrl(card.ID!)} alt={card.cardname || ''} class="w-full max-w-[60px] h-auto rounded mb-1" loading="lazy" />
                 <div class="flex gap-0.5 mb-1">
-                  <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded {rarityClass}">{card.rarity || '?'}</span>
-                  <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded {attrBgClass}">{attr}</span>
+                  <RarityBadge rarity={card.rarity} sizeClass="px-1 py-0.5 text-[9px]" fallbackLabel="?" />
+                  <AttributeBadge attribute={attr} sizeClass="px-1 py-0.5 text-[9px]" />
                 </div>
                 <div class="text-[9px] text-gray-600 dark:text-slate-300 text-center truncate w-full" title={card.cardname || ''}>{card.cardname || ''}</div>
                 <div class="text-[8px] text-gray-400 dark:text-slate-500 text-center">{card.name || ''}</div>

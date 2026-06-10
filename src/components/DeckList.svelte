@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { Card } from '../lib/data/fetchCardsJson';
   import type { Song } from '../lib/data/fetchSongsJson';
-  import { RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../lib/constants';
   import { normalizeAttribute } from '../lib/score/types';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import { cardThumbUrl } from '../lib/ui';
+  import RarityBadge from './ui/RarityBadge.svelte';
+  import AttributeBadge from './ui/AttributeBadge.svelte';
 
   type Props = {
     cards: Card[];
@@ -109,14 +110,12 @@
             {@const labelClass = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
             {#if card}
               {@const attr = normalizeAttribute(card.attribute)}
-              {@const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300'}
-              {@const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300'}
               <div class="flex flex-col items-center">
                 <div class="text-[9px] {labelClass} mb-0.5">{label}</div>
                 <img src={cardThumbUrl(card.ID!)} alt={card.cardname || ''} class="w-10 h-auto rounded" loading="lazy" />
                 <div class="flex gap-0.5 mt-0.5">
-                  <span class="px-0.5 py-px text-[7px] font-bold text-white rounded {rarityClass}">{card.rarity || '?'}</span>
-                  <span class="px-0.5 py-px text-[7px] font-bold text-white rounded {attrBgClass}">{attr}</span>
+                  <RarityBadge rarity={card.rarity} sizeClass="px-0.5 py-px text-[7px]" fallbackLabel="?" />
+                  <AttributeBadge attribute={attr} sizeClass="px-0.5 py-px text-[7px]" />
                 </div>
                 <div class="text-[8px] text-gray-500 dark:text-slate-400 truncate max-w-[60px] text-center" title={card.cardname || ''}>{card.cardname || ''}</div>
               </div>

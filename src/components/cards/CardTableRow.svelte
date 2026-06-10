@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { CardListItem } from '../../lib/cardListData';
-  import { ATTR_BADGE_BG, ATTR_BG, ATTR_BG_HOVER, ATTR_HEX, RARITY_BADGE_CLASSES } from '../../lib/constants';
+  import { ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { attrDonutSvg } from '../../lib/donutChart';
   import CountInput from './CountInput.svelte';
+  import RarityBadge from '../ui/RarityBadge.svelte';
+  import AttributeBadge from '../ui/AttributeBadge.svelte';
 
   type Props = {
     card: CardListItem;
@@ -83,14 +85,10 @@
   </td>
   <td class="px-3 py-2">{card.name || ''}</td>
   <td class="px-3 py-2">
-    <span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded {RARITY_BADGE_CLASSES[card.rarity] || 'bg-gray-300'}">
-      {card.rarity}
-    </span>
+    <RarityBadge rarity={card.rarity} sizeClass="inline-block px-1.5 py-0.5 text-xs" />
   </td>
   <td class="px-3 py-2">
-    <span class="inline-block px-1.5 py-0.5 text-xs font-bold text-white rounded {ATTR_BADGE_BG[card.attribute] || 'bg-gray-300'}">
-      {card.attribute || '?'}
-    </span>
+    <AttributeBadge attribute={card.attribute} sizeClass="inline-block px-1.5 py-0.5 text-xs" />
   </td>
   {#if showBonusCell}
     <td class="px-3 py-2 bonus-cell">
