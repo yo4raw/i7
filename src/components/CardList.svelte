@@ -5,6 +5,7 @@
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
+  import { cardTextMatches } from '../lib/cardFilter';
   import CardTableRow from './cards/CardTableRow.svelte';
   import CardMobileCard from './cards/CardMobileCard.svelte';
   import CardTileCard from './cards/CardTileCard.svelte';
@@ -41,7 +42,7 @@
   const filtered = $derived.by(() => {
     const t = text.toLowerCase();
     let result = allCards.filter((card) => {
-      if (t && !(card.cardname || '').toLowerCase().includes(t) && !(card.name || '').toLowerCase().includes(t)) return false;
+      if (!cardTextMatches(card, t)) return false;
       if (raritySet.size && !raritySet.has(card.rarity)) return false;
       if (attributeSet.size && !attributeSet.has(card.attribute)) return false;
       if (characterSet.size && !characterSet.has(card.name)) return false;
