@@ -169,7 +169,8 @@
         }
         return centerSum * currentCandidates.length;
       }
-      // 縮小2枚条件: center の縮小有無 × フレンドの縮小有無 で残りメンバーの縮小枚数が決まる
+      // 縮小2枚条件 (所持衣装検索): スロット0-4の縮小枚数がちょうど2枚なら非縮小フレンド、
+      // それ以外 (0枚 / 1枚 / 3枚以上) は縮小フレンドのみを組合せる（除外はしない）
       let total = 0;
       for (let ci = 0; ci < ownedCandidates.length; ci++) {
         const center = ownedCandidates[ci];
@@ -181,13 +182,12 @@
           if (c === center) lim -= 1;
           (isShrinkCard(c) ? shrinkLimits : nonShrinkLimits).push(lim);
         }
-        for (const fs of [0, 1]) {
-          const k = SHRINK_PAIR_TARGET - cs - fs;
-          if (k < 0 || k > 4) continue;
-          const friendPool = fs === 1 ? shrinkCandidates.length : nonShrinkCandidates.length;
+        for (let j = 0; j <= 4; j++) {
+          const own5 = cs + j; // スロット0-4 の縮小枚数
+          const friendPool = own5 === SHRINK_PAIR_TARGET ? nonShrinkCandidates.length : shrinkCandidates.length;
           if (friendPool < 1) continue;
-          total += countMultisetsWithLimits(shrinkLimits, k)
-            * countMultisetsWithLimits(nonShrinkLimits, 4 - k)
+          total += countMultisetsWithLimits(shrinkLimits, j)
+            * countMultisetsWithLimits(nonShrinkLimits, 4 - j)
             * friendPool;
         }
       }
@@ -220,7 +220,7 @@
       : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR 衣装がありません'
       : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR 衣装がありません'
       : ownedOnly && comboCount === 0 && !shrinkPairOnly ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
-      : shrinkPairOnly && comboCount === 0 ? '判定縮小スキル持ちがちょうど2枚になる組合せが作れません（縮小持ち候補の不足など）'
+      : shrinkPairOnly && comboCount === 0 ? '判定縮小2枚編成の条件を満たす組合せが作れません（縮小持ち特効候補の不足など）'
       : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : ''
   );
@@ -384,16 +384,15 @@
           }
           if (!valid) continue;
 
-          // 縮小2枚条件: スロット0-4の縮小枚数からフレンド候補を縮小持ち/それ以外に絞る
+          // 縮小2枚条件: スロット0-4の縮小がちょうど2枚なら非縮小フレンド、
+          // それ以外 (0枚 / 1枚 / 3枚以上) は縮小フレンドのみ（組合せ自体は除外しない）
           let friendPool = candidates;
           if (shrinkPairOnly) {
             let shrinkCount5 = 0;
             for (let i = 0; i < 5; i++) {
               if (isShrinkCard(deck[i])) shrinkCount5++;
             }
-            if (shrinkCount5 === SHRINK_PAIR_TARGET) friendPool = nonShrinkCandidates;
-            else if (shrinkCount5 === SHRINK_PAIR_TARGET - 1) friendPool = shrinkCandidates;
-            else continue;
+            friendPool = shrinkCount5 === SHRINK_PAIR_TARGET ? nonShrinkCandidates : shrinkCandidates;
           }
 
           for (let fi = 0; fi < friendPool.length; fi++) {
@@ -473,16 +472,14 @@
       // 最適編成の center + member1..4 を固定し、friend だけ全候補に切り替えて Top 5 を抽出
       const best = top[0];
       const fixed = best.cardIds.map((id) => candidates.find((c) => c.ID === id) ?? null);
-      // 縮小2枚条件: スロット0-4の縮小枚数を維持できるフレンドのみ差し替え候補にする
+      // 縮小2枚条件: スロット0-4の縮小がちょうど2枚なら非縮小フレンド、それ以外は縮小フレンドのみ
       let friendSwapPool = candidates;
       if (shrinkPairOnly) {
         let fixedShrink = 0;
         for (let i = 0; i < 5; i++) {
           if (isShrinkCard(fixed[i])) fixedShrink++;
         }
-        friendSwapPool = fixedShrink === SHRINK_PAIR_TARGET ? nonShrinkCandidates
-          : fixedShrink === SHRINK_PAIR_TARGET - 1 ? shrinkCandidates
-          : [];
+        friendSwapPool = fixedShrink === SHRINK_PAIR_TARGET ? nonShrinkCandidates : shrinkCandidates;
       }
       const friendScores: FriendCandidate[] = [];
       for (const cand of friendSwapPool) {
@@ -689,7 +686,7 @@
     </label>
     <label class="flex items-center gap-2 text-xs">
       <input type="checkbox" bind:checked={shrinkPairOnly} class="rounded" />
-      <span><b>判定縮小2枚編成に限定</b> — フレンドを含む6枠中、判定縮小スキル持ちがちょうど2枚の組合せのみ探索します（縮小持ち候補 {shrinkCandidates.length} 枚）</span>
+      <span><b>判定縮小2枚編成</b> — センター+メンバー4枚に縮小2枚なら非縮小フレンド、それ以外は縮小フレンドに絞って探索します。所持衣装で検索 OFF 時はフレンドを含めちょうど2枚の組合せのみ探索します（縮小持ち候補 {shrinkCandidates.length} 枚）</span>
     </label>
   </div>
 </section>
