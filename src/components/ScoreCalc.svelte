@@ -20,6 +20,7 @@
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
+  import { cardTextMatches } from '../lib/cardFilter';
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs, SONG_NOTE_GROUP_KEYS } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
@@ -744,11 +745,7 @@
 
       let filtered = allCards.filter(card => {
         if (ownedOnly && !(counts[String(card.ID)] >= 1)) return false;
-        if (text) {
-          const name = (card.cardname || '').toLowerCase();
-          const charName = (card.name || '').toLowerCase();
-          if (!name.includes(text) && !charName.includes(text)) return false;
-        }
+        if (!cardTextMatches(card, text)) return false;
         if (rarity && card.rarity !== rarity) return false;
         if (attribute && normalizeAttribute(card.attribute) !== attribute) return false;
         return true;
