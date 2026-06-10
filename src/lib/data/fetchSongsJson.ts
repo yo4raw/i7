@@ -41,6 +41,11 @@ export interface Song {
   [key: string]: string | number | boolean | null | SongNoteGroup;
 }
 
+/** ノートグループの 8 キー（ステージ進行順）。LIGHT_MULTIPLIER (score/constants.ts) のキー順と一致 */
+export const SONG_NOTE_GROUP_KEYS = [
+  'notes_20', 'light_2', 'light_3', 'light_4', 'light_5', 'light_6', 'chorus_light_5', 'chorus_light_6',
+] as const;
+
 const SONGS_GID = 1083871743;
 
 // フラットカラム定義 (col index → key)

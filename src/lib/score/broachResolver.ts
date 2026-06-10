@@ -61,7 +61,7 @@ function countIdolAttrMatch(deck: (Card | null)[], idol: string, attribute: stri
 function checkBroachCondition(
   broach: FixedBroach,
   deck: (Card | null)[],
-  song: Song,
+  song: Pick<Song, 'song_name'>,
 ): boolean {
   const type = broach.broach_type;
 
@@ -106,7 +106,7 @@ function checkBroachCondition(
 export function resolveDeckBroachs(
   deck: (Card | null)[],
   allBroachs: FixedBroach[],
-  song: Song,
+  song: Pick<Song, 'song_name'>,
   selectedBroachIds?: (number | null)[],
 ): Map<number, ResolvedBroach[]> {
   const result = new Map<number, ResolvedBroach[]>();
