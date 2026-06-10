@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CardList from '../../components/CardList.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
+import { fetchEventsCsv, toEventForBonus } from '../../lib/data/fetchEventsCsv.ts';
 import { CARD_THUMB_BASE_URL, PAGE_SIZE } from '../../lib/constants';
 
 const [allCards, allEvents] = await Promise.all([
@@ -11,14 +11,7 @@ const [allCards, allEvents] = await Promise.all([
 ]);
 const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].sort() as string[];
 
-const eventsForBonus = allEvents.map(e => ({
-  id: e.id,
-  start_date: e.start_date,
-  end_date: e.end_date,
-  gold: e.gold.cardIds,
-  silver: e.silver.cardIds,
-  bronze: e.bronze.cardIds,
-}));
+const eventsForBonus = allEvents.map(toEventForBonus);
 
 const base = import.meta.env.BASE_URL;
 ---
