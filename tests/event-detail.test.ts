@@ -34,6 +34,7 @@ test.describe('イベント詳細 特効所持枚数', () => {
     const plus = gold.getByRole('button', { name: '所持数を1増やす' }).first();
 
     await plus.click();
+    await expect(gold.locator('input[type="number"]').first()).toHaveValue('1');
     await plus.click();
 
     await expect(gold.locator('input[type="number"]').first()).toHaveValue('2');
@@ -52,6 +53,7 @@ test.describe('イベント詳細 特効所持枚数', () => {
     const minus = gold.getByRole('button', { name: '所持数を1減らす' }).first();
 
     await plus.click();
+    await expect(gold.locator('input[type="number"]').first()).toHaveValue('1');
     await minus.click();
 
     await expect(gold.locator('input[type="number"]').first()).toHaveValue('0');
