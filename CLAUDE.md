@@ -135,7 +135,9 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 | ファイル | 役割 |
 |---------|------|
-| `engine.ts` | チーム構成・シミュレーション実行（`runSimulation`, `computeTeam`） |
+| `engine.ts` | 互換 re-export レイヤー（実体は teamBuilder / simulation） |
+| `teamBuilder.ts` | チーム属性値・センタースキル計算（`computeTeam`, `getCenterSkillRate`） |
+| `simulation.ts` | 理論値・期待値・MC シミュレーション（`runSimulation`, `calcMinScore`, `calcMaxScore` 等） |
 | `types.ts` | 型定義 |
 | `constants.ts` | スコア計算用定数 |
 | `rng.ts` | 乱数生成 |
