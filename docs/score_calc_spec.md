@@ -200,15 +200,20 @@ teamMelodyAssisted = floor(teamMelody × 1.2)
 
 ```
 for groupKey in [notes_20, light_2, light_3, light_4, light_5, light_6, chorus_light_5, chorus_light_6]:
+  groupNotes = []
   for attr in [Shout, Beat, Melody]:
     for type in [white, color]:
       count = song[groupKey][`${attr}_${type}`]
-      notes.push(FlatNote × count)
-
-// Fisher-Yates シャッフル（XorShift128Plus, seed=42 固定）
+      groupNotes.push(FlatNote × count)
+  groupNotes をグループ内のみ Fisher-Yates シャッフル（XorShift128Plus, seed=42 固定）
+  除外フラグをシャッフル後に先頭から付与（fullGroups は全ノーツ / partialGroup は先頭 partialCount 個）
+  notes.push(...groupNotes)
 ```
 
-ノートの発生タイミングは実ゲーム上の配置と同期しないため、シャッフルによる近似。シード固定でビルドごとに同一順序。
+ステージグループの順序（notes_20 → light_2 → … → chorus_light_6）はライブ進行に対応するため
+固定し、グループ内の属性・白色の並びのみシャッフルで近似する。これにより excluded ノーツは
+常に「配列先頭からの連続区間」になり、縮小スキルの先頭除外仕様
+（`docs/shrink-skill-spec.md` §2）と整合する。シード固定でビルドごとに同一順序。
 
 ## 5. ノーツスコアの計算（2 段 floor）
 
@@ -380,7 +385,8 @@ for 各縮小カード:
 ### 10-2. 100% キャップ
 
 ```
-effectiveSeconds = songDuration - offsetSeconds
+headSeconds      = (excludeHeadCount / notesCount) × songDuration   // 先頭除外区間の秒換算
+effectiveSeconds = songDuration - offsetSeconds - headSeconds
 coveredSeconds         = min(rawCoveredSeconds,         effectiveSeconds)
 expectedCoveredSeconds = min(rawExpectedCoveredSeconds, effectiveSeconds)
 coverageRate           = coveredSeconds         / effectiveSeconds    // 100% 以下
@@ -431,7 +437,7 @@ interface ScoreOptions {
 
 ## 13. 注意事項・設計上の制約
 
-- ノート順序は実ゲームと同期しない（シャッフル seed=42 固定）
+- ノート順序は実ゲームと同期しない（ステージグループ順は固定、グループ内のみシャッフル seed=42 固定）
 - ブローチは **UR カードのみ** 装備可能（`broachResolver.ts:122`）
 - フレンド枠（スロット 5）のブローチも種類 9 以外は属性値加算として機能する
 - 種類 8 (`AUTO_ONLY`) ブローチはシミュレーション対象外

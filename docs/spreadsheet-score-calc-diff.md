@@ -32,7 +32,9 @@
 
 結論: **i7 の縮小スキル計算は仕様 (`docs/shrink-skill-spec.md`) に忠実な実装**。スプレッドシートは**期待値のみの解析式ベース**で、(a) 基準スコアのアシスト剥離、(b) 先頭除外の未適用、(c) カバー率分母＝全曲尺、(d) カード別 rate の加重平均、という 4 点で系統的に異なる値を返す。
 
-> **v1.0.6 実測差分（ゴールデン#1）**: 属性値スコアは bit-exact 一致。expected 最終リザルトで engine がオラクルより +164,366 (約 +3.8%)、max モードで +158,757 (約 +3.2%)。主因は縮小スキル差分 (+146,925 expected)。詳細は §「オラクル検証によるゴールデン#1 実測差分」参照（v1.0.5 時代のサマリー値は旧デッキ基準のため直接比較不可）。
+> **v1.0.6 実測差分（ゴールデン#1、2026-06-10 engine 修正後）**: 属性値スコアは bit-exact 一致。expected 最終リザルトで engine がオラクルより +227,410 (約 +5.2%)、max モードで +210,022 (約 +4.2%)。主因は縮小スキル差分 (+201,273 expected)。詳細は §「オラクル検証によるゴールデン#1 実測差分」参照（v1.0.5 時代のサマリー値は旧デッキ基準のため直接比較不可）。
+>
+> 2026-06-10 の engine 修正（`flattenNotes` グループ内シャッフル化 + カバー率分母の実効秒数化、`docs/shrink-skill-spec.md` §7-11）により、engine の縮小スコアが旧値より約 +4.5% 上昇し、スプレッドシートとの差分は旧 +146,925 から +201,273 に拡大した。これは engine 側が実機仕様（先頭除外との整合）に近づいた結果の意図的な変化。
 
 ---
 
@@ -73,10 +75,12 @@ v1.0.5 の `BA11=TRUE` バグ（Shout 白 per-note score が本来 `floor(Shout 
 | --- | --- | ---: | ---: | ---: | --- |
 | 属性値スコア | expected | 2,388,497 | 2,388,497 | 0 | **一致** |
 | スコアアップ | expected | 298,535 | 293,305 | −5,230 | 既知差分 |
-| 縮小 | expected | 1,051,457 | 1,198,382 | +146,925 | 既知差分 |
-| ライブ終了時 | expected | 3,738,489 | 3,880,184 | +141,695 | 既知差分 |
-| 最終リザルト | expected | 4,336,647 | 4,501,013 | +164,366 | 既知差分 |
-| 最終リザルト | max | 4,966,270 | 5,125,027 | +158,757 | 既知差分 |
+| 縮小 | expected | 1,051,457 | 1,252,730 | +201,273 | 既知差分 |
+| ライブ終了時 | expected | 3,738,489 | 3,934,532 | +196,043 | 既知差分 |
+| 最終リザルト | expected | 4,336,647 | 4,564,057 | +227,410 | 既知差分 |
+| 最終リザルト | max | 4,966,270 | 5,176,292 | +210,022 | 既知差分 |
+
+> 数値は 2026-06-10 engine 修正（グループ内シャッフル + 実効秒数分母）後の実測。旧実装の縮小 delta は +146,925 だった。
 
 ### 所見
 
@@ -88,9 +92,9 @@ v1.0.5 の `BA11=TRUE` バグ（Shout 白 per-note score が本来 `floor(Shout 
 
 主因: engine は活動回数を `floor(notes / count)` で整数化するのに対し、スプレッドシートは小数を保持して最後に 1 回 `ROUNDDOWN` する（§3 参照）。活動回数の端数処理による系統的なズレ。
 
-**縮小差分（+146,925 — 最大の差分要因）**
+**縮小差分（+201,273 — 最大の差分要因）**
 
-主因: 基準スコアのアシスト剥離・先頭除外なし・カバー率分母=全曲尺・rate 加重平均（§5 参照、`docs/shrink-skill-spec.md`）。expected モードで engine がオラクルより約 +14% 大きい。engine は実機準拠仕様（`docs/shrink-skill-spec.md`）に基づき意図的にスプレッドシートと異なる実装を採用している。
+主因: 基準スコアのアシスト剥離・先頭除外なし・カバー率分母=全曲尺・rate 加重平均（§5 参照、`docs/shrink-skill-spec.md`）。expected モードで engine がオラクルより約 +19% 大きい。engine は実機準拠仕様（`docs/shrink-skill-spec.md`）に基づき意図的にスプレッドシートと異なる実装を採用している。
 
 **既知差分の扱い**
 
@@ -334,7 +338,8 @@ eligibleCount  = notesCount - excludeHead
 
 // calcShrinkCoverage — カバー率（docs/shrink-skill-spec.md §3 §4）
 raw            = Σ_i floor(eligibleCount / count_i) × value_i × (per_i / 100)
-effective      = songDuration − offsetSeconds   // offsetSeconds = excluded時間
+headSeconds    = (excludeHead / notesCount) × songDuration   // 先頭除外区間の秒換算
+effective      = songDuration − offsetSeconds − headSeconds
 expected       = min(raw / effective, 1.0)
 ```
 
@@ -381,9 +386,9 @@ Binary Vampire: notes_count=461 / notes_20=20 / songDuration=92
 minCount=22, excludeHead = max(20, 22) = 22, eligibleCount = 439
 1 枚あたり numActivations = floor(439/22) = 19 回（スプレッドシート: 461/22 = 20.95 回 → 20 回相当）
 rawExpectedCovered = 19 × 4 × 0.42 = 31.92 秒 / 枚 → 2 枚 = 63.84 秒
-offsetSeconds = (20/461) × 92 ≈ 3.99 秒
-effectiveSeconds = 92 − 3.99 ≈ 88.01
-expectedCoverageRate = min(63.84/88.01, 1.0) = 0.7254
+headSeconds = (22/461) × 92 ≈ 4.39 秒
+effectiveSeconds = 92 − 4.39 ≈ 87.61
+expectedCoverageRate = min(63.84/87.61, 1.0) = 0.7287
 eligibleBaseAssisted ≒ BN21 − notes_20寄与 ≒ 1,600,353 − notes_20分
 shrinkExpected = floor(eligibleBaseAssisted × 0.6 × 0.7254)
 ```
@@ -394,8 +399,8 @@ shrinkExpected = floor(eligibleBaseAssisted × 0.6 × 0.7254)
 | --- | ---: | ---: | ---: |
 | カード別発動回数 | 20.95 (小数) | 19 (整数) | **+10.3%** |
 | 1 枚あたり期待秒数 | 35 秒 | 31.92 秒 | **+9.7%** |
-| カバー率分母 | 92 秒（全曲尺） | ≈88.01 秒（notes_20 除外） | **+4.5%** |
-| カバー率（表示用） | 76.09% | ≈72.54% | **+4.9%** |
+| カバー率分母 | 92 秒（全曲尺） | ≈87.61 秒（先頭除外 22 ノーツ分を控除） | **+5.0%** |
+| カバー率（表示用） | 76.09% | ≈72.87% | **+4.4%** |
 | 基準スコア | 1,333,627 (アシスト無し) | ≈ 1,600,353 − notes_20 分 (アシスト有り) | **−20%〜** |
 | 最終縮小スコア | 608,828 | 推定 630,000〜660,000 程度（注） | **±3〜10%** |
 
