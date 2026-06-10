@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getApSkillLevel, SKILL_TYPE, type Card } from '../lib/data/fetchCardsJson';
+  import { getApSkillLevel, type Card } from '../lib/data/fetchCardsJson';
   import { formatSkillEffect } from '../lib/score/skillFormatter';
   import type { Song } from '../lib/data/fetchSongsJson';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
@@ -8,14 +8,14 @@
   import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, calcCardSkillMaxActivations, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
   import { resolveDeckBroachs } from '../lib/score/broachResolver';
   import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../lib/score/constants';
-  import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES, buildLiveTierMap } from '../lib/data/eventBonusTiers';
+  import { EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, buildLiveTierMap } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { renderHistogramSvg } from '../lib/score/histogram';
   import { attrDonutSvg } from '../lib/donutChart';
-  import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../lib/constants';
+  import { ATTR_HEX } from '../lib/constants';
   import { normalizeAttribute } from '../lib/score/types';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
-  import { ATTR_TEXT_CLASS, cardThumbUrl } from '../lib/ui';
+  import { ATTR_TEXT_CLASS } from '../lib/ui';
   import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
@@ -25,6 +25,7 @@
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
   import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS, DISPLAY_ORDER } from '../lib/score/deckState';
   import CardPickerModal from './score/CardPickerModal.svelte';
+  import DeckSlots from './score/DeckSlots.svelte';
   type Props = {
     cards: Card[];
     songs: Song[];
@@ -37,19 +38,25 @@
 
   const deckState = $state(createEmptyDeckState());
   let allCardsState = $state<Card[]>(initialCards);
+  let allBroachsState = $state<FixedBroach[]>(initialBroachs);
+  let selectedSong = $state<Song | null>(null);
 
   let rootEl: HTMLDivElement;
   let picker: CardPickerModal | undefined;
 
-  // ピッカーのコールバック実体は onMount 閉包内で代入される
+  // ピッカー / DeckSlots のコールバック実体は onMount 閉包内で代入される
   let handlePickImpl: (slot: number, card: Card) => void = () => {};
   let handleClearImpl: (slot: number) => void = () => {};
+  let handleSwapImpl: (a: number, b: number) => void = () => {};
+  let handleDeckChangedImpl: () => void = () => {};
   function handlePick(slot: number, card: Card) { handlePickImpl(slot, card); }
   function handleClear(slot: number) { handleClearImpl(slot); }
+  function handleSlotClick(slot: number) { picker!.open(slot, SLOT_LABELS[slot]); }
+  function handleSwap(a: number, b: number) { handleSwapImpl(a, b); }
+  function handleDeckChanged() { handleDeckChangedImpl(); }
 
   onMount(() => {
     let allSongs: Song[] = initialSongs;
-    let allBroachs: FixedBroach[] = initialBroachs;
     const allEventsForBonus: EventForBonus[] = initialEvents;
 
     const defaultTierMap = buildLiveTierMap(allEventsForBonus);
@@ -61,18 +68,28 @@
 
     const _q = <T extends HTMLElement = HTMLElement>(id: string): T => rootEl.querySelector<T>(`#${id}`) as T;
 
-    let selectedSong: Song | null = null;
     let simulationResult: SimulationResult | null = null;
 
     handlePickImpl = (slot, card) => {
-      setCard(deckState, slot, card, defaultTierFor(card), allBroachs);
-      renderDeckSlots();
+      setCard(deckState, slot, card, defaultTierFor(card), allBroachsState);
+      renderCardDetailTable();
       recalculate();
       saveState();
     };
     handleClearImpl = (slot) => {
       clearSlot(deckState, slot);
-      renderDeckSlots();
+      renderCardDetailTable();
+      recalculate();
+      saveState();
+    };
+    handleSwapImpl = (a, b) => {
+      swapSlots(deckState, a, b);
+      renderCardDetailTable();
+      recalculate();
+      saveState();
+    };
+    handleDeckChangedImpl = () => {
+      renderCardDetailTable();
       recalculate();
       saveState();
     };
@@ -167,345 +184,6 @@
       anchor.href = `${base}songs/${selectedSong.id}/`;
     }
 
-    const DRAG_THRESHOLD = 6;
-    const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-indigo-400', 'ring-offset-1'];
-
-    function clearDropHighlight() {
-      rootEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
-        el.classList.remove(...DRAG_DROP_HIGHLIGHT);
-      });
-    }
-
-    function findDropTargetSlot(x: number, y: number): number | null {
-      const elem = document.elementFromPoint(x, y) as HTMLElement | null;
-      if (!elem) return null;
-      const slotEl = elem.closest<HTMLElement>('[data-slot-btn]');
-      if (!slotEl) return null;
-      const slot = Number(slotEl.dataset.slotBtn);
-      if (Number.isNaN(slot)) return null;
-      return slot;
-    }
-
-    function highlightDropTarget(x: number, y: number, sourceSlot: number) {
-      clearDropHighlight();
-      const target = findDropTargetSlot(x, y);
-      if (target === null || target === sourceSlot || target === 5) return;
-      const targetEl = rootEl.querySelector<HTMLElement>(`[data-slot-btn="${target}"]`);
-      if (targetEl) targetEl.classList.add(...DRAG_DROP_HIGHLIGHT);
-    }
-
-    let activeDragGhost: HTMLElement | null = null;
-    let activeDragGhostSize: { w: number; h: number } | null = null;
-
-    function createDragGhost(src: HTMLElement, x: number, y: number): HTMLElement {
-      const rect = src.getBoundingClientRect();
-      const ghost = src.cloneNode(true) as HTMLElement;
-      ghost.style.position = 'fixed';
-      ghost.style.left = '0';
-      ghost.style.top = '0';
-      ghost.style.width = `${rect.width}px`;
-      ghost.style.height = `${rect.height}px`;
-      ghost.style.pointerEvents = 'none';
-      ghost.style.opacity = '0.75';
-      ghost.style.zIndex = '9999';
-      ghost.style.transform = `translate3d(${x - rect.width / 2}px, ${y - rect.height / 2}px, 0)`;
-      ghost.style.transition = 'none';
-      ghost.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.25)';
-      document.body.appendChild(ghost);
-      activeDragGhost = ghost;
-      activeDragGhostSize = { w: rect.width, h: rect.height };
-      return ghost;
-    }
-
-    function moveDragGhost(x: number, y: number) {
-      if (!activeDragGhost || !activeDragGhostSize) return;
-      const { w, h } = activeDragGhostSize;
-      activeDragGhost.style.transform = `translate3d(${x - w / 2}px, ${y - h / 2}px, 0)`;
-    }
-
-    function destroyDragGhost() {
-      if (activeDragGhost) {
-        activeDragGhost.remove();
-        activeDragGhost = null;
-        activeDragGhostSize = null;
-      }
-    }
-
-    function attachSlotPointerHandlers() {
-      rootEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
-        const slot = Number(el.dataset.slotBtn);
-        el.style.touchAction = 'none';
-        el.addEventListener('pointerdown', (ev: PointerEvent) => {
-          if (ev.button !== undefined && ev.button !== 0) return;
-          const t = ev.target as HTMLElement;
-          if (t.closest('select, input, label.trained-label')) return;
-
-          const startX = ev.clientX;
-          const startY = ev.clientY;
-          const isFriend = slot === 5;
-          const hasCard = deckState.cards[slot] !== null;
-          let dragging = false;
-          let pointerId = ev.pointerId;
-
-          const onMove = (e: PointerEvent) => {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            if (!dragging) {
-              if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-              if (isFriend || !hasCard) return;
-              dragging = true;
-              try { el.setPointerCapture(pointerId); } catch { /* noop */ }
-              createDragGhost(el, e.clientX, e.clientY);
-              document.body.style.cursor = 'grabbing';
-              el.style.opacity = '0.4';
-            }
-            moveDragGhost(e.clientX, e.clientY);
-            highlightDropTarget(e.clientX, e.clientY, slot);
-          };
-
-          const finish = (e: PointerEvent | null, dropped: boolean) => {
-            el.removeEventListener('pointermove', onMove);
-            el.removeEventListener('pointerup', onUp);
-            el.removeEventListener('pointercancel', onCancel);
-            try { el.releasePointerCapture(pointerId); } catch { /* noop */ }
-            clearDropHighlight();
-            destroyDragGhost();
-            document.body.style.cursor = '';
-            el.style.opacity = '';
-            if (!dragging) {
-              picker!.open(slot, SLOT_LABELS[slot]);
-              return;
-            }
-            if (!dropped || !e) return;
-            const target = findDropTargetSlot(e.clientX, e.clientY);
-            if (target === null || target === slot || target === 5) return;
-            swapSlots(deckState, slot, target);
-            renderDeckSlots();
-            renderCardDetailTable();
-            recalculate();
-            saveState();
-          };
-
-          const onUp = (e: PointerEvent) => finish(e, true);
-          const onCancel = (e: PointerEvent) => finish(e, false);
-
-          el.addEventListener('pointermove', onMove);
-          el.addEventListener('pointerup', onUp);
-          el.addEventListener('pointercancel', onCancel);
-        });
-      });
-    }
-
-    function renderDeckSlots() {
-      const slotDummySong = selectedSong || { song_name: '' };
-      const slotResolvedMap = resolveDeckBroachs(deckState.cards, allBroachs, slotDummySong);
-
-      // 縮小スキルの並び順警告: 発動優先度 メンバー1(idx=1) → センター(idx=0) → メンバー2(idx=2)
-      // の順に強い縮小スキルが配置されているかを検証
-      const PRIORITY_SLOTS = [1, 0, 2] as const;
-      const shrinkStrengths = PRIORITY_SLOTS.map(si => {
-        const c = deckState.cards[si];
-        if (!c) return 0;
-        const t = c.ap_skill_type;
-        if (!t) return 0;
-        const isShrink = t === SKILL_TYPE.SHRINK || t.startsWith(SKILL_TYPE.SHRINK_PREFIX);
-        if (!isShrink) return 0;
-        const sl = getApSkillLevel(c, deckState.skillLevels[si]);
-        return (sl.rate ?? 0) * (sl.per ?? 0);
-      });
-      const sortedDesc = [...shrinkStrengths].sort((a, b) => b - a);
-      const hasAnyShrink = shrinkStrengths.some(v => v > 0);
-      const misplacedSlots = new Set<number>();
-      if (hasAnyShrink) {
-        for (let pi = 0; pi < PRIORITY_SLOTS.length; pi++) {
-          if (shrinkStrengths[pi] !== sortedDesc[pi]) {
-            misplacedSlots.add(PRIORITY_SLOTS[pi]);
-          }
-        }
-      }
-
-      for (let i = 0; i < 6; i++) {
-        const card = deckState.cards[i];
-        const container = rootEl.querySelector<HTMLElement>(`[data-slot-btn="${i}"]`);
-        if (!container) continue;
-
-        if (!card) {
-          const isFriend = i === 5;
-          container.className = `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-indigo-50'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
-          container.innerHTML = `
-            <svg class="w-8 h-8 ${isFriend ? 'text-amber-300' : 'text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] ${isFriend ? 'text-amber-400' : 'text-gray-400'} mt-1">選択</span>`;
-          continue;
-        }
-
-        const attr = normalizeAttribute(card.attribute);
-        const attrColor = ATTR_HEX[attr] || '#6b7280';
-        const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
-        const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
-
-        const currentTier = deckState.bonusTiers[i];
-        const trainedChecked = deckState.trained[i];
-        const currentSkillLv = deckState.skillLevels[i];
-
-        const cardBroachs = card.rarity === 'UR'
-          ? allBroachs.filter(br => br.card_id === card.cardID)
-          : [];
-        const slotResolved = slotResolvedMap.get(i) ?? [];
-        let broachLabelHtml = '';
-        if (cardBroachs.length > 0) {
-          broachLabelHtml = cardBroachs.map(br => {
-            const resolved = slotResolved.find(rb => rb.broach.id === br.id);
-            const isActive = resolved?.active ?? false;
-            const mult = (isActive ? resolved?.multiplier : 1) ?? 1;
-
-            const stats: string[] = [];
-            if (br.shout) stats.push(`S+${(br.shout * mult).toLocaleString()}`);
-            if (br.beat) stats.push(`B+${(br.beat * mult).toLocaleString()}`);
-            if (br.melody) stats.push(`M+${(br.melody * mult).toLocaleString()}`);
-            if (br.score) stats.push(`スコア+${br.score}`);
-            const statStr = stats.join('/');
-            const baseLabel = br.condition
-              ? `${br.condition}${statStr ? ' ' + statStr : ''}`
-              : statStr || `ブローチ#${br.id}`;
-            const label = br.broach_type === 5 && isActive && mult > 1
-              ? `${baseLabel}（${mult}枚）`
-              : baseLabel;
-
-            const isAutoOnly = br.broach_type === 8;
-
-            if (isAutoOnly) {
-              return `<div class="mt-1 w-full text-[8px] bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-1 py-0.5 text-gray-400 dark:text-slate-500 truncate text-center line-through" title="${label}（オート専用・計算対象外）">🔮 ${label}（オート専用）</div>`;
-            } else if (isActive) {
-              return `<div class="mt-1 w-full text-[8px] bg-purple-50 border border-purple-200 rounded px-1 py-0.5 text-purple-700 truncate text-center" title="${label}">🔮 ${label}</div>`;
-            } else {
-              return `<div class="mt-1 w-full text-[8px] bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-1 py-0.5 text-gray-400 dark:text-slate-500 truncate text-center" title="${label}（条件未達）">🔮 ${label}</div>`;
-            }
-          }).join('');
-        }
-
-        let sharedBroachHtml = '';
-        if (card.rarity === 'UR') {
-          const hasFixed = cardBroachs.length > 0;
-          const maxShared = hasFixed ? 1 : 2;
-          for (let s = 0; s < maxShared; s++) {
-            const currentVal = deckState.sharedBroachs[i]?.[s] ?? 0;
-            const options = SHARED_BROACHS.map(sb => {
-              const sel = sb.id === currentVal ? ' selected' : '';
-              const stats: string[] = [];
-              if (sb.shout) stats.push(`S+${sb.shout}`);
-              if (sb.beat) stats.push(`B+${sb.beat}`);
-              if (sb.melody) stats.push(`M+${sb.melody}`);
-              const cond = sb.targetAttribute ? `${sb.targetAttribute}属性` : '';
-              const label = cond ? `${sb.name} (${cond} ${stats.join('/')})` : `${sb.name} (${stats.join('/')})`;
-              return `<option value="${sb.id}"${sel}>${label}</option>`;
-            }).join('');
-            sharedBroachHtml += `
-              <select class="shared-broach-select mt-1 w-full text-[8px] border border-purple-300 rounded px-0.5 py-0.5 bg-purple-50 text-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                      data-broach-slot="${i}" data-broach-idx="${s}">
-                <option value="0">共有ブローチ${maxShared > 1 ? (s + 1) : ''}を選択</option>
-                ${options}
-              </select>`;
-          }
-        }
-
-        const shrinkWarningHtml = misplacedSlots.has(i)
-          ? `<div class="mt-1 w-full text-[8px] bg-amber-50 border border-amber-300 rounded px-1 py-0.5 text-amber-700 text-center" title="縮小スキルの並び順が最適ではありません。発動優先度はメンバー1 → センター → メンバー2 の順なので、強い縮小スキル（倍率×発動率）ほど優先度の高いスロットに配置するとスコアが伸びやすくなります。">⚠️ 並び順</div>`
-          : '';
-
-        const cursorClass = i === 5 ? 'cursor-pointer' : 'cursor-grab';
-        container.className = `slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
-        container.style.borderColor = attrColor;
-        container.innerHTML = `
-          <img src="${cardThumbUrl(card.ID!)}" alt="${card.cardname || ''}" class="w-full max-w-[60px] h-auto rounded mb-1"
-            onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 67%22><rect width=%2248%22 height=%2267%22 fill=%22%23e5e7eb%22/></svg>'" loading="lazy" />
-          <div class="flex gap-0.5 mb-1">
-            <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityClass}">${card.rarity || '?'}</span>
-            <span class="px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBgClass}">${attr}</span>
-          </div>
-          <div class="text-[9px] text-gray-600 dark:text-slate-300 text-center truncate w-full" title="${card.cardname || ''}">${card.cardname || ''}</div>
-          <div class="text-[8px] text-gray-400 dark:text-slate-500 text-center">${card.name || ''}</div>
-          <label class="trained-label mt-1 flex items-center gap-1 text-[9px] text-gray-600 dark:text-slate-300 cursor-pointer">
-            <input type="checkbox" class="trained-check w-3 h-3" data-trained-slot="${i}"${trainedChecked ? ' checked' : ''} />
-            <span>特訓済</span>
-          </label>
-          <select class="bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 dark:border-slate-600 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-bonus-slot="${i}">
-            ${EVENT_BONUS_TIERS.map(t => `<option value="${t.key}"${currentTier === t.key ? ' selected' : ''}>${t.optionLabel}</option>`).join('')}
-          </select>
-          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 dark:border-slate-600 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot="${i}">
-            ${[1, 2, 3, 4, 5].map(lv => `<option value="${lv}"${currentSkillLv === lv ? ' selected' : ''}>スキルLv${lv}</option>`).join('')}
-          </select>${shrinkWarningHtml}${broachLabelHtml}${sharedBroachHtml}`;
-      }
-
-      rootEl.querySelectorAll('.bonus-tier-select').forEach(el => {
-        el.addEventListener('click', (e) => e.stopPropagation());
-        el.addEventListener('change', (e) => {
-          const sel = e.target as HTMLSelectElement;
-          const slot = Number(sel.dataset.bonusSlot);
-          deckState.bonusTiers[slot] = sel.value as EventBonusTier;
-          applyBonusTierStyle(sel);
-          renderCardDetailTable();
-          recalculate();
-          saveState();
-        });
-        applyBonusTierStyle(el as HTMLSelectElement);
-      });
-
-      rootEl.querySelectorAll('.trained-label').forEach(el => {
-        el.addEventListener('click', (e) => e.stopPropagation());
-      });
-      rootEl.querySelectorAll('.trained-check').forEach(el => {
-        el.addEventListener('change', (e) => {
-          const chk = e.target as HTMLInputElement;
-          const slot = Number(chk.dataset.trainedSlot);
-          deckState.trained[slot] = chk.checked;
-          renderCardDetailTable();
-          recalculate();
-          saveState();
-        });
-      });
-
-      rootEl.querySelectorAll('.skill-level-select').forEach(el => {
-        el.addEventListener('click', (e) => e.stopPropagation());
-        el.addEventListener('change', (e) => {
-          const sel = e.target as HTMLSelectElement;
-          const slot = Number(sel.dataset.skillSlot);
-          deckState.skillLevels[slot] = Number(sel.value) as 1 | 2 | 3 | 4 | 5;
-          renderDeckSlots();
-          renderCardDetailTable();
-          recalculate();
-          saveState();
-        });
-      });
-
-      rootEl.querySelectorAll('.shared-broach-select').forEach(el => {
-        el.addEventListener('click', (e) => e.stopPropagation());
-        el.addEventListener('change', (e) => {
-          const sel = e.target as HTMLSelectElement;
-          const slot = Number(sel.dataset.broachSlot);
-          const idx = Number(sel.dataset.broachIdx);
-          const val = Number(sel.value);
-          if (!deckState.sharedBroachs[slot]) deckState.sharedBroachs[slot] = [];
-          while (deckState.sharedBroachs[slot].length <= idx) deckState.sharedBroachs[slot].push(0);
-          deckState.sharedBroachs[slot][idx] = val;
-          renderDeckSlots();
-          recalculate();
-          saveState();
-        });
-      });
-
-      renderCardDetailTable();
-      updateCalcButton();
-    }
-
-    function applyBonusTierStyle(sel: HTMLSelectElement) {
-      const tier = sel.value as EventBonusTier;
-      sel.classList.remove(...ALL_SELECT_CLASSES);
-      const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
-      if (def && def.selectClasses.length > 0) {
-        sel.classList.add(...def.selectClasses);
-      }
-    }
-
     function renderCardDetailTable() {
       const filledCards = deckState.cards.filter(c => c !== null);
       if (filledCards.length === 0) {
@@ -515,7 +193,7 @@
       _q('card-detail-section').classList.remove('hidden');
 
       const dummySong = selectedSong || { song_name: '' };
-      const resolvedMap = resolveDeckBroachs(deckState.cards, allBroachs, dummySong);
+      const resolvedMap = resolveDeckBroachs(deckState.cards, allBroachsState, dummySong);
 
       const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
       for (const c of deckState.cards) {
@@ -716,7 +394,7 @@
         return;
       }
 
-      const team = computeTeam(deckState.cards, allBroachs, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
+      const team = computeTeam(deckState.cards, allBroachsState, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
       const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
       const notes = flattenNotes(selectedSong, 42, exclusion);
 
@@ -866,7 +544,7 @@
       btn.textContent = '計算中...';
       _q('progress-container').classList.remove('hidden');
 
-      const team = computeTeam(deckState.cards, allBroachs, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
+      const team = computeTeam(deckState.cards, allBroachsState, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
       const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
       const notes = flattenNotes(selectedSong, 42, exclusion);
 
@@ -1027,13 +705,13 @@
         }
       }
       for (let i = 0; i < 6; i++) {
-        clampSharedBroachs(deckState, i, allBroachs);
+        clampSharedBroachs(deckState, i, allBroachsState);
       }
       if (typeof state.badgeRate === 'number') {
         const el = _q<HTMLInputElement>('opt-scoreup-badge-rate');
         if (el) el.value = String(state.badgeRate);
       }
-      renderDeckSlots();
+      renderCardDetailTable();
       recalculate();
     }
 
@@ -1244,8 +922,6 @@
     initResultPlaceholders();
     initSongSelect();
 
-    attachSlotPointerHandlers();
-
     _q('btn-save-deck').addEventListener('click', saveDeck);
     _q('btn-load-deck').addEventListener('click', showLoadDropdown);
     _q('btn-share-url').addEventListener('click', shareDeckUrl);
@@ -1261,7 +937,7 @@
 
     _q('shrink-offset-input').addEventListener('input', () => {
       if (!selectedSong || deckState.cards.filter(c => c !== null).length === 0) return;
-      const team = computeTeam(deckState.cards, allBroachs, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
+      const team = computeTeam(deckState.cards, allBroachsState, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
       updateShrinkCoverage(team, selectedSong);
     });
 
@@ -1273,7 +949,7 @@
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCardsState = fresh as Card[];
       deckState.cards = deckState.cards.map(c => c ? allCardsState.find(fc => fc.ID === c.ID) || null : null);
-      renderDeckSlots();
+      renderCardDetailTable();
       recalculate();
     });
 
@@ -1291,7 +967,7 @@
     });
 
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => {
-      allBroachs = fresh as FixedBroach[];
+      allBroachsState = fresh as FixedBroach[];
       renderCardDetailTable();
       recalculate();
     });
@@ -1366,50 +1042,7 @@
           <div id="load-deck-dropdown" class="hidden absolute right-0 top-full mt-1 w-64 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
         </div>
       </div>
-      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="deck-slots">
-        <div class="deck-slot" data-slot="1">
-          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー1</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="1">
-            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
-          </div>
-        </div>
-        <div class="deck-slot" data-slot="2">
-          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー2</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="2">
-            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
-          </div>
-        </div>
-        <div class="deck-slot" data-slot="0">
-          <div class="text-[10px] text-center text-indigo-600 font-bold mb-1">センター</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="0">
-            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
-          </div>
-        </div>
-        <div class="deck-slot" data-slot="3">
-          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー3</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="3">
-            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
-          </div>
-        </div>
-        <div class="deck-slot" data-slot="4">
-          <div class="text-[10px] text-center text-gray-500 dark:text-slate-400 mb-1">メンバー4</div>
-          <div class="slot-content border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors" data-slot-btn="4">
-            <svg class="w-8 h-8 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">選択</span>
-          </div>
-        </div>
-        <div class="deck-slot" data-slot="5">
-          <div class="text-[10px] text-center text-amber-600 font-bold mb-1">フレンド</div>
-          <div class="slot-content border-2 border-dashed border-amber-300 rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-colors" data-slot-btn="5">
-            <svg class="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="text-[10px] text-amber-400 mt-1">選択</span>
-          </div>
-        </div>
-      </div>
+      <DeckSlots deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} onSlotClick={handleSlotClick} onSwap={handleSwap} onChanged={handleDeckChanged} />
     </section>
 
     <details id="card-detail-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 hidden group" open>
