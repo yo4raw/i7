@@ -17,7 +17,6 @@ import {
   evaluateFriendSwap,
   TOP_K,
   type SearchInput,
-  type ChunkDescriptor,
   type DeckRecord,
 } from '../../../src/lib/score/maxScoreFinder';
 import type { Card } from '../../../src/lib/data/fetchCardsJson';

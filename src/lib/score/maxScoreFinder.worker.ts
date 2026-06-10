@@ -36,14 +36,19 @@ self.onmessage = async (e: MessageEvent<FinderWorkerRequest>) => {
 
   // msg.type === 'chunk'
   if (!ctx) return;
-  const result = await evaluateChunk(ctx, msg.descriptor, {
-    onTick: async (evaluatedDelta, localBest) => {
-      post({ type: 'progress', evaluatedDelta, localBestScore: localBest?.score ?? null });
-      // マクロタスクで yield してメッセージループに制御を返し、
-      // キュー済みの abort メッセージを処理させる (Promise.resolve() では不可)
-      await new Promise((r) => setTimeout(r, 0));
-      return aborted;
-    },
-  });
-  post({ type: 'result', topK: result.topK, evaluated: result.evaluated, aborted: result.aborted });
+  try {
+    const result = await evaluateChunk(ctx, msg.descriptor, {
+      onTick: async (evaluatedDelta, localBest) => {
+        post({ type: 'progress', evaluatedDelta, localBestScore: localBest?.score ?? null });
+        // マクロタスクで yield してメッセージループに制御を返し、
+        // キュー済みの abort メッセージを処理させる (Promise.resolve() では不可)
+        await new Promise((r) => setTimeout(r, 0));
+        return aborted;
+      },
+    });
+    post({ type: 'result', topK: result.topK, evaluated: result.evaluated, aborted: result.aborted });
+  } catch (err) {
+    // async onmessage 内の throw は self.onerror を発火させないため、構造化してメインに通知する
+    post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+  }
 };

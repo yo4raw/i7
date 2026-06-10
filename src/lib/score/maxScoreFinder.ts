@@ -475,4 +475,5 @@ export type FinderWorkerRequest =
 export type FinderWorkerResponse =
   | { type: 'ready' }
   | { type: 'progress'; evaluatedDelta: number; localBestScore: number | null }
-  | { type: 'result'; topK: DeckRecord[]; evaluated: number; aborted: boolean };
+  | { type: 'result'; topK: DeckRecord[]; evaluated: number; aborted: boolean }
+  | { type: 'error'; message: string };
