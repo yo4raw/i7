@@ -1,7 +1,8 @@
 /**
- * tests/fixtures/ 配下に全カード・全楽曲・全固定ブローチのスナップショット JSON を生成するワンショットスクリプト。
- *
- * 実行: npm run extract-fixtures
+ * Google Sheets から全カード・全楽曲・全固定ブローチを取得し、tests/fixtures/ 配下に
+ * テスト用スナップショット JSON を生成する。
+ * 実行: npm run extract-fixtures （= tsx scripts/extract-test-fixtures.ts）
+ * 頻度: 必要時のみ（スプレッドシートのスキーマ変更・フィクスチャ更新が必要なときに再実行）
  *
  * 出力物:
  *   - tests/fixtures/cards.json   全カードデータ

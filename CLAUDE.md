@@ -124,7 +124,8 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 | モジュール | 役割 |
 |-----------|------|
-| `src/lib/cardListRenderer.ts` | カード一覧のフィルタリング・ソート・ページネーション・所持数管理 |
+| `src/lib/cardListData.ts` | カード一覧の行データ型 (`CardListItem`) 定義。フィルタ/ソート/ページネーションの実装は `src/components/CardList.svelte` |
+| `src/lib/cardFilter.ts` | カード名・キャラ名の部分一致検索述語（`cardTextMatches`） |
 | `src/lib/donutChart.ts` | 属性比率のドーナツチャート描画 |
 | `src/lib/storage.ts` | localStorage ラッパー。キー一覧は `STORAGE_KEYS` で集中管理（新しいキー追加時はここに追記） |
 | `src/lib/ui.ts` | UI 共通ヘルパー |
@@ -147,6 +148,17 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | `skillFormatter.ts` | スキル表示文字列の生成 |
 | `shrinkExclusion.ts` | 縮小スキルの並び順検証ロジック |
 | `specDiagrams.ts` | スキル仕様可視化用ダイアグラム生成 |
+| `deckState.ts` | デッキ編成状態（`DeckState`、6 スロット: 0=センター, 1-4=メンバー, 5=フレンド。表示順は `DISPLAY_ORDER`） |
+| `maxScoreFinder.ts` | 編成組合計算（max-score-finder）の総当たり探索ロジック。UI / Worker 両方から import される純粋モジュール |
+| `maxScoreFinder.worker.ts` | 探索 Web Worker。chunk を受けて `maxScoreFinder.ts` の `evaluateChunk` に委譲 |
+| `searchWorkerPool.ts` | 探索 Worker プール制御（Worker 生成・chunk dispatch・進捗集約・abort・terminate） |
+
+スコア計算系コンポーネントの構成:
+
+| ディレクトリ | 内容 |
+|-------------|------|
+| `src/components/score/` | `ScoreCalc.svelte` / `MaxScoreFinder.svelte` の子コンポーネント群（`CardPickerModal` / `DeckSlots` / `CardDetailTable` / `ScoreCalcResults` / `SearchResults` 等） |
+| `src/components/ui/` | 汎用バッジ（`RarityBadge` / `AttributeBadge`） |
 
 ### Page Patterns
 
@@ -259,6 +271,13 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 ユーザー可視テキスト（HTML、ラベル、alert/placeholder、aria-label、SVG `<title>` など）では「カード」ではなく **「衣装」** を用いる。アイドリッシュセブンの用語に揃えるため。
 
 内部識別子（コード中の変数名・関数名・ファイル名・URL パス・localStorage キーなど）は引き続き `card` を使用する（例: `cards/[id].astro`、`i7_card_counts`、`fetchCardsJson.ts`、`CardList.svelte`）。
+
+## 命名規約
+
+- イベント変数は `event`（ループ内の短縮は `ev` まで可。`evt` 等は使わない）
+- ブローチは内部識別子で `broach`（本リポジトリの慣用綴り。`brooch` に直さない）。固有ブローチ = `FixedBroach`（カード紐付き）、共有ブローチ = `SHARED_BROACHS`（`src/lib/data/sharedBroachs.ts`）
+- スロット index は `slotIndex`（0=センター, 1-4=メンバー, 5=フレンド。表示順は `DISPLAY_ORDER`）
+- デッキ編成状態は `DeckState`（`src/lib/score/deckState.ts`）を使い、個別配列を新設しない
 
 ## 衣装表示参考
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * verify-card-images.mjs の出力を元に、
- * 差分のあったカード画像をコピー元から再取得してローカルを上書きする。
+ * verify-card-images.mjs の出力を元に、差分のあったカード画像をコピー元
+ * (i7.step-on-dream.net) から再取得してローカル (public/assets/) を上書きする。
+ * 実行: node scripts/refetch-card-images.mjs --type th --from tmp/verify-th.json （詳細は下記 Usage）
+ * 頻度: 必要時のみ（verify-card-images.mjs で不一致を検出したときの手動修復用）
  *
  * 安全のため、次の条件を満たすもののみ上書きする:
  *   - HTTP 200

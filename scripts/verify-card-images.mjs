@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /**
- * ローカルのカード画像がコピー元サーバーと一致するかを網羅的に検証する。
+ * ローカルのカード画像 (public/assets/cards | th_cards) がコピー元サーバー
+ * (i7.step-on-dream.net) と一致するかを網羅的に検証する。
+ * 実行: node scripts/verify-card-images.mjs [options] （結果は --out で JSON 出力し refetch-card-images.mjs に渡せる）
+ * 頻度: 必要時のみ（画像破損・プレースホルダー混入が疑われるときの手動検証用）
  *
  * - デフォルトは Content-Length 比較（HEAD のみ）で高速にサイズ不一致を検出
  * - --hash で全ファイルを GET して SHA-256 比較（厳密だが重い）
