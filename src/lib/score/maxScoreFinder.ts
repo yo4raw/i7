@@ -1,7 +1,7 @@
 /**
  * max-score-finder (編成組合計算) の総当たり探索ロジック。
  *
- * UI (SecretsTool.svelte) と Web Worker (maxScoreFinder.worker.ts) の両方から
+ * UI (MaxScoreFinder.svelte) と Web Worker (maxScoreFinder.worker.ts) の両方から
  * import される純粋モジュール。Svelte やブラウザ API に依存しない。
  */
 import type { Card } from '../data/fetchCardsJson';
@@ -83,7 +83,7 @@ export function* multisetIndicesOrEmpty(N: number, k: number): Generator<number[
   yield* multisetIndices(N, k);
 }
 
-/** flattenNotes のシード (現行 SecretsTool と同値。結果再現性のため固定) */
+/** flattenNotes のシード (移植元の旧 UI 実装と同値。結果再現性のため固定) */
 export const FLATTEN_SEED = 42;
 
 export type EvalMode = 'expected' | 'max';
@@ -355,7 +355,7 @@ export interface ChunkResult {
   aborted: boolean;
 }
 
-// 探索条件は全カード スキルLv5・特訓済み・共有ブローチなしで固定 (現行 SecretsTool と同値)
+// 探索条件は全カード スキルLv5・特訓済み・共有ブローチなしで固定 (移植元の旧 UI 実装と同値)
 const SEARCH_SKILL_LEVELS: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
 const SEARCH_TRAINED: boolean[] = [true, true, true, true, true, true];
 const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
