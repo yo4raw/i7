@@ -17,7 +17,6 @@
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import { ATTR_TEXT_CLASS, cardThumbUrl } from '../lib/ui';
   import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
-  import { loadJson as loadStorageJson } from '../lib/storage';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
@@ -38,7 +37,7 @@
 
   // カード所持数のヘルパ（cardListRenderer由来の関数と同等）
   function loadCounts(): Record<string, number> {
-    return loadStorageJson<Record<string, number>>(STORAGE_KEYS.CARD_COUNTS, {});
+    return loadJson<Record<string, number>>(STORAGE_KEYS.CARD_COUNTS, {});
   }
 
   onMount(() => {

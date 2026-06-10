@@ -34,4 +34,3 @@ export const TRAIN_BONUS: Record<string, number> = {
 };
 
 export { EVENT_BONUS_MULTIPLIER } from '../data/eventBonusTiers';
-export type { EventBonusTier } from '../data/eventBonusTiers';
