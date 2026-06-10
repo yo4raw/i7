@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * IDOLiSH7 Wiki から楽曲カバー画像をクローリングし、
- * Google Spreadsheet の楽曲IDをファイル名として保存するスクリプト。
- *
- * Usage: node scripts/fetch-song-images.mjs
+ * IDOLiSH7 Wiki (idolish7.miraheze.org) から不足している楽曲ジャケット画像をクローリングし、
+ * Google Spreadsheet の楽曲 ID をファイル名として public/assets/songs/ に保存する。
+ * 実行: node scripts/fetch-song-images.mjs
+ * 頻度: GitHub Actions cron から定期実行（.github/workflows/fetch-new-songs.yml、毎時 00 分 UTC）。手動実行も可
  */
 
 import { writeFile, mkdir } from 'node:fs/promises';

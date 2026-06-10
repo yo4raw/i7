@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * 既存 Tailwind クラスに dark: バリアントを系統的に追加する一回限りのスクリプト。
- *
- *   node scripts/apply-dark-variants.mjs
+ * 既存 Tailwind クラスに dark: バリアントを系統的に一括追加するコードモッドスクリプト。
+ * 実行: node scripts/apply-dark-variants.mjs
+ * 頻度: 一回限り（ダークテーマ導入時に使用済み。dark: バリアントの一括追加が再度必要になった場合のみ再利用）
  *
  * 各マッピングについて、
  *   1. クラス文字列 (class="...", class:foo="...") の中で対象トークン X を検出

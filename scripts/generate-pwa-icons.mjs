@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * PWA アイコン PNG を public/ 配下に生成する。
- *
- *   node scripts/generate-pwa-icons.mjs
+ * PWA アイコン PNG を public/ 配下に生成する（sharp 依存）。
+ * 実行: node scripts/generate-pwa-icons.mjs
+ * 頻度: 必要時のみ（favicon.svg / アイコンデザインを変更したときだけ再生成。生成済み PNG は commit 済み）
  *
  * 出力ファイル:
  *   - public/pwa-192x192.png
