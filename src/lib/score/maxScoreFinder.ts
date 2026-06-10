@@ -460,3 +460,19 @@ export function evaluateFriendSwap(ctx: SearchContext, bestCardIds: number[]): F
   scores.sort((a, b) => b.score - a.score);
   return scores.slice(0, 5);
 }
+
+// ---------------------------------------------------------------------------
+// Worker プロトコル型
+// ---------------------------------------------------------------------------
+
+/** メイン → Worker */
+export type FinderWorkerRequest =
+  | { type: 'init'; input: SearchInput }
+  | { type: 'chunk'; descriptor: ChunkDescriptor }
+  | { type: 'abort' };
+
+/** Worker → メイン */
+export type FinderWorkerResponse =
+  | { type: 'ready' }
+  | { type: 'progress'; evaluatedDelta: number; localBestScore: number | null }
+  | { type: 'result'; topK: DeckRecord[]; evaluated: number; aborted: boolean };
