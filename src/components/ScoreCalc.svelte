@@ -1,22 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getApSkillLevel, type Card } from '../lib/data/fetchCardsJson';
-  import { formatSkillEffect } from '../lib/score/skillFormatter';
+  import type { Card } from '../lib/data/fetchCardsJson';
   import type { Song } from '../lib/data/fetchSongsJson';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
   import type { ComputedTeam, SimulationResult, ScoreOptions, FlatNote } from '../lib/score/types';
-  import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, calcCardSkillMaxActivations, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
-  import { resolveDeckBroachs } from '../lib/score/broachResolver';
-  import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../lib/score/constants';
-  import { EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, buildLiveTierMap } from '../lib/data/eventBonusTiers';
+  import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, calcCardSkillMaxActivations, runSimulation, flattenNotes, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
+  import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../lib/score/constants';
+  import { buildLiveTierMap } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { renderHistogramSvg } from '../lib/score/histogram';
   import { attrDonutSvg } from '../lib/donutChart';
   import { ATTR_HEX } from '../lib/constants';
-  import { normalizeAttribute } from '../lib/score/types';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
-  import { ATTR_TEXT_CLASS } from '../lib/ui';
-  import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
@@ -26,6 +21,7 @@
   import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS, DISPLAY_ORDER } from '../lib/score/deckState';
   import CardPickerModal from './score/CardPickerModal.svelte';
   import DeckSlots from './score/DeckSlots.svelte';
+  import CardDetailTable from './score/CardDetailTable.svelte';
   type Props = {
     cards: Card[];
     songs: Song[];
@@ -72,24 +68,20 @@
 
     handlePickImpl = (slot, card) => {
       setCard(deckState, slot, card, defaultTierFor(card), allBroachsState);
-      renderCardDetailTable();
       recalculate();
       saveState();
     };
     handleClearImpl = (slot) => {
       clearSlot(deckState, slot);
-      renderCardDetailTable();
       recalculate();
       saveState();
     };
     handleSwapImpl = (a, b) => {
       swapSlots(deckState, a, b);
-      renderCardDetailTable();
       recalculate();
       saveState();
     };
     handleDeckChangedImpl = () => {
-      renderCardDetailTable();
       recalculate();
       saveState();
     };
@@ -182,199 +174,6 @@
 
       const anchor = _q<HTMLAnchorElement>('song-detail-anchor');
       anchor.href = `${base}songs/${selectedSong.id}/`;
-    }
-
-    function renderCardDetailTable() {
-      const filledCards = deckState.cards.filter(c => c !== null);
-      if (filledCards.length === 0) {
-        _q('card-detail-section').classList.add('hidden');
-        return;
-      }
-      _q('card-detail-section').classList.remove('hidden');
-
-      const dummySong = selectedSong || { song_name: '' };
-      const resolvedMap = resolveDeckBroachs(deckState.cards, allBroachsState, dummySong);
-
-      const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
-      for (const c of deckState.cards) {
-        if (!c) continue;
-        const a = normalizeAttribute(c.attribute);
-        if (a in attrCounts) attrCounts[a]++;
-      }
-
-      const rnMap = loadRabbitNotes();
-      let totalShout = 0, totalBeat = 0, totalMelody = 0;
-      let totalBS = 0, totalBB = 0, totalBM = 0;
-      const rows = DISPLAY_ORDER.map(i => {
-        const card = deckState.cards[i];
-        if (!card) return '';
-        const slotBroachs = resolvedMap.get(i) ?? [];
-        const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
-        let bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0) * (rb.multiplier ?? 1), 0);
-        let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0) * (rb.multiplier ?? 1), 0);
-        let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0) * (rb.multiplier ?? 1), 0);
-        if (card.rarity === 'UR') {
-          for (const sbId of (deckState.sharedBroachs[i] || [])) {
-            if (!sbId) continue;
-            const sb = SHARED_BROACHS.find(s => s.id === sbId);
-            if (!sb) continue;
-            if (sb.targetAttribute) {
-              const count = attrCounts[sb.targetAttribute] || 0;
-              bS += sb.shout * count; bB += sb.beat * count; bM += sb.melody * count;
-            } else {
-              bS += sb.shout; bB += sb.beat; bM += sb.melody;
-            }
-          }
-        }
-        const skillType = card.ap_skill_type || '-';
-        const sl = getApSkillLevel(card, deckState.skillLevels[i]);
-        const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl);
-        const tier = deckState.bonusTiers[i];
-        const bonusLabel = BONUS_LABEL[tier];
-        const bonusClass = BONUS_CLASS[tier];
-        const trained = deckState.trained[i];
-        const trainedLabel = trained ? '済' : '未';
-        const trainedClass = trained ? 'text-indigo-600 font-bold' : 'text-gray-400';
-        const rn = rnMap[card.name || ''];
-        const bonusMult = EVENT_BONUS_MULTIPLIER[tier];
-        const cardAttr = normalizeAttribute(card.attribute);
-        const trainBonus = TRAIN_BONUS[card.rarity ?? ''] ?? 0;
-        const baseShout = (card.shout_max || 0) - (trained || cardAttr !== 'Shout' ? 0 : trainBonus);
-        const baseBeat = (card.beat_max || 0) - (trained || cardAttr !== 'Beat' ? 0 : trainBonus);
-        const baseMelody = (card.melody_max || 0) - (trained || cardAttr !== 'Melody' ? 0 : trainBonus);
-        const statShout = Math.round((baseShout + (rn?.shout || 0)) * bonusMult);
-        const statBeat = Math.round((baseBeat + (rn?.beat || 0)) * bonusMult);
-        const statMelody = Math.round((baseMelody + (rn?.melody || 0)) * bonusMult);
-
-        totalShout += statShout;
-        totalBeat += statBeat;
-        totalMelody += statMelody;
-        totalBS += bS;
-        totalBB += bB;
-        totalBM += bM;
-
-        return `<tr class="border-t">
-          <td class="py-1 px-1 text-[10px] ${i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}">${SLOT_LABELS[i]}</td>
-          <td class="py-1 px-1">
-            <div>${card.cardname || ''}</div>
-            <div class="text-[10px] text-gray-400 dark:text-slate-500">${card.name || ''}</div>
-          </td>
-          <td class="py-1 px-1 text-center ${trainedClass}">${trainedLabel}</td>
-          <td class="py-1 px-1 text-center ${bonusClass}">${bonusLabel}</td>
-          <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${statShout.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${statBeat.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${statMelody.toLocaleString()}</td>
-          <td class="py-1 px-1 text-right">${bS || '-'}</td>
-          <td class="py-1 px-1 text-right">${bB || '-'}</td>
-          <td class="py-1 px-1 text-right">${bM || '-'}</td>
-          <td class="py-1 px-1">${skillType}</td>
-          <td class="py-1 px-1">${skillEffect}</td>
-        </tr>`;
-      }).join('');
-
-      _q('card-detail-body').innerHTML = rows;
-      const centerCard = deckState.cards[0];
-      const friendCard = deckState.cards[5];
-      const centerRate = centerCard ? getCenterSkillRate(centerCard.rarity) : 0;
-      const friendRate = friendCard ? getCenterSkillRate(friendCard.rarity) : 0;
-      const centerAttr = centerCard ? normalizeAttribute(centerCard.attribute) : null;
-      const friendAttr = friendCard ? normalizeAttribute(friendCard.attribute) : null;
-
-      const baseShout = totalShout + totalBS;
-      const baseBeat = totalBeat + totalBB;
-      const baseMelody = totalMelody + totalBM;
-      const centerShout = centerAttr === 'Shout' ? Math.floor(baseShout * centerRate / 100) : 0;
-      const centerBeat = centerAttr === 'Beat' ? Math.floor(baseBeat * centerRate / 100) : 0;
-      const centerMelody = centerAttr === 'Melody' ? Math.floor(baseMelody * centerRate / 100) : 0;
-      const friendShout = friendAttr === 'Shout' ? Math.floor(baseShout * friendRate / 100) : 0;
-      const friendBeat = friendAttr === 'Beat' ? Math.floor(baseBeat * friendRate / 100) : 0;
-      const friendMelody = friendAttr === 'Melody' ? Math.floor(baseMelody * friendRate / 100) : 0;
-      const csShout = centerShout + friendShout;
-      const csBeat = centerBeat + friendBeat;
-      const csMelody = centerMelody + friendMelody;
-
-      const hasCenter = !!centerCard && centerRate > 0;
-      const hasFriend = !!friendCard && friendRate > 0;
-
-      const scoreUpAssistEnabled = _q<HTMLInputElement>('opt-scoreup-assist')?.checked ?? false;
-      const teamShout = baseShout + csShout;
-      const teamBeat = baseBeat + csBeat;
-      const teamMelody = baseMelody + csMelody;
-      const assistShout = scoreUpAssistEnabled ? Math.floor(teamShout * (1 + SCOREUP_ASSIST_RATE)) - teamShout : 0;
-      const assistBeat = scoreUpAssistEnabled ? Math.floor(teamBeat * (1 + SCOREUP_ASSIST_RATE)) - teamBeat : 0;
-      const assistMelody = scoreUpAssistEnabled ? Math.floor(teamMelody * (1 + SCOREUP_ASSIST_RATE)) - teamMelody : 0;
-      const assistPct = Math.round(SCOREUP_ASSIST_RATE * 100);
-
-      const deckShout  = teamShout  + assistShout;
-      const deckBeat   = teamBeat   + assistBeat;
-      const deckMelody = teamMelody + assistMelody;
-
-      const noteShoutWhite  = Math.floor(deckShout  * NOTE_RATE.white);
-      const noteBeatWhite   = Math.floor(deckBeat   * NOTE_RATE.white);
-      const noteMelodyWhite = Math.floor(deckMelody * NOTE_RATE.white);
-      const noteShoutColor  = Math.floor(deckShout  * NOTE_RATE.color);
-      const noteBeatColor   = Math.floor(deckBeat   * NOTE_RATE.color);
-      const noteMelodyColor = Math.floor(deckMelody * NOTE_RATE.color);
-
-      _q('card-detail-foot').innerHTML = `<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs">
-        <td colspan="4" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">単純属性値計</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${totalShout.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${totalBeat.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${totalMelody.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right">${totalBS || '-'}</td>
-        <td class="py-1 px-1 text-right">${totalBB || '-'}</td>
-        <td class="py-1 px-1 text-right">${totalBM || '-'}</td>
-        <td colspan="2"></td>
-      </tr>${(totalBS + totalBB + totalBM) > 0 ? `<tr class="font-bold text-xs text-indigo-600">
-        <td colspan="4" class="py-1 px-1 text-right">ブローチ</td>
-        <td class="py-1 px-1 text-right">${totalBS > 0 ? `+${totalBS.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${totalBB > 0 ? `+${totalBB.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${totalBM > 0 ? `+${totalBM.toLocaleString()}` : '-'}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr>` : ''}${hasCenter ? `<tr class="font-bold text-xs text-purple-600">
-        <td colspan="4" class="py-1 px-1 text-right">センターSkill (+${centerRate}%)</td>
-        <td class="py-1 px-1 text-right">${centerShout > 0 ? `+${centerShout.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${centerBeat > 0 ? `+${centerBeat.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${centerMelody > 0 ? `+${centerMelody.toLocaleString()}` : '-'}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr>` : ''}${hasFriend ? `<tr class="font-bold text-xs text-purple-600">
-        <td colspan="4" class="py-1 px-1 text-right">FセンターSkill (+${friendRate}%)</td>
-        <td class="py-1 px-1 text-right">${friendShout > 0 ? `+${friendShout.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${friendBeat > 0 ? `+${friendBeat.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${friendMelody > 0 ? `+${friendMelody.toLocaleString()}` : '-'}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr>` : ''}${scoreUpAssistEnabled ? `<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs text-emerald-600">
-        <td colspan="4" class="py-1 px-1 text-right">ScoreUPアシスト (+${assistPct}%)</td>
-        <td class="py-1 px-1 text-right">${assistShout > 0 ? `+${assistShout.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${assistBeat > 0 ? `+${assistBeat.toLocaleString()}` : '-'}</td>
-        <td class="py-1 px-1 text-right">${assistMelody > 0 ? `+${assistMelody.toLocaleString()}` : '-'}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr>` : ''}<tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs">
-        <td colspan="4" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">デッキ合計</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${deckShout.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${deckBeat.toLocaleString()}</td>
-        <td class="py-1 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${deckMelody.toLocaleString()}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr><tr class="text-xs text-gray-500 dark:text-slate-400">
-        <td colspan="4" class="py-0.5 px-1 text-right">⚪🟢/1ノーツ</td>
-        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${noteShoutWhite.toLocaleString()}</td>
-        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${noteBeatWhite.toLocaleString()}</td>
-        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${noteMelodyWhite.toLocaleString()}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr><tr class="text-xs text-gray-500 dark:text-slate-400">
-        <td colspan="4" class="py-0.5 px-1 text-right">🔵🔴/1ノーツ</td>
-        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Shout}">${noteShoutColor.toLocaleString()}</td>
-        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Beat}">${noteBeatColor.toLocaleString()}</td>
-        <td class="py-0.5 px-1 text-right ${ATTR_TEXT_CLASS.Melody}">${noteMelodyColor.toLocaleString()}</td>
-        <td colspan="3"></td>
-        <td colspan="2"></td>
-      </tr>`;
     }
 
     function recalculate() {
@@ -711,7 +510,6 @@
         const el = _q<HTMLInputElement>('opt-scoreup-badge-rate');
         if (el) el.value = String(state.badgeRate);
       }
-      renderCardDetailTable();
       recalculate();
     }
 
@@ -931,7 +729,6 @@
 
     _q('opt-scoreup-assist').addEventListener('change', () => {
       recalculate();
-      renderCardDetailTable();
     });
     _q('opt-scoreup-badge-rate').addEventListener('input', () => { recalculate(); saveState(); });
 
@@ -949,7 +746,6 @@
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCardsState = fresh as Card[];
       deckState.cards = deckState.cards.map(c => c ? allCardsState.find(fc => fc.ID === c.ID) || null : null);
-      renderCardDetailTable();
       recalculate();
     });
 
@@ -968,7 +764,6 @@
 
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => {
       allBroachsState = fresh as FixedBroach[];
-      renderCardDetailTable();
       recalculate();
     });
 
@@ -1045,35 +840,7 @@
       <DeckSlots deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} onSlotClick={handleSlotClick} onSwap={handleSwap} onChanged={handleDeckChanged} />
     </section>
 
-    <details id="card-detail-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 hidden group" open>
-      <summary class="cursor-pointer text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center justify-between select-none mb-3">
-        <span>🧾 衣装詳細</span>
-        <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-      </summary>
-      <div class="overflow-x-auto">
-        <table class="w-full text-xs">
-          <thead>
-            <tr class="text-gray-500 dark:text-slate-400 border-b">
-              <th class="text-left py-1 px-1">スロット</th>
-              <th class="text-left py-1 px-1">衣装名</th>
-              <th class="text-center py-1 px-1">特訓</th>
-              <th class="text-center py-1 px-1">特効</th>
-              <th class="text-right py-1 px-1 text-red-500">Shout</th>
-              <th class="text-right py-1 px-1 text-green-500">Beat</th>
-              <th class="text-right py-1 px-1 text-blue-500">Melody</th>
-              <th class="text-right py-1 px-1">ブローチS</th>
-              <th class="text-right py-1 px-1">ブローチB</th>
-              <th class="text-right py-1 px-1">ブローチM</th>
-              <th class="text-left py-1 px-1">スキル</th>
-              <th class="text-left py-1 px-1">効果</th>
-            </tr>
-          </thead>
-          <tbody id="card-detail-body"></tbody>
-          <tfoot id="card-detail-foot"></tfoot>
-        </table>
-      </div>
-      <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
-    </details>
+    <CardDetailTable deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} />
 
     <details id="breakdown-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 group" open>
       <summary class="cursor-pointer text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center justify-between select-none mb-3">
