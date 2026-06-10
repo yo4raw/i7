@@ -9,7 +9,10 @@ import {
   isShrinkCard,
   createSearchContext,
   countCombos,
+  generateChunks,
+  enumerateChunkDecks,
   type SearchInput,
+  type ChunkDescriptor,
 } from '../../../src/lib/score/maxScoreFinder';
 import type { Card } from '../../../src/lib/data/fetchCardsJson';
 import type { EventBonusTier } from '../../../src/lib/data/eventBonusTiers';
@@ -158,5 +161,105 @@ describe('countCombos', () => {
     expect(countCombos(createSearchContext(empty))).toBe(0);
     expect(countCombos(createSearchContext({ ...empty, shrinkPairOnly: true }))).toBe(0);
     expect(countCombos(createSearchContext({ ...empty, ownedOnly: true }))).toBe(0);
+  });
+});
+
+/** 全チャンクの全デッキを列挙して個数と正規化キーを集める */
+function enumerateAll(input: SearchInput): { count: number; keys: Set<string>; decks: Card[][] } {
+  const ctx = createSearchContext(input);
+  const keys = new Set<string>();
+  const decks: Card[][] = [];
+  let count = 0;
+  for (const chunk of generateChunks(ctx)) {
+    for (const deck of enumerateChunkDecks(ctx, chunk)) {
+      count++;
+      decks.push([...deck]); // yield された配列は再利用されるためコピー
+      // 正規化キー: (center,friend) は対称なのでソートしたペア + ソートしたメンバー
+      const pair = [deck[0].ID!, deck[5].ID!].sort((a, b) => a - b).join('+');
+      const members = deck.slice(1, 5).map((c) => c.ID!).sort((a, b) => a - b).join(',');
+      keys.add(`${pair}|${members}`);
+    }
+  }
+  return { count, keys, decks };
+}
+
+/** ownedOnly 用キー: center は役割が固定なので分離する */
+function enumerateAllOwned(input: SearchInput): { count: number; keys: Set<string>; decks: Card[][] } {
+  const ctx = createSearchContext(input);
+  const keys = new Set<string>();
+  const decks: Card[][] = [];
+  let count = 0;
+  for (const chunk of generateChunks(ctx)) {
+    for (const deck of enumerateChunkDecks(ctx, chunk)) {
+      count++;
+      decks.push([...deck]);
+      const members = deck.slice(1, 5).map((c) => c.ID!).sort((a, b) => a - b).join(',');
+      keys.add(`${deck[0].ID}|${members}|${deck[5].ID}`);
+    }
+  }
+  return { count, keys, decks };
+}
+
+describe('generateChunks + enumerateChunkDecks', () => {
+  it('通常モード: 列挙数 = countCombos、重複なし', () => {
+    const input = buildInput();
+    const ctx = createSearchContext(input);
+    const { count, keys } = enumerateAll(input);
+    expect(count).toBe(countCombos(ctx));
+    expect(keys.size).toBe(count); // 正規化キーに重複がない = 同一編成を二度列挙しない
+  });
+
+  it('通常モード: チャンク数 = multichoose(N,2)', () => {
+    const ctx = createSearchContext(buildInput());
+    expect([...generateChunks(ctx)].length).toBe(multichoose(7, 2));
+  });
+
+  it('縮小2枚条件: 列挙数 = countCombos、全デッキの縮小枚数がちょうど 2', () => {
+    const input = buildInput({ shrinkPairOnly: true });
+    const ctx = createSearchContext(input);
+    const { count, keys, decks } = enumerateAll(input);
+    expect(count).toBe(countCombos(ctx));
+    expect(keys.size).toBe(count);
+    for (const deck of decks) {
+      expect(deck.filter((c) => isShrinkCard(c)).length).toBe(2);
+    }
+  });
+
+  it('所持衣装検索: 列挙数 = countCombos、スロット0-4 が所持上限内', () => {
+    const ownedCounts = {
+      [String(testCandidates[0].ID)]: 2, // 縮小持ち
+      [String(testCandidates[1].ID)]: 1, // 縮小持ち
+      [String(testCandidates[3].ID)]: 3, // 非縮小
+      [String(testCandidates[4].ID)]: 1, // 非縮小
+    };
+    const input = buildInput({ ownedOnly: true, ownedCounts });
+    const ctx = createSearchContext(input);
+    const { count, keys, decks } = enumerateAllOwned(input);
+    expect(count).toBe(countCombos(ctx));
+    expect(keys.size).toBe(count);
+    for (const deck of decks) {
+      const usage = new Map<number, number>();
+      for (let i = 0; i < 5; i++) usage.set(deck[i].ID!, (usage.get(deck[i].ID!) ?? 0) + 1);
+      for (const [id, n] of usage) expect(n).toBeLessThanOrEqual(ownedCounts[String(id)] ?? 0);
+    }
+  });
+
+  it('所持×縮小2枚条件: 列挙数 = countCombos、フレンドプール規則が守られる', () => {
+    const ownedCounts = {
+      [String(testCandidates[0].ID)]: 2,
+      [String(testCandidates[1].ID)]: 1,
+      [String(testCandidates[3].ID)]: 3,
+      [String(testCandidates[4].ID)]: 1,
+    };
+    const input = buildInput({ ownedOnly: true, shrinkPairOnly: true, ownedCounts });
+    const ctx = createSearchContext(input);
+    const { count, keys, decks } = enumerateAllOwned(input);
+    expect(count).toBe(countCombos(ctx));
+    expect(keys.size).toBe(count);
+    for (const deck of decks) {
+      const shrink5 = deck.slice(0, 5).filter((c) => isShrinkCard(c)).length;
+      // スロット0-4 が縮小2枚なら非縮小フレンド、それ以外は縮小フレンド
+      expect(isShrinkCard(deck[5])).toBe(shrink5 !== 2);
+    }
   });
 });

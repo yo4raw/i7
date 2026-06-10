@@ -191,3 +191,122 @@ export function countCombos(ctx: SearchContext): number {
   }
   return total;
 }
+
+/**
+ * チャンク = Worker に渡す作業単位。
+ * - pair: 通常モード。(center, friend) 多重集合ペア 1 つ (centerIdx ≤ friendIdx)
+ * - shrinkPair: 縮小2枚条件。s2 = ペア内の縮小枚数。s2=0 は非縮小内ペア (aIdx ≤ bIdx)、
+ *   s2=1 は (縮小 aIdx, 非縮小 bIdx) の直積、s2=2 は縮小内ペア (aIdx ≤ bIdx)
+ * - center: 所持衣装検索。owned[centerIdx] をセンターに固定
+ */
+export type ChunkDescriptor =
+  | { kind: 'pair'; centerIdx: number; friendIdx: number }
+  | { kind: 'shrinkPair'; s2: 0 | 1 | 2; aIdx: number; bIdx: number }
+  | { kind: 'center'; centerIdx: number };
+
+export function* generateChunks(ctx: SearchContext): Generator<ChunkDescriptor> {
+  const { input } = ctx;
+  if (input.ownedOnly) {
+    for (let ci = 0; ci < ctx.owned.length; ci++) yield { kind: 'center', centerIdx: ci };
+    return;
+  }
+  if (input.shrinkPairOnly) {
+    const S = ctx.shrink.length;
+    const T = ctx.nonShrink.length;
+    for (let a = 0; a < T; a++) for (let b = a; b < T; b++) yield { kind: 'shrinkPair', s2: 0, aIdx: a, bIdx: b };
+    for (let a = 0; a < S; a++) for (let b = 0; b < T; b++) yield { kind: 'shrinkPair', s2: 1, aIdx: a, bIdx: b };
+    for (let a = 0; a < S; a++) for (let b = a; b < S; b++) yield { kind: 'shrinkPair', s2: 2, aIdx: a, bIdx: b };
+    return;
+  }
+  const N = ctx.candidates.length;
+  for (let c = 0; c < N; c++) for (let f = c; f < N; f++) yield { kind: 'pair', centerIdx: c, friendIdx: f };
+}
+
+/**
+ * チャンク内の全デッキを列挙する。
+ * yield される配列は次の iteration で破壊的に書き換えられるため、
+ * 保持する場合は呼び出し側でコピーすること。
+ * deck の並びは [center, member1..4, friend]。
+ */
+export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor): Generator<Card[]> {
+  const deck: Card[] = new Array(6);
+
+  if (chunk.kind === 'pair') {
+    // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称
+    deck[0] = ctx.candidates[chunk.centerIdx];
+    deck[5] = ctx.candidates[chunk.friendIdx];
+    for (const m of multisetIndices(ctx.candidates.length, 4)) {
+      deck[1] = ctx.candidates[m[0]];
+      deck[2] = ctx.candidates[m[1]];
+      deck[3] = ctx.candidates[m[2]];
+      deck[4] = ctx.candidates[m[3]];
+      yield deck;
+    }
+    return;
+  }
+
+  if (chunk.kind === 'shrinkPair') {
+    const S = ctx.shrink;
+    const T = ctx.nonShrink;
+    if (chunk.s2 === 0) {
+      deck[0] = T[chunk.aIdx];
+      deck[5] = T[chunk.bIdx];
+    } else if (chunk.s2 === 1) {
+      deck[0] = S[chunk.aIdx];
+      deck[5] = T[chunk.bIdx];
+    } else {
+      deck[0] = S[chunk.aIdx];
+      deck[5] = S[chunk.bIdx];
+    }
+    const k = SHRINK_PAIR_TARGET - chunk.s2; // メンバー4枠中の縮小枚数
+    if (k < 0 || k > 4) return;
+    for (const sm of multisetIndicesOrEmpty(S.length, k)) {
+      for (const nm of multisetIndicesOrEmpty(T.length, 4 - k)) {
+        for (let i = 0; i < k; i++) deck[1 + i] = S[sm[i]];
+        for (let i = 0; i < 4 - k; i++) deck[1 + k + i] = T[nm[i]];
+        yield deck;
+      }
+    }
+    return;
+  }
+
+  // kind === 'center': 所持衣装検索
+  // center + member1..4 を所持枚数の範囲内で組合せ、フレンドは全候補
+  // ((center, friend) 対称性は所持プールが非対称なため利用しない)
+  const owned = ctx.owned;
+  deck[0] = owned[chunk.centerIdx];
+  for (const m of multisetIndices(owned.length, 4)) {
+    deck[1] = owned[m[0]];
+    deck[2] = owned[m[1]];
+    deck[3] = owned[m[2]];
+    deck[4] = owned[m[3]];
+
+    // 5 スロット内の所持枚数違反を skip
+    const usage = new Map<number, number>();
+    for (let i = 0; i < 5; i++) {
+      const id = deck[i].ID!;
+      usage.set(id, (usage.get(id) ?? 0) + 1);
+    }
+    let valid = true;
+    for (const [id, n] of usage) {
+      if (n > (ctx.ownedLimit.get(id) ?? 0)) { valid = false; break; }
+    }
+    if (!valid) continue;
+
+    // 縮小2枚条件: スロット0-4の縮小がちょうど2枚なら非縮小フレンド、
+    // それ以外 (0枚 / 1枚 / 3枚以上) は縮小フレンドのみ（組合せ自体は除外しない）
+    let friendPool = ctx.candidates;
+    if (ctx.input.shrinkPairOnly) {
+      let shrinkCount5 = 0;
+      for (let i = 0; i < 5; i++) {
+        if (isShrinkCard(deck[i])) shrinkCount5++;
+      }
+      friendPool = shrinkCount5 === SHRINK_PAIR_TARGET ? ctx.nonShrink : ctx.shrink;
+    }
+
+    for (const f of friendPool) {
+      deck[5] = f;
+      yield deck;
+    }
+  }
+}
