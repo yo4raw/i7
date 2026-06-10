@@ -115,7 +115,6 @@
   const silverCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'silver'));
 
   const shrinkCandidates = $derived(currentCandidates.filter((c) => isShrinkCard(c)));
-  const nonShrinkCandidates = $derived(currentCandidates.filter((c) => !isShrinkCard(c)));
 
   const cardCounts = $derived(allCounts());
   const ownedCountOf = (card: Card): number => (card.ID == null ? 0 : cardCounts[String(card.ID)] ?? 0);
