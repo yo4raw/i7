@@ -76,10 +76,19 @@
   let progressText = $state('');
   let lastResult = $state<SearchResult | null>(null);
   let abortRequested = false;
+  let activeWorkers: Worker[] = [];
 
   $effect(() => {
     const id = setInterval(() => { now = Date.now(); }, 60_000);
     return () => clearInterval(id);
+  });
+
+  // アイランド破棄時に探索中の Worker を解放する (フルページ遷移では不要だが将来の SPA 化への保険)
+  $effect(() => {
+    return () => {
+      for (const w of activeWorkers) w.terminate();
+      activeWorkers = [];
+    };
   });
 
   $effect(() => {
@@ -189,8 +198,6 @@
     const m = Math.floor(s / 60);
     return `${m}分 ${(s - m * 60).toFixed(1)}秒`;
   }
-
-  let activeWorkers: Worker[] = [];
 
   async function runSearch() {
     const input = buildSearchInput();
