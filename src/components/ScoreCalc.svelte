@@ -24,6 +24,7 @@
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs, SONG_NOTE_GROUP_KEYS } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
+  import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS, DISPLAY_ORDER } from '../lib/score/deckState';
   type Props = {
     cards: Card[];
     songs: Song[];
@@ -33,6 +34,8 @@
   };
 
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events: initialEvents, base }: Props = $props();
+
+  const deckState = $state(createEmptyDeckState());
 
   let rootEl: HTMLDivElement;
 
@@ -57,27 +60,8 @@
     const _q = <T extends HTMLElement = HTMLElement>(id: string): T => rootEl.querySelector<T>(`#${id}`) as T;
 
     let selectedSong: Song | null = null;
-    let deck: (Card | null)[] = [null, null, null, null, null, null];
-    let deckBonusTiers: EventBonusTier[] = ['none', 'none', 'none', 'none', 'none', 'none'];
-    let deckTrained: boolean[] = [true, true, true, true, true, true];
-    let deckSharedBroachs: number[][] = [[], [], [], [], [], []];
-    let deckSkillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     let activeModalSlot = -1;
     let simulationResult: SimulationResult | null = null;
-
-    const SLOT_LABELS = ['センター', 'メンバー1', 'メンバー2', 'メンバー3', 'メンバー4', 'フレンド'];
-    const DISPLAY_ORDER = [1, 2, 0, 3, 4, 5];
-
-    function validateSharedBroachs(slotIndex: number) {
-      const card = deck[slotIndex];
-      if (!card || card.rarity !== 'UR') {
-        deckSharedBroachs[slotIndex] = [];
-        return;
-      }
-      const hasFixed = allBroachs.some(br => br.card_id === card.cardID);
-      const maxShared = hasFixed ? 1 : 2;
-      deckSharedBroachs[slotIndex] = deckSharedBroachs[slotIndex].slice(0, maxShared);
-    }
 
     function getSelectedSongIds(): Set<number> {
       return new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
@@ -172,20 +156,6 @@
     const DRAG_THRESHOLD = 6;
     const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-indigo-400', 'ring-offset-1'];
 
-    function swapDeckSlots(a: number, b: number) {
-      if (a === b) return;
-      if (a < 0 || a > 4 || b < 0 || b > 4) return;
-      [deck[a], deck[b]] = [deck[b], deck[a]];
-      [deckBonusTiers[a], deckBonusTiers[b]] = [deckBonusTiers[b], deckBonusTiers[a]];
-      [deckTrained[a], deckTrained[b]] = [deckTrained[b], deckTrained[a]];
-      [deckSharedBroachs[a], deckSharedBroachs[b]] = [deckSharedBroachs[b], deckSharedBroachs[a]];
-      [deckSkillLevels[a], deckSkillLevels[b]] = [deckSkillLevels[b], deckSkillLevels[a]];
-      renderDeckSlots();
-      renderCardDetailTable();
-      recalculate();
-      saveState();
-    }
-
     function clearDropHighlight() {
       rootEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
         el.classList.remove(...DRAG_DROP_HIGHLIGHT);
@@ -259,7 +229,7 @@
           const startX = ev.clientX;
           const startY = ev.clientY;
           const isFriend = slot === 5;
-          const hasCard = deck[slot] !== null;
+          const hasCard = deckState.cards[slot] !== null;
           let dragging = false;
           let pointerId = ev.pointerId;
 
@@ -295,7 +265,11 @@
             if (!dropped || !e) return;
             const target = findDropTargetSlot(e.clientX, e.clientY);
             if (target === null || target === slot || target === 5) return;
-            swapDeckSlots(slot, target);
+            swapSlots(deckState, slot, target);
+            renderDeckSlots();
+            renderCardDetailTable();
+            recalculate();
+            saveState();
           };
 
           const onUp = (e: PointerEvent) => finish(e, true);
@@ -310,19 +284,19 @@
 
     function renderDeckSlots() {
       const slotDummySong = selectedSong || { song_name: '' };
-      const slotResolvedMap = resolveDeckBroachs(deck, allBroachs, slotDummySong);
+      const slotResolvedMap = resolveDeckBroachs(deckState.cards, allBroachs, slotDummySong);
 
       // 縮小スキルの並び順警告: 発動優先度 メンバー1(idx=1) → センター(idx=0) → メンバー2(idx=2)
       // の順に強い縮小スキルが配置されているかを検証
       const PRIORITY_SLOTS = [1, 0, 2] as const;
       const shrinkStrengths = PRIORITY_SLOTS.map(si => {
-        const c = deck[si];
+        const c = deckState.cards[si];
         if (!c) return 0;
         const t = c.ap_skill_type;
         if (!t) return 0;
         const isShrink = t === SKILL_TYPE.SHRINK || t.startsWith(SKILL_TYPE.SHRINK_PREFIX);
         if (!isShrink) return 0;
-        const sl = getApSkillLevel(c, deckSkillLevels[si]);
+        const sl = getApSkillLevel(c, deckState.skillLevels[si]);
         return (sl.rate ?? 0) * (sl.per ?? 0);
       });
       const sortedDesc = [...shrinkStrengths].sort((a, b) => b - a);
@@ -337,7 +311,7 @@
       }
 
       for (let i = 0; i < 6; i++) {
-        const card = deck[i];
+        const card = deckState.cards[i];
         const container = rootEl.querySelector<HTMLElement>(`[data-slot-btn="${i}"]`);
         if (!container) continue;
 
@@ -355,9 +329,9 @@
         const rarityClass = RARITY_BADGE_CLASSES[card.rarity || ''] || 'bg-gray-300';
         const attrBgClass = ATTR_BADGE_BG[attr] || 'bg-gray-300';
 
-        const currentTier = deckBonusTiers[i];
-        const trainedChecked = deckTrained[i];
-        const currentSkillLv = deckSkillLevels[i];
+        const currentTier = deckState.bonusTiers[i];
+        const trainedChecked = deckState.trained[i];
+        const currentSkillLv = deckState.skillLevels[i];
 
         const cardBroachs = card.rarity === 'UR'
           ? allBroachs.filter(br => br.card_id === card.cardID)
@@ -400,7 +374,7 @@
           const hasFixed = cardBroachs.length > 0;
           const maxShared = hasFixed ? 1 : 2;
           for (let s = 0; s < maxShared; s++) {
-            const currentVal = deckSharedBroachs[i]?.[s] ?? 0;
+            const currentVal = deckState.sharedBroachs[i]?.[s] ?? 0;
             const options = SHARED_BROACHS.map(sb => {
               const sel = sb.id === currentVal ? ' selected' : '';
               const stats: string[] = [];
@@ -453,7 +427,7 @@
         el.addEventListener('change', (e) => {
           const sel = e.target as HTMLSelectElement;
           const slot = Number(sel.dataset.bonusSlot);
-          deckBonusTiers[slot] = sel.value as EventBonusTier;
+          deckState.bonusTiers[slot] = sel.value as EventBonusTier;
           applyBonusTierStyle(sel);
           renderCardDetailTable();
           recalculate();
@@ -469,7 +443,7 @@
         el.addEventListener('change', (e) => {
           const chk = e.target as HTMLInputElement;
           const slot = Number(chk.dataset.trainedSlot);
-          deckTrained[slot] = chk.checked;
+          deckState.trained[slot] = chk.checked;
           renderCardDetailTable();
           recalculate();
           saveState();
@@ -481,7 +455,7 @@
         el.addEventListener('change', (e) => {
           const sel = e.target as HTMLSelectElement;
           const slot = Number(sel.dataset.skillSlot);
-          deckSkillLevels[slot] = Number(sel.value) as 1 | 2 | 3 | 4 | 5;
+          deckState.skillLevels[slot] = Number(sel.value) as 1 | 2 | 3 | 4 | 5;
           renderDeckSlots();
           renderCardDetailTable();
           recalculate();
@@ -496,9 +470,9 @@
           const slot = Number(sel.dataset.broachSlot);
           const idx = Number(sel.dataset.broachIdx);
           const val = Number(sel.value);
-          if (!deckSharedBroachs[slot]) deckSharedBroachs[slot] = [];
-          while (deckSharedBroachs[slot].length <= idx) deckSharedBroachs[slot].push(0);
-          deckSharedBroachs[slot][idx] = val;
+          if (!deckState.sharedBroachs[slot]) deckState.sharedBroachs[slot] = [];
+          while (deckState.sharedBroachs[slot].length <= idx) deckState.sharedBroachs[slot].push(0);
+          deckState.sharedBroachs[slot][idx] = val;
           renderDeckSlots();
           recalculate();
           saveState();
@@ -519,7 +493,7 @@
     }
 
     function renderCardDetailTable() {
-      const filledCards = deck.filter(c => c !== null);
+      const filledCards = deckState.cards.filter(c => c !== null);
       if (filledCards.length === 0) {
         _q('card-detail-section').classList.add('hidden');
         return;
@@ -527,10 +501,10 @@
       _q('card-detail-section').classList.remove('hidden');
 
       const dummySong = selectedSong || { song_name: '' };
-      const resolvedMap = resolveDeckBroachs(deck, allBroachs, dummySong);
+      const resolvedMap = resolveDeckBroachs(deckState.cards, allBroachs, dummySong);
 
       const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
-      for (const c of deck) {
+      for (const c of deckState.cards) {
         if (!c) continue;
         const a = normalizeAttribute(c.attribute);
         if (a in attrCounts) attrCounts[a]++;
@@ -540,7 +514,7 @@
       let totalShout = 0, totalBeat = 0, totalMelody = 0;
       let totalBS = 0, totalBB = 0, totalBM = 0;
       const rows = DISPLAY_ORDER.map(i => {
-        const card = deck[i];
+        const card = deckState.cards[i];
         if (!card) return '';
         const slotBroachs = resolvedMap.get(i) ?? [];
         const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
@@ -548,7 +522,7 @@
         let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0) * (rb.multiplier ?? 1), 0);
         let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0) * (rb.multiplier ?? 1), 0);
         if (card.rarity === 'UR') {
-          for (const sbId of (deckSharedBroachs[i] || [])) {
+          for (const sbId of (deckState.sharedBroachs[i] || [])) {
             if (!sbId) continue;
             const sb = SHARED_BROACHS.find(s => s.id === sbId);
             if (!sb) continue;
@@ -561,12 +535,12 @@
           }
         }
         const skillType = card.ap_skill_type || '-';
-        const sl = getApSkillLevel(card, deckSkillLevels[i]);
+        const sl = getApSkillLevel(card, deckState.skillLevels[i]);
         const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl);
-        const tier = deckBonusTiers[i];
+        const tier = deckState.bonusTiers[i];
         const bonusLabel = BONUS_LABEL[tier];
         const bonusClass = BONUS_CLASS[tier];
-        const trained = deckTrained[i];
+        const trained = deckState.trained[i];
         const trainedLabel = trained ? '済' : '未';
         const trainedClass = trained ? 'text-indigo-600 font-bold' : 'text-gray-400';
         const rn = rnMap[card.name || ''];
@@ -607,8 +581,8 @@
       }).join('');
 
       _q('card-detail-body').innerHTML = rows;
-      const centerCard = deck[0];
-      const friendCard = deck[5];
+      const centerCard = deckState.cards[0];
+      const friendCard = deckState.cards[5];
       const centerRate = centerCard ? getCenterSkillRate(centerCard.rarity) : 0;
       const friendRate = friendCard ? getCenterSkillRate(friendCard.rarity) : 0;
       const centerAttr = centerCard ? normalizeAttribute(centerCard.attribute) : null;
@@ -781,9 +755,7 @@
           const cardId = Number((el as HTMLElement).dataset.pickCard);
           const card = allCards.find(c => c.ID === cardId);
           if (card && activeModalSlot >= 0) {
-            deck[activeModalSlot] = card;
-            deckBonusTiers[activeModalSlot] = defaultTierFor(card);
-            validateSharedBroachs(activeModalSlot);
+            setCard(deckState, activeModalSlot, card, defaultTierFor(card), allBroachs);
             closeCardPicker();
             renderDeckSlots();
             recalculate();
@@ -795,7 +767,7 @@
 
     function recalculate() {
       updateCalcButton();
-      const filledCards = deck.filter(c => c !== null);
+      const filledCards = deckState.cards.filter(c => c !== null);
       if (!selectedSong || filledCards.length === 0) {
         _q('score-breakdown').classList.add('hidden');
         _q('area-values-section').classList.add('hidden');
@@ -810,7 +782,7 @@
         return;
       }
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
+      const team = computeTeam(deckState.cards, allBroachs, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
       const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
       const notes = flattenNotes(selectedSong, 42, exclusion);
 
@@ -846,7 +818,7 @@
       let totalMax = 0;
       let totalActivations = 0;
       for (const i of DISPLAY_ORDER) {
-        const card = deck[i];
+        const card = deckState.cards[i];
         if (!card) continue;
         const exp = calcCardSkillExpected(team, notes, notesCount, i, options);
         const max = calcCardSkillMax(team, notes, notesCount, i, options);
@@ -953,14 +925,14 @@
     }
 
     async function runMC() {
-      if (!selectedSong || deck.filter(c => c !== null).length === 0) return;
+      if (!selectedSong || deckState.cards.filter(c => c !== null).length === 0) return;
 
       const btn = _q<HTMLButtonElement>('btn-calculate');
       btn.disabled = true;
       btn.textContent = '計算中...';
       _q('progress-container').classList.remove('hidden');
 
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
+      const team = computeTeam(deckState.cards, allBroachs, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
       const exclusion = computeShrinkExclusion(team, computeGroupSizes(selectedSong));
       const notes = flattenNotes(selectedSong, 42, exclusion);
 
@@ -1046,7 +1018,7 @@
     function updateCalcButton() {
       const btn = _q<HTMLButtonElement>('btn-calculate');
       const reason = _q('calc-disabled-reason');
-      const hasCards = deck.some(c => c !== null);
+      const hasCards = deckState.cards.some(c => c !== null);
 
       if (!selectedSong && !hasCards) {
         btn.disabled = true;
@@ -1068,11 +1040,11 @@
       const badgeRate = badgeRateEl ? (parseFloat(badgeRateEl.value) || 0) : undefined;
       return {
         songId: selectedSong?.id ?? null,
-        deckIds: deck.map(c => c?.ID ?? null),
-        bonusTiers: [...deckBonusTiers],
-        trained: [...deckTrained],
-        sharedBroachs: deckSharedBroachs.map(a => [...a]),
-        skillLevels: [...deckSkillLevels],
+        deckIds: deckState.cards.map(c => c?.ID ?? null),
+        bonusTiers: [...deckState.bonusTiers],
+        trained: [...deckState.trained],
+        sharedBroachs: deckState.sharedBroachs.map(a => [...a]),
+        skillLevels: [...deckState.skillLevels],
         badgeRate,
       };
     }
@@ -1092,36 +1064,36 @@
       }
       if (Array.isArray(state.bonusTiers)) {
         for (let i = 0; i < 6; i++) {
-          deckBonusTiers[i] = state.bonusTiers[i] || 'none';
+          deckState.bonusTiers[i] = state.bonusTiers[i] || 'none';
         }
       }
       if (Array.isArray(state.trained)) {
         for (let i = 0; i < 6; i++) {
-          deckTrained[i] = state.trained[i] !== false;
+          deckState.trained[i] = state.trained[i] !== false;
         }
       }
       if (Array.isArray(state.sharedBroachs)) {
         for (let i = 0; i < 6; i++) {
-          deckSharedBroachs[i] = Array.isArray(state.sharedBroachs[i]) ? state.sharedBroachs[i] : [];
+          deckState.sharedBroachs[i] = Array.isArray(state.sharedBroachs[i]) ? state.sharedBroachs[i] : [];
         }
       }
       if (Array.isArray(state.skillLevels)) {
         for (let i = 0; i < 6; i++) {
           const lv = state.skillLevels[i];
-          deckSkillLevels[i] = (lv >= 1 && lv <= 5) ? lv : 5;
+          deckState.skillLevels[i] = (lv >= 1 && lv <= 5) ? lv : 5;
         }
       }
-      deck = [null, null, null, null, null, null];
+      deckState.cards = [null, null, null, null, null, null];
       if (Array.isArray(state.deckIds)) {
         for (let i = 0; i < 6; i++) {
           const id = state.deckIds[i];
           if (id != null) {
-            deck[i] = allCards.find(c => c.ID === id) || null;
+            deckState.cards[i] = allCards.find(c => c.ID === id) || null;
           }
         }
       }
       for (let i = 0; i < 6; i++) {
-        validateSharedBroachs(i);
+        clampSharedBroachs(deckState, i, allBroachs);
       }
       if (typeof state.badgeRate === 'number') {
         const el = _q<HTMLInputElement>('opt-scoreup-badge-rate');
@@ -1202,7 +1174,7 @@
     }
 
     function saveDeck() {
-      const hasCards = deck.some(c => c !== null);
+      const hasCards = deckState.cards.some(c => c !== null);
       if (!hasCards) { alert('デッキに衣装を1枚以上セットしてください'); return; }
 
       const existing = loadSavedDecks();
@@ -1345,10 +1317,7 @@
     _q('modal-close-x').addEventListener('click', closeCardPicker);
     _q('modal-clear').addEventListener('click', () => {
       if (activeModalSlot >= 0) {
-        deck[activeModalSlot] = null;
-        deckBonusTiers[activeModalSlot] = 'none';
-        deckTrained[activeModalSlot] = true;
-        deckSharedBroachs[activeModalSlot] = [];
+        clearSlot(deckState, activeModalSlot);
         closeCardPicker();
         renderDeckSlots();
         recalculate();
@@ -1380,8 +1349,8 @@
     _q('opt-scoreup-badge-rate').addEventListener('input', () => { recalculate(); saveState(); });
 
     _q('shrink-offset-input').addEventListener('input', () => {
-      if (!selectedSong || deck.filter(c => c !== null).length === 0) return;
-      const team = computeTeam(deck, allBroachs, selectedSong, deckBonusTiers, deckTrained, undefined, deckSharedBroachs, deckSkillLevels, loadRabbitNotes());
+      if (!selectedSong || deckState.cards.filter(c => c !== null).length === 0) return;
+      const team = computeTeam(deckState.cards, allBroachs, selectedSong, deckState.bonusTiers, deckState.trained, undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes());
       updateShrinkCoverage(team, selectedSong);
     });
 
@@ -1392,7 +1361,7 @@
 
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCards = fresh as Card[];
-      deck = deck.map(c => c ? allCards.find(fc => fc.ID === c.ID) || null : null);
+      deckState.cards = deckState.cards.map(c => c ? allCards.find(fc => fc.ID === c.ID) || null : null);
       renderDeckSlots();
       recalculate();
     });
