@@ -341,6 +341,17 @@ export interface FriendCandidate {
   score: number;
 }
 
+/** 探索完了時にまとめる結果 (UI の結果表示コンポーネントが受け取る) */
+export type SearchResult = {
+  best: DeckRecord;
+  top: DeckRecord[];
+  topFriends: FriendCandidate[];
+  evaluated: number;
+  elapsedMs: number;
+  evalMode: 'expected' | 'max';
+  aborted?: boolean;
+};
+
 export interface ChunkCallbacks {
   /**
    * yieldEvery 評価ごとと、チャンク完了時の端数で呼ばれる。
