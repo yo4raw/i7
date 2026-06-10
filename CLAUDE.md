@@ -163,7 +163,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | ラビットノート | `src/pages/rabbit-note/index.astro` | ビルド時プリレンダリング |
 | About | `src/pages/about/index.astro` | ビルド時プリレンダリング |
 | リリースノート | `src/pages/releases/index.astro` | ビルド時プリレンダリング |
-| 編成組合計算 | `src/pages/score-calc/max-score-finder/index.astro` | ビルド時 + クライアント JS（理論値最大編成探索） |
+| 編成組合計算 | `src/pages/score-calc/max-score-finder/index.astro` | ビルド時 + クライアント JS（理論値最大編成探索。所持衣装縛りモード（`i7_card_counts` の枚数を上限とした多重集合探索）あり。実装は `src/components/MaxScoreFinder.svelte`） |
 
 ### User Data Backup
 
@@ -261,10 +261,7 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 ## 衣装表示参考
 
 衣装の表示で判断が難しい場合は
-`https://i7.yo4raw.com/cards/{id}/`
-が　
-`https://i7.step-on-dream.net/card.php?ID={id}`
-に該当するので参考にする
+`https://i7.yo4raw.com/cards/{id}/`　が　`https://i7.step-on-dream.net/card.php?ID={id}`　に該当するので参考にする
 
 ## Workflow
 

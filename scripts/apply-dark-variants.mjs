@@ -69,7 +69,7 @@ const files = [
   'src/components/RabbitNoteEditor.svelte',
   'src/components/score/ShrinkPlayground.svelte',
   'src/components/ScoreCalc.svelte',
-  'src/components/SecretsTool.svelte',
+  'src/components/MaxScoreFinder.svelte',
   'src/components/SongList.svelte',
   'src/pages/about/index.astro',
   'src/pages/cards/[id].astro',

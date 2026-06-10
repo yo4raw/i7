@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import SecretsTool from '../../../components/SecretsTool.svelte';
+import MaxScoreFinder from '../../../components/MaxScoreFinder.svelte';
 import { fetchCardsJson } from '../../../lib/data/fetchCardsJson';
 import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../../lib/data/fetchSongsJson';
 import { fetchFixedBroachsJson } from '../../../lib/data/fetchFixedBroachsJson';
@@ -42,7 +42,7 @@ const breadcrumbs = [
     <br />スキルレベルは全て Lv5 / 特訓済み前提。固定ブローチは条件を満たすものを自動装着してスコアに反映します（衣装詳細表示で確認可能）。共有ブローチは未装着として扱います。
   </p>
 
-  <SecretsTool
+  <MaxScoreFinder
     cards={allCards}
     songs={allSongs}
     broachs={allBroachs}
