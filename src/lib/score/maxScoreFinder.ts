@@ -11,8 +11,14 @@ import type { FixedBroach } from '../data/fetchFixedBroachsJson';
 import type { ScoreOptions } from './types';
 import type { EventBonusTier } from '../data/eventBonusTiers';
 import type { RabbitNoteMap } from '../data/rabbitNote';
-import { computeGroupSizes } from './shrinkExclusion';
-import { flattenNotes } from './noteFlattener';
+import {
+  computeGroupSizes,
+  computeShrinkExclusion,
+  computeTeam,
+  calcExpectedScore,
+  calcMaxScore,
+  flattenNotes,
+} from './engine';
 
 /** デッキ6枠中の判定縮小スキル持ち枚数を固定する条件 (shrinkPairOnly 有効時) */
 export const SHRINK_PAIR_TARGET = 2;
@@ -309,4 +315,148 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
       yield deck;
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// デッキ評価・チャンク実行・Top-K マージ・フレンド差し替え
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TOP_K = 10;
+/** この評価数ごとに onTick を呼ぶ (進捗報告・中断確認・イベントループへの yield) */
+export const YIELD_EVERY = 3000;
+
+export interface DeckRecord {
+  /** [center, member1..4, friend] の cardID */
+  cardIds: number[];
+  score: number;
+  liveEndScore?: number;
+  baseScore?: number;
+  scoreUpExpected?: number;
+  shrinkExpected?: number;
+  finalScore?: number;
+}
+
+export interface FriendCandidate {
+  cardId: number;
+  score: number;
+}
+
+export interface ChunkCallbacks {
+  /**
+   * yieldEvery 評価ごとと、チャンク完了時の端数で呼ばれる。
+   * true を返すとチャンクを中断する (完了時の端数呼び出しの返り値は無視される)。
+   */
+  onTick?: (evaluatedDelta: number, localBest: DeckRecord | null) => boolean | Promise<boolean>;
+}
+
+export interface ChunkResult {
+  topK: DeckRecord[];
+  evaluated: number;
+  aborted: boolean;
+}
+
+// 探索条件は全カード スキルLv5・特訓済み・共有ブローチなしで固定 (現行 SecretsTool と同値)
+const SEARCH_SKILL_LEVELS: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
+const SEARCH_TRAINED: boolean[] = [true, true, true, true, true, true];
+const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
+
+export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRecord {
+  const { input } = ctx;
+  const tiers: EventBonusTier[] = deck.map((c) =>
+    c && c.ID != null ? input.tierByCardId[String(c.ID)] ?? 'none' : 'none'
+  );
+  const team = computeTeam(
+    deck, input.broachs, input.song, tiers, SEARCH_TRAINED, undefined,
+    SEARCH_EMPTY_SHARED, SEARCH_SKILL_LEVELS, input.rabbitNotes
+  );
+  const exclusion = computeShrinkExclusion(team, ctx.groupSizes);
+  const notes = flattenNotes(input.song, FLATTEN_SEED, exclusion);
+  const rec: DeckRecord = {
+    cardIds: deck.map((c) => c!.ID!),
+    score: 0,
+  };
+  if (input.evalMode === 'expected') {
+    const e = calcExpectedScore(team, notes, ctx.notesCount, input.scoreOptions);
+    rec.score = e.finalScore;
+    rec.baseScore = e.baseScore;
+    rec.scoreUpExpected = e.scoreUpExpected;
+    rec.shrinkExpected = e.shrinkExpected;
+    rec.liveEndScore = e.liveEndScore;
+    rec.finalScore = e.finalScore;
+  } else {
+    const s = calcMaxScore(team, notes, input.scoreOptions);
+    rec.score = s;
+    rec.finalScore = s;
+  }
+  return rec;
+}
+
+function pushTop(top: DeckRecord[], rec: DeckRecord, k: number): void {
+  if (top.length < k) {
+    top.push(rec);
+    top.sort((a, b) => b.score - a.score);
+  } else if (rec.score > top[k - 1].score) {
+    top[k - 1] = rec;
+    top.sort((a, b) => b.score - a.score);
+  }
+}
+
+/** チャンク内の全デッキを評価し、ローカル Top-K と評価件数を返す */
+export async function evaluateChunk(
+  ctx: SearchContext,
+  chunk: ChunkDescriptor,
+  callbacks?: ChunkCallbacks,
+  yieldEvery: number = YIELD_EVERY,
+): Promise<ChunkResult> {
+  const top: DeckRecord[] = [];
+  let evaluated = 0;
+  let sinceTick = 0;
+  let aborted = false;
+  for (const deck of enumerateChunkDecks(ctx, chunk)) {
+    pushTop(top, evaluateDeck(ctx, deck), TOP_K);
+    evaluated++;
+    sinceTick++;
+    if (sinceTick >= yieldEvery && callbacks?.onTick) {
+      const stop = await callbacks.onTick(sinceTick, top[0] ?? null);
+      sinceTick = 0;
+      if (stop) {
+        aborted = true;
+        break;
+      }
+    }
+  }
+  // 完了時の端数を報告 (中断指示は無視: チャンクは既に終わっている)
+  if (sinceTick > 0 && callbacks?.onTick) {
+    await callbacks.onTick(sinceTick, top[0] ?? null);
+  }
+  return { topK: top, evaluated, aborted };
+}
+
+/** 各 Worker のローカル Top-K をスコア降順にマージして上位 k 件を返す */
+export function mergeTopK(lists: DeckRecord[][], k: number = TOP_K): DeckRecord[] {
+  return lists.flat().sort((a, b) => b.score - a.score).slice(0, k);
+}
+
+/**
+ * 最適編成の center + member1..4 を固定し、フレンドだけ差し替えた Top 5 を返す。
+ * shrinkPairOnly 時はスロット0-4 の縮小枚数に応じてプールを絞る (探索時と同じ規則)。
+ */
+export function evaluateFriendSwap(ctx: SearchContext, bestCardIds: number[]): FriendCandidate[] {
+  const byId = new Map(ctx.candidates.map((c) => [c.ID!, c]));
+  const fixed: (Card | null)[] = bestCardIds.map((id) => byId.get(id) ?? null);
+  let pool = ctx.candidates;
+  if (ctx.input.shrinkPairOnly) {
+    let fixedShrink = 0;
+    for (let i = 0; i < 5; i++) {
+      if (isShrinkCard(fixed[i])) fixedShrink++;
+    }
+    pool = fixedShrink === SHRINK_PAIR_TARGET ? ctx.nonShrink : ctx.shrink;
+  }
+  const scores: FriendCandidate[] = [];
+  for (const cand of pool) {
+    fixed[5] = cand;
+    scores.push({ cardId: cand.ID!, score: evaluateDeck(ctx, fixed).score });
+  }
+  scores.sort((a, b) => b.score - a.score);
+  return scores.slice(0, 5);
 }

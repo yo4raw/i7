@@ -11,8 +11,14 @@ import {
   countCombos,
   generateChunks,
   enumerateChunkDecks,
+  evaluateDeck,
+  evaluateChunk,
+  mergeTopK,
+  evaluateFriendSwap,
+  TOP_K,
   type SearchInput,
   type ChunkDescriptor,
+  type DeckRecord,
 } from '../../../src/lib/score/maxScoreFinder';
 import type { Card } from '../../../src/lib/data/fetchCardsJson';
 import type { EventBonusTier } from '../../../src/lib/data/eventBonusTiers';
@@ -261,5 +267,133 @@ describe('generateChunks + enumerateChunkDecks', () => {
       // スロット0-4 が縮小2枚なら非縮小フレンド、それ以外は縮小フレンド
       expect(isShrinkCard(deck[5])).toBe(shrink5 !== 2);
     }
+  });
+});
+
+describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
+  // 評価コストを抑えるため候補 5 枚 (縮小 2 + 非縮小 3)
+  const smallInput = buildInput({
+    candidates: [...shrinkUr.slice(0, 2), ...nonShrinkUr.slice(0, 3)],
+  });
+
+  async function runAllChunks(input: SearchInput, shuffle: boolean): Promise<{ top: DeckRecord[]; evaluated: number }> {
+    const ctx = createSearchContext(input);
+    const chunks = [...generateChunks(ctx)];
+    if (shuffle) chunks.reverse(); // 順序を変えても結果が同じことの検証
+    const tops: DeckRecord[][] = [];
+    let evaluated = 0;
+    for (const chunk of chunks) {
+      const r = await evaluateChunk(ctx, chunk);
+      tops.push(r.topK);
+      evaluated += r.evaluated;
+    }
+    return { top: mergeTopK(tops, TOP_K), evaluated };
+  }
+
+  it('順次実行とチャンク順入れ替え実行で Top-K が一致する (分割の完全性)', async () => {
+    const a = await runAllChunks(smallInput, false);
+    const b = await runAllChunks(smallInput, true);
+    const ctx = createSearchContext(smallInput);
+    expect(a.evaluated).toBe(countCombos(ctx));
+    expect(b.evaluated).toBe(a.evaluated);
+    expect(a.top.map((r) => r.score)).toEqual(b.top.map((r) => r.score));
+    expect(a.top[0].cardIds.slice().sort()).toEqual(b.top[0].cardIds.slice().sort());
+  });
+
+  it('evalMode=max でも動作しスコアは expected と異なりうる', async () => {
+    const r = await runAllChunks({ ...smallInput, evalMode: 'max' }, false);
+    expect(r.top.length).toBeGreaterThan(0);
+    expect(r.top[0].score).toBeGreaterThan(0);
+  });
+
+  it('evaluateDeck: expected モードでは内訳フィールドが埋まる', () => {
+    const ctx = createSearchContext(smallInput);
+    const deck = new Array(6).fill(ctx.candidates[0]);
+    const rec = evaluateDeck(ctx, deck);
+    expect(rec.cardIds).toEqual(deck.map((c) => c.ID));
+    expect(rec.score).toBe(rec.finalScore);
+    expect(rec.baseScore).toBeGreaterThan(0);
+    expect(rec.liveEndScore).toBeDefined();
+  });
+
+  it('onTick が true を返すと中断され、部分結果が整合する', async () => {
+    const ctx = createSearchContext(smallInput);
+    const chunk = [...generateChunks(ctx)][0];
+    let ticks = 0;
+    // yieldEvery=10 で 1 回目の tick (10 評価後) に中断
+    const r = await evaluateChunk(ctx, chunk, { onTick: () => { ticks++; return true; } }, 10);
+    expect(r.aborted).toBe(true);
+    expect(r.evaluated).toBe(10);
+    expect(ticks).toBe(1);
+    expect(r.topK.length).toBeLessThanOrEqual(TOP_K);
+    for (let i = 1; i < r.topK.length; i++) {
+      expect(r.topK[i].score).toBeLessThanOrEqual(r.topK[i - 1].score);
+    }
+  });
+
+  it('onTick は yieldEvery ごとと完了時の端数で呼ばれ、delta 合計 = evaluated', async () => {
+    const ctx = createSearchContext(smallInput);
+    const chunk = [...generateChunks(ctx)][0]; // 1 チャンク = H(5,4) = 70 デッキ
+    let total = 0;
+    const r = await evaluateChunk(ctx, chunk, { onTick: (delta) => { total += delta; return false; } }, 30);
+    expect(r.evaluated).toBe(70);
+    expect(total).toBe(70); // 30 + 30 + 10 (端数)
+    expect(r.aborted).toBe(false);
+  });
+});
+
+describe('mergeTopK', () => {
+  const rec = (score: number): DeckRecord => ({ cardIds: [1, 2, 3, 4, 5, 6], score });
+
+  it('空リスト・空配列を許容する', () => {
+    expect(mergeTopK([], 10)).toEqual([]);
+    expect(mergeTopK([[], []], 10)).toEqual([]);
+  });
+
+  it('スコア降順にマージして k 件に切り詰める', () => {
+    const merged = mergeTopK([[rec(5), rec(1)], [rec(3)], [rec(9), rec(2)]], 3);
+    expect(merged.map((r) => r.score)).toEqual([9, 5, 3]);
+  });
+
+  it('k 件未満ならあるだけ返す', () => {
+    expect(mergeTopK([[rec(1)]], 10).length).toBe(1);
+  });
+
+  it('同点は件数を失わない', () => {
+    expect(mergeTopK([[rec(5), rec(5)], [rec(5)]], 2).map((r) => r.score)).toEqual([5, 5]);
+  });
+});
+
+describe('evaluateFriendSwap', () => {
+  it('最適編成のフレンド差し替え Top 5 を返す (スコア降順)', async () => {
+    const smallInput = buildInput({
+      candidates: [...shrinkUr.slice(0, 2), ...nonShrinkUr.slice(0, 3)],
+    });
+    const ctx = createSearchContext(smallInput);
+    const chunks = [...generateChunks(ctx)];
+    const tops: DeckRecord[][] = [];
+    for (const chunk of chunks) tops.push((await evaluateChunk(ctx, chunk)).topK);
+    const best = mergeTopK(tops, 1)[0];
+    const friends = evaluateFriendSwap(ctx, best.cardIds);
+    expect(friends.length).toBe(Math.min(5, ctx.candidates.length));
+    for (let i = 1; i < friends.length; i++) {
+      expect(friends[i].score).toBeLessThanOrEqual(friends[i - 1].score);
+    }
+    // 最良フレンドのスコアは全体ベストと一致する (best 自身が候補に含まれるため)
+    expect(friends[0].score).toBe(best.score);
+  });
+
+  it('縮小2枚条件: 固定5枠の縮小枚数に応じてプールが絞られる', () => {
+    const input = buildInput({ shrinkPairOnly: true });
+    const ctx = createSearchContext(input);
+    // 固定5枠 = 縮小2枚 (center 縮小 + member1 縮小) → フレンドは非縮小プール
+    const fixedIds = [
+      shrinkUr[0].ID!, shrinkUr[1].ID!,
+      nonShrinkUr[0].ID!, nonShrinkUr[1].ID!, nonShrinkUr[2].ID!,
+      nonShrinkUr[3].ID!,
+    ];
+    const friends = evaluateFriendSwap(ctx, fixedIds);
+    const ids = new Set(ctx.nonShrink.map((c) => c.ID));
+    for (const f of friends) expect(ids.has(f.cardId)).toBe(true);
   });
 });
