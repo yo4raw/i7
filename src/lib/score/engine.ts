@@ -14,7 +14,7 @@ import {
   MC_CHUNK_SIZE, CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
   EVENT_BONUS_MULTIPLIER, TRAIN_BONUS,
 } from './constants';
-import type { EventBonusTier } from './constants';
+import type { EventBonusTier } from '../data/eventBonusTiers';
 import { XorShift128Plus } from './rng';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
