@@ -8,8 +8,8 @@
   import { computeTeam, calcMinScore, calcMaxScore, calcShrinkCoverage, calcExpectedScore, calcCardSkillExpected, calcCardSkillMax, calcCardSkillMaxActivations, runSimulation, flattenNotes, getCenterSkillRate, computeShrinkExclusion, computeGroupSizes } from '../lib/score/engine';
   import { resolveDeckBroachs } from '../lib/score/broachResolver';
   import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../lib/score/constants';
-  import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES } from '../lib/data/eventBonusTiers';
-  import type { EventBonusTier } from '../lib/data/eventBonusTiers';
+  import { EVENT_BONUS_TIERS, EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS, ALL_SELECT_CLASSES, buildLiveTierMap } from '../lib/data/eventBonusTiers';
+  import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { renderHistogramSvg } from '../lib/score/histogram';
   import { attrDonutSvg } from '../lib/donutChart';
   import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../lib/constants';
@@ -24,15 +24,6 @@
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
-  type EventForBonus = {
-    id: number;
-    start_date: string;
-    end_date: string;
-    gold: number[];
-    silver: number[];
-    bronze: number[];
-  };
-
   type Props = {
     cards: Card[];
     songs: Song[];
@@ -56,26 +47,7 @@
     let allBroachs: FixedBroach[] = initialBroachs;
     const allEventsForBonus: EventForBonus[] = initialEvents;
 
-    const TIER_RANK: Record<EventBonusTier, number> = { none: 0, bronze: 1, silver: 2, gold: 3 };
-
-    function buildDefaultTierMap(): Map<number, EventBonusTier> {
-      const now = Date.now();
-      const map = new Map<number, EventBonusTier>();
-      const upgrade = (id: number, tier: EventBonusTier) => {
-        const cur = map.get(id) ?? 'none';
-        if (TIER_RANK[tier] > TIER_RANK[cur]) map.set(id, tier);
-      };
-      for (const ev of allEventsForBonus) {
-        const start = Date.parse(`${ev.start_date}T00:00:00+09:00`);
-        const end = Date.parse(`${ev.end_date}T17:00:00+09:00`);
-        if (!(now >= start && now < end)) continue;
-        for (const id of ev.gold) upgrade(id, 'gold');
-        for (const id of ev.silver) upgrade(id, 'silver');
-        for (const id of ev.bronze) upgrade(id, 'bronze');
-      }
-      return map;
-    }
-    const defaultTierMap = buildDefaultTierMap();
+    const defaultTierMap = buildLiveTierMap(allEventsForBonus);
 
     function defaultTierFor(card: Card | null): EventBonusTier {
       if (!card || card.ID == null) return 'none';
