@@ -21,7 +21,7 @@ import { SHARED_BROACHS } from '../data/sharedBroachs';
 import type { RabbitNoteMap } from '../data/rabbitNote';
 
 /** カードからスキル情報を解析する */
-function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5 = 5): CardSkill | null {
+export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5 = 5): CardSkill | null {
   const type = card.ap_skill_type;
   // 判定補助系スキルはスコアに影響しないため null を返す
   if (!type || type === SKILL_TYPE.MISS_TO_GOOD || type === SKILL_TYPE.BAD_TO_PERFECT) return null;
