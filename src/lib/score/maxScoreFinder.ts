@@ -20,8 +20,8 @@ import {
   flattenNotes,
 } from './engine';
 
-/** デッキ6枠中の判定縮小スキル持ち枚数を固定する条件 (shrinkPairOnly 有効時) */
-export const SHRINK_PAIR_TARGET = 2;
+/** デッキ6枠中の判定縮小スキル持ちの最低枚数 (shrinkPairOnly 有効時) */
+export const SHRINK_MIN = 2;
 
 /** parseSkill (engine.ts) と同じ判定で「判定縮小スキル持ち」かどうかを返す */
 export function isShrinkCard(c: Card | null): boolean {
@@ -92,7 +92,7 @@ export interface SearchInput {
   evalMode: EvalMode;
   /** センター+メンバー4枚を所持枚数の範囲内に制限する */
   ownedOnly: boolean;
-  /** デッキ6枠中の判定縮小持ちをちょうど SHRINK_PAIR_TARGET 枚に絞る */
+  /** デッキ6枠中の判定縮小持ちを SHRINK_MIN 枚以上に絞る（所持モードはフレンドプール規則） */
   shrinkPairOnly: boolean;
   scoreOptions: ScoreOptions;
   /** 評価対象の特効 UR 候補 */
@@ -140,8 +140,8 @@ export function createSearchContext(input: SearchInput): SearchContext {
  * ownedOnly 時: 各 owned カードを center に置いた時の「残り所持枚数で 4-多重集合」の総和 × フレンド候補数。
  * ownedOnly=false 時: (center, friend) は UR/UR で対称、(member1..4) は多重集合
  *   → multichoose(N,2) × multichoose(N,4)。
- * shrinkPairOnly 時: 縮小持ち / それ以外に分割し、6枠合計でちょうど SHRINK_PAIR_TARGET 枚に
- *   なる組合せのみ数える。
+ * shrinkPairOnly 時: 縮小持ち / それ以外に分割し、6枠合計で SHRINK_MIN 枚以上に
+ *   なる組合せを数える。
  */
 export function countCombos(ctx: SearchContext): number {
   const { input } = ctx;
@@ -157,8 +157,8 @@ export function countCombos(ctx: SearchContext): number {
       }
       return centerSum * ctx.candidates.length;
     }
-    // 縮小2枚条件 (所持衣装検索): スロット0-4の縮小枚数がちょうど2枚なら非縮小フレンド、
-    // それ以外 (0枚 / 1枚 / 3枚以上) は縮小フレンドのみを組合せる（除外はしない）
+    // 縮小2枚以上条件 (所持衣装検索): スロット0-4 の縮小枚数が SHRINK_MIN 以上なら全フレンド、
+    // 1 枚以下は縮小フレンドのみを組合せる（除外はしない）
     let total = 0;
     for (let ci = 0; ci < ctx.owned.length; ci++) {
       const center = ctx.owned[ci];
@@ -172,7 +172,7 @@ export function countCombos(ctx: SearchContext): number {
       }
       for (let j = 0; j <= 4; j++) {
         const own5 = cs + j; // スロット0-4 の縮小枚数
-        const friendPool = own5 === SHRINK_PAIR_TARGET ? ctx.nonShrink.length : ctx.shrink.length;
+        const friendPool = own5 >= SHRINK_MIN ? ctx.candidates.length : ctx.shrink.length;
         if (friendPool < 1) continue;
         total += countMultisetsWithLimits(shrinkLimits, j)
           * countMultisetsWithLimits(nonShrinkLimits, 4 - j)
@@ -185,15 +185,17 @@ export function countCombos(ctx: SearchContext): number {
   if (!input.shrinkPairOnly) {
     return multichoose(ctx.candidates.length, 2) * multichoose(ctx.candidates.length, 4);
   }
-  // 縮小2枚条件: (center, friend) ペア内の縮小枚数 s2 ごとにメンバーの縮小枚数 k が決まる
+  // 縮小2枚以上条件: (center, friend) ペア内の縮小枚数 s2 ごとに、
+  // メンバー4枠の縮小枚数 k を max(0, SHRINK_MIN−s2) 〜 4 の範囲で総和する
   const S = ctx.shrink.length;
   const T = ctx.nonShrink.length;
   let total = 0;
-  for (let s2 = 0; s2 <= SHRINK_PAIR_TARGET; s2++) {
-    const k = SHRINK_PAIR_TARGET - s2;
-    if (k < 0 || k > 4) continue;
+  for (let s2 = 0; s2 <= 2; s2++) {
     const pairs = s2 === 0 ? multichoose(T, 2) : s2 === 1 ? S * T : multichoose(S, 2);
-    total += pairs * multichoose(S, k) * multichoose(T, 4 - k);
+    if (pairs === 0) continue;
+    for (let k = Math.max(0, SHRINK_MIN - s2); k <= 4; k++) {
+      total += pairs * multichoose(S, k) * multichoose(T, 4 - k);
+    }
   }
   return total;
 }
@@ -201,8 +203,9 @@ export function countCombos(ctx: SearchContext): number {
 /**
  * チャンク = Worker に渡す作業単位。
  * - pair: 通常モード。(center, friend) 多重集合ペア 1 つ (centerIdx ≤ friendIdx)
- * - shrinkPair: 縮小2枚条件。s2 = ペア内の縮小枚数。s2=0 は非縮小内ペア (aIdx ≤ bIdx)、
- *   s2=1 は (縮小 aIdx, 非縮小 bIdx) の直積、s2=2 は縮小内ペア (aIdx ≤ bIdx)
+ * - shrinkPair: 縮小2枚以上条件。s2 = ペア内の縮小枚数 (0/1/2)。s2=0 は非縮小内ペア (aIdx ≤ bIdx)、
+ *   s2=1 は (縮小 aIdx, 非縮小 bIdx) の直積、s2=2 は縮小内ペア (aIdx ≤ bIdx)。
+ *   メンバー4枠の縮小枚数は max(0, SHRINK_MIN−s2)〜4 を列挙する
  * - center: 所持衣装検索。owned[centerIdx] をセンターに固定
  */
 export type ChunkDescriptor =
@@ -264,13 +267,16 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
       deck[0] = S[chunk.aIdx];
       deck[5] = S[chunk.bIdx];
     }
-    const k = SHRINK_PAIR_TARGET - chunk.s2; // メンバー4枠中の縮小枚数
-    if (k < 0 || k > 4) return;
-    for (const sm of multisetIndicesOrEmpty(S.length, k)) {
-      for (const nm of multisetIndicesOrEmpty(T.length, 4 - k)) {
-        for (let i = 0; i < k; i++) deck[1 + i] = S[sm[i]];
-        for (let i = 0; i < 4 - k; i++) deck[1 + k + i] = T[nm[i]];
-        yield deck;
+    // メンバー4枠中の縮小枚数 k を、6枠合計が SHRINK_MIN 以上になる範囲でループ
+    // (縮小候補が k 枚に満たない場合は多重集合の列挙が空になるだけ)
+    const kMin = Math.max(0, SHRINK_MIN - chunk.s2);
+    for (let k = kMin; k <= 4; k++) {
+      for (const sm of multisetIndicesOrEmpty(S.length, k)) {
+        for (const nm of multisetIndicesOrEmpty(T.length, 4 - k)) {
+          for (let i = 0; i < k; i++) deck[1 + i] = S[sm[i]];
+          for (let i = 0; i < 4 - k; i++) deck[1 + k + i] = T[nm[i]];
+          yield deck;
+        }
       }
     }
     return;
@@ -299,15 +305,15 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
     }
     if (!valid) continue;
 
-    // 縮小2枚条件: スロット0-4の縮小がちょうど2枚なら非縮小フレンド、
-    // それ以外 (0枚 / 1枚 / 3枚以上) は縮小フレンドのみ（組合せ自体は除外しない）
+    // 縮小2枚以上条件: スロット0-4 の縮小が SHRINK_MIN 以上なら全フレンド、
+    // 1 枚以下は縮小フレンドのみ（組合せ自体は除外しない）
     let friendPool = ctx.candidates;
     if (ctx.input.shrinkPairOnly) {
       let shrinkCount5 = 0;
       for (let i = 0; i < 5; i++) {
         if (isShrinkCard(deck[i])) shrinkCount5++;
       }
-      friendPool = shrinkCount5 === SHRINK_PAIR_TARGET ? ctx.nonShrink : ctx.shrink;
+      friendPool = shrinkCount5 >= SHRINK_MIN ? ctx.candidates : ctx.shrink;
     }
 
     for (const f of friendPool) {
@@ -461,7 +467,7 @@ export function evaluateFriendSwap(ctx: SearchContext, bestCardIds: number[]): F
     for (let i = 0; i < 5; i++) {
       if (isShrinkCard(fixed[i])) fixedShrink++;
     }
-    pool = fixedShrink === SHRINK_PAIR_TARGET ? ctx.nonShrink : ctx.shrink;
+    pool = fixedShrink >= SHRINK_MIN ? ctx.candidates : ctx.shrink;
   }
   const scores: FriendCandidate[] = [];
   for (const cand of pool) {
