@@ -279,6 +279,15 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 - スロット index は `slotIndex`（0=センター, 1-4=メンバー, 5=フレンド。表示順は `DISPLAY_ORDER`）
 - デッキ編成状態は `DeckState`（`src/lib/score/deckState.ts`）を使い、個別配列を新設しない
 
+## ADR（意思決定記録）— 必須
+
+設計・仕様・方針に関わる意思決定（機能の採否、仕様変更、調査の結果「変更しない」と決めた場合も含む）を行ったら、**必ず `docs/adr/` に ADR を追加または更新する**。運用ルールとフォーマットは `docs/adr/README.md` に従う:
+
+- ファイル名は `NNNN-<kebab-case-title>.md`（連番 4 桁）。README.md の一覧表にも行を追加する
+- 「何を・なぜ決めたか」と検討した代替案を書く。実装の詳細は書かない
+- ステータスは `提案` → `承認` で運用し、覆った場合も削除せず `却下` / `破棄` に更新して理由を追記する
+- ADR は意思決定が固まったタイミングでコミットする（実装の完了を待たない）
+
 ## 衣装表示参考
 
 衣装の表示で判断が難しい場合は
