@@ -17,3 +17,4 @@
 | [0003](0003-shrink-min-two-or-more.md) | 判定縮小条件を「ちょうど2枚」から「2枚以上」へ | 承認 |
 | [0004](0004-shared-broach-registration.md) | 共通ブローチ所持登録とスコア計算・編成探索への反映方針 | 承認 |
 | [0005](0005-checkbox-filter-ui.md) | 衣装一覧フィルタを select multiple からチップ+折りたたみへ | 承認 |
+| [0006](0006-event-share-dense-layout.md) | イベント SNS 共有パネルを高密度レイアウトへ | 承認 |
