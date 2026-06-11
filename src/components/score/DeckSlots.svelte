@@ -383,7 +383,7 @@
                 onclick={stopProp}
                 onchange={(e) => onSharedBroachChange(e, i, s)}
               >
-                <option value={0}>共有ブローチ{maxShared > 1 ? (s + 1) : ''}を選択</option>
+                <option value={0}>共通ブローチ{maxShared > 1 ? (s + 1) : ''}を選択</option>
                 {#each SHARED_BROACHS as sb (sb.id)}
                   <option value={sb.id}>{sharedBroachOptionLabel(sb)}</option>
                 {/each}

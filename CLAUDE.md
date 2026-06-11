@@ -175,6 +175,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | イベント一覧 | `src/pages/events/index.astro` | ビルド時プリレンダリング（`fetchEventsCsv` を build 時に読込） |
 | イベント詳細 | `src/pages/events/[id].astro` | `getStaticPaths()` による動的ルート |
 | ラビットノート | `src/pages/rabbit-note/index.astro` | ビルド時プリレンダリング |
+| 共通ブローチ | `src/pages/shared-broach/index.astro` | ビルド時 + クライアント JS（localStorage ベースの共通ブローチ所持数登録。実装は `src/components/SharedBroachEditor.svelte`） |
 | About | `src/pages/about/index.astro` | ビルド時プリレンダリング |
 | リリースノート | `src/pages/releases/index.astro` | ビルド時プリレンダリング |
 | 編成組合計算 | `src/pages/score-calc/max-score-finder/index.astro` | ビルド時 + クライアント JS（理論値最大編成探索。所持衣装縛りモード（`i7_card_counts` の枚数を上限とした多重集合探索）あり。実装は `src/components/MaxScoreFinder.svelte`） |
@@ -190,6 +191,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | `i7_selected_songs` | 選択楽曲 |
 | `i7_saved_decks` | 保存デッキ |
 | `i7_score_calc_state` | スコア計算画面の状態 |
+| `i7_shared_broach_counts` | 共通ブローチ所持数 |
 
 `src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
 
@@ -272,10 +274,12 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 内部識別子（コード中の変数名・関数名・ファイル名・URL パス・localStorage キーなど）は引き続き `card` を使用する（例: `cards/[id].astro`、`i7_card_counts`、`fetchCardsJson.ts`、`CardList.svelte`）。
 
+共有ブローチ（`SHARED_BROACHS`）のユーザー可視テキストは **「共通ブローチ」** を用いる（ゲーム内表記に揃えるため）。内部識別子は引き続き `sharedBroach` / `SHARED_BROACHS` / URL `shared-broach` を使用する。
+
 ## 命名規約
 
 - イベント変数は `event`（ループ内の短縮は `ev` まで可。`evt` 等は使わない）
-- ブローチは内部識別子で `broach`（本リポジトリの慣用綴り。`brooch` に直さない）。固有ブローチ = `FixedBroach`（カード紐付き）、共有ブローチ = `SHARED_BROACHS`（`src/lib/data/sharedBroachs.ts`）
+- ブローチは内部識別子で `broach`（本リポジトリの慣用綴り。`brooch` に直さない）。固有ブローチ = `FixedBroach`（カード紐付き）、共有ブローチ = `SHARED_BROACHS`（`src/lib/data/sharedBroachs.ts`、表示名は「共通ブローチ」）
 - スロット index は `slotIndex`（0=センター, 1-4=メンバー, 5=フレンド。表示順は `DISPLAY_ORDER`）
 - デッキ編成状態は `DeckState`（`src/lib/score/deckState.ts`）を使い、個別配列を新設しない
 

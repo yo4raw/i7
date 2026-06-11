@@ -5,9 +5,9 @@
   let { base }: Props = $props();
 
   let mobileOpen = $state(false);
-  let scoreCalcOpen = $state(false);
-  let scoreCalcMobileOpen = $state(false);
-  let scoreCalcWrapper: HTMLLIElement | undefined = $state();
+  let openDropdown = $state<string | null>(null);
+  let mobileDropdownOpen = $state<Record<string, boolean>>({});
+  const dropdownWrappers = new Map<string, HTMLLIElement>();
 
   type LinkItem = { href: string; label: string };
   type DropdownItem = { label: string; children: LinkItem[] };
@@ -28,25 +28,49 @@
         { href: `${base}score-calc/max-score-finder/`, label: '編成組合計算' },
       ],
     },
-    { href: `${base}rabbit-note/`, label: 'ラビットノート' },
+    {
+      label: '各種登録',
+      children: [
+        { href: `${base}rabbit-note/`, label: 'ラビットノート' },
+        { href: `${base}shared-broach/`, label: '共通ブローチ' },
+      ],
+    },
     { href: `${base}decks/`, label: '保存デッキ' },
   ];
+
+  function registerDropdown(node: HTMLLIElement, label: string) {
+    dropdownWrappers.set(label, node);
+    return {
+      destroy() {
+        dropdownWrappers.delete(label);
+      },
+    };
+  }
+
+  function toggleDropdown(label: string) {
+    openDropdown = openDropdown === label ? null : label;
+  }
+
+  function toggleMobileDropdown(label: string) {
+    mobileDropdownOpen[label] = !mobileDropdownOpen[label];
+  }
 
   $effect(() => {
     const contextHandler = (e: Event) => e.preventDefault();
     document.addEventListener('contextmenu', contextHandler);
 
     const clickHandler = (e: MouseEvent) => {
-      if (!scoreCalcWrapper) return;
-      if (!scoreCalcWrapper.contains(e.target as Node)) {
-        scoreCalcOpen = false;
+      if (openDropdown === null) return;
+      const wrapper = dropdownWrappers.get(openDropdown);
+      if (wrapper && !wrapper.contains(e.target as Node)) {
+        openDropdown = null;
       }
     };
     document.addEventListener('click', clickHandler);
 
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        scoreCalcOpen = false;
+        openDropdown = null;
       }
     };
     document.addEventListener('keydown', keyHandler);
@@ -76,20 +100,20 @@
     <ul class="hidden md:flex gap-6 text-sm font-medium">
       {#each items as item}
         {#if isDropdown(item)}
-          <li class="relative" bind:this={scoreCalcWrapper}>
+          <li class="relative" use:registerDropdown={item.label}>
             <button
               type="button"
               class="hover:text-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
               aria-haspopup="menu"
-              aria-expanded={scoreCalcOpen}
-              onclick={() => (scoreCalcOpen = !scoreCalcOpen)}
+              aria-expanded={openDropdown === item.label}
+              onclick={() => toggleDropdown(item.label)}
             >
               {item.label}
-              <svg class="w-3 h-3 transition-transform" class:rotate-180={scoreCalcOpen} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3 h-3 transition-transform" class:rotate-180={openDropdown === item.label} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            {#if scoreCalcOpen}
+            {#if openDropdown === item.label}
               <ul role="menu" class="absolute left-0 top-full mt-2 min-w-44 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-100 rounded-md shadow-lg ring-1 ring-black/10 py-1 z-50">
                 {#each item.children as child}
                   <li role="none">
@@ -118,15 +142,15 @@
           <button
             type="button"
             class="w-full flex items-center justify-between py-1 hover:text-indigo-200"
-            aria-expanded={scoreCalcMobileOpen}
-            onclick={() => (scoreCalcMobileOpen = !scoreCalcMobileOpen)}
+            aria-expanded={!!mobileDropdownOpen[item.label]}
+            onclick={() => toggleMobileDropdown(item.label)}
           >
             <span>{item.label}</span>
-            <svg class="w-3 h-3 transition-transform" class:rotate-180={scoreCalcMobileOpen} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-3 h-3 transition-transform" class:rotate-180={mobileDropdownOpen[item.label]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          {#if scoreCalcMobileOpen}
+          {#if mobileDropdownOpen[item.label]}
             <ul class="pl-4 flex flex-col gap-1 mt-1">
               {#each item.children as child}
                 <li><a href={child.href} class="block py-1 hover:text-indigo-200">{child.label}</a></li>
