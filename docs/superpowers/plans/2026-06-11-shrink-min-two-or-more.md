@@ -28,6 +28,7 @@ git checkout -b feature/shrink-min-two-or-more
 ### Task 1: 単体テストを新仕様に更新（RED）
 
 **Files:**
+
 - Modify: `tests/unit/score/maxScoreFinder.test.ts`
 
 - [ ] **Step 1: countCombos の縮小条件テストを新期待値に書き換え**
@@ -126,6 +127,7 @@ Expected: 上記 4 箇所（countCombos 4510 / 縮小 2 以上の列挙 / 所持
 ### Task 2: maxScoreFinder.ts の実装（GREEN）
 
 **Files:**
+
 - Modify: `src/lib/score/maxScoreFinder.ts`
 
 - [ ] **Step 1: 定数のリネームと doc コメント更新（23-24 行目）**
@@ -248,6 +250,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 3: UI 文言の更新
 
 **Files:**
+
 - Modify: `src/components/MaxScoreFinder.svelte:153,361-362`
 
 - [ ] **Step 1: 0 件時メッセージ（153 行目）**
@@ -265,6 +268,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - [ ] **Step 3: dev サーバーで確認**
 
 `npm run dev` をバックグラウンド起動 → `http://localhost:4321/score-calc/max-score-finder/` を開き:
+
 1. チェックボックス文言が新しいこと
 2. 条件 ON で組合せ数表示が旧仕様より増えること（縮小候補 ≥3 の楽曲・イベント条件時）
 3. スクリーンショットを `tmp/` に保存
