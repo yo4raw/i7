@@ -18,3 +18,4 @@
 | [0004](0004-shared-broach-registration.md) | 共通ブローチ所持登録とスコア計算・編成探索への反映方針 | 承認 |
 | [0005](0005-checkbox-filter-ui.md) | 衣装一覧フィルタを select multiple からチップ+折りたたみへ | 承認 |
 | [0006](0006-event-share-dense-layout.md) | イベント SNS 共有パネルを高密度レイアウトへ | 承認 |
+| [0007](0007-card-compare-page.md) | 衣装比較ページの新設とスキル種別ごとの比較軸 | 承認 |
