@@ -139,13 +139,13 @@ describe('countCombos', () => {
     expect(countCombos(ctx)).toBe(multichoose(7, 2) * multichoose(7, 4)); // 28 × 210 = 5880
   });
 
-  it('縮小2枚条件: s2 ごとのペア数 × メンバー組合せの合計', () => {
+  it('縮小2枚以上条件: s2 ごとのペア数 × k=max(0,2−s2)..4 のメンバー組合せ総和', () => {
     const ctx = createSearchContext(buildInput({ shrinkPairOnly: true }));
-    // S=3, T=4:
-    //   s2=0: H(4,2)=10 ペア × H(3,2)=6 × H(4,2)=10 = 600
-    //   s2=1: 3×4=12 ペア × H(3,1)=3 × H(4,3)=20 = 720
-    //   s2=2: H(3,2)=6 ペア × H(3,0)=1 × H(4,4)=35 = 210
-    expect(countCombos(ctx)).toBe(600 + 720 + 210);
+    // S=3, T=4。k = メンバー4枠中の縮小枚数:
+    //   s2=0: H(4,2)=10 ペア × Σ_{k=2..4} H(3,k)×H(4,4−k) = (6×10 + 10×4 + 15×1) = 115 → 1150
+    //   s2=1: 3×4=12 ペア × Σ_{k=1..4} = (3×20 + 6×10 + 10×4 + 15×1) = 175 → 2100
+    //   s2=2: H(3,2)=6 ペア × Σ_{k=0..4} = (1×35 + 3×20 + 6×10 + 10×4 + 15×1) = 210 → 1260
+    expect(countCombos(ctx)).toBe(1150 + 2100 + 1260); // 4510
   });
 
   it('所持衣装検索: センターごとの上限付き 4-多重集合 × フレンド候補数', () => {
@@ -219,15 +219,17 @@ describe('generateChunks + enumerateChunkDecks', () => {
     expect([...generateChunks(ctx)].length).toBe(multichoose(7, 2));
   });
 
-  it('縮小2枚条件: 列挙数 = countCombos、全デッキの縮小枚数がちょうど 2', () => {
+  it('縮小2枚以上条件: 列挙数 = countCombos、全デッキの縮小枚数が 2 以上', () => {
     const input = buildInput({ shrinkPairOnly: true });
     const ctx = createSearchContext(input);
     const { count, keys, decks } = enumerateAll(input);
     expect(count).toBe(countCombos(ctx));
     expect(keys.size).toBe(count);
     for (const deck of decks) {
-      expect(deck.filter((c) => isShrinkCard(c)).length).toBe(2);
+      expect(deck.filter((c) => isShrinkCard(c)).length).toBeGreaterThanOrEqual(2);
     }
+    // 「以上」になったことで 3 枚以上の編成も列挙される
+    expect(decks.some((deck) => deck.filter((c) => isShrinkCard(c)).length >= 3)).toBe(true);
   });
 
   it('所持衣装検索: 列挙数 = countCombos、スロット0-4 が所持上限内', () => {
@@ -249,7 +251,7 @@ describe('generateChunks + enumerateChunkDecks', () => {
     }
   });
 
-  it('所持×縮小2枚条件: 列挙数 = countCombos、フレンドプール規則が守られる', () => {
+  it('所持×縮小2枚以上条件: 列挙数 = countCombos、フレンドプール規則が守られる', () => {
     const ownedCounts = {
       [String(testCandidates[0].ID)]: 2,
       [String(testCandidates[1].ID)]: 1,
@@ -263,9 +265,13 @@ describe('generateChunks + enumerateChunkDecks', () => {
     expect(keys.size).toBe(count);
     for (const deck of decks) {
       const shrink5 = deck.slice(0, 5).filter((c) => isShrinkCard(c)).length;
-      // スロット0-4 が縮小2枚なら非縮小フレンド、それ以外は縮小フレンド
-      expect(isShrinkCard(deck[5])).toBe(shrink5 !== 2);
+      // スロット0-4 の縮小が 1 枚以下なら縮小フレンドのみ
+      if (shrink5 <= 1) expect(isShrinkCard(deck[5])).toBe(true);
     }
+    // own5 ≥ 2 では全フレンドが許される: 非縮小/縮小フレンド両方の編成が存在する
+    const over2 = decks.filter((deck) => deck.slice(0, 5).filter((c) => isShrinkCard(c)).length >= 2);
+    expect(over2.some((deck) => !isShrinkCard(deck[5]))).toBe(true);
+    expect(over2.some((deck) => isShrinkCard(deck[5]))).toBe(true);
   });
 });
 
@@ -382,17 +388,31 @@ describe('evaluateFriendSwap', () => {
     expect(friends[0].score).toBe(best.score);
   });
 
-  it('縮小2枚条件: 固定5枠の縮小枚数に応じてプールが絞られる', () => {
+  it('縮小2枚以上条件: 固定5枠の縮小 ≥2 なら全候補プール', () => {
     const input = buildInput({ shrinkPairOnly: true });
     const ctx = createSearchContext(input);
-    // 固定5枠 = 縮小2枚 (center 縮小 + member1 縮小) → フレンドは非縮小プール
+    // 固定5枠 = 縮小2枚 (center 縮小 + member1 縮小) → フレンドは全候補 (7枚) から Top5
     const fixedIds = [
       shrinkUr[0].ID!, shrinkUr[1].ID!,
       nonShrinkUr[0].ID!, nonShrinkUr[1].ID!, nonShrinkUr[2].ID!,
       nonShrinkUr[3].ID!,
     ];
     const friends = evaluateFriendSwap(ctx, fixedIds);
-    const ids = new Set(ctx.nonShrink.map((c) => c.ID));
-    for (const f of friends) expect(ids.has(f.cardId)).toBe(true);
+    expect(friends.length).toBe(5); // 旧仕様 (非縮小プール=4枚) なら 4 になる
+  });
+
+  it('縮小2枚以上条件: 固定5枠の縮小 ≤1 なら縮小プールのみ', () => {
+    const input = buildInput({ shrinkPairOnly: true });
+    const ctx = createSearchContext(input);
+    // 固定5枠 = 縮小1枚 (center のみ縮小)、フレンド枠は縮小 → プールは縮小 3 枚
+    const fixedIds = [
+      shrinkUr[0].ID!,
+      nonShrinkUr[0].ID!, nonShrinkUr[1].ID!, nonShrinkUr[2].ID!, nonShrinkUr[3].ID!,
+      shrinkUr[1].ID!,
+    ];
+    const friends = evaluateFriendSwap(ctx, fixedIds);
+    const shrinkIds = new Set(ctx.shrink.map((c) => c.ID));
+    expect(friends.length).toBe(3);
+    for (const f of friends) expect(shrinkIds.has(f.cardId)).toBe(true);
   });
 });
