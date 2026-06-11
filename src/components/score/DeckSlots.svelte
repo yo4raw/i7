@@ -12,11 +12,12 @@
   import type { SharedBroach } from '../../lib/data/sharedBroachs';
   import { ATTR_HEX } from '../../lib/constants';
   import { normalizeAttribute } from '../../lib/score/types';
+  import { countUsedBroachs } from '../../lib/score/broachInventory';
   import { cardThumbUrl } from '../../lib/ui';
   import RarityBadge from '../ui/RarityBadge.svelte';
   import AttributeBadge from '../ui/AttributeBadge.svelte';
 
-  let { deckState, selectedSong, allBroachs, onSlotClick, onSwap, onChanged }: {
+  let { deckState, selectedSong, allBroachs, onSlotClick, onSwap, onChanged, ownedBroachLimit = false, broachCounts = {} }: {
     deckState: DeckState;            // 親の $state proxy（カード配置等の mutate は親側）
     selectedSong: Song | null;
     allBroachs: FixedBroach[];
@@ -26,6 +27,10 @@
     onSwap: (a: number, b: number) => void;
     /** スロット内の select/checkbox 変更。値の更新は子が deckState に直接行い、この通知で親が再計算+保存する */
     onChanged: () => void;
+    /** 所持ブローチ縛り: 自チーム枠 (slot 0-4) の共通ブローチ選択肢を所持数で制限する */
+    ownedBroachLimit?: boolean;
+    /** broachId(文字列) → 所持数 (ownedBroachLimit 時に使用) */
+    broachCounts?: Record<string, number>;
   } = $props();
 
   let gridEl: HTMLDivElement;
@@ -148,6 +153,17 @@
     if (sb.melody) stats.push(`M+${sb.melody}`);
     const cond = sb.targetAttribute ? `${sb.targetAttribute}属性` : '';
     return cond ? `${sb.name} (${cond} ${stats.join('/')})` : `${sb.name} (${stats.join('/')})`;
+  }
+
+  /** 所持ブローチ縛り時の選択肢。slot 5 (フレンド) と OFF 時は全種を返す */
+  function selectableBroachs(slot: number, idx: number): SharedBroach[] {
+    if (!ownedBroachLimit || slot === 5) return SHARED_BROACHS;
+    const used = countUsedBroachs(deckState.sharedBroachs, slot, idx);
+    const current = deckState.sharedBroachs[slot]?.[idx] ?? 0;
+    return SHARED_BROACHS.filter((sb) => {
+      if (sb.id === current) return true; // 選択中は常に残す
+      return (broachCounts[String(sb.id)] ?? 0) - (used.get(sb.id) ?? 0) > 0;
+    });
   }
 
   function bonusTierSelectClass(tier: EventBonusTier): string {
@@ -384,7 +400,7 @@
                 onchange={(e) => onSharedBroachChange(e, i, s)}
               >
                 <option value={0}>共通ブローチ{maxShared > 1 ? (s + 1) : ''}を選択</option>
-                {#each SHARED_BROACHS as sb (sb.id)}
+                {#each selectableBroachs(i, s) as sb (sb.id)}
                   <option value={sb.id}>{sharedBroachOptionLabel(sb)}</option>
                 {/each}
               </select>

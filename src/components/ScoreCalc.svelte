@@ -11,6 +11,9 @@
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
   import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS } from '../lib/score/deckState';
   import { DEFAULT_SCOREUP_BADGE_RATE } from '../lib/score/constants';
+  import { broachViolations } from '../lib/score/broachInventory';
+  import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
+  import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
   import CardPickerModal from './score/CardPickerModal.svelte';
   import DeckSlots from './score/DeckSlots.svelte';
   import CardDetailTable from './score/CardDetailTable.svelte';
@@ -28,6 +31,14 @@
   // スキルオプション
   let scoreUpAssist = $state(false);
   let scoreUpBadgeRate = $state(DEFAULT_SCOREUP_BADGE_RATE);
+
+  // 所持ブローチ縛り (共通ブローチの選択肢を登録した所持数で制限。フレンド枠は対象外)
+  let ownedBroachLimit = $state(false);
+  const broachCounts = $derived(allBroachCounts());
+  const violationNames = $derived(
+    broachViolations(deckState.sharedBroachs, broachCounts)
+      .map((id) => SHARED_BROACHS.find((sb) => sb.id === id)?.name ?? `#${id}`)
+  );
 
   let picker: CardPickerModal | undefined;
 
@@ -95,6 +106,7 @@
       sharedBroachs: deckState.sharedBroachs.map(a => [...a]),
       skillLevels: [...deckState.skillLevels],
       badgeRate: Number(scoreUpBadgeRate) || 0,
+      ownedBroachLimit,
     };
   }
 
@@ -123,6 +135,7 @@
     }
     for (let i = 0; i < 6; i++) clampSharedBroachs(deckState, i, allBroachsState);
     if (typeof state.badgeRate === 'number') scoreUpBadgeRate = state.badgeRate;
+    if (typeof state.ownedBroachLimit === 'boolean') ownedBroachLimit = state.ownedBroachLimit;
   }
 
   function saveState() { saveJson(STORAGE_KEYS.SCORE_CALC_STATE, buildStateObject()); }
@@ -206,6 +219,7 @@
   }
 
   onMount(() => {
+    reloadBroachCountsFromStorage();
     if (!tryRestoreFromUrl()) restoreState();
 
     refreshData('cards', fetchCardsJson, (fresh) => {
@@ -300,6 +314,10 @@
           <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm" min="0" max="100" step="1" bind:value={scoreUpBadgeRate} oninput={saveState} />
           <span class="text-xs text-gray-500 dark:text-slate-400">%</span>
         </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="opt-owned-broach-limit" class="rounded" bind:checked={ownedBroachLimit} onchange={saveState} />
+          <span>所持ブローチ縛り（共通ブローチを登録した所持数の範囲で選択。フレンド枠は対象外）</span>
+        </label>
       </div>
       <p class="text-[11px] text-gray-400 dark:text-slate-500 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
     </div>
@@ -332,7 +350,13 @@
           </div>
         </div>
       </div>
-      <DeckSlots deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} onSlotClick={handleSlotClick} onSwap={handleSwap} onChanged={saveState} />
+      <DeckSlots deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} onSlotClick={handleSlotClick} onSwap={handleSwap} onChanged={saveState} ownedBroachLimit={ownedBroachLimit} broachCounts={broachCounts} />
+      {#if ownedBroachLimit && totalOwnedBroachs() === 0}
+        <p class="mt-2 text-xs text-amber-600">共通ブローチが未登録です。<a class="underline" href={`${base}shared-broach/`}>共通ブローチ登録ページ</a>で所持数を登録してください。</p>
+      {/if}
+      {#if ownedBroachLimit && violationNames.length > 0}
+        <p class="mt-2 text-xs text-red-600">⚠️ 所持数を超える共通ブローチが装備されています: {violationNames.join('、')}（装備はそのまま残ります。選び直すと所持数の範囲に制限されます）</p>
+      {/if}
     </section>
 
     <CardDetailTable deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} scoreUpAssist={scoreUpAssist} />
