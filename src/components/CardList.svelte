@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { CardListItem } from '../lib/cardListData';
-  import { CHARACTERS, RARITIES, ATTRIBUTES } from '../lib/constants';
+  import { CHARACTER_GROUPS, RARITIES, ATTRIBUTES } from '../lib/constants';
   import { buildLiveTierMap, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import { cardTextMatches } from '../lib/cardFilter';
+  import CardFilterChips from './cards/CardFilterChips.svelte';
   import CardTableRow from './cards/CardTableRow.svelte';
   import CardMobileCard from './cards/CardMobileCard.svelte';
   import CardTileCard from './cards/CardTileCard.svelte';
@@ -78,10 +79,25 @@
       : `${filtered.length}件中 ${visible.length}件を表示`
   );
 
-  function toggleSet(set: Set<string>, value: string) {
-    if (set.has(value)) set.delete(value); else set.add(value);
-    return new Set(set);
-  }
+  // 属性チップ選択時の塗り色（ATTR_BADGE_BG と同系色 + ボーダー）
+  const ATTR_CHIP_ACTIVE: Record<string, string> = {
+    Shout: 'bg-red-500 border-red-500',
+    Beat: 'bg-green-500 border-green-500',
+    Melody: 'bg-blue-500 border-blue-500',
+  };
+
+  const rarityOptions = RARITIES.map((r) => ({ value: r, label: r }));
+  const attributeOptions = ATTRIBUTES.map((a) => ({ value: a.label, label: a.label, activeClass: ATTR_CHIP_ACTIVE[a.label] }));
+  const bonusOptions = [
+    { value: 'gold', label: '金特効' },
+    { value: 'silver', label: '銀特効' },
+    { value: 'bronze', label: '銅特効' },
+  ];
+  const characterGroups = CHARACTER_GROUPS.map((g) => ({
+    name: g.name,
+    options: g.members.map((m) => ({ value: m, label: m })),
+  }));
+  const skillOptions = $derived(skillTypes.map((s) => ({ value: s, label: s })));
 
   function updateUrlParams() {
     const params = new URLSearchParams();
@@ -215,8 +231,8 @@
 </script>
 
 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-6">
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3">
-    <div>
+  <div class="flex flex-wrap gap-3 mb-4">
+    <div class="w-full sm:w-64">
       <label for="search-text" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">名前検索</label>
       <input
         type="text"
@@ -227,84 +243,7 @@
         class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
     </div>
-    <div>
-      <label for="search-rarity" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">レアリティ</label>
-      <select
-        id="search-rarity"
-        multiple
-        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]"
-        onchange={(e) => {
-          raritySet = new Set(Array.from((e.currentTarget as HTMLSelectElement).selectedOptions).map((o) => o.value));
-        }}
-      >
-        {#each RARITIES as r}
-          <option value={r} selected={raritySet.has(r)}>{r}</option>
-        {/each}
-      </select>
-    </div>
-    <div>
-      <label for="search-attribute" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">属性</label>
-      <select
-        id="search-attribute"
-        multiple
-        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]"
-        onchange={(e) => {
-          attributeSet = new Set(Array.from((e.currentTarget as HTMLSelectElement).selectedOptions).map((o) => o.value));
-        }}
-      >
-        {#each ATTRIBUTES as a}
-          <option value={a.label} selected={attributeSet.has(a.label)}>{a.label}</option>
-        {/each}
-      </select>
-    </div>
-    <div>
-      <label for="search-character" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">キャラクター</label>
-      <select
-        id="search-character"
-        multiple
-        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]"
-        onchange={(e) => {
-          characterSet = new Set(Array.from((e.currentTarget as HTMLSelectElement).selectedOptions).map((o) => o.value));
-        }}
-      >
-        {#each CHARACTERS as c}
-          <option value={c} selected={characterSet.has(c)}>{c}</option>
-        {/each}
-      </select>
-    </div>
-    <div>
-      <label for="search-skill" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">スキルタイプ</label>
-      <select
-        id="search-skill"
-        multiple
-        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]"
-        onchange={(e) => {
-          skillSet = new Set(Array.from((e.currentTarget as HTMLSelectElement).selectedOptions).map((o) => o.value));
-        }}
-      >
-        {#each skillTypes as s}
-          <option value={s} selected={skillSet.has(s)}>{s}</option>
-        {/each}
-      </select>
-    </div>
-    {#if hasAnyLive}
-      <div>
-        <label for="search-bonus" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">特効</label>
-        <select
-          id="search-bonus"
-          multiple
-          class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 h-[4.5rem]"
-          onchange={(e) => {
-            bonusSet = new Set(Array.from((e.currentTarget as HTMLSelectElement).selectedOptions).map((o) => o.value));
-          }}
-        >
-          <option value="gold" selected={bonusSet.has('gold')}>金特効</option>
-          <option value="silver" selected={bonusSet.has('silver')}>銀特効</option>
-          <option value="bronze" selected={bonusSet.has('bronze')}>銅特効</option>
-        </select>
-      </div>
-    {/if}
-    <div>
+    <div class="w-full sm:w-56">
       <label for="sort-by" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">ソート</label>
       <select
         id="sort-by"
@@ -317,6 +256,46 @@
         <option value="stats-asc">ステータス合計（低い順）</option>
       </select>
     </div>
+  </div>
+  <div class="flex flex-wrap gap-x-8 gap-y-3 mb-3">
+    <CardFilterChips
+      label="レアリティ"
+      options={rarityOptions}
+      selected={raritySet}
+      onChange={(next) => (raritySet = next)}
+    />
+    <CardFilterChips
+      label="属性"
+      options={attributeOptions}
+      selected={attributeSet}
+      onChange={(next) => (attributeSet = next)}
+    />
+    {#if hasAnyLive}
+      <CardFilterChips
+        label="特効"
+        options={bonusOptions}
+        selected={bonusSet}
+        onChange={(next) => (bonusSet = next)}
+      />
+    {/if}
+  </div>
+  <div class="space-y-2">
+    <CardFilterChips
+      label="キャラクター"
+      groups={characterGroups}
+      selected={characterSet}
+      onChange={(next) => (characterSet = next)}
+      collapsible
+      {ready}
+    />
+    <CardFilterChips
+      label="スキルタイプ"
+      options={skillOptions}
+      selected={skillSet}
+      onChange={(next) => (skillSet = next)}
+      collapsible
+      {ready}
+    />
   </div>
   <div class="mt-3 flex items-center gap-3 flex-wrap">
     <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>

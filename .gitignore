@@ -39,3 +39,4 @@ deps/
 test-results/
 
 !.env.example
+.superpowers/
