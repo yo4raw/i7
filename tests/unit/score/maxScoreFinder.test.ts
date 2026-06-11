@@ -113,6 +113,8 @@ function buildInput(overrides: Partial<SearchInput> = {}): SearchInput {
     broachs: allBroachs,
     tierByCardId: testTiers,
     rabbitNotes: {},
+    useOwnedBroachs: false,
+    sharedBroachCounts: {},
     ...overrides,
   };
 }
@@ -319,6 +321,28 @@ describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
     expect(rec.score).toBe(rec.finalScore);
     expect(rec.baseScore).toBeGreaterThan(0);
     expect(rec.liveEndScore).toBeDefined();
+  });
+
+  it('evaluateDeck: useOwnedBroachs=true で割当が記録されスコアが下がらない', () => {
+    const withoutCtx = createSearchContext(smallInput);
+    const withCtx = createSearchContext({
+      ...smallInput,
+      useOwnedBroachs: true,
+      sharedBroachCounts: { '1': 2 }, // ALL750 × 2
+    });
+    const deck = new Array(6).fill(withoutCtx.candidates[0]);
+    const recWithout = evaluateDeck(withoutCtx, deck);
+    const recWith = evaluateDeck(withCtx, deck);
+
+    expect(recWithout.sharedBroachIds).toBeUndefined();
+    expect(recWith.sharedBroachIds).toBeDefined();
+    // slot 0-4 の割当合計は min(所持 2, 容量) = 2、フレンド枠は容量分の最良ブローチ
+    const ownAssigned = recWith.sharedBroachIds!.slice(0, 5).flat();
+    expect(ownAssigned).toHaveLength(2);
+    expect(ownAssigned.every((id) => id === 1)).toBe(true);
+    expect(recWith.sharedBroachIds![5].length).toBeGreaterThanOrEqual(1);
+    // ブローチ分だけスコアが上がる (少なくとも下がらない)
+    expect(recWith.score).toBeGreaterThan(recWithout.score);
   });
 
   it('onTick が true を返すと中断され、部分結果が整合する', async () => {

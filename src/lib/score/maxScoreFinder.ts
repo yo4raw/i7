@@ -19,6 +19,7 @@ import {
   calcMaxScore,
   flattenNotes,
 } from './engine';
+import { assignBroachs, calcAttrWeights, type AttrWeights } from './broachAssignment';
 
 /** デッキ6枠中の判定縮小スキル持ちの最低枚数 (shrinkPairOnly 有効時) */
 export const SHRINK_MIN = 2;
@@ -104,6 +105,10 @@ export interface SearchInput {
   /** cardId(文字列) → 特効 tier */
   tierByCardId: Record<string, EventBonusTier>;
   rabbitNotes: RabbitNoteMap;
+  /** 所持共通ブローチを slot 0-4 にグリーディ割当する (false なら従来どおりブローチなし) */
+  useOwnedBroachs: boolean;
+  /** broachId(文字列) → 所持数 (useOwnedBroachs 時に使用) */
+  sharedBroachCounts: Record<string, number>;
 }
 
 /** SearchInput から導出した探索用の前計算データ (Worker 内で 1 回だけ作る) */
@@ -117,12 +122,18 @@ export interface SearchContext {
   ownedLimit: Map<number, number>;
   groupSizes: Record<string, number>;
   notesCount: number;
+  /** ブローチ割当用: 楽曲ノーツから前計算した属性重み */
+  attrWeights: AttrWeights;
+  /** ブローチ割当用: 固有ブローチ持ちカード判定 */
+  hasFixedBroach: (card: Card) => boolean;
 }
 
 export function createSearchContext(input: SearchInput): SearchContext {
   const owned = input.candidates.filter((c) => (input.ownedCounts[String(c.ID)] ?? 0) >= 1);
   const ownedLimit = new Map<number, number>();
   for (const c of owned) ownedLimit.set(c.ID!, input.ownedCounts[String(c.ID)] ?? 0);
+  const notes = flattenNotes(input.song, FLATTEN_SEED);
+  const fixedIds = new Set(input.broachs.map((b) => b.card_id));
   return {
     input,
     candidates: input.candidates,
@@ -131,7 +142,9 @@ export function createSearchContext(input: SearchInput): SearchContext {
     nonShrink: input.candidates.filter((c) => !isShrinkCard(c)),
     ownedLimit,
     groupSizes: computeGroupSizes(input.song),
-    notesCount: input.song.notes_count || flattenNotes(input.song, FLATTEN_SEED).length,
+    notesCount: input.song.notes_count || notes.length,
+    attrWeights: calcAttrWeights(notes),
+    hasFixedBroach: (c) => c.cardID != null && fixedIds.has(c.cardID),
   };
 }
 
@@ -335,6 +348,8 @@ export interface DeckRecord {
   /** [center, member1..4, friend] の cardID */
   cardIds: number[];
   score: number;
+  /** useOwnedBroachs 時の共通ブローチ割当 (slot ごとの broachId 配列) */
+  sharedBroachIds?: number[][];
   liveEndScore?: number;
   baseScore?: number;
   scoreUpExpected?: number;
@@ -372,7 +387,8 @@ export interface ChunkResult {
   aborted: boolean;
 }
 
-// 探索条件は全カード スキルLv5・特訓済み・共有ブローチなしで固定 (移植元の旧 UI 実装と同値)
+// 探索条件は全カード スキルLv5・特訓済みで固定 (移植元の旧 UI 実装と同値)。
+// 共通ブローチは useOwnedBroachs=false ならなし固定、true なら編成ごとにグリーディ割当
 const SEARCH_SKILL_LEVELS: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
 const SEARCH_TRAINED: boolean[] = [true, true, true, true, true, true];
 const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
@@ -382,9 +398,13 @@ export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRec
   const tiers: EventBonusTier[] = deck.map((c) =>
     c && c.ID != null ? input.tierByCardId[String(c.ID)] ?? 'none' : 'none'
   );
+  let shared: number[][] = SEARCH_EMPTY_SHARED;
+  if (input.useOwnedBroachs) {
+    shared = assignBroachs(deck, input.sharedBroachCounts, ctx.attrWeights, ctx.hasFixedBroach);
+  }
   const team = computeTeam(
     deck, input.broachs, input.song, tiers, SEARCH_TRAINED, undefined,
-    SEARCH_EMPTY_SHARED, SEARCH_SKILL_LEVELS, input.rabbitNotes
+    shared, SEARCH_SKILL_LEVELS, input.rabbitNotes
   );
   const exclusion = computeShrinkExclusion(team, ctx.groupSizes);
   const notes = flattenNotes(input.song, FLATTEN_SEED, exclusion);
@@ -392,6 +412,7 @@ export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRec
     cardIds: deck.map((c) => c!.ID!),
     score: 0,
   };
+  if (input.useOwnedBroachs) rec.sharedBroachIds = shared;
   if (input.evalMode === 'expected') {
     const e = calcExpectedScore(team, notes, ctx.notesCount, input.scoreOptions);
     rec.score = e.finalScore;

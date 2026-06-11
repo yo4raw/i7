@@ -27,6 +27,7 @@
   import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
+  import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
 
   type LiveEvent = EventForBonus & { eventname: string };
 
@@ -51,6 +52,8 @@
   let scoreUpBadgeRate = $state(0);
   let ownedOnly = $state(false);
   let shrinkPairOnly = $state(false);
+  let useOwnedBroachs = $state(false);
+  const ownedBroachTotal = $derived(totalOwnedBroachs());
 
   let now = $state(Date.now());
 
@@ -79,6 +82,7 @@
     refreshData('songs', async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())), (fresh) => { allSongs = fresh as Song[]; });
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => { allBroachs = fresh as FixedBroach[]; });
     reloadCardCounts();
+    reloadBroachCountsFromStorage();
   });
 
   const selectedSong = $derived(selectedSongId ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
@@ -131,6 +135,8 @@
       broachs: allBroachs,
       tierByCardId,
       rabbitNotes: loadRabbitNotes(),
+      useOwnedBroachs: useOwnedBroachs && ownedBroachTotal > 0,
+      sharedBroachCounts: { ...allBroachCounts() },
     }) as SearchInput;
   }
 
@@ -361,6 +367,13 @@
       <input type="checkbox" bind:checked={shrinkPairOnly} class="rounded" />
       <span><b>判定縮小2枚以上編成</b> — 縮小スキル持ちが合計2枚以上になる編成のみ探索します。センター+メンバーの縮小が1枚以下の場合はフレンドを縮小持ちに絞り、2枚以上なら全フレンドを組合せます（縮小持ち候補 {shrinkCandidates.length} 枚）</span>
     </label>
+    <label class="flex items-center gap-2 text-xs">
+      <input type="checkbox" id="opt-use-owned-broachs" bind:checked={useOwnedBroachs} class="rounded" />
+      <span><b>所持共通ブローチを割り当てる</b> — 登録した共通ブローチを所持数の範囲でセンター + メンバー4枠に自動割当します。フレンド枠は全種から推奨ブローチを割当（OFF はブローチなしで探索）</span>
+    </label>
+    {#if useOwnedBroachs && ownedBroachTotal === 0}
+      <p class="text-[11px] text-amber-600 pl-6">共通ブローチが未登録のため、ブローチなしで探索します。<a class="underline" href={`${base}shared-broach/`}>共通ブローチ登録ページ</a>で所持数を登録してください。</p>
+    {/if}
   </div>
 </section>
 
