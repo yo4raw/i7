@@ -244,8 +244,19 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 | `song-detail.test.ts` | 楽曲詳細 |
 | `mycard.test.ts` | 所持カード |
 | `score-calc-spec.test.ts` | スコア計算ページのスキル仕様表示 |
+| `card-compare.test.ts` | 衣装比較 |
 
-テスト実行時は `npm run preview`（ビルド + ローカルサーバー）が自動起動される。
+##### ローカルでの E2E は dev サーバー (HMR) を再利用する
+
+4321 番ポートにサーバーがない状態で実行すると `npm run preview`（本番ビルド + ローカルサーバー）が自動起動されるが、本番ビルドは衣装詳細など数千ページの静的生成で **約 10 分** かかる。`playwright.config.ts` は `reuseExistingServer: true` のため、**先に dev サーバーを起動しておけばビルドなしで E2E が回る**（実測 20 秒弱）。ローカル開発中はこちらを使うこと:
+
+1. `npm run dev` をバックグラウンド起動（約 1 秒で ready、dev と本番でパス構成は同一）
+2. `npx playwright test tests/<対象>.test.ts` — 4321 番の dev サーバーが再利用され、ビルドは走らない
+
+注意点:
+
+- dev では Astro dev toolbar が `<select name="dev-toolbar-select">` 等を DOM に注入する。ロケータは `getByTestId` / `getByLabel` / role で対象を特定し、裸の `locator('select')` のような曖昧なセレクタは使わない（strict mode 違反になる）
+- 本番ビルド経由の E2E（サーバーなしで `npm run test`）が必要なのは、圧縮後挙動・動的ルート全件生成などビルド必須項目の検証とリリース前最終確認のみ。ビルド成否自体は PR の CI ビルドチェックでもカバーされる
 
 #### 単体テスト (Vitest)
 
