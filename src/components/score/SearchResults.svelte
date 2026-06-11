@@ -9,6 +9,7 @@
   import type { SearchResult } from '../../lib/score/maxScoreFinder';
   import { resolveDeckBroachs } from '../../lib/score/broachResolver';
   import { BONUS_LABEL, BONUS_CLASS } from '../../lib/data/eventBonusTiers';
+  import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
   import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { ATTR_HEX } from '../../lib/constants';
   import RarityBadge from '../ui/RarityBadge.svelte';
@@ -49,7 +50,7 @@
       deckIds: rec.cardIds,
       bonusTiers: tiers,
       trained: [true, true, true, true, true, true],
-      sharedBroachs: [[], [], [], [], [], []],
+      sharedBroachs: rec.sharedBroachIds ?? [[], [], [], [], [], []],
       skillLevels: [5, 5, 5, 5, 5, 5],
     };
     saveJson(STORAGE_KEYS.SCORE_CALC_STATE, state);
@@ -63,11 +64,15 @@
     const tiers = buildTiersFromDeck(deck);
     const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     const trained: boolean[] = [true, true, true, true, true, true];
-    const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
+    const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, result.best.sharedBroachIds ?? [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
     const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong, undefined);
     return { team, deck, resolvedBroachs };
   });
   const bestTeam = $derived(bestContext?.team ?? null);
+
+  function sharedBroachName(id: number): string {
+    return SHARED_BROACHS.find((sb) => sb.id === id)?.name ?? `#${id}`;
+  }
 
   type ResolvedBroachItem = NonNullable<ReturnType<NonNullable<ReturnType<typeof resolveDeckBroachs>['get']>>>[number];
   function broachLabel(rb: ResolvedBroachItem): string {
@@ -153,6 +158,9 @@
             <th class="text-left py-1 px-1">スキル</th>
             <th class="text-left py-1 px-1">効果</th>
             <th class="text-left py-1 px-1">固定ブローチ</th>
+            {#if result.best.sharedBroachIds}
+              <th class="text-left py-1 px-1">共通ブローチ</th>
+            {/if}
           </tr>
         </thead>
         <tbody>
@@ -201,6 +209,18 @@
                       {/each}
                     {/if}
                   </td>
+                  {#if result.best.sharedBroachIds}
+                    {@const sharedIds = result.best.sharedBroachIds[i] ?? []}
+                    <td class="py-1 px-1">
+                      {#if sharedIds.length === 0}
+                        <span class="text-[10px] text-gray-300 dark:text-slate-600">—</span>
+                      {:else}
+                        {#each sharedIds as id}
+                          <div class="text-[9px] text-purple-700" title={i === 5 ? '推奨ブローチ（所持制約なし）' : '所持ブローチから自動割当'}>💠 {sharedBroachName(id)}</div>
+                        {/each}
+                      {/if}
+                    </td>
+                  {/if}
                 </tr>
               {/if}
             {/each}
@@ -209,7 +229,7 @@
               <td class="py-1 px-1 text-right text-red-500">{bestTeam.Shout.toLocaleString()}</td>
               <td class="py-1 px-1 text-right text-green-500">{bestTeam.Beat.toLocaleString()}</td>
               <td class="py-1 px-1 text-right text-blue-500">{bestTeam.Melody.toLocaleString()}</td>
-              <td colspan="3"></td>
+              <td colspan={result.best.sharedBroachIds ? 4 : 3}></td>
             </tr>
           {/if}
         </tbody>
