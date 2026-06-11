@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatSkillEffect } from '../../../src/lib/score/skillFormatter';
+import { formatSkillEffect, formatSkillBadge } from '../../../src/lib/score/skillFormatter';
 import { SKILL_TYPE, type ApSkillLevel } from '../../../src/lib/data/fetchCardsJson';
 
 const sl = (
@@ -59,5 +59,36 @@ describe('formatSkillEffect (スキル効果の自然文生成)', () => {
 
   it('未知のスキル種別は "-"', () => {
     expect(formatSkillEffect('謎スキル', null, sl(10, 10, 10))).toBe('-');
+  });
+});
+
+describe('formatSkillBadge (SNS共有パネル用の短縮ラベル)', () => {
+  it('スコアアップ系は発動条件によらず「スコアアップ」', () => {
+    expect(formatSkillBadge('スコアアップ（コンボ）')).toEqual({ label: 'スコアアップ', isShrink: false });
+    expect(formatSkillBadge('スコアアップ（Perfect）')).toEqual({ label: 'スコアアップ', isShrink: false });
+    expect(formatSkillBadge(SKILL_TYPE.SCOREUP_TIMER)).toEqual({ label: 'スコアアップ', isShrink: false });
+  });
+
+  it('判定縮小系は isShrink が立つ', () => {
+    expect(formatSkillBadge('判定縮小（Perfect）')).toEqual({ label: '判定縮小', isShrink: true });
+    expect(formatSkillBadge('判定縮小（コンボ）')).toEqual({ label: '判定縮小', isShrink: true });
+    expect(formatSkillBadge(SKILL_TYPE.SHRINK_TIMER)).toEqual({ label: '判定縮小', isShrink: true });
+    expect(formatSkillBadge(SKILL_TYPE.SHRINK)).toEqual({ label: '判定縮小', isShrink: true });
+  });
+
+  it('判定変更系は矢印表記に短縮する', () => {
+    expect(formatSkillBadge(SKILL_TYPE.BAD_TO_PERFECT)).toEqual({ label: 'BAD→Perfect', isShrink: false });
+    expect(formatSkillBadge('MISS以上をPerfectに変更')).toEqual({ label: 'MISS→Perfect', isShrink: false });
+    expect(formatSkillBadge('MISS→Perfect')).toEqual({ label: 'MISS→Perfect', isShrink: false });
+    expect(formatSkillBadge(SKILL_TYPE.MISS_TO_GOOD)).toEqual({ label: 'MISS→Good', isShrink: false });
+  });
+
+  it('判定拡大スコアダウンは「判定拡大」', () => {
+    expect(formatSkillBadge('判定拡大スコアダウン')).toEqual({ label: '判定拡大', isShrink: false });
+  });
+
+  it('null は「-」、未知の種別はそのまま返す', () => {
+    expect(formatSkillBadge(null)).toEqual({ label: '-', isShrink: false });
+    expect(formatSkillBadge('謎スキル')).toEqual({ label: '謎スキル', isShrink: false });
   });
 });

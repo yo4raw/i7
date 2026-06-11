@@ -36,3 +36,34 @@ export function formatSkillEffect(
   }
   return '-';
 }
+
+export interface SkillBadge {
+  /** セル表示用の短縮ラベル */
+  label: string;
+  /** 判定縮小系（強調表示の対象） */
+  isShrink: boolean;
+}
+
+/**
+ * SNS共有パネルのスキル種別セルに表示する短縮ラベルを生成する。
+ * 発動条件は ap_skill_req を別セルで表示するため含めない。
+ */
+export function formatSkillBadge(skillType: string | null): SkillBadge {
+  if (!skillType) return { label: '-', isShrink: false };
+  if (skillType === SKILL_TYPE.SHRINK || skillType.startsWith(SKILL_TYPE.SHRINK_PREFIX)) {
+    return { label: '判定縮小', isShrink: true };
+  }
+  if (skillType.startsWith(SKILL_TYPE.SCOREUP_PREFIX) || skillType === 'スコアアップ') {
+    return { label: 'スコアアップ', isShrink: false };
+  }
+  if (skillType === SKILL_TYPE.BAD_TO_PERFECT) {
+    return { label: 'BAD→Perfect', isShrink: false };
+  }
+  if (skillType === 'MISS以上をPerfectに変更' || skillType === 'MISS→Perfect') {
+    return { label: 'MISS→Perfect', isShrink: false };
+  }
+  if (skillType === '判定拡大スコアダウン') {
+    return { label: '判定拡大', isShrink: false };
+  }
+  return { label: skillType, isShrink: false };
+}

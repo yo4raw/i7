@@ -2,8 +2,9 @@
 import EventShareImage from './EventShareImage.svelte';
 import { formatEffectSummary, type EventRow, type EventSpecialTier } from '../lib/data/fetchEventsCsv';
 import { type Card } from '../lib/data/fetchCardsJson';
-import { ATTR_BADGE_BG, RARITY_BADGE_CLASSES, SITE_NAME } from '../lib/constants';
+import { ATTR_BADGE_BG, SITE_NAME } from '../lib/constants';
 import { cardThumbUrl } from '../lib/ui';
+import { formatSkillBadge } from '../lib/score/skillFormatter';
 
 interface Props {
   event: EventRow;
@@ -54,8 +55,9 @@ const tiers: TierView[] = [
   <EventShareImage filename={shareFilename} client:load />
 </div>
 
-<!-- スクショ対象パネル -->
-<div id="share-panel" class="max-w-3xl rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden bg-white dark:bg-slate-800">
+<!-- スクショ対象パネル（端末によらず同じダウンロード画像になるよう幅固定。狭い画面では横スクロール） -->
+<div class="overflow-x-auto pb-2">
+<div id="share-panel" class="w-[640px] shrink-0 rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden bg-white dark:bg-slate-800">
   <!-- ヘッダー帯 -->
   <div class="bg-indigo-600 dark:bg-indigo-700 text-white px-4 py-3">
     <div class="flex items-baseline justify-between gap-2 flex-wrap">
@@ -83,15 +85,15 @@ const tiers: TierView[] = [
         {t.cards.length === 0 ? (
           <p class="text-sm text-gray-400 dark:text-slate-500">対象衣装なし</p>
         ) : (
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          <div class="grid grid-cols-6 gap-px">
             {t.cards.map(card => {
               const attr = card.attribute || '';
-              const cardRarity = card.rarity || '';
               const attrBg = ATTR_BADGE_BG[attr] || 'bg-gray-400';
-              const rarityBg = RARITY_BADGE_CLASSES[cardRarity] || 'bg-gray-300';
+              const skill = formatSkillBadge(card.ap_skill_type);
               return (
-                <div class="flex flex-col">
-                  <div class="relative rounded overflow-hidden border border-gray-200 dark:border-slate-700">
+                <div class="flex flex-col min-w-0">
+                  <div class="text-[10px] leading-tight text-center text-gray-700 dark:text-slate-300 truncate px-0.5 py-0.5">{card.cardname || '-'}</div>
+                  <div class="relative">
                     <img
                       src={cardThumbUrl(card.ID!)}
                       alt={card.cardname || ''}
@@ -99,13 +101,10 @@ const tiers: TierView[] = [
                       width="200"
                       height="300"
                     />
-                    <div class="absolute top-0.5 left-0.5 flex gap-0.5">
-                      <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${rarityBg}`}>{cardRarity || '?'}</span>
-                      {attr && <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
-                    </div>
+                    {attr && <span class={`absolute top-0.5 left-0.5 px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
                   </div>
-                  <div class="mt-1 text-[11px] leading-tight font-medium text-gray-800 dark:text-slate-100 line-clamp-2">{card.cardname || '-'}</div>
-                  <div class="text-[10px] text-gray-500 dark:text-slate-400 truncate">{card.name || ''}</div>
+                  <div class={`flex-1 flex items-center justify-center text-[10px] leading-tight text-center font-bold px-0.5 py-1 ${skill.isShrink ? 'bg-pink-500 text-white' : 'bg-gray-50 text-gray-800 dark:bg-slate-700 dark:text-slate-100'}`}>{skill.label}</div>
+                  <div class="text-[10px] leading-tight text-center font-bold bg-yellow-300 text-yellow-950 px-0.5 py-0.5">{card.ap_skill_req || '-'}</div>
                 </div>
               );
             })}
@@ -114,4 +113,5 @@ const tiers: TierView[] = [
       </section>
     ))}
   </div>
+</div>
 </div>
