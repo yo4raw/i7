@@ -150,7 +150,7 @@
       : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR 衣装がありません'
       : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR 衣装がありません'
       : ownedOnly && comboCount === 0 && !shrinkPairOnly ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
-      : shrinkPairOnly && comboCount === 0 ? '判定縮小2枚編成の条件を満たす組合せが作れません（縮小持ち特効候補の不足など）'
+      : shrinkPairOnly && comboCount === 0 ? '判定縮小2枚以上編成の条件を満たす組合せが作れません（縮小持ち特効候補の不足など）'
       : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : ''
   );
@@ -359,7 +359,7 @@
     </label>
     <label class="flex items-center gap-2 text-xs">
       <input type="checkbox" bind:checked={shrinkPairOnly} class="rounded" />
-      <span><b>判定縮小2枚編成</b> — センター+メンバー4枚に縮小2枚なら非縮小フレンド、それ以外は縮小フレンドに絞って探索します。所持衣装で検索 OFF 時はフレンドを含めちょうど2枚の組合せのみ探索します（縮小持ち候補 {shrinkCandidates.length} 枚）</span>
+      <span><b>判定縮小2枚以上編成</b> — 縮小スキル持ちが合計2枚以上になる編成のみ探索します。センター+メンバーの縮小が1枚以下の場合はフレンドを縮小持ちに絞り、2枚以上なら全フレンドを組合せます（縮小持ち候補 {shrinkCandidates.length} 枚）</span>
     </label>
   </div>
 </section>
