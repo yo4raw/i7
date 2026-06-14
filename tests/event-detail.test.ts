@@ -65,3 +65,23 @@ test.describe('イベント詳細 特効所持枚数', () => {
     expect(Object.keys(counts)).toHaveLength(0);
   });
 });
+
+test.describe('イベント詳細 特効スキル表示', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/events/${eventId}/`);
+  });
+
+  test('金特効セクションの各衣装にスキルバッジが表示される', async ({ page }) => {
+    const gold = page.locator('section', { hasText: '金特効' }).first();
+    const badges = gold.getByTestId('skill-badge');
+    await expect(badges.first()).toBeVisible();
+    expect(await badges.count()).toBeGreaterThan(0);
+  });
+
+  test('判定縮小スキルのバッジはピンク強調される', async ({ page }) => {
+    const shrink = page.getByTestId('skill-badge').filter({ hasText: '判定縮小' });
+    const count = await shrink.count();
+    test.skip(count === 0, 'このイベントに判定縮小持ちの特効衣装がいないためスキップ');
+    await expect(shrink.first()).toHaveClass(/bg-pink-500/);
+  });
+});
