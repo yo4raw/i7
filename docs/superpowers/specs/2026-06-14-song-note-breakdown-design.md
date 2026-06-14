@@ -80,8 +80,8 @@
 
 ## テスト
 
-- 単体（Vitest, `tests/unit/songNoteBreakdown.test.ts`）: `buildNoteBreakdown` を検証 — 始点終点合算、ゼロ行除外、属性別合計、倍率対応、全ゼロ楽曲で `hasNotes === false`。
-- E2E（`tests/song-detail.test.ts` に追記）: ノーツ内訳テーブルの見出し・倍率・属性列ヘッダが表示されること。
+- 単体（Vitest, `tests/unit/songNoteBreakdown.test.ts`）: `buildNoteBreakdown` を検証 — 始点終点合算、ゼロ行除外、属性別合計、倍率対応、全ゼロ楽曲で `hasNotes === false`。表示ロジックの実体はこの純粋関数に集約されるため、ここが主要カバレッジ。
+- E2E: 楽曲詳細を含むページ E2E（`song-detail.test.ts` 等）は現状 `playwright.config.ts` の `testIgnore` で**プロジェクト全体として無効化**されている（旧 `BASE='/i7'` ベースパス前提で 404 になるため、ルート配信への改修待ち）。本変更では E2E を追加せず、レンダリング確認は dev サーバーでの目視（スクリーンショット）で行う。ノーツ内訳テーブルは `buildNoteBreakdown` の出力を静的描画するだけのため、ロジックの単体テストで実質的に担保される。
 
 ## 用語・命名
 
