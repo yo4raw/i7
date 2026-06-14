@@ -147,6 +147,8 @@ const tiers: TierView[] = [
           name: c.name || '',
           attribute: c.attribute || '',
           rarity: c.rarity || '',
+          apSkillType: c.ap_skill_type ?? null,
+          apSkillReq: c.ap_skill_req ?? null,
         }))}
         base={base}
         client:load
