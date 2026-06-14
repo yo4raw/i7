@@ -60,11 +60,7 @@ const infoRows = [
 
 // ノーツ内訳（ステージ別・属性別。始点終点合算）
 const noteBreakdown = buildNoteBreakdown(song);
-const attrCols = [
-  { name: 'Shout', key: 'shout' as const },
-  { name: 'Beat', key: 'beat' as const },
-  { name: 'Melody', key: 'melody' as const },
-];
+const attrCols = [{ name: 'Shout' }, { name: 'Beat' }, { name: 'Melody' }];
 ---
 
 <BaseLayout
