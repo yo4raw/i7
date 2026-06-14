@@ -46,4 +46,19 @@ test.describe('スコア計算ページ', () => {
     await expect(page.locator('#mc-mean')).toHaveText(/[\d,]+/);
     await expect(page.locator('#final-result')).toHaveText(/[\d,]+/);
   });
+
+  test('楽曲を選択すると共通ブローチ スコア寄与 TOP10 が表示される', async ({ page }) => {
+    const firstValue = await page.locator('#song-select option').nth(1).getAttribute('value');
+    await page.locator('#song-select').selectOption(firstValue!);
+
+    const section = page.locator('#broach-ranking-section');
+    await expect(section).toBeVisible();
+    await expect(section).toContainText('共通ブローチ スコア寄与 TOP10');
+
+    const items = section.locator('ol li');
+    await expect(items.first()).toBeVisible();
+    expect(await items.count()).toBeGreaterThan(0);
+    // 1位の行にスコア値（数字）が出る
+    await expect(items.first()).toContainText(/[\d,]+/);
+  });
 });

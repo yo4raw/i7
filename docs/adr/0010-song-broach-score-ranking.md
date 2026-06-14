@@ -26,3 +26,5 @@
 - 追加 `src/lib/score/songBroachRanking.ts` + 単体テスト、`songs/[id].astro` にセクション追加、`simulation.ts` の `calcNoteScore` を export。
 - 寄与計算はノーツ内訳（[0009](0009-song-note-breakdown.md)）と同じ楽曲ノートグループを用いる。
 - 楽曲詳細を含むページ E2E は無効化中のため、検証は単体テスト + dev サーバー目視で行った。
+- スコア計算画面（`ScoreCalc.svelte`）でも楽曲選択時に同ランキングを折りたたみセクションで表示する（2026-06-14 追記）。
+- バーチャートは `src/components/score/BroachRankingChart.svelte` に共有コンポーネント化し、楽曲詳細（Astro）は `client:` 指定なしの静的描画で流用、スコア計算（Svelte）は `selectedSong` から `$derived` でリアクティブ描画する。score-calc は E2E が有効なため楽曲選択でのランキング表示を E2E でも検証する。

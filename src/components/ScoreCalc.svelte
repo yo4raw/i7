@@ -14,10 +14,12 @@
   import { broachViolations } from '../lib/score/broachInventory';
   import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
+  import { buildBroachRanking } from '../lib/score/songBroachRanking';
   import CardPickerModal from './score/CardPickerModal.svelte';
   import DeckSlots from './score/DeckSlots.svelte';
   import CardDetailTable from './score/CardDetailTable.svelte';
   import ScoreCalcResults from './score/ScoreCalcResults.svelte';
+  import BroachRankingChart from './score/BroachRankingChart.svelte';
   type Props = { cards: Card[]; songs: Song[]; broachs: FixedBroach[]; events: EventForBonus[]; base: string };
 
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events: initialEvents, base }: Props = $props();
@@ -78,6 +80,7 @@
   const songChartSvg = $derived(selectedSong
     ? attrDonutSvg(selectedSong.shout_ratio || 0, selectedSong.beat_ratio || 0, selectedSong.melody_ratio || 0, { sizeClass: 'w-20 h-20' })
     : '');
+  const broachRanking = $derived(selectedSong ? buildBroachRanking(selectedSong) : []);
 
   // 保存デッキ読込ドロップダウン（null = 閉じている）
   type LoadDeckItem = { id: string; name: string; dateLabel: string; cardCount: number };
@@ -296,6 +299,20 @@
       </div>
     </div>
   </section>
+
+  <!-- 共通ブローチ スコア寄与 TOP10 -->
+  {#if selectedSong && broachRanking.length > 0}
+    <details id="broach-ranking-section" class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 group" open>
+      <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 dark:text-slate-200 flex items-center justify-between select-none">
+        <span>🏅 共通ブローチ スコア寄与 TOP10</span>
+        <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <div class="px-4 pb-4 border-t border-gray-100 dark:border-slate-800 pt-3">
+        <p class="text-[11px] text-gray-500 dark:text-slate-400 mb-3">この楽曲のノーツ分布における各共通ブローチ単独のスコア寄与（デッキ非依存の目安）。</p>
+        <BroachRankingChart ranking={broachRanking} />
+      </div>
+    </details>
+  {/if}
 
   <!-- スキルオプション（折りたたみ可、デフォルト開） -->
   <details class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 group" open>
