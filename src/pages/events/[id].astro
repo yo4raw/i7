@@ -5,6 +5,7 @@ import EventBonusCardGrid from '../../components/EventBonusCardGrid.svelte';
 import { fetchEventsCsv, formatEffectSummary, type EventRow, type EventSpecialTier } from '../../lib/data/fetchEventsCsv';
 import { fetchCardsJson, type Card } from '../../lib/data/fetchCardsJson';
 import { cardThumbUrl } from '../../lib/ui';
+import { isHighScoreEvent } from '../../lib/data/eventBonusTiers';
 
 export async function getStaticPaths() {
   const [events, cards] = await Promise.all([
@@ -18,15 +19,22 @@ export async function getStaticPaths() {
   const pick = (ids: number[]): Card[] =>
     [...new Set(ids)].map(id => cardMap.get(id)).filter((c): c is Card => !!c);
 
-  return (events as EventRow[]).map(ev => ({
-    params: { id: String(ev.id) },
-    props: {
-      event: ev,
-      goldCards: pick(ev.gold.cardIds),
-      silverCards: pick(ev.silver.cardIds),
-      bronzeCards: pick(ev.bronze.cardIds),
-    },
-  }));
+  return (events as EventRow[]).map(ev => {
+    const urOnly = isHighScoreEvent(ev.eventtype);
+    const pickTier = (ids: number[]): Card[] => {
+      const picked = pick(ids);
+      return urOnly ? picked.filter(c => c.rarity === 'UR') : picked;
+    };
+    return {
+      params: { id: String(ev.id) },
+      props: {
+        event: ev,
+        goldCards: pickTier(ev.gold.cardIds),
+        silverCards: pickTier(ev.silver.cardIds),
+        bronzeCards: pickTier(ev.bronze.cardIds),
+      },
+    };
+  });
 }
 
 interface Props {
@@ -37,6 +45,7 @@ interface Props {
 }
 
 const { event, goldCards, silverCards, bronzeCards } = Astro.props as Props;
+const isHighScore = isHighScoreEvent(event.eventtype);
 const base = import.meta.env.BASE_URL;
 
 const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
@@ -133,6 +142,15 @@ const tiers: TierView[] = [
       <p class="mt-3 text-sm text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-3 py-2">{event.comment}</p>
     )}
   </div>
+
+  {isHighScore && (
+    <p
+      data-testid="highscore-ur-note"
+      class="mb-6 text-sm text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded px-3 py-2"
+    >
+      ハイスコアライブイベントのため、UR 衣装のみ表示しています。
+    </p>
+  )}
 
   {tiers.map(t => (
     <section class={`mb-6 rounded-lg bg-white dark:bg-slate-800 shadow p-4 ${t.borderClass}`}>
