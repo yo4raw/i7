@@ -66,3 +66,8 @@ export function bonusBadgeHtml(tier: EventBonusTier | undefined | null): string 
   if (!def) return '';
   return `<span class="inline-block px-1.5 py-0.5 text-xs font-bold rounded border ${def.selectClasses.join(' ')}">${def.shortLabel}</span>`;
 }
+
+/** イベント種別がハイスコア系か判定する（表記揺れに備え includes 判定）。 */
+export function isHighScoreEvent(eventtype: string | null | undefined): boolean {
+  return !!eventtype && eventtype.includes('ハイスコア');
+}
