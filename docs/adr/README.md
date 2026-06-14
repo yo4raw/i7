@@ -22,3 +22,4 @@
 | [0008](0008-event-detail-card-skill.md) | イベント詳細ページに特効衣装のスキルを表示する | 承認 |
 | [0009](0009-song-note-breakdown.md) | 楽曲詳細ページにノーツ内訳を表示する | 承認 |
 | [0010](0010-song-broach-score-ranking.md) | 楽曲詳細ページに共通ブローチ スコア寄与 TOP10 を表示する | 承認 |
+| [0011](0011-song-detail-two-column.md) | 楽曲詳細の属性比率／ノーツ内訳を PC で横並びにする | 承認 |
