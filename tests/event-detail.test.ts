@@ -79,6 +79,9 @@ test.describe('イベント詳細 特効スキル表示', () => {
   });
 
   test('判定縮小スキルのバッジはピンク強調される', async ({ page }) => {
+    // スキルバッジはクライアントサイドの GViz フェッチ後に描画されるため、
+    // まず最初のバッジ表示を待ってからカウントする（早すぎる count() による誤スキップ防止）
+    await expect(page.getByTestId('skill-badge').first()).toBeVisible();
     const shrink = page.getByTestId('skill-badge').filter({ hasText: '判定縮小' });
     const count = await shrink.count();
     test.skip(count === 0, 'このイベントに判定縮小持ちの特効衣装がいないためスキップ');
