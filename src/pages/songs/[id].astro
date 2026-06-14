@@ -4,6 +4,7 @@ import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/
 import { ATTR_BADGE_BG } from '../../lib/constants';
 import { attrDonutSvg } from '../../lib/donutChart';
 import { songImageUrl, starsText } from '../../lib/ui';
+import { buildNoteBreakdown } from '../../lib/songNoteBreakdown';
 
 export async function getStaticPaths() {
   const allSongs = filterAllowedSongs(filterValidSongs(await fetchSongsJson()));
@@ -56,6 +57,14 @@ const infoRows = [
   { label: '秒数', value: song.duration ? `${song.duration}秒` : null },
   { label: '更新日', value: song.updated_at },
 ].filter(r => r.value != null && r.value !== '');
+
+// ノーツ内訳（ステージ別・属性別。始点終点合算）
+const noteBreakdown = buildNoteBreakdown(song);
+const attrCols = [
+  { name: 'Shout', key: 'shout' as const },
+  { name: 'Beat', key: 'beat' as const },
+  { name: 'Melody', key: 'melody' as const },
+];
 ---
 
 <BaseLayout
@@ -110,6 +119,51 @@ const infoRows = [
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ノーツ内訳 -->
+  {noteBreakdown.hasNotes && (
+    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
+      <h2 class="text-lg font-semibold mb-4">ノーツ内訳</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-gray-200 dark:border-slate-700">
+              <th class="py-2 pr-4 font-medium text-gray-500 dark:text-slate-400">ステージ</th>
+              <th class="py-2 pr-4 font-medium text-gray-500 dark:text-slate-400">倍率</th>
+              {attrCols.map(col => (
+                <th class="py-2 px-2 font-medium text-right">
+                  <span class="inline-flex items-center gap-1 justify-end">
+                    <span class={`w-2.5 h-2.5 rounded-full inline-block ${ATTR_BADGE_BG[col.name]}`}></span>
+                    {col.name}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+            {noteBreakdown.rows.map(row => (
+              <tr>
+                <td class="py-2 pr-4">{row.label}</td>
+                <td class="py-2 pr-4 tabular-nums text-gray-500 dark:text-slate-400">×{row.multiplier.toFixed(1)}</td>
+                <td class="py-2 px-2 text-right tabular-nums">{row.shout.toLocaleString()}</td>
+                <td class="py-2 px-2 text-right tabular-nums">{row.beat.toLocaleString()}</td>
+                <td class="py-2 px-2 text-right tabular-nums">{row.melody.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-gray-200 dark:border-slate-700 font-semibold">
+              <td class="py-2 pr-4">合計</td>
+              <td class="py-2 pr-4"></td>
+              <td class="py-2 px-2 text-right tabular-nums">{noteBreakdown.totals.shout.toLocaleString()}</td>
+              <td class="py-2 px-2 text-right tabular-nums">{noteBreakdown.totals.beat.toLocaleString()}</td>
+              <td class="py-2 px-2 text-right tabular-nums">{noteBreakdown.totals.melody.toLocaleString()}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </section>
   )}
