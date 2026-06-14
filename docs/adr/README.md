@@ -20,3 +20,4 @@
 | [0006](0006-event-share-dense-layout.md) | イベント SNS 共有パネルを高密度レイアウトへ | 承認 |
 | [0007](0007-card-compare-page.md) | 衣装比較ページの新設とスキル種別ごとの比較軸 | 承認 |
 | [0008](0008-event-detail-card-skill.md) | イベント詳細ページに特効衣装のスキルを表示する | 承認 |
+| [0009](0009-song-note-breakdown.md) | 楽曲詳細ページにノーツ内訳を表示する | 承認 |
