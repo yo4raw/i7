@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { fetchEventsCsv } from '../src/lib/data/fetchEventsCsv';
+import { isHighScoreEvent } from '../src/lib/data/eventBonusTiers';
 
 const BASE = '';
 
@@ -86,5 +87,34 @@ test.describe('イベント詳細 特効スキル表示', () => {
     const count = await shrink.count();
     test.skip(count === 0, 'このイベントに判定縮小持ちの特効衣装がいないためスキップ');
     await expect(shrink.first()).toHaveClass(/bg-pink-500/);
+  });
+});
+
+test.describe('イベント詳細 ハイスコアUR限定', () => {
+  let highScoreId = 0;
+
+  test.beforeAll(async () => {
+    const events = await fetchEventsCsv();
+    const target = events.find(
+      (ev) => isHighScoreEvent(ev.eventtype) &&
+        (ev.gold.cardIds.length + ev.silver.cardIds.length + ev.bronze.cardIds.length) > 0,
+    );
+    highScoreId = target?.id ?? 0;
+  });
+
+  test('ハイスコアイベントは UR 注記が表示され、特効バッジが UR のみ', async ({ page }) => {
+    test.skip(highScoreId === 0, 'ハイスコアイベントが events.csv に無いためスキップ');
+    await page.goto(`${BASE}/events/${highScoreId}/`);
+
+    await expect(page.getByTestId('highscore-ur-note')).toBeVisible();
+
+    // レアリティバッジ（UR/SSR/SR/R/N のいずれか）が描画されるのを待ち、全て UR か確認
+    const rarityBadge = page.locator('section span').filter({ hasText: /^(UR|SSR|SR|R|N)$/ });
+    await rarityBadge.first().waitFor({ timeout: 10000 });
+    const texts = await rarityBadge.allInnerTexts();
+    expect(texts.length).toBeGreaterThan(0);
+    for (const t of texts) {
+      expect(t.trim()).toBe('UR');
+    }
   });
 });
