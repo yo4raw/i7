@@ -41,7 +41,7 @@ function getAppeal(team: ComputedTeam, attr: AttributeName, assist: boolean): nu
  * 属性値に NOTE_RATE を乗じて floor した「1 ノーツ基底値」にステージ倍率を乗じて再度 floor する
  * (docs/score_calc_spec.md §5 準拠)。
  */
-function calcNoteScore(appeal: number, note: FlatNote): number {
+export function calcNoteScore(appeal: number, note: FlatNote): number {
   const perNoteBase = Math.floor(appeal * NOTE_RATE[note.type]);
   return Math.floor(perNoteBase * LIGHT_MULTIPLIER[note.group]);
 }
