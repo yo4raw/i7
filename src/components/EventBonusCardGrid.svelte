@@ -3,6 +3,7 @@
   import { getCount } from '../lib/stores/cardCounts.svelte';
   import { cardThumbUrl } from '../lib/ui';
   import CountInput from './cards/CountInput.svelte';
+  import { formatSkillBadge } from '../lib/score/skillFormatter';
 
   interface EventBonusCardItem {
     ID: number;
@@ -10,6 +11,8 @@
     name: string;
     attribute: string;
     rarity: string;
+    apSkillType: string | null;
+    apSkillReq: string | null;
   }
 
   type Props = {
@@ -44,7 +47,14 @@
 {:else}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
     {#each cards as card (card.ID)}
-      <div class="flex flex-col p-2 rounded border border-gray-200 dark:border-slate-700">
+      {@const skill = formatSkillBadge(card.apSkillType)}
+      <div
+        class={`flex flex-col p-2 rounded border ${
+          skill.isShrink
+            ? 'border-pink-400 ring-1 ring-pink-300 dark:border-pink-500 dark:ring-pink-500'
+            : 'border-gray-200 dark:border-slate-700'
+        }`}
+      >
         <a
           href={`${base}cards/${card.ID}/`}
           class="flex items-center gap-2 rounded hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
@@ -66,6 +76,19 @@
             <div class="text-[11px] text-gray-500 dark:text-slate-400 truncate">{card.name}</div>
           </div>
         </a>
+        <div class="mt-1.5 flex items-center gap-1 flex-wrap">
+          <span
+            class={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+              skill.isShrink
+                ? 'bg-pink-500 text-white'
+                : 'bg-gray-50 text-gray-800 dark:bg-slate-700 dark:text-slate-100'
+            }`}
+            data-testid="skill-badge"
+          >{skill.label}</span>
+          {#if card.apSkillReq}
+            <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200">{card.apSkillReq}</span>
+          {/if}
+        </div>
         <div class="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between">
           <span class="text-[10px] text-gray-500 dark:text-slate-400">所持</span>
           <CountInput cardId={card.ID} />

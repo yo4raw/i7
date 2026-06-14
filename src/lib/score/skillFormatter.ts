@@ -45,8 +45,9 @@ export interface SkillBadge {
 }
 
 /**
- * SNS共有パネルのスキル種別セルに表示する短縮ラベルを生成する。
- * 発動条件は ap_skill_req を別セルで表示するため含めない。
+ * スキル種別の短縮ラベルと判定縮小フラグを生成する。
+ * SNS共有パネル・イベント詳細の特効グリッド等で使用する。
+ * 発動条件 (ap_skill_req) は呼び出し側が別途表示するため含めない。
  */
 export function formatSkillBadge(skillType: string | null): SkillBadge {
   if (!skillType) return { label: '-', isShrink: false };
