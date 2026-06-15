@@ -28,3 +28,4 @@
 | [0014](0014-bad-to-perfect-skill-label.md) | スキル種別ラベル「BAD以上をPerfectに変更」を「判定強化(BAD→Perfect)」に統一 | 承認 |
 | [0015](0015-card-list-skill-effect.md) | 衣装一覧のリスト表示に最上位レベルのスキル効果文を表示する | 承認 |
 | [0016](0016-card-compare-shrink-coverage.md) | 衣装比較 判定縮小タブの比較軸をカバー秒数／カバー率へ変更 | 承認 |
+| [0017](0017-card-compare-shrink-attr-reference.md) | 衣装比較 判定縮小タブに属性値由来スコアを参考表示 | 承認 |

@@ -19,6 +19,13 @@ test.describe('衣装比較ページ', () => {
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
   });
 
+  test('判定縮小の棒に属性値由来スコアが参考表示される', async ({ page }) => {
+    await page.getByRole('tab', { name: '判定縮小' }).click();
+    const col = page.getByTestId('shrink-col').first();
+    await expect(col).toBeVisible({ timeout: 20000 });
+    await expect(col.getByText(/属性 /)).toBeVisible();
+  });
+
   test('判定縮小タブにカバー秒数のソートセレクタがあり既定は期待カバー秒数', async ({ page }) => {
     await page.getByRole('tab', { name: '判定縮小' }).click();
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
