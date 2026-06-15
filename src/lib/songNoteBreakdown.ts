@@ -18,50 +18,71 @@ export interface NoteBreakdownRow {
   key: string;
   label: string;
   multiplier: number;
-  shout: number;
-  beat: number;
-  melody: number;
+  shoutWhite: number;
+  shoutColor: number;
+  beatWhite: number;
+  beatColor: number;
+  melodyWhite: number;
+  melodyColor: number;
+}
+
+export interface NoteAttrTotals {
+  shoutWhite: number;
+  shoutColor: number;
+  beatWhite: number;
+  beatColor: number;
+  melodyWhite: number;
+  melodyColor: number;
 }
 
 export interface NoteBreakdown {
   rows: NoteBreakdownRow[];
-  totals: { shout: number; beat: number; melody: number };
+  totals: NoteAttrTotals;
   hasNotes: boolean;
 }
 
 /**
- * 楽曲の 8 ステージ × 属性 × 始点終点のノーツ数を、ステージ別・属性別の表示用データに集計する。
- * 始点(white)と終点(color)は合算する。全属性 0 のステージ行は除外する。倍率は LIGHT_MULTIPLIER を再利用。
+ * 楽曲の 8 ステージ × 属性 × 白(始点)/色(終点) のノーツ数を、ステージ別・属性別の表示用データに集計する。
+ * 白(white)と色(color)は分離して保持する（スコア係数が白 ×0.025 / 色 ×0.03 と異なるため）。
+ * 全属性（白+色）が 0 のステージ行は除外する。倍率は LIGHT_MULTIPLIER を再利用。
  */
 export function buildNoteBreakdown(song: Song): NoteBreakdown {
   const rows: NoteBreakdownRow[] = [];
-  const totals = { shout: 0, beat: 0, melody: 0 };
+  const totals: NoteAttrTotals = {
+    shoutWhite: 0, shoutColor: 0,
+    beatWhite: 0, beatColor: 0,
+    melodyWhite: 0, melodyColor: 0,
+  };
 
   for (const key of SONG_NOTE_GROUP_KEYS) {
     const group = song[key] as SongNoteGroup | undefined;
     if (!group) continue;
 
-    const cell = (attrKey: string): number =>
-      (group[`${attrKey}_white` as keyof SongNoteGroup] ?? 0) +
-      (group[`${attrKey}_color` as keyof SongNoteGroup] ?? 0);
+    const cell = (field: keyof SongNoteGroup): number => group[field] ?? 0;
 
-    const shout = cell('shout');
-    const beat = cell('beat');
-    const melody = cell('melody');
+    const shoutWhite = cell('shout_white');
+    const shoutColor = cell('shout_color');
+    const beatWhite = cell('beat_white');
+    const beatColor = cell('beat_color');
+    const melodyWhite = cell('melody_white');
+    const melodyColor = cell('melody_color');
 
-    totals.shout += shout;
-    totals.beat += beat;
-    totals.melody += melody;
+    totals.shoutWhite += shoutWhite;
+    totals.shoutColor += shoutColor;
+    totals.beatWhite += beatWhite;
+    totals.beatColor += beatColor;
+    totals.melodyWhite += melodyWhite;
+    totals.melodyColor += melodyColor;
 
-    if (shout + beat + melody === 0) continue;
+    if (shoutWhite + shoutColor + beatWhite + beatColor + melodyWhite + melodyColor === 0) continue;
 
     rows.push({
       key,
       label: STAGE_LABELS[key] ?? key,
       multiplier: LIGHT_MULTIPLIER[key] ?? 1,
-      shout,
-      beat,
-      melody,
+      shoutWhite, shoutColor,
+      beatWhite, beatColor,
+      melodyWhite, melodyColor,
     });
   }
 
