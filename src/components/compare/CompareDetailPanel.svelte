@@ -42,8 +42,11 @@
   }
 
   const totalMax = $derived(maxIndexes(entries.map((e) => e.totalScore)));
+  const maxTotalMax = $derived(maxIndexes(entries.map((e) => e.maxTotalScore)));
   const baseMax = $derived(maxIndexes(entries.map((e) => e.baseScore)));
-  const skillMax = $derived(maxIndexes(entries.map((e) => e.skillExpected)));
+  const skillExpMax = $derived(maxIndexes(entries.map((e) => e.skillExpected)));
+  const skillMaxMax = $derived(maxIndexes(entries.map((e) => e.skillMax)));
+  const hasScoreUpSkill = $derived(entries.some((e) => e.skillMax > 0));
   const hasShrink = $derived(entries.some((e) => e.skill?.isShrink));
   const maxCoverMax = $derived(maxIndexes(entries.map((e) => e.maxCoverSec)));
   const expCoverMax = $derived(maxIndexes(entries.map((e) => e.expectedCoverSec)));
@@ -136,19 +139,39 @@
           <tr>
             <td class="text-gray-500 dark:text-slate-400 pr-2 py-1">スキル期待値</td>
             {#each entries as entry, i (entry.card.ID)}
-              <td class="px-2 py-1 text-center" class:font-bold={skillMax.has(i)} class:text-red-600={skillMax.has(i)} class:dark:text-red-400={skillMax.has(i)}>
+              <td class="px-2 py-1 text-center" class:font-bold={skillExpMax.has(i)} class:text-red-600={skillExpMax.has(i)} class:dark:text-red-400={skillExpMax.has(i)}>
                 {formatScore(entry.skillExpected)}
               </td>
             {/each}
           </tr>
+          {#if hasScoreUpSkill}
+            <tr>
+              <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 whitespace-nowrap">スキル最大値</td>
+              {#each entries as entry, i (entry.card.ID)}
+                <td class="px-2 py-1 text-center" class:font-bold={skillMaxMax.has(i)} class:text-red-600={skillMaxMax.has(i)} class:dark:text-red-400={skillMaxMax.has(i)}>
+                  {formatScore(entry.skillMax)}
+                </td>
+              {/each}
+            </tr>
+          {/if}
           <tr>
-            <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 font-bold">合計</td>
+            <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 font-bold">合計（期待）</td>
             {#each entries as entry, i (entry.card.ID)}
               <td class="px-2 py-1 text-center font-bold" class:text-red-600={totalMax.has(i)} class:dark:text-red-400={totalMax.has(i)}>
                 {formatScore(entry.totalScore)}
               </td>
             {/each}
           </tr>
+          {#if hasScoreUpSkill}
+            <tr>
+              <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 font-bold whitespace-nowrap">合計（最大）</td>
+              {#each entries as entry, i (entry.card.ID)}
+                <td class="px-2 py-1 text-center font-bold" class:text-red-600={maxTotalMax.has(i)} class:dark:text-red-400={maxTotalMax.has(i)}>
+                  {formatScore(entry.maxTotalScore)}
+                </td>
+              {/each}
+            </tr>
+          {/if}
         </tbody>
       </table>
     </div>

@@ -7,6 +7,7 @@ import {
   buildCardStrengthEntry,
   calcBaseScore,
   classifyCard,
+  compareScoreUpBy,
   compareShrinkBy,
   formatScore,
 } from '../../../src/lib/score/cardStrength';
@@ -77,6 +78,24 @@ describe('buildCardStrengthEntry (スコアアップ系)', () => {
     expect(entry.maxActivations).toBe(19);
     expect(entry.skillExpected).toBe(Math.floor(19 * 0.4 * 5200)); // 39520
     expect(entry.totalScore).toBe(entry.baseScore + entry.skillExpected);
+  });
+
+  it('スキル最大値・最大スコア合計: 確率を掛けない 100%発動時の値', () => {
+    const entry = buildCardStrengthEntry(makeCard(), [], makeSong());
+    expect(entry.skillMax).toBe(19 * 5200); // 98800
+    expect(entry.maxTotalScore).toBe(entry.baseScore + entry.skillMax);
+    expect(entry.maxTotalScore).toBeGreaterThan(entry.totalScore); // per < 100% なので最大 > 期待
+  });
+
+  it('判定補助系・縮小系は skillMax 0・最大スコア合計 = 属性値', () => {
+    const help = buildCardStrengthEntry(makeCard({ ap_skill_type: 'MISS→Good' }), [], makeSong());
+    expect(help.skillMax).toBe(0);
+    expect(help.maxTotalScore).toBe(help.baseScore);
+    const shrink = buildCardStrengthEntry(
+      makeCard({ ap_skill_type: '判定縮小（コンボ）', ap_skill_5_value: 8, ap_skill_5_rate: 1.5 }), [], makeSong(),
+    );
+    expect(shrink.skillMax).toBe(0);
+    expect(shrink.maxTotalScore).toBe(shrink.baseScore);
   });
 
   it('タイマー型: 発動機会は曲秒数', () => {
@@ -185,6 +204,28 @@ describe('判定縮小系', () => {
     expect(cmp(higherPer, base)).toBeLessThan(0);
     // 'max' では同値だが 'expected' では確率の高い方が先
     expect(compareShrinkBy('max')(higherPer, base)).toBe(base.appealTotal - higherPer.appealTotal);
+  });
+});
+
+describe('compareScoreUpBy', () => {
+  const song = makeSong();
+
+  it("'expected': 期待スコア合計の降順、同値は属性値由来スコア", () => {
+    const cmp = compareScoreUpBy('expected');
+    const base = buildCardStrengthEntry(makeCard(), [], song);
+    const higherPer = buildCardStrengthEntry(makeCard({ ap_skill_5_per: 60 }), [], song); // 期待値↑
+    expect(cmp(higherPer, base)).toBeLessThan(0);
+  });
+
+  it("'max': 最大スコア合計の降順。確率違いは max では同順、value 違いで差が出る", () => {
+    const cmp = compareScoreUpBy('max');
+    const base = buildCardStrengthEntry(makeCard(), [], song);
+    // 確率だけ高い → 最大スコア合計は同じ（skillMax は per 非依存）→ 属性値同値で 0
+    const higherPer = buildCardStrengthEntry(makeCard({ ap_skill_5_per: 60 }), [], song);
+    expect(cmp(higherPer, base)).toBe(0);
+    // value が高い → 最大スコア合計↑
+    const higherValue = buildCardStrengthEntry(makeCard({ ap_skill_5_value: 6000 }), [], song);
+    expect(cmp(higherValue, base)).toBeLessThan(0);
   });
 });
 

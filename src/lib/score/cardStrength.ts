@@ -33,7 +33,12 @@ export interface CardStrengthEntry {
   baseScore: number;
   /** スコアアップ期待値（縮小・判定補助系・スキルなしは 0） */
   skillExpected: number;
+  /** スコアアップ最大値 = maxActivations × value（100%発動時。縮小・判定補助系・スキルなしは 0） */
+  skillMax: number;
+  /** 期待スコア合計 = baseScore + skillExpected */
   totalScore: number;
+  /** 最大スコア合計 = baseScore + skillMax */
+  maxTotalScore: number;
   /** 選択曲での最大発動回数 = floor(発動機会 ÷ count) */
   maxActivations: number;
   /** 判定縮小系のみ: 最大カバー秒数 = maxActivations × 縮小秒数（100%発動前提の上限）。縮小以外は 0 */
@@ -46,6 +51,9 @@ export interface CardStrengthEntry {
 
 /** 判定縮小タブのソートキー: 最大カバー秒数 / 期待カバー秒数 */
 export type ShrinkSortKey = 'max' | 'expected';
+
+/** スコアアップタブのソートキー: 期待スコア合計 / 最大スコア合計 */
+export type ScoreUpSortKey = 'expected' | 'max';
 
 export type CompareGroup = 'scoreUp' | 'shrink';
 
@@ -137,6 +145,7 @@ export function buildCardStrengthEntry(
   const baseScore = calcBaseScore(appeal, song) + broachScoreBonus;
 
   let skillExpected = 0;
+  let skillMax = 0;
   let maxActivations = 0;
   let maxCoverSec = 0;
   let expectedCoverSec = 0;
@@ -150,6 +159,7 @@ export function buildCardStrengthEntry(
         expectedCoverSec = maxCoverSec * (skill.per / 100);
       } else {
         skillExpected = Math.floor(maxActivations * (skill.per / 100) * skill.value);
+        skillMax = maxActivations * skill.value;
       }
     }
   }
@@ -161,12 +171,27 @@ export function buildCardStrengthEntry(
     appealTotal: appeal.Shout + appeal.Beat + appeal.Melody,
     baseScore,
     skillExpected,
+    skillMax,
     totalScore: baseScore + skillExpected,
+    maxTotalScore: baseScore + skillMax,
     maxActivations,
     maxCoverSec,
     expectedCoverSec,
     skill,
     broachScoreBonus,
+  };
+}
+
+/**
+ * スコアアップ系のソート比較関数を生成する。
+ * 指定キー（期待スコア合計 / 最大スコア合計）の降順、同値は属性値由来スコアの降順。
+ */
+export function compareScoreUpBy(key: ScoreUpSortKey): (a: CardStrengthEntry, b: CardStrengthEntry) => number {
+  return (a, b) => {
+    const av = key === 'max' ? a.maxTotalScore : a.totalScore;
+    const bv = key === 'max' ? b.maxTotalScore : b.totalScore;
+    if (av !== bv) return bv - av;
+    return b.baseScore - a.baseScore;
   };
 }
 
