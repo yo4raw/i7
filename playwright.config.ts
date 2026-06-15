@@ -7,7 +7,6 @@ export default defineConfig({
     '**/unit/**',
     // 以下は旧ベースパス (BASE = '/i7') 前提で全ページ 404 → タイムアウトするため除外。
     // 現行のルート配信パスに合わせて改修するまでスキップ
-    '**/home.test.ts',
     '**/card-list.test.ts',
     '**/card-detail.test.ts',
     '**/song-list.test.ts',
