@@ -252,11 +252,11 @@
 
 <div>
   <!-- 楽曲サマリーバー（全幅・横長） -->
-  <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-4">
+  <section class="bg-white rounded-lg shadow p-4 mb-4">
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
       <div class="min-w-0">
-        <label for="song-select" class="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-2">🎵 楽曲</label>
-        <select id="song-select" class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={selectedSong?.id != null ? String(selectedSong.id) : ''} onchange={handleSongChange}>
+        <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
+        <select id="song-select" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={selectedSong?.id != null ? String(selectedSong.id) : ''} onchange={handleSongChange}>
           <option value="">楽曲を選択</option>
           {#if pickedSongs.length > 0}
             <optgroup label={`選択中の曲（${pickedSongs.length}曲・秒数順）`}>
@@ -275,12 +275,12 @@
         </select>
         <div id="song-info" class="mt-3" class:hidden={!selectedSong}>
           <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
-            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">曲名</dt><dd id="song-name-val" class="font-medium truncate">{selectedSong ? selectedSong.song_name || '-' : ''}</dd></div>
-            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">アーティスト</dt><dd id="song-artist" class="font-medium truncate">{selectedSong ? selectedSong.artist || '-' : ''}</dd></div>
-            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">楽曲種類</dt><dd id="song-type" class="font-medium">{selectedSong ? selectedSong.song_type || '-' : ''}</dd></div>
-            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">ノーツ数</dt><dd id="song-notes" class="font-medium">{selectedSong ? (selectedSong.notes_count || 0).toLocaleString() : ''}</dd></div>
-            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">秒数</dt><dd id="song-duration-val" class="font-medium">{selectedSong ? `${selectedSong.duration || '-'}秒` : ''}</dd></div>
-            <div><dt class="text-gray-500 dark:text-slate-400 text-[10px]">構成</dt><dd id="song-attr-counts">{#if songAttrCounts}<span style="color:{ATTR_HEX.Shout}">🔴{songAttrCounts.s}</span> <span style="color:{ATTR_HEX.Beat}">🟢{songAttrCounts.b}</span> <span style="color:{ATTR_HEX.Melody}">🔵{songAttrCounts.m}</span>{/if}</dd></div>
+            <div><dt class="text-gray-500 text-[10px]">曲名</dt><dd id="song-name-val" class="font-medium truncate">{selectedSong ? selectedSong.song_name || '-' : ''}</dd></div>
+            <div><dt class="text-gray-500 text-[10px]">アーティスト</dt><dd id="song-artist" class="font-medium truncate">{selectedSong ? selectedSong.artist || '-' : ''}</dd></div>
+            <div><dt class="text-gray-500 text-[10px]">楽曲種類</dt><dd id="song-type" class="font-medium">{selectedSong ? selectedSong.song_type || '-' : ''}</dd></div>
+            <div><dt class="text-gray-500 text-[10px]">ノーツ数</dt><dd id="song-notes" class="font-medium">{selectedSong ? (selectedSong.notes_count || 0).toLocaleString() : ''}</dd></div>
+            <div><dt class="text-gray-500 text-[10px]">秒数</dt><dd id="song-duration-val" class="font-medium">{selectedSong ? `${selectedSong.duration || '-'}秒` : ''}</dd></div>
+            <div><dt class="text-gray-500 text-[10px]">構成</dt><dd id="song-attr-counts">{#if songAttrCounts}<span style="color:{ATTR_HEX.Shout}">🔴{songAttrCounts.s}</span> <span style="color:{ATTR_HEX.Beat}">🟢{songAttrCounts.b}</span> <span style="color:{ATTR_HEX.Melody}">🔵{songAttrCounts.m}</span>{/if}</dd></div>
           </dl>
           <div class="mt-2 text-right">
             <a id="song-detail-anchor" href={selectedSong ? `${base}songs/${selectedSong.id}/` : '#'} class="text-xs text-indigo-600 hover:underline">楽曲詳細を見る →</a>
@@ -302,66 +302,66 @@
 
   <!-- 共通ブローチ スコア寄与 TOP10 -->
   {#if selectedSong && broachRanking.length > 0}
-    <details id="broach-ranking-section" class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 group" open>
-      <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 dark:text-slate-200 flex items-center justify-between select-none">
+    <details id="broach-ranking-section" class="bg-white rounded-lg shadow mb-4 group" open>
+      <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
         <span>🏅 共通ブローチ スコア寄与 TOP10</span>
-        <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </summary>
-      <div class="px-4 pb-4 border-t border-gray-100 dark:border-slate-800 pt-3">
-        <p class="text-[11px] text-gray-500 dark:text-slate-400 mb-3">この楽曲のノーツ分布における各共通ブローチ単独のスコア寄与（デッキ非依存の目安）。</p>
+      <div class="px-4 pb-4 border-t border-gray-100 pt-3">
+        <p class="text-[11px] text-gray-500 mb-3">この楽曲のノーツ分布における各共通ブローチ単独のスコア寄与（デッキ非依存の目安）。</p>
         <BroachRankingChart ranking={broachRanking} />
       </div>
     </details>
   {/if}
 
   <!-- スキルオプション（折りたたみ可、デフォルト開） -->
-  <details class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 group" open>
-    <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 dark:text-slate-200 flex items-center justify-between select-none">
+  <details class="bg-white rounded-lg shadow mb-4 group" open>
+    <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
       <span>⚙️ スキルオプション</span>
-      <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </summary>
-    <div class="px-4 pb-4 border-t border-gray-100 dark:border-slate-800 pt-3">
+    <div class="px-4 pb-4 border-t border-gray-100 pt-3">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <label class="flex items-center gap-2">
           <input type="checkbox" id="opt-scoreup-assist" class="rounded" bind:checked={scoreUpAssist} />
           <span>SCOREUPアシスト（属性値 ×1.2）</span>
         </label>
         <label class="flex items-center gap-2">
-          <span class="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">SCOREUPバッジ倍率</span>
-          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm" min="0" max="100" step="1" bind:value={scoreUpBadgeRate} oninput={saveState} />
-          <span class="text-xs text-gray-500 dark:text-slate-400">%</span>
+          <span class="text-xs text-gray-500 whitespace-nowrap">SCOREUPバッジ倍率</span>
+          <input type="number" id="opt-scoreup-badge-rate" class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" min="0" max="100" step="1" bind:value={scoreUpBadgeRate} oninput={saveState} />
+          <span class="text-xs text-gray-500">%</span>
         </label>
         <label class="flex items-center gap-2">
           <input type="checkbox" id="opt-owned-broach-limit" class="rounded" bind:checked={ownedBroachLimit} onchange={saveState} />
           <span>所持ブローチ縛り（共通ブローチを登録した所持数の範囲で選択。フレンド枠は対象外）</span>
         </label>
       </div>
-      <p class="text-[11px] text-gray-400 dark:text-slate-500 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
+      <p class="text-[11px] text-gray-400 mt-2">バッジ倍率: 0 で未装着、例: 15 → ×1.15</p>
     </div>
   </details>
 
   <div class="space-y-4">
-    <section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+    <section class="bg-white rounded-lg shadow p-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200">🎴 デッキ編成</h2>
+        <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
         <div class="relative flex gap-2">
           <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'} rounded hover:bg-indigo-200 transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
-          <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors" onclick={showLoadDropdown}>読込</button>
+          <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors" onclick={showLoadDropdown}>読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー" disabled={shareCopied} onclick={shareDeckUrl}>{shareCopied ? '✅ コピーしました' : '🔗 URLコピー'}</button>
-          <div id="load-deck-dropdown" class="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" class:hidden={loadDeckItems === null}>
+          <div id="load-deck-dropdown" class="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" class:hidden={loadDeckItems === null}>
             {#if loadDeckItems !== null}
               {#if loadDeckItems.length === 0}
-                <div class="p-3 text-xs text-gray-400 dark:text-slate-500 text-center">保存されたデッキがありません</div>
+                <div class="p-3 text-xs text-gray-400 text-center">保存されたデッキがありません</div>
               {:else}
                 {#each loadDeckItems as d (d.id)}
-                  <div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 dark:border-slate-800 last:border-0" data-deck-id={d.id} onclick={() => loadDeck(d.id)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadDeck(d.id); }}>
+                  <div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0" data-deck-id={d.id} onclick={() => loadDeck(d.id)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadDeck(d.id); }}>
                     <div class="min-w-0 flex-1">
-                      <div class="text-xs font-medium text-gray-700 dark:text-slate-200 truncate">{d.name}</div>
-                      <div class="text-[10px] text-gray-400 dark:text-slate-500">{d.dateLabel} / {d.cardCount}枚</div>
+                      <div class="text-xs font-medium text-gray-700 truncate">{d.name}</div>
+                      <div class="text-[10px] text-gray-400">{d.dateLabel} / {d.cardCount}枚</div>
                     </div>
                   </div>
                 {/each}
-                <a href="{base}decks/" class="block text-center text-[10px] text-indigo-500 hover:text-indigo-700 py-2 border-t border-gray-100 dark:border-slate-800">デッキ管理ページ →</a>
+                <a href="{base}decks/" class="block text-center text-[10px] text-indigo-500 hover:text-indigo-700 py-2 border-t border-gray-100">デッキ管理ページ →</a>
               {/if}
             {/if}
           </div>

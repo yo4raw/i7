@@ -103,13 +103,13 @@
     </td>
   {/if}
   <td class="px-3 py-2">{@html donut}</td>
-  <td class="px-3 py-2 text-right">{s.toLocaleString()}<div class="text-xs text-gray-400 dark:text-slate-500">{sPct}%</div></td>
-  <td class="px-3 py-2 text-right">{b.toLocaleString()}<div class="text-xs text-gray-400 dark:text-slate-500">{bPct}%</div></td>
-  <td class="px-3 py-2 text-right">{m.toLocaleString()}<div class="text-xs text-gray-400 dark:text-slate-500">{mPct}%</div></td>
+  <td class="px-3 py-2 text-right">{s.toLocaleString()}<div class="text-xs text-gray-400">{sPct}%</div></td>
+  <td class="px-3 py-2 text-right">{b.toLocaleString()}<div class="text-xs text-gray-400">{bPct}%</div></td>
+  <td class="px-3 py-2 text-right">{m.toLocaleString()}<div class="text-xs text-gray-400">{mPct}%</div></td>
   <td class="px-3 py-2 text-xs">
     <div>{card.ap_skill_type || ''}</div>
     {#if skillEffect}
-      <div class="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
+      <div class="text-[10px] text-gray-500 mt-0.5">
         <span class="font-medium">Lv{skillEffect.level}</span> {skillEffect.text}
       </div>
     {/if}

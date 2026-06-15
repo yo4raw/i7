@@ -190,15 +190,15 @@
 
 {#if detail}
   {@const f = detail.foot}
-  <details id="card-detail-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 group" open>
-    <summary class="cursor-pointer text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center justify-between select-none mb-3">
+  <details id="card-detail-section" class="bg-white rounded-lg shadow p-4 group" open>
+    <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
       <span>🧾 衣装詳細</span>
-      <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </summary>
     <div class="overflow-x-auto">
       <table class="w-full text-xs">
         <thead>
-          <tr class="text-gray-500 dark:text-slate-400 border-b">
+          <tr class="text-gray-500 border-b">
             <th class="text-left py-1 px-1">スロット</th>
             <th class="text-left py-1 px-1">衣装名</th>
             <th class="text-center py-1 px-1">特訓</th>
@@ -219,7 +219,7 @@
               <td class="py-1 px-1 text-[10px] {row.slotClass}">{SLOT_LABELS[row.i]}</td>
               <td class="py-1 px-1">
                 <div>{row.cardname}</div>
-                <div class="text-[10px] text-gray-400 dark:text-slate-500">{row.name}</div>
+                <div class="text-[10px] text-gray-400">{row.name}</div>
               </td>
               <td class="py-1 px-1 text-center {row.trainedClass}">{row.trainedLabel}</td>
               <td class="py-1 px-1 text-center {row.bonusClass}">{row.bonusLabel}</td>
@@ -235,8 +235,8 @@
           {/each}
         </tbody>
         <tfoot id="card-detail-foot">
-          <tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs">
-            <td colspan="4" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">単純属性値計</td>
+          <tr class="border-t-2 border-gray-300 font-bold text-xs">
+            <td colspan="4" class="py-1 px-1 text-right text-gray-700">単純属性値計</td>
             <td class="py-1 px-1 text-right {ATTR_TEXT_CLASS.Shout}">{f.totalShout.toLocaleString()}</td>
             <td class="py-1 px-1 text-right {ATTR_TEXT_CLASS.Beat}">{f.totalBeat.toLocaleString()}</td>
             <td class="py-1 px-1 text-right {ATTR_TEXT_CLASS.Melody}">{f.totalMelody.toLocaleString()}</td>
@@ -276,7 +276,7 @@
             </tr>
           {/if}
           {#if f.scoreUpAssist}
-            <tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs text-emerald-600">
+            <tr class="border-t-2 border-gray-300 font-bold text-xs text-emerald-600">
               <td colspan="4" class="py-1 px-1 text-right">ScoreUPアシスト (+{f.assistPct}%)</td>
               <td class="py-1 px-1 text-right">{f.assistShout > 0 ? `+${f.assistShout.toLocaleString()}` : '-'}</td>
               <td class="py-1 px-1 text-right">{f.assistBeat > 0 ? `+${f.assistBeat.toLocaleString()}` : '-'}</td>
@@ -285,15 +285,15 @@
               <td colspan="2"></td>
             </tr>
           {/if}
-          <tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold text-xs">
-            <td colspan="4" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">デッキ合計</td>
+          <tr class="border-t-2 border-gray-300 font-bold text-xs">
+            <td colspan="4" class="py-1 px-1 text-right text-gray-700">デッキ合計</td>
             <td class="py-1 px-1 text-right {ATTR_TEXT_CLASS.Shout}">{f.deckShout.toLocaleString()}</td>
             <td class="py-1 px-1 text-right {ATTR_TEXT_CLASS.Beat}">{f.deckBeat.toLocaleString()}</td>
             <td class="py-1 px-1 text-right {ATTR_TEXT_CLASS.Melody}">{f.deckMelody.toLocaleString()}</td>
             <td colspan="3"></td>
             <td colspan="2"></td>
           </tr>
-          <tr class="text-xs text-gray-500 dark:text-slate-400">
+          <tr class="text-xs text-gray-500">
             <td colspan="4" class="py-0.5 px-1 text-right">⚪🟢/1ノーツ</td>
             <td class="py-0.5 px-1 text-right {ATTR_TEXT_CLASS.Shout}">{f.noteShoutWhite.toLocaleString()}</td>
             <td class="py-0.5 px-1 text-right {ATTR_TEXT_CLASS.Beat}">{f.noteBeatWhite.toLocaleString()}</td>
@@ -301,7 +301,7 @@
             <td colspan="3"></td>
             <td colspan="2"></td>
           </tr>
-          <tr class="text-xs text-gray-500 dark:text-slate-400">
+          <tr class="text-xs text-gray-500">
             <td colspan="4" class="py-0.5 px-1 text-right">🔵🔴/1ノーツ</td>
             <td class="py-0.5 px-1 text-right {ATTR_TEXT_CLASS.Shout}">{f.noteShoutColor.toLocaleString()}</td>
             <td class="py-0.5 px-1 text-right {ATTR_TEXT_CLASS.Beat}">{f.noteBeatColor.toLocaleString()}</td>
@@ -312,6 +312,6 @@
         </tfoot>
       </table>
     </div>
-    <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
+    <p class="text-xs text-gray-400 mt-2">※ オート専用ブローチはスコア計算の対象外です</p>
   </details>
 {/if}

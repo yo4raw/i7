@@ -91,14 +91,14 @@
 <span class="flex items-center gap-3">
   <button
     type="button"
-    class="hover:text-gray-600 dark:hover:text-slate-200 hover:underline underline-offset-2"
+    class="hover:text-gray-600 hover:underline underline-offset-2"
     onclick={exportData}
   >
     エクスポート
   </button>
   <button
     type="button"
-    class="hover:text-gray-600 dark:hover:text-slate-200 hover:underline underline-offset-2"
+    class="hover:text-gray-600 hover:underline underline-offset-2"
     onclick={triggerImport}
   >
     インポート

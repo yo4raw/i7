@@ -29,7 +29,7 @@
   const chipBase =
     'inline-flex items-center rounded-full border px-3 py-1 text-sm cursor-pointer select-none transition-colors';
   const chipOff =
-    'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-200 hover:border-indigo-400';
+    'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
 
   function toggle(value: string) {
     const next = new Set(selected);
@@ -77,7 +77,7 @@
             onclick={() => toggleGroup(group)}
             class="{chipBase} border-dashed font-semibold {isGroupOn(group)
               ? 'bg-indigo-600 border-indigo-600 text-white'
-              : 'bg-white dark:bg-slate-800 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:border-indigo-500'}"
+              : 'bg-white border-indigo-300 text-indigo-600 hover:border-indigo-500'}"
           >
             {group.name}
           </button>
@@ -97,9 +97,9 @@
 {/snippet}
 
 {#if collapsible}
-  <details bind:open class="rounded-lg border border-gray-200 dark:border-slate-700">
+  <details bind:open class="rounded-lg border border-gray-200">
     <summary
-      class="flex cursor-pointer list-none items-center justify-between rounded-lg bg-gray-50 dark:bg-slate-700/50 px-3 py-2 text-sm text-gray-700 dark:text-slate-200 [&::-webkit-details-marker]:hidden"
+      class="flex cursor-pointer list-none items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 [&::-webkit-details-marker]:hidden"
     >
       <span class="flex items-center gap-2">
         {label}
@@ -107,15 +107,15 @@
           <span class="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white">{selected.size}</span>
         {/if}
       </span>
-      <span aria-hidden="true" class="text-gray-400 dark:text-slate-500">{open ? '▴' : '▾'}</span>
+      <span aria-hidden="true" class="text-gray-400">{open ? '▴' : '▾'}</span>
     </summary>
-    <div class="border-t border-gray-200 dark:border-slate-700 px-3 py-2.5">
+    <div class="border-t border-gray-200 px-3 py-2.5">
       {@render body()}
     </div>
   </details>
 {:else}
   <div>
-    <div class="mb-1 block text-xs font-medium text-gray-500 dark:text-slate-400">{label}</div>
+    <div class="mb-1 block text-xs font-medium text-gray-500">{label}</div>
     {@render body()}
   </div>
 {/if}

@@ -126,7 +126,7 @@
 
       if (isAutoOnly) {
         return {
-          cls: 'mt-1 w-full text-[8px] bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-1 py-0.5 text-gray-400 dark:text-slate-500 truncate text-center line-through',
+          cls: 'mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center line-through',
           title: `${label}（オート専用・計算対象外）`,
           text: `🔮 ${label}（オート専用）`,
         };
@@ -138,7 +138,7 @@
         };
       } else {
         return {
-          cls: 'mt-1 w-full text-[8px] bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-1 py-0.5 text-gray-400 dark:text-slate-500 truncate text-center',
+          cls: 'mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center',
           title: `${label}（条件未達）`,
           text: `🔮 ${label}`,
         };
@@ -167,7 +167,7 @@
   }
 
   function bonusTierSelectClass(tier: EventBonusTier): string {
-    const base = 'bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 dark:border-slate-600 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400';
+    const base = 'bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400';
     const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
     return def && def.selectClasses.length > 0 ? `${base} ${def.selectClasses.join(' ')}` : base;
   }
@@ -342,7 +342,7 @@
   {#each DISPLAY_ORDER as i (i)}
     {@const card = deckState.cards[i]}
     <div class="deck-slot" data-slot={i}>
-      <div class="text-[10px] text-center {i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500 dark:text-slate-400'} mb-1">{SLOT_LABELS[i]}</div>
+      <div class="text-[10px] text-center {i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'} mb-1">{SLOT_LABELS[i]}</div>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class={slotContentClass(i, card)}
@@ -366,10 +366,10 @@
             <RarityBadge rarity={card.rarity} sizeClass="px-1 py-0.5 text-[9px]" fallbackLabel="?" />
             <AttributeBadge attribute={attr} sizeClass="px-1 py-0.5 text-[9px]" />
           </div>
-          <div class="text-[9px] text-gray-600 dark:text-slate-300 text-center truncate w-full" title={card.cardname || ''}>{card.cardname || ''}</div>
-          <div class="text-[8px] text-gray-400 dark:text-slate-500 text-center">{card.name || ''}</div>
+          <div class="text-[9px] text-gray-600 text-center truncate w-full" title={card.cardname || ''}>{card.cardname || ''}</div>
+          <div class="text-[8px] text-gray-400 text-center">{card.name || ''}</div>
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-          <label class="trained-label mt-1 flex items-center gap-1 text-[9px] text-gray-600 dark:text-slate-300 cursor-pointer" onclick={stopProp}>
+          <label class="trained-label mt-1 flex items-center gap-1 text-[9px] text-gray-600 cursor-pointer" onclick={stopProp}>
             <input type="checkbox" class="trained-check w-3 h-3" data-trained-slot={i} checked={deckState.trained[i]} onchange={(e) => onTrainedChange(e, i)} />
             <span>特訓済</span>
           </label>
@@ -378,7 +378,7 @@
               <option value={t.key}>{t.optionLabel}</option>
             {/each}
           </select>
-          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 dark:border-slate-600 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot={i} value={deckState.skillLevels[i]} onclick={stopProp} onchange={(e) => onSkillLevelChange(e, i)}>
+          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot={i} value={deckState.skillLevels[i]} onclick={stopProp} onchange={(e) => onSkillLevelChange(e, i)}>
             {#each [1, 2, 3, 4, 5] as lv (lv)}
               <option value={lv}>スキルLv{lv}</option>
             {/each}

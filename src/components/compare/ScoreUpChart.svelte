@@ -23,7 +23,7 @@
 </script>
 
 {#if entries.length === 0}
-  <p class="text-sm text-gray-500 dark:text-slate-400 py-10 text-center">対象の衣装がありません</p>
+  <p class="text-sm text-gray-500 py-10 text-center">対象の衣装がありません</p>
 {:else}
   <div class="overflow-x-auto">
     <div class="flex items-end gap-3 px-3 pt-5 pb-3 min-w-max">
@@ -37,16 +37,16 @@
           title={entry.card.cardname}
           onclick={() => onToggle(entry)}
         >
-          <span class="text-[10px] font-bold text-gray-700 dark:text-slate-200 leading-tight text-center">
+          <span class="text-[10px] font-bold text-gray-700 leading-tight text-center">
             {formatScore(sortKey === 'max' ? entry.maxTotalScore : entry.totalScore)}
           </span>
           <span class="flex flex-col justify-end w-9" style={`height:${CHART_HEIGHT}px`}>
             <!-- 上乗せ: スキル最大値 − スキル期待値（発動率による目減り分） -->
-            <span class="block w-full bg-amber-200 dark:bg-amber-800/60 rounded-t-sm" style={`height:${px(entry.skillMax) - px(entry.skillExpected)}px`}></span>
+            <span class="block w-full bg-amber-200 rounded-t-sm" style={`height:${px(entry.skillMax) - px(entry.skillExpected)}px`}></span>
             <!-- 実体: スキル期待値 -->
-            <span class="block w-full bg-amber-400 dark:bg-amber-500" style={`height:${px(entry.skillExpected)}px`}></span>
+            <span class="block w-full bg-amber-400" style={`height:${px(entry.skillExpected)}px`}></span>
             <!-- 属性値由来スコア -->
-            <span class="block w-full bg-indigo-500 dark:bg-indigo-400" style={`height:${px(entry.baseScore)}px`}></span>
+            <span class="block w-full bg-indigo-500" style={`height:${px(entry.baseScore)}px`}></span>
           </span>
           <img
             src={cardThumbUrl(entry.card.ID ?? '')}
@@ -58,7 +58,7 @@
             class:ring-offset-1={selected}
             style={`border-color:${ATTR_HEX[entry.attribute]}`}
           />
-          <span class="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 leading-tight text-center break-words w-full">
+          <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
             期待 {formatScore(entry.totalScore)}<br />
             最大 {formatScore(entry.maxTotalScore)}<br />
             {entry.skill?.originalType ?? entry.card.ap_skill_type ?? 'スキルなし'}
@@ -68,10 +68,10 @@
       {/each}
     </div>
   </div>
-  <div class="flex flex-wrap items-center gap-4 px-3 pb-3 text-[11px] text-gray-600 dark:text-slate-300">
-    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500 dark:bg-indigo-400"></span>属性値由来スコア</span>
-    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400 dark:bg-amber-500"></span>スキル期待値</span>
-    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-200 dark:bg-amber-800/60"></span>最大との差（発動率による目減り）</span>
-    <span class="text-gray-400 dark:text-slate-500">サムネ枠色 = 属性 / タップで詳細比較（最大4枚）</span>
+  <div class="flex flex-wrap items-center gap-4 px-3 pb-3 text-[11px] text-gray-600">
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500"></span>属性値由来スコア</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>スキル期待値</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-200"></span>最大との差（発動率による目減り）</span>
+    <span class="text-gray-400">サムネ枠色 = 属性 / タップで詳細比較（最大4枚）</span>
   </div>
 {/if}
