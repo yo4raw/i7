@@ -25,3 +25,4 @@
 | [0011](0011-song-detail-two-column.md) | 楽曲詳細の属性比率／ノーツ内訳を PC で横並びにする | 承認 |
 | [0012](0012-highscore-event-ur-only.md) | ハイスコアイベントの特効衣装は UR のみ表示する | 承認 |
 | [0013](0013-song-note-white-color-split.md) | 楽曲詳細のノーツ内訳で白ノーツ／色ノーツを分離表示する | 承認 |
+| [0014](0014-bad-to-perfect-skill-label.md) | スキル種別ラベル「BAD以上をPerfectに変更」を「判定強化(BAD→Perfect)」に統一 | 承認 |

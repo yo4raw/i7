@@ -60,7 +60,7 @@ export function formatSkillBadge(skillType: string | null): SkillBadge {
   if (skillType === SKILL_TYPE.BAD_TO_PERFECT) {
     return { label: 'BAD→Perfect', isShrink: false };
   }
-  if (skillType === 'MISS以上をPerfectに変更' || skillType === 'MISS→Perfect') {
+  if (skillType === SKILL_TYPE.MISS_TO_PERFECT) {
     return { label: 'MISS→Perfect', isShrink: false };
   }
   if (skillType === '判定拡大スコアダウン') {

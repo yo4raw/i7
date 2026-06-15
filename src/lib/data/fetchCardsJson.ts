@@ -78,13 +78,18 @@ export const SKILL_TYPE = {
   SHRINK: '判定縮小スコアアップ',
   SHRINK_PREFIX: '判定縮小（',
   SHRINK_TIMER: '判定縮小（タイマー）',
-  BAD_TO_PERFECT: 'BAD以上をPerfectに変更',
+  BAD_TO_PERFECT: '判定強化(BAD→Perfect)',
+  MISS_TO_PERFECT: '判定ガード(MISS→Perfect)',
 } as const;
 
 /** ap_skill_type の表記揺れを正規化するマップ */
 const SKILL_TYPE_NORMALIZE: Record<string, string> = {
   'MISS→GOOD': SKILL_TYPE.MISS_TO_GOOD,
   '判定領域を': SKILL_TYPE.SHRINK,
+  // 旧表記（スプレッドシートの生値）を短い表示ラベルへ統一
+  'BAD以上をPerfectに変更': SKILL_TYPE.BAD_TO_PERFECT,
+  'MISS以上をPerfectに変更': SKILL_TYPE.MISS_TO_PERFECT,
+  'MISS→Perfect': SKILL_TYPE.MISS_TO_PERFECT,
 };
 
 const MIN_EXPECTED_CARDS = 100;

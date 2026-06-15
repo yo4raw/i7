@@ -78,8 +78,7 @@ describe('formatSkillBadge (SNS共有パネル用の短縮ラベル)', () => {
 
   it('判定変更系は矢印表記に短縮する', () => {
     expect(formatSkillBadge(SKILL_TYPE.BAD_TO_PERFECT)).toEqual({ label: 'BAD→Perfect', isShrink: false });
-    expect(formatSkillBadge('MISS以上をPerfectに変更')).toEqual({ label: 'MISS→Perfect', isShrink: false });
-    expect(formatSkillBadge('MISS→Perfect')).toEqual({ label: 'MISS→Perfect', isShrink: false });
+    expect(formatSkillBadge(SKILL_TYPE.MISS_TO_PERFECT)).toEqual({ label: 'MISS→Perfect', isShrink: false });
     expect(formatSkillBadge(SKILL_TYPE.MISS_TO_GOOD)).toEqual({ label: 'MISS→Good', isShrink: false });
   });
 
