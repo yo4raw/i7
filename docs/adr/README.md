@@ -26,3 +26,4 @@
 | [0012](0012-highscore-event-ur-only.md) | ハイスコアイベントの特効衣装は UR のみ表示する | 承認 |
 | [0013](0013-song-note-white-color-split.md) | 楽曲詳細のノーツ内訳で白ノーツ／色ノーツを分離表示する | 承認 |
 | [0014](0014-bad-to-perfect-skill-label.md) | スキル種別ラベル「BAD以上をPerfectに変更」を「判定強化(BAD→Perfect)」に統一 | 承認 |
+| [0015](0015-card-list-skill-effect.md) | 衣装一覧のリスト表示に最上位レベルのスキル効果文を表示する | 承認 |

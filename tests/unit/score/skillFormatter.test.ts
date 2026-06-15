@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatSkillEffect, formatSkillBadge } from '../../../src/lib/score/skillFormatter';
-import { SKILL_TYPE, type ApSkillLevel } from '../../../src/lib/data/fetchCardsJson';
+import { formatSkillEffect, formatSkillBadge, getMaxApSkillLevel, formatSkillEffectMax } from '../../../src/lib/score/skillFormatter';
+import { SKILL_TYPE, type ApSkillLevel, type Card } from '../../../src/lib/data/fetchCardsJson';
 
 const sl = (
   count: number | null,
@@ -89,5 +89,81 @@ describe('formatSkillBadge (SNS共有パネル用の短縮ラベル)', () => {
   it('null は「-」、未知の種別はそのまま返す', () => {
     expect(formatSkillBadge(null)).toEqual({ label: '-', isShrink: false });
     expect(formatSkillBadge('謎スキル')).toEqual({ label: '謎スキル', isShrink: false });
+  });
+});
+
+/** スキルレベル別フィールドを持つ最小 Card を組み立てる */
+function makeCardWithLevels(
+  skillType: string | null,
+  req: string | null,
+  levels: Partial<Record<1 | 2 | 3 | 4 | 5, { count: number; per: number; value: number; rate?: number }>>,
+): Card {
+  const card: Record<string, unknown> = { ap_skill_type: skillType, ap_skill_req: req };
+  for (let i = 1; i <= 5; i++) {
+    const lv = levels[i as 1 | 2 | 3 | 4 | 5];
+    card[`ap_skill_${i}_count`] = lv?.count ?? null;
+    card[`ap_skill_${i}_per`] = lv?.per ?? null;
+    card[`ap_skill_${i}_value`] = lv?.value ?? null;
+    card[`ap_skill_${i}_rate`] = lv?.rate ?? null;
+  }
+  return card as unknown as Card;
+}
+
+describe('getMaxApSkillLevel (最上位スキルレベルの判定)', () => {
+  it('Lv5 まで揃っていれば 5', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.SCOREUP_TIMER, null, {
+      1: { count: 15, per: 30, value: 100 },
+      5: { count: 15, per: 45, value: 300 },
+    });
+    expect(getMaxApSkillLevel(card)).toBe(5);
+  });
+
+  it('Lv5 が無い（SSR等）なら Lv4 にフォールバック', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.SCOREUP_TIMER, null, {
+      1: { count: 15, per: 30, value: 100 },
+      4: { count: 15, per: 40, value: 250 },
+    });
+    expect(getMaxApSkillLevel(card)).toBe(4);
+  });
+
+  it('Lv5 が未登録（0 埋め）なら Lv4 にフォールバック', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.SCOREUP_TIMER, null, {
+      4: { count: 12, per: 44, value: 2662 },
+      5: { count: 0, per: 0, value: 0 },
+    });
+    expect(getMaxApSkillLevel(card)).toBe(4);
+  });
+
+  it('レベルデータが全く無ければ null', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.SCOREUP_TIMER, null, {});
+    expect(getMaxApSkillLevel(card)).toBeNull();
+  });
+
+  it('全レベル 0 埋め（完全未登録）なら null', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.SCOREUP_TIMER, null, {
+      1: { count: 0, per: 0, value: 0 },
+      5: { count: 0, per: 0, value: 0 },
+    });
+    expect(getMaxApSkillLevel(card)).toBeNull();
+  });
+});
+
+describe('formatSkillEffectMax (一覧用 最上位レベル効果文)', () => {
+  it('最上位レベルの効果文とレベル番号を返す', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.SCOREUP_TIMER, null, {
+      4: { count: 15, per: 40, value: 250 },
+    });
+    expect(formatSkillEffectMax(card)).toEqual({ level: 4, text: '15秒毎に40％の確率でスコア250UP' });
+  });
+
+  it('効果文を持たない種別（判定補助系）は null', () => {
+    const card = makeCardWithLevels(SKILL_TYPE.MISS_TO_PERFECT, null, {
+      5: { count: 10, per: 30, value: 5 },
+    });
+    expect(formatSkillEffectMax(card)).toBeNull();
+  });
+
+  it('スキルデータ無しは null', () => {
+    expect(formatSkillEffectMax(makeCardWithLevels(null, null, {}))).toBeNull();
   });
 });

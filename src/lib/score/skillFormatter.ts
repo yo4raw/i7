@@ -1,5 +1,5 @@
-import type { ApSkillLevel } from '../data/fetchCardsJson';
-import { SKILL_TYPE } from '../data/fetchCardsJson';
+import type { ApSkillLevel, Card } from '../data/fetchCardsJson';
+import { SKILL_TYPE, getApSkillLevel } from '../data/fetchCardsJson';
 
 /**
  * スキル種別・発動条件・レベル別数値から自然文の効果表示を生成する。
@@ -35,6 +35,32 @@ export function formatSkillEffect(
     return `${req ?? ''}${c}回毎に${p}％の確率でスコア${v}UP`;
   }
   return '-';
+}
+
+/**
+ * 数値（count/per/value）が有効な最上位スキルレベルを返す。
+ * Lv5 が無い衣装（SSR）や Lv5 未登録の新規衣装（値が 0 で埋まっている）は Lv4 以下に
+ * フォールバックする。いずれのレベルも有効でなければ null。
+ * 「有効」= count/per/value がいずれも 0 より大きい（null・0 は未登録扱い）。
+ */
+export function getMaxApSkillLevel(card: Card): 1 | 2 | 3 | 4 | 5 | null {
+  for (const level of [5, 4, 3, 2, 1] as const) {
+    const sl = getApSkillLevel(card, level);
+    if ((sl.count ?? 0) > 0 && (sl.per ?? 0) > 0 && (sl.value ?? 0) > 0) return level;
+  }
+  return null;
+}
+
+/**
+ * 衣装の「最上位レベルの効果文」を生成する。一覧リストでの表示用。
+ * 効果文を持たない種別（スキルなし・判定補助系など）や該当レベル無しは null を返す。
+ */
+export function formatSkillEffectMax(card: Card): { level: 1 | 2 | 3 | 4 | 5; text: string } | null {
+  const level = getMaxApSkillLevel(card);
+  if (level == null) return null;
+  const text = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, getApSkillLevel(card, level));
+  if (text === '-') return null;
+  return { level, text };
 }
 
 export interface SkillBadge {

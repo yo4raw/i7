@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { CardListItem } from '../../lib/cardListData';
+  import type { Card } from '../../lib/data/fetchCardsJson';
+  import { formatSkillEffectMax } from '../../lib/score/skillFormatter';
   import { ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { attrDonutSvg } from '../../lib/donutChart';
@@ -50,6 +52,7 @@
 
   const donut = $derived(attrDonutSvg(s, b, m));
   const bonusDef = $derived(bonusTier && bonusTier !== 'none' ? EVENT_BONUS_TIERS.find((t) => t.key === bonusTier) ?? null : null);
+  const skillEffect = $derived(formatSkillEffectMax(card as unknown as Card));
 
   let rowBgCurrent = $state(rowBg);
   $effect(() => { rowBgCurrent = rowBg; });
@@ -103,7 +106,14 @@
   <td class="px-3 py-2 text-right">{s.toLocaleString()}<div class="text-xs text-gray-400 dark:text-slate-500">{sPct}%</div></td>
   <td class="px-3 py-2 text-right">{b.toLocaleString()}<div class="text-xs text-gray-400 dark:text-slate-500">{bPct}%</div></td>
   <td class="px-3 py-2 text-right">{m.toLocaleString()}<div class="text-xs text-gray-400 dark:text-slate-500">{mPct}%</div></td>
-  <td class="px-3 py-2 text-xs">{card.ap_skill_type || ''}</td>
+  <td class="px-3 py-2 text-xs">
+    <div>{card.ap_skill_type || ''}</div>
+    {#if skillEffect}
+      <div class="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
+        <span class="font-medium">Lv{skillEffect.level}</span> {skillEffect.text}
+      </div>
+    {/if}
+  </td>
   <td class="px-3 py-2">
     <CountInput cardId={card.ID} />
   </td>
