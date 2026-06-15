@@ -14,6 +14,17 @@ test.describe('衣装比較ページ', () => {
     await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
   });
 
+  test('スコアアップタブに期待/最大ソートセレクタと最大表示がある', async ({ page }) => {
+    const bar = page.getByTestId('scoreup-bar').first();
+    await expect(bar).toBeVisible({ timeout: 20000 });
+    await expect(bar.getByText(/最大 /)).toBeVisible();
+    const select = page.getByLabel('スコアアップソート');
+    await expect(select).toBeVisible();
+    await expect(select).toHaveValue('expected');
+    await select.selectOption('max');
+    await expect(page.getByTestId('scoreup-bar').first()).toBeVisible();
+  });
+
   test('判定縮小タブに切り替えると縮小ランキングが表示される', async ({ page }) => {
     await page.getByRole('tab', { name: '判定縮小' }).click();
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });

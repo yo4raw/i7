@@ -12,8 +12,8 @@
   } from '../lib/data/eventBonusTiers';
   import { STORAGE_KEYS, loadJson } from '../lib/storage';
   import {
-    buildCardStrengthEntry, classifyCard, compareShrinkBy,
-    type CardStrengthEntry, type ShrinkSortKey,
+    buildCardStrengthEntry, classifyCard, compareShrinkBy, compareScoreUpBy,
+    type CardStrengthEntry, type ShrinkSortKey, type ScoreUpSortKey,
   } from '../lib/score/cardStrength';
   import ScoreUpChart from './compare/ScoreUpChart.svelte';
   import ShrinkChart from './compare/ShrinkChart.svelte';
@@ -42,6 +42,7 @@
   let ownedOnly = $state(false);
   let applyBonus = $state(false);
   let tab = $state<'scoreUp' | 'shrink'>('scoreUp');
+  let scoreUpSort = $state<ScoreUpSortKey>('expected');
   let shrinkSort = $state<ShrinkSortKey>('expected');
   let selectedSongId = $state<number | null>(null);
   let selectedIds = $state<number[]>([]);
@@ -90,7 +91,7 @@
   });
 
   const scoreUpEntries = $derived(
-    [...entries.filter((e) => classifyCard(e.card) === 'scoreUp')].sort((a, b) => b.totalScore - a.totalScore),
+    [...entries.filter((e) => classifyCard(e.card) === 'scoreUp')].sort(compareScoreUpBy(scoreUpSort)),
   );
   const shrinkEntries = $derived(
     [...entries.filter((e) => classifyCard(e.card) === 'shrink')].sort(compareShrinkBy(shrinkSort)),
@@ -174,7 +175,18 @@
   {#if !selectedSong}
     <p class="text-sm text-gray-500 dark:text-slate-400 py-10 text-center">楽曲データを読み込んでいます…</p>
   {:else if tab === 'scoreUp'}
-    <ScoreUpChart entries={scoreUpEntries} selectedIds={selectedIds} tierOf={tierOf} onToggle={toggleSelect} />
+    <div class="flex items-center gap-2 px-3 pt-3 text-sm">
+      <span class="text-gray-600 dark:text-slate-300 shrink-0">並び替え</span>
+      <select
+        class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        bind:value={scoreUpSort}
+        aria-label="スコアアップソート"
+      >
+        <option value="expected">期待スコア合計</option>
+        <option value="max">最大スコア合計</option>
+      </select>
+    </div>
+    <ScoreUpChart entries={scoreUpEntries} selectedIds={selectedIds} tierOf={tierOf} onToggle={toggleSelect} sortKey={scoreUpSort} />
   {:else}
     <div class="flex items-center gap-2 px-3 pt-3 text-sm">
       <span class="text-gray-600 dark:text-slate-300 shrink-0">並び替え</span>
