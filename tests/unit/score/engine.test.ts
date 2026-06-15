@@ -102,7 +102,7 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
     });
 
     it('10th 環 の BAD→Perfect スキルはスコアに影響しないため skill=null として解析される', () => {
-      expect(tenthTamakiMainCard.ap_skill_type).toBe('BAD以上をPerfectに変更');
+      expect(tenthTamakiMainCard.ap_skill_type).toBe('判定強化(BAD→Perfect)');
       expect(team.cards[0].skill).toBeNull();
     });
 
