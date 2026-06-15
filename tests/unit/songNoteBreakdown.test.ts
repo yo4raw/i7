@@ -28,41 +28,47 @@ function makeSong(groups: Partial<Record<string, Partial<Record<string, number>>
 }
 
 describe('buildNoteBreakdown', () => {
-  it('始点(white)と終点(color)を合算して属性別ノーツ数を出す', () => {
+  it('白(始点)と色(終点)を属性別に分離して出す', () => {
     const song = makeSong({
       light_3: { shout_white: 20, shout_color: 6, melody_white: 32, melody_color: 3 },
     });
     const bd = buildNoteBreakdown(song);
     const row = bd.rows.find(r => r.key === 'light_3')!;
-    expect(row.shout).toBe(26);
-    expect(row.beat).toBe(0);
-    expect(row.melody).toBe(35);
+    expect(row.shoutWhite).toBe(20);
+    expect(row.shoutColor).toBe(6);
+    expect(row.beatWhite).toBe(0);
+    expect(row.beatColor).toBe(0);
+    expect(row.melodyWhite).toBe(32);
+    expect(row.melodyColor).toBe(3);
     expect(row.multiplier).toBe(1.1);
     expect(row.label).toBe(STAGE_LABELS.light_3);
   });
 
-  it('全属性0のステージ行は除外する', () => {
-    const song = makeSong({ light_3: { shout_white: 10 } });
+  it('白+色がすべて0のステージ行は除外する', () => {
+    const song = makeSong({ light_3: { shout_white: 10 }, light_4: { shout_color: 5 } });
     const bd = buildNoteBreakdown(song);
-    expect(bd.rows.map(r => r.key)).toEqual(['light_3']);
+    expect(bd.rows.map(r => r.key)).toEqual(['light_3', 'light_4']);
   });
 
-  it('属性別の合計を全ステージ合算で返す', () => {
+  it('属性別×白/色の合計を全ステージ合算で返す', () => {
     const song = makeSong({
       light_3: { shout_white: 10, beat_color: 4 },
       chorus_light_6: { shout_color: 5, melody_white: 7 },
     });
     const bd = buildNoteBreakdown(song);
-    expect(bd.totals.shout).toBe(15);
-    expect(bd.totals.beat).toBe(4);
-    expect(bd.totals.melody).toBe(7);
+    expect(bd.totals.shoutWhite).toBe(10);
+    expect(bd.totals.shoutColor).toBe(5);
+    expect(bd.totals.beatWhite).toBe(0);
+    expect(bd.totals.beatColor).toBe(4);
+    expect(bd.totals.melodyWhite).toBe(7);
+    expect(bd.totals.melodyColor).toBe(0);
   });
 
   it('ステージ順は notes_20 → … → chorus_light_6 を保つ', () => {
     const song = makeSong({
       chorus_light_6: { shout_white: 1 },
       notes_20: { beat_white: 1 },
-      light_5: { melody_white: 1 },
+      light_5: { melody_color: 1 },
     });
     const bd = buildNoteBreakdown(song);
     expect(bd.rows.map(r => r.key)).toEqual(['notes_20', 'light_5', 'chorus_light_6']);
@@ -72,7 +78,11 @@ describe('buildNoteBreakdown', () => {
     const bd = buildNoteBreakdown(makeSong({}));
     expect(bd.hasNotes).toBe(false);
     expect(bd.rows).toEqual([]);
-    expect(bd.totals).toEqual({ shout: 0, beat: 0, melody: 0 });
+    expect(bd.totals).toEqual({
+      shoutWhite: 0, shoutColor: 0,
+      beatWhite: 0, beatColor: 0,
+      melodyWhite: 0, melodyColor: 0,
+    });
   });
 
   it('STAGE_LABELS は 8 ステージすべてに日本語ラベルを持つ', () => {
