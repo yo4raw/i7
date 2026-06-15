@@ -31,3 +31,4 @@
 | [0017](0017-card-compare-shrink-attr-reference.md) | 衣装比較 判定縮小タブに属性値由来スコアを参考表示 | 承認 |
 | [0018](0018-card-compare-scoreup-max-overlay.md) | 衣装比較 スコアアップタブに最大値を重ね、期待/最大ソートを追加 | 承認 |
 | [0019](0019-home-page-dashboard-redesign.md) | トップページをダッシュボード型へフルリデザイン | 承認 |
+| [0020](0020-abolish-dark-mode.md) | ダークモードの廃止（段階的） | 承認 |
