@@ -19,6 +19,16 @@ test.describe('衣装比較ページ', () => {
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
   });
 
+  test('棒のサムネイルが card.ID ベースの th_cards 画像を指す', async ({ page }) => {
+    const bar = page.getByTestId('scoreup-bar').first();
+    await bar.waitFor({ timeout: 20000 });
+    const cardId = await bar.getAttribute('data-card-id');
+    const src = await bar.locator('img').getAttribute('src');
+    // cardID ではなく ID ベースであること（過去のフィールド取り違えバグの再発防止）
+    expect(cardId).toBeTruthy();
+    expect(src).toMatch(new RegExp(`/assets/th_cards/${cardId}\\.png$`));
+  });
+
   test('棒をクリックすると詳細比較パネルが開閉する', async ({ page }) => {
     const bar = page.getByTestId('scoreup-bar').first();
     await bar.waitFor({ timeout: 20000 });

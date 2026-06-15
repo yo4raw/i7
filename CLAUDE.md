@@ -98,8 +98,10 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 | 種別 | ディレクトリ | URL パターン |
 |------|-------------|-------------|
-| フルサイズ画像 | `public/assets/cards/` | `{BASE_URL}assets/cards/{cardID}.png` |
-| サムネイル画像 | `public/assets/th_cards/` | `{BASE_URL}assets/th_cards/{cardID}.png` |
+| フルサイズ画像 | `public/assets/cards/` | `{BASE_URL}assets/cards/{ID}.png` |
+| サムネイル画像 | `public/assets/th_cards/` | `{BASE_URL}assets/th_cards/{ID}.png` |
+
+> ⚠️ **`Card.ID` と `Card.cardID` は別物**（`fetchCardsJson.ts` で別フィールド）。画像ファイル名・カード詳細パス (`cards/{id}/`)・localStorage の所持数キー・特効ティア照合など、**カードを指す ID はすべて `Card.ID`** を使う。`cardID` は固有ブローチ照合（`FixedBroach.card_id === Card.cardID`）など限られた用途専用で、画像やルーティングに使うと別カードを指してしまう。画像 URL は文字列を直書きせず `cardImageUrl(card.ID)` / `cardThumbUrl(card.ID)`（`src/lib/ui.ts`）を使うこと。
 
 画像・イベント DB はゲームサーバー (`i7.step-on-dream.net`) から GitHub Actions の cron ワークフローで自動取得され、PR として追加される:
 

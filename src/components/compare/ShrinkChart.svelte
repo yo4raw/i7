@@ -1,6 +1,7 @@
 <script lang="ts">
   import { shrinkTieKey, type CardStrengthEntry } from '../../lib/score/cardStrength';
-  import { ATTR_HEX, CARD_THUMB_BASE_URL } from '../../lib/constants';
+  import { ATTR_HEX } from '../../lib/constants';
+  import { cardThumbUrl } from '../../lib/ui';
   import { bonusBadgeHtml, type EventBonusTier } from '../../lib/data/eventBonusTiers';
 
   type Props = {
@@ -68,7 +69,7 @@
                 onclick={() => onToggle(entry)}
               >
                 <img
-                  src={`${CARD_THUMB_BASE_URL}/${entry.card.cardID}.png`}
+                  src={cardThumbUrl(entry.card.ID ?? '')}
                   alt={entry.card.cardname || ''}
                   loading="lazy"
                   class="w-12 h-12 rounded border-[3px] object-cover"
