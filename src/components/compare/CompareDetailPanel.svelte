@@ -1,6 +1,7 @@
 <script lang="ts">
   import { formatScore, type CardStrengthEntry } from '../../lib/score/cardStrength';
-  import { ATTR_HEX, CARD_THUMB_BASE_URL } from '../../lib/constants';
+  import { ATTR_HEX } from '../../lib/constants';
+  import { cardThumbUrl } from '../../lib/ui';
 
   type Props = {
     entries: CardStrengthEntry[];
@@ -51,7 +52,7 @@
               <th class="px-2 py-1 text-center font-medium">
                 <div class="flex flex-col items-center gap-0.5">
                   <img
-                    src={`${CARD_THUMB_BASE_URL}/${entry.card.cardID}.png`}
+                    src={cardThumbUrl(entry.card.ID ?? '')}
                     alt={entry.card.cardname || ''}
                     loading="lazy"
                     class="w-10 h-10 rounded border-2 object-cover"
