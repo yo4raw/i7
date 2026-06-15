@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CardStrengthEntry, ShrinkSortKey } from '../../lib/score/cardStrength';
+  import { formatScore, type CardStrengthEntry, type ShrinkSortKey } from '../../lib/score/cardStrength';
   import { ATTR_HEX } from '../../lib/constants';
   import { cardThumbUrl } from '../../lib/ui';
   import { bonusBadgeHtml, type EventBonusTier } from '../../lib/data/eventBonusTiers';
@@ -84,7 +84,8 @@
             <span class="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 leading-tight text-center">
               最大 {sec(entry.maxCoverSec)}s ({pct(mr)})<br />
               期待 {sec(entry.expectedCoverSec)}s ({pct(er)})<br />
-              {condLabel(entry)} / {entry.skill?.per ?? 0}%
+              {condLabel(entry)} / {entry.skill?.per ?? 0}%<br />
+              属性 {formatScore(entry.baseScore)}
             </span>
             {@html bonusBadgeHtml(tierOf(entry))}
           </button>
@@ -93,6 +94,6 @@
     </div>
   </div>
   <div class="px-3 pb-3 text-[11px] text-gray-400 dark:text-slate-500">
-    棒の高さ = カバー率（曲全体に対する縮小秒数の割合）。濃い部分 = 期待カバー率（発動確率込み）、薄い部分 = 最大との差（発動率による目減り）。▲ は 100% 超。並び順: {sortKey === 'max' ? '最大カバー秒数' : '期待カバー秒数'}の降順
+    棒の高さ = カバー率（曲全体に対する縮小秒数の割合）。濃い部分 = 期待カバー率（発動確率込み）、薄い部分 = 最大との差（発動率による目減り）。▲ は 100% 超。並び順: {sortKey === 'max' ? '最大カバー秒数' : '期待カバー秒数'}の降順。属性 = 選択曲での属性値由来スコア（多色拮抗曲の参考値、順位には影響しません）
   </div>
 {/if}
