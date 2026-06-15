@@ -7,9 +7,8 @@ import {
   buildCardStrengthEntry,
   calcBaseScore,
   classifyCard,
-  compareShrink,
+  compareShrinkBy,
   formatScore,
-  shrinkTieKey,
 } from '../../../src/lib/score/cardStrength';
 import { calcExpectedScore, computeTeam, flattenNotes } from '../../../src/lib/score/engine';
 import { findCardById, findSongById } from '../../fixtures';
@@ -140,35 +139,52 @@ describe('判定縮小系', () => {
     expect(classifyCard(makeCard({ ap_skill_type: null }))).toBe('scoreUp');
   });
 
-  it('縮小はスキル期待値 0・最大発動回数のみ算出', () => {
+  it('縮小はスキル期待値 0・カバー秒数を算出（最大/期待）', () => {
     const entry = buildCardStrengthEntry(shrinkCard(), [], makeSong());
     expect(entry.skillExpected).toBe(0);
     expect(entry.maxActivations).toBe(16); // floor(493/30)
+    // 最大カバー秒数 = 16 × 8 = 128、期待カバー秒数 = 128 × 0.4 = 51.2
+    expect(entry.maxCoverSec).toBe(128);
+    expect(entry.expectedCoverSec).toBeCloseTo(51.2, 5);
   });
 
-  it('compareShrink: 秒数 → 最大発動回数 → 確率 → 属性値合計の辞書式', () => {
-    const song = makeSong();
-    const e9sec = buildCardStrengthEntry(shrinkCard({ ap_skill_5_value: 9 }), [], song);
-    const e8sec = buildCardStrengthEntry(shrinkCard(), [], song);
-    expect(compareShrink(e9sec, e8sec)).toBeLessThan(0); // 9秒が先
-
-    const eCombo25 = buildCardStrengthEntry(shrinkCard({ ap_skill_5_count: 25 }), [], song);
-    expect(compareShrink(eCombo25, e8sec)).toBeLessThan(0); // 同秒数 → 発動回数 19 > 16
-
-    const ePer50 = buildCardStrengthEntry(shrinkCard({ ap_skill_5_per: 50 }), [], song);
-    expect(compareShrink(ePer50, e8sec)).toBeLessThan(0); // 同秒数・同回数 → 確率 50 > 40
-
-    const eHighAppeal = buildCardStrengthEntry(shrinkCard({ melody_max: 5000 }), [], song);
-    expect(compareShrink(eHighAppeal, e8sec)).toBeLessThan(0); // 全同 → 属性値合計
+  it('タイマー型縮小: 発動機会は曲秒数', () => {
+    // count=15(秒毎), value=10(秒), per=50 → maxActivations=floor(113/15)=7
+    const entry = buildCardStrengthEntry(
+      shrinkCard({ ap_skill_type: '判定縮小（タイマー）', ap_skill_5_count: 15, ap_skill_5_value: 10, ap_skill_5_per: 50 }),
+      [], makeSong(),
+    );
+    expect(entry.maxActivations).toBe(7);
+    expect(entry.maxCoverSec).toBe(70); // 7 × 10
+    expect(entry.expectedCoverSec).toBeCloseTo(35, 5); // 70 × 0.5
   });
 
-  it('shrinkTieKey: 秒数・発動回数・確率が同じなら同率', () => {
+  it('スコアアップ系は縮小ではないため maxCoverSec/expectedCoverSec は 0', () => {
+    const entry = buildCardStrengthEntry(makeCard(), [], makeSong());
+    expect(entry.maxCoverSec).toBe(0);
+    expect(entry.expectedCoverSec).toBe(0);
+  });
+
+  it("compareShrinkBy('max'): 最大カバー秒数の降順、同値は属性値合計", () => {
     const song = makeSong();
-    const a = buildCardStrengthEntry(shrinkCard(), [], song);
-    const b = buildCardStrengthEntry(shrinkCard({ melody_max: 5000 }), [], song);
-    const c = buildCardStrengthEntry(shrinkCard({ ap_skill_5_per: 50 }), [], song);
-    expect(shrinkTieKey(a)).toBe(shrinkTieKey(b)); // 属性値違いは同率
-    expect(shrinkTieKey(a)).not.toBe(shrinkTieKey(c));
+    const cmp = compareShrinkBy('max');
+    const base = buildCardStrengthEntry(shrinkCard(), [], song); // 128s
+    const higher = buildCardStrengthEntry(shrinkCard({ ap_skill_5_value: 9 }), [], song); // 16×9=144s
+    expect(cmp(higher, base)).toBeLessThan(0); // 144 > 128 が先
+
+    const sameCover = buildCardStrengthEntry(shrinkCard({ melody_max: 5000 }), [], song); // 128s, 属性値↑
+    expect(cmp(sameCover, base)).toBeLessThan(0); // 同カバー秒数 → 属性値合計
+  });
+
+  it("compareShrinkBy('expected'): 期待カバー秒数の降順", () => {
+    const song = makeSong();
+    const cmp = compareShrinkBy('expected');
+    const base = buildCardStrengthEntry(shrinkCard(), [], song); // 51.2s
+    // 確率↑で期待カバー秒数が増える（最大カバー秒数は同じ）
+    const higherPer = buildCardStrengthEntry(shrinkCard({ ap_skill_5_per: 50 }), [], song); // 128×0.5=64s
+    expect(cmp(higherPer, base)).toBeLessThan(0);
+    // 'max' では同値だが 'expected' では確率の高い方が先
+    expect(compareShrinkBy('max')(higherPer, base)).toBe(base.appealTotal - higherPer.appealTotal);
   });
 });
 

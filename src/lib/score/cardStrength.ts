@@ -4,7 +4,7 @@
  * 前提条件 (docs/adr/0007 / docs/superpowers/specs/2026-06-11-card-compare-design.md):
  * - UR 限定 / 全ノーツ Perfect 前提 / センタースキル無視 / 固有ブローチ装備込み
  * - スコアアップ系: 期待スコア = 属性値由来スコア + スキル期待値
- * - 判定縮小系: 期待スコア化せず多段ソート（秒数 → 最大発動回数 → 確率 → 属性値合計）
+ * - 判定縮小系: 曲全体のカバー秒数で比較（最大カバー秒数 = 発動回数×秒数 / 期待カバー秒数 = ×確率）
  */
 import type { Card } from '../data/fetchCardsJson';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
@@ -36,9 +36,16 @@ export interface CardStrengthEntry {
   totalScore: number;
   /** 選択曲での最大発動回数 = floor(発動機会 ÷ count) */
   maxActivations: number;
+  /** 判定縮小系のみ: 最大カバー秒数 = maxActivations × 縮小秒数（100%発動前提の上限）。縮小以外は 0 */
+  maxCoverSec: number;
+  /** 判定縮小系のみ: 期待カバー秒数 = maxCoverSec × (per/100)。縮小以外は 0 */
+  expectedCoverSec: number;
   skill: CardSkill | null;
   broachScoreBonus: number;
 }
+
+/** 判定縮小タブのソートキー: 最大カバー秒数 / 期待カバー秒数 */
+export type ShrinkSortKey = 'max' | 'expected';
 
 export type CompareGroup = 'scoreUp' | 'shrink';
 
@@ -131,11 +138,17 @@ export function buildCardStrengthEntry(
 
   let skillExpected = 0;
   let maxActivations = 0;
+  let maxCoverSec = 0;
+  let expectedCoverSec = 0;
   if (skill && skill.count > 0) {
     const denom = skill.isTimer ? (song.duration || 0) : (song.notes_count || 0);
     if (denom > 0) {
       maxActivations = Math.floor(denom / skill.count);
-      if (!skill.isShrink) {
+      if (skill.isShrink) {
+        // skill.value は 1 発動あたりの縮小秒数
+        maxCoverSec = maxActivations * skill.value;
+        expectedCoverSec = maxCoverSec * (skill.per / 100);
+      } else {
         skillExpected = Math.floor(maxActivations * (skill.per / 100) * skill.value);
       }
     }
@@ -150,26 +163,24 @@ export function buildCardStrengthEntry(
     skillExpected,
     totalScore: baseScore + skillExpected,
     maxActivations,
+    maxCoverSec,
+    expectedCoverSec,
     skill,
     broachScoreBonus,
   };
 }
 
-/** 判定縮小系の多段ソート比較関数: ①効果秒数 → ②最大発動回数 → ③確率 → ④属性値合計（すべて優位が先） */
-export function compareShrink(a: CardStrengthEntry, b: CardStrengthEntry): number {
-  const av = a.skill?.value ?? 0;
-  const bv = b.skill?.value ?? 0;
-  if (av !== bv) return bv - av;
-  if (a.maxActivations !== b.maxActivations) return b.maxActivations - a.maxActivations;
-  const ap = a.skill?.per ?? 0;
-  const bp = b.skill?.per ?? 0;
-  if (ap !== bp) return bp - ap;
-  return b.appealTotal - a.appealTotal;
-}
-
-/** 縦積み同率判定キー（秒数・最大発動回数・確率が一致 = 同率） */
-export function shrinkTieKey(e: CardStrengthEntry): string {
-  return `${e.skill?.value ?? 0}|${e.maxActivations}|${e.skill?.per ?? 0}`;
+/**
+ * 判定縮小系のソート比較関数を生成する。
+ * 指定キー（最大カバー秒数 / 期待カバー秒数）の降順、同値は属性値合計の降順。
+ */
+export function compareShrinkBy(key: ShrinkSortKey): (a: CardStrengthEntry, b: CardStrengthEntry) => number {
+  return (a, b) => {
+    const av = key === 'max' ? a.maxCoverSec : a.expectedCoverSec;
+    const bv = key === 'max' ? b.maxCoverSec : b.expectedCoverSec;
+    if (av !== bv) return bv - av;
+    return b.appealTotal - a.appealTotal;
+  };
 }
 
 /** スコアの省略表記（1万以上は「12.3万」、未満はカンマ区切り） */
