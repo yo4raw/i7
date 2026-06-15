@@ -17,8 +17,7 @@
     busy = true;
     try {
       const { domToPng } = await import('modern-screenshot');
-      const bg = document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff';
-      const dataUrl = await domToPng(node, { scale: 2, backgroundColor: bg });
+      const dataUrl = await domToPng(node, { scale: 2, backgroundColor: '#ffffff' });
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = `${filename}.png`;
@@ -38,7 +37,7 @@
   type="button"
   onclick={download}
   disabled={busy}
-  class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-indigo-700 dark:hover:bg-indigo-600"
+  class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
 >
   {#if busy}
     <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">

@@ -122,11 +122,11 @@
   const tierOf = (entry: CardStrengthEntry) => tierFor(entry.card);
 </script>
 
-<div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+<div class="bg-white border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
   <label class="flex items-center gap-2">
-    <span class="text-gray-600 dark:text-slate-300 shrink-0">楽曲</span>
+    <span class="text-gray-600 shrink-0">楽曲</span>
     <select
-      class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
       value={selectedSongId != null ? String(selectedSongId) : ''}
       onchange={handleSongChange}
     >
@@ -137,16 +137,16 @@
   </label>
   <label class="flex items-center gap-1.5 cursor-pointer">
     <input type="checkbox" bind:checked={ownedOnly} disabled={!hasOwned} class="accent-indigo-600" />
-    <span class="text-gray-700 dark:text-slate-200" class:opacity-50={!hasOwned}>所持のみ</span>
+    <span class="text-gray-700" class:opacity-50={!hasOwned}>所持のみ</span>
   </label>
   {#if hasLiveEvent}
     <label class="flex items-center gap-1.5 cursor-pointer">
       <input type="checkbox" bind:checked={applyBonus} class="accent-indigo-600" />
-      <span class="text-gray-700 dark:text-slate-200">イベント特効を反映</span>
+      <span class="text-gray-700">イベント特効を反映</span>
     </label>
   {/if}
   {#if !hasOwned}
-    <span class="text-xs text-gray-400 dark:text-slate-500">所持衣装の登録がないため全件表示しています</span>
+    <span class="text-xs text-gray-400">所持衣装の登録がないため全件表示しています</span>
   {/if}
 </div>
 
@@ -156,8 +156,8 @@
     role="tab"
     aria-selected={tab === 'scoreUp'}
     class="px-5 py-2 text-sm rounded-t-lg border border-b-0 cursor-pointer {tab === 'scoreUp'
-      ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold border-gray-200 dark:border-slate-700'
-      : 'bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-slate-400 border-transparent'}"
+      ? 'bg-white text-indigo-700 font-bold border-gray-200'
+      : 'bg-gray-100 text-gray-500 border-transparent'}"
     onclick={() => (tab = 'scoreUp')}
   >スコアアップ</button>
   <button
@@ -165,20 +165,20 @@
     role="tab"
     aria-selected={tab === 'shrink'}
     class="px-5 py-2 text-sm rounded-t-lg border border-b-0 cursor-pointer {tab === 'shrink'
-      ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold border-gray-200 dark:border-slate-700'
-      : 'bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-slate-400 border-transparent'}"
+      ? 'bg-white text-indigo-700 font-bold border-gray-200'
+      : 'bg-gray-100 text-gray-500 border-transparent'}"
     onclick={() => (tab = 'shrink')}
   >判定縮小</button>
 </div>
 
-<div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-b-lg rounded-tr-lg" class:pb-24={selectedEntries.length > 0}>
+<div class="bg-white border border-gray-200 rounded-b-lg rounded-tr-lg" class:pb-24={selectedEntries.length > 0}>
   {#if !selectedSong}
-    <p class="text-sm text-gray-500 dark:text-slate-400 py-10 text-center">楽曲データを読み込んでいます…</p>
+    <p class="text-sm text-gray-500 py-10 text-center">楽曲データを読み込んでいます…</p>
   {:else if tab === 'scoreUp'}
     <div class="flex items-center gap-2 px-3 pt-3 text-sm">
-      <span class="text-gray-600 dark:text-slate-300 shrink-0">並び替え</span>
+      <span class="text-gray-600 shrink-0">並び替え</span>
       <select
-        class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
         bind:value={scoreUpSort}
         aria-label="スコアアップソート"
       >
@@ -189,9 +189,9 @@
     <ScoreUpChart entries={scoreUpEntries} selectedIds={selectedIds} tierOf={tierOf} onToggle={toggleSelect} sortKey={scoreUpSort} />
   {:else}
     <div class="flex items-center gap-2 px-3 pt-3 text-sm">
-      <span class="text-gray-600 dark:text-slate-300 shrink-0">並び替え</span>
+      <span class="text-gray-600 shrink-0">並び替え</span>
       <select
-        class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
         bind:value={shrinkSort}
         aria-label="縮小ソート"
       >

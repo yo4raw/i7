@@ -67,7 +67,7 @@ export function donutChartSvg(segments: DonutSegment[], opts: DonutChartOptions 
 
   const centerHtml = centerText
     ? `<text x="18" y="17" text-anchor="middle" class="fill-gray-500" font-size="3">${centerText.label}</text>
-    <text x="18" y="21" text-anchor="middle" class="fill-gray-800 dark:fill-slate-100 font-bold" font-size="4">${centerText.value}</text>`
+    <text x="18" y="21" text-anchor="middle" class="fill-gray-800 font-bold" font-size="4">${centerText.value}</text>`
     : '';
 
   return `<svg viewBox="0 0 36 36" class="${sizeClass}"${titleAttr}>

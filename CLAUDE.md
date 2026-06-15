@@ -227,9 +227,7 @@ Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。�
 
 Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astrojs/tailwind` integration). Custom theme colors defined in `src/styles/global.css` via `@theme` block.
 
-ダークテーマは `class` モード（`html.dark` を切替）で運用。`src/styles/global.css` の `@custom-variant dark` 定義により `dark:` Tailwind プレフィックスが有効。`@layer base` 内の `:root` / `html.dark` で `--chart-grid` `--chart-axis-label` `--chart-text` `--chart-exclude-bg` `--chart-exclude-border` `--chart-mute-fill` の CSS 変数を切り替え、`src/lib/donutChart.ts` / `src/lib/score/histogram.ts` / `src/lib/score/specDiagrams.ts` のチャート SVG はこれらの変数を `fill="var(--chart-grid)"` 等で参照する。
-
-トグルは `src/components/FooterTools.svelte` の太陽/月アイコンボタン。`STORAGE_KEYS.THEME_MODE` (`i7_theme_mode`) に `'light' | 'dark'` を永続化。未保存時は `BaseLayout.astro` 先頭のインラインスクリプトが `prefers-color-scheme` を見て初回ペイント前に `.dark` を付与し FOUC を防ぐ。新規コンポーネントを書く際は `bg-white dark:bg-slate-800` / `text-gray-700 dark:text-slate-200` / `border-gray-200 dark:border-slate-700` のようにダークバリアントを必ずペアで指定する。一括追加用に `scripts/apply-dark-variants.mjs` を残してある。
+サイトは**ライトテーマ固定**（ダークモードは ADR 0020 で廃止済み。`dark:` バリアント・`html.dark`・テーマトグルは存在しない）。チャート配色は `src/styles/global.css` の `@layer base` 内 `:root` で `--chart-grid` `--chart-axis-label` `--chart-text` `--chart-exclude-bg` `--chart-exclude-border` `--chart-mute-fill` を定義し、`src/lib/donutChart.ts` / `src/lib/score/histogram.ts` / `src/lib/score/specDiagrams.ts` のチャート SVG が `fill="var(--chart-grid)"` 等で参照する。新規コンポーネントでは `dark:` バリアントを付けないこと。
 
 ### Testing
 

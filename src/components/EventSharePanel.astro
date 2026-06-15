@@ -34,22 +34,22 @@ const tiers: TierView[] = [
     label: '金特効衣装',
     cards: goldCards,
     tier: event.gold,
-    headerClass: 'bg-yellow-400 text-yellow-950 dark:bg-yellow-500 dark:text-yellow-950',
-    badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-400 dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-600',
+    headerClass: 'bg-yellow-400 text-yellow-950',
+    badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-400',
   },
   {
     key: 'silver',
     label: '銀特効衣装',
     cards: silverCards,
     tier: event.silver,
-    headerClass: 'bg-gray-300 text-gray-800 dark:bg-slate-500 dark:text-slate-50',
-    badgeClass: 'bg-gray-200 text-gray-700 border-gray-400 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-500',
+    headerClass: 'bg-gray-300 text-gray-800',
+    badgeClass: 'bg-gray-200 text-gray-700 border-gray-400',
   },
 ];
 ---
 
 <div class="mb-3 flex items-center justify-between gap-3 flex-wrap max-w-3xl">
-  <p class="text-sm text-gray-600 dark:text-slate-300">
+  <p class="text-sm text-gray-600">
     下の枠をスクリーンショット、または右のボタンで画像保存して SNS でシェアできます（{rarity} の特効衣装まとめ）。
   </p>
   <EventShareImage filename={shareFilename} client:load />
@@ -57,9 +57,9 @@ const tiers: TierView[] = [
 
 <!-- スクショ対象パネル（端末によらず同じダウンロード画像になるよう幅固定。狭い画面では横スクロール） -->
 <div class="overflow-x-auto pb-2">
-<div id="share-panel" class="w-[640px] shrink-0 rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden bg-white dark:bg-slate-800">
+<div id="share-panel" class="w-[640px] shrink-0 rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
   <!-- ヘッダー帯 -->
-  <div class="bg-indigo-600 dark:bg-indigo-700 text-white px-4 py-3">
+  <div class="bg-indigo-600 text-white px-4 py-3">
     <div class="flex items-baseline justify-between gap-2 flex-wrap">
       <h1 class="text-lg sm:text-xl font-bold leading-snug">{event.eventname}<span class="ml-2 text-sm font-semibold text-indigo-100">{rarity} 特効衣装</span></h1>
       <span class="text-xs font-semibold text-indigo-100 whitespace-nowrap">{SITE_NAME}</span>
@@ -76,14 +76,14 @@ const tiers: TierView[] = [
       <section>
         <div class="flex items-center gap-2 flex-wrap mb-2">
           <span class={`inline-block px-3 py-0.5 rounded-full text-sm font-bold ${t.headerClass}`}>{t.label}</span>
-          <span class="text-xs text-gray-500 dark:text-slate-400">{t.cards.length} 着</span>
+          <span class="text-xs text-gray-500">{t.cards.length} 着</span>
           {formatEffectSummary(t.tier) && (
-            <span class="text-xs text-gray-600 dark:text-slate-300">{formatEffectSummary(t.tier)}</span>
+            <span class="text-xs text-gray-600">{formatEffectSummary(t.tier)}</span>
           )}
         </div>
 
         {t.cards.length === 0 ? (
-          <p class="text-sm text-gray-400 dark:text-slate-500">対象衣装なし</p>
+          <p class="text-sm text-gray-400">対象衣装なし</p>
         ) : (
           <div class="grid grid-cols-6 gap-px">
             {t.cards.map(card => {
@@ -92,7 +92,7 @@ const tiers: TierView[] = [
               const skill = formatSkillBadge(card.ap_skill_type);
               return (
                 <div class="flex flex-col min-w-0">
-                  <div class="text-[10px] leading-tight text-center text-gray-700 dark:text-slate-300 truncate px-0.5 py-0.5">{card.cardname || '-'}</div>
+                  <div class="text-[10px] leading-tight text-center text-gray-700 truncate px-0.5 py-0.5">{card.cardname || '-'}</div>
                   <div class="relative">
                     <img
                       src={cardThumbUrl(card.ID!)}
@@ -103,7 +103,7 @@ const tiers: TierView[] = [
                     />
                     {attr && <span class={`absolute top-0.5 left-0.5 px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
                   </div>
-                  <div class={`flex-1 flex items-center justify-center text-[10px] leading-tight text-center font-bold px-0.5 py-1 ${skill.isShrink ? 'bg-pink-500 text-white' : 'bg-gray-50 text-gray-800 dark:bg-slate-700 dark:text-slate-100'}`}>{skill.label}</div>
+                  <div class={`flex-1 flex items-center justify-center text-[10px] leading-tight text-center font-bold px-0.5 py-1 ${skill.isShrink ? 'bg-pink-500 text-white' : 'bg-gray-50 text-gray-800'}`}>{skill.label}</div>
                   <div class="text-[10px] leading-tight text-center font-bold bg-yellow-300 text-yellow-950 px-0.5 py-0.5">{card.ap_skill_req || '-'}</div>
                 </div>
               );

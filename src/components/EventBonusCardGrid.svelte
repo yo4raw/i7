@@ -32,18 +32,18 @@
 
 <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
   <span class={`inline-block px-3 py-1 rounded text-sm font-bold border ${badgeClass}`}>{label}</span>
-  <span class="text-xs text-gray-500 dark:text-slate-400">対象 {cards.length} 枚 ・ 所持 {owned} 枚</span>
+  <span class="text-xs text-gray-500">対象 {cards.length} 枚 ・ 所持 {owned} 枚</span>
 </div>
 
 {#if effectSummary}
-  <p class="text-sm text-gray-700 dark:text-slate-200 mb-2">{effectSummary}</p>
+  <p class="text-sm text-gray-700 mb-2">{effectSummary}</p>
 {/if}
 {#if targetNote}
-  <p class="text-xs text-gray-500 dark:text-slate-400 mb-3">対象: {targetNote}</p>
+  <p class="text-xs text-gray-500 mb-3">対象: {targetNote}</p>
 {/if}
 
 {#if cards.length === 0}
-  <p class="text-sm text-gray-400 dark:text-slate-500">対象衣装なし</p>
+  <p class="text-sm text-gray-400">対象衣装なし</p>
 {:else}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
     {#each cards as card (card.ID)}
@@ -51,13 +51,13 @@
       <div
         class={`flex flex-col p-2 rounded border ${
           skill.isShrink
-            ? 'border-pink-400 ring-1 ring-pink-300 dark:border-pink-500 dark:ring-pink-500'
-            : 'border-gray-200 dark:border-slate-700'
+            ? 'border-pink-400 ring-1 ring-pink-300'
+            : 'border-gray-200'
         }`}
       >
         <a
           href={`${base}cards/${card.ID}/`}
-          class="flex items-center gap-2 rounded hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
+          class="flex items-center gap-2 rounded hover:bg-gray-50 transition-colors"
         >
           <img
             src={cardThumbUrl(card.ID)}
@@ -72,8 +72,8 @@
                 <span class={`px-1 py-0.5 text-[9px] font-bold text-white rounded ${ATTR_BADGE_BG[card.attribute] || 'bg-gray-400'}`}>{card.attribute}</span>
               {/if}
             </div>
-            <div class="text-xs font-medium truncate text-gray-800 dark:text-slate-100">{card.cardname || '-'}</div>
-            <div class="text-[11px] text-gray-500 dark:text-slate-400 truncate">{card.name}</div>
+            <div class="text-xs font-medium truncate text-gray-800">{card.cardname || '-'}</div>
+            <div class="text-[11px] text-gray-500 truncate">{card.name}</div>
           </div>
         </a>
         <div class="mt-1.5 flex items-center gap-1 flex-wrap">
@@ -81,16 +81,16 @@
             class={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
               skill.isShrink
                 ? 'bg-pink-500 text-white'
-                : 'bg-gray-50 text-gray-800 dark:bg-slate-700 dark:text-slate-100'
+                : 'bg-gray-50 text-gray-800'
             }`}
             data-testid="skill-badge"
           >{skill.label}</span>
           {#if card.apSkillReq}
-            <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200">{card.apSkillReq}</span>
+            <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-900">{card.apSkillReq}</span>
           {/if}
         </div>
-        <div class="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between">
-          <span class="text-[10px] text-gray-500 dark:text-slate-400">所持</span>
+        <div class="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between">
+          <span class="text-[10px] text-gray-500">所持</span>
           <CountInput cardId={card.ID} />
         </div>
       </div>

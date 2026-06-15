@@ -16,10 +16,10 @@ const COLOR = {
   shrink: '#f59e0b',    // amber-500（縮小枝）
   shrinkDark: '#b45309',// amber-700
   emerald: '#10b981',   // emerald-500（カバー率）
-  exclude: 'var(--chart-exclude-border)',  // light: #d1d5db / dark: #475569
-  grid: 'var(--chart-grid)',                // light: #e5e7eb / dark: #334155
-  text: 'var(--chart-text)',                // light: #374151 / dark: #cbd5e1
-  muted: 'var(--chart-axis-label)',         // light: #6b7280 / dark: #94a3b8
+  exclude: 'var(--chart-exclude-border)',  // #d1d5db
+  grid: 'var(--chart-grid)',                // #e5e7eb
+  text: 'var(--chart-text)',                // #374151
+  muted: 'var(--chart-axis-label)',         // #6b7280
 } as const;
 
 function escapeXml(s: string): string {

@@ -48,17 +48,17 @@
 
 <div>
   {#each groups as group (group.name)}
-    <section class="bg-white dark:bg-slate-800 rounded-lg shadow mb-4 border-l-4 {GROUP_COLORS[group.name]}">
+    <section class="bg-white rounded-lg shadow mb-4 border-l-4 {GROUP_COLORS[group.name]}">
       <h2 class="text-lg font-bold px-4 pt-4 pb-2">{group.name}</h2>
       <div class="px-4 pb-4 space-y-2">
         {#each group.broachs as sb (sb.id)}
           <div class="flex items-center gap-2 sm:gap-4">
             <span class="font-medium text-sm w-40 sm:w-52 shrink-0 truncate" title={sb.name}>{sb.name}</span>
-            <span class="text-xs text-gray-500 dark:text-slate-400 flex-1 truncate">{statsLabel(sb)}</span>
+            <span class="text-xs text-gray-500 flex-1 truncate">{statsLabel(sb)}</span>
             <div class="flex items-center gap-1 shrink-0">
               <button
                 type="button"
-                class="w-7 h-7 rounded bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-300 dark:hover:bg-slate-600 text-sm font-bold"
+                class="w-7 h-7 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-bold"
                 aria-label="{sb.name} の所持数を減らす"
                 data-broach-btn={sb.id}
                 data-delta="-1"
@@ -71,12 +71,12 @@
                 value={getBroachCount(sb.id)}
                 data-broach-input={sb.id}
                 aria-label="{sb.name} の所持数"
-                class="w-14 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                class="w-14 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 onchange={(e) => onInput(e, sb.id)}
               />
               <button
                 type="button"
-                class="w-7 h-7 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-800 text-sm font-bold"
+                class="w-7 h-7 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-sm font-bold"
                 aria-label="{sb.name} の所持数を増やす"
                 data-broach-btn={sb.id}
                 data-delta="1"
@@ -91,7 +91,7 @@
 </div>
 
 <div class="mt-6 flex items-center gap-3">
-  <span class="text-sm text-gray-700 dark:text-slate-200">合計所持数: <b data-broach-total>{totalOwnedBroachs()}</b> 個</span>
-  <button type="button" class="px-5 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 shadow-lg text-sm" onclick={onClear}>全てクリア</button>
+  <span class="text-sm text-gray-700">合計所持数: <b data-broach-total>{totalOwnedBroachs()}</b> 個</span>
+  <button type="button" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-lg text-sm" onclick={onClear}>全てクリア</button>
 </div>
-<p class="mt-2 text-xs text-gray-400 dark:text-slate-500">入力は即時保存されます。1 種類あたり {MAX_BROACH_COUNT} 個まで登録できます（スコア計算に影響するのは自チーム 5 枠 × 2 個 = 最大 10 個のため）。</p>
+<p class="mt-2 text-xs text-gray-400">入力は即時保存されます。1 種類あたり {MAX_BROACH_COUNT} 個まで登録できます（スコア計算に影響するのは自チーム 5 枠 × 2 個 = 最大 10 個のため）。</p>

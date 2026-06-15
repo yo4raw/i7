@@ -246,32 +246,32 @@
   }
 </script>
 
-<details id="breakdown-section" class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 group" open>
-  <summary class="cursor-pointer text-sm font-bold text-gray-700 dark:text-slate-200 flex items-center justify-between select-none mb-3">
+<details id="breakdown-section" class="bg-white rounded-lg shadow p-4 group" open>
+  <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
     <span>📊 スキル詳細</span>
-    <svg class="w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
   </summary>
   <section id="score-breakdown" class:hidden={!calc}>
     <div class="space-y-1">
       <div id="shrink-coverage-row" class="flex justify-between text-sm" class:hidden={!shrink}>
-        <span class="text-gray-500 dark:text-slate-400">縮小カバー率（最大発動時）</span>
+        <span class="text-gray-500">縮小カバー率（最大発動時）</span>
         <span id="shrink-coverage-val" class="font-medium text-orange-600">{shrink?.coverageText ?? ''}</span>
       </div>
       <div id="shrink-expected-row" class="flex justify-between text-sm" class:hidden={!shrink}>
-        <span class="text-gray-500 dark:text-slate-400">縮小カバー率（期待値）</span>
+        <span class="text-gray-500">縮小カバー率（期待値）</span>
         <span id="shrink-expected-val" class="font-medium text-orange-600">{shrink?.expectedText ?? ''}</span>
       </div>
     </div>
-    <p id="shrink-exclusion-note" class="text-xs text-gray-400 dark:text-slate-500 mt-2" class:hidden={!(calc && calc.exclusion.totalExcluded > 0)}>※ 最初の<span id="shrink-exclusion-count" class="font-medium">{calc?.exclusion.totalExcluded ?? 0}</span>ノーツは縮小の計算対象外です</p>
-    <div id="shrink-offset-row" class="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500 dark:text-slate-400" class:hidden={!shrink}>
+    <p id="shrink-exclusion-note" class="text-xs text-gray-400 mt-2" class:hidden={!(calc && calc.exclusion.totalExcluded > 0)}>※ 最初の<span id="shrink-exclusion-count" class="font-medium">{calc?.exclusion.totalExcluded ?? 0}</span>ノーツは縮小の計算対象外です</p>
+    <div id="shrink-offset-row" class="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500" class:hidden={!shrink}>
       <label for="shrink-offset-input">先頭</label>
-      <input type="number" id="shrink-offset-input" bind:value={shrinkOffset} min="0" step="1" class="w-12 border border-gray-300 dark:border-slate-600 rounded px-1 py-0.5 text-right" />
+      <input type="number" id="shrink-offset-input" bind:value={shrinkOffset} min="0" step="1" class="w-12 border border-gray-300 rounded px-1 py-0.5 text-right" />
       <span>秒除外</span>
     </div>
     <div id="skill-per-card-section" class="mt-4 border-t pt-3" class:hidden={!skillRows}>
       <table class="w-full text-xs">
         <thead>
-          <tr class="text-gray-500 dark:text-slate-400 border-b">
+          <tr class="text-gray-500 border-b">
             <th class="text-left py-1 px-1">スロット</th>
             <th class="text-left py-1 px-1">衣装名</th>
             <th class="text-left py-1 px-1">スキル</th>
@@ -287,7 +287,7 @@
                 <td class="py-1 px-1 text-[10px] {row.slotCls}">{SLOT_LABELS[row.i]}</td>
                 <td class="py-1 px-1">
                   <div>{row.cardname}</div>
-                  <div class="text-[10px] text-gray-400 dark:text-slate-500">{row.name}</div>
+                  <div class="text-[10px] text-gray-400">{row.name}</div>
                 </td>
                 <td class="py-1 px-1">{row.skillType}</td>
                 <td class="py-1 px-1 text-right">{row.exp > 0 ? row.exp.toLocaleString() : '-'}</td>
@@ -299,8 +299,8 @@
         </tbody>
         <tfoot id="skill-per-card-foot">
           {#if skillRows}
-            <tr class="border-t-2 border-gray-300 dark:border-slate-600 font-bold">
-              <td colspan="3" class="py-1 px-1 text-right text-gray-700 dark:text-slate-200">合計</td>
+            <tr class="border-t-2 border-gray-300 font-bold">
+              <td colspan="3" class="py-1 px-1 text-right text-gray-700">合計</td>
               <td class="py-1 px-1 text-right">{skillRows.totalExp.toLocaleString()}</td>
               <td class="py-1 px-1 text-right">{skillRows.totalActivations.toLocaleString()}</td>
               <td class="py-1 px-1 text-right">{skillRows.totalMax.toLocaleString()}</td>
@@ -308,42 +308,42 @@
           {/if}
         </tfoot>
       </table>
-      <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">※ 複数の判定縮小スキルが共存する場合、値は按分されます</p>
+      <p class="text-xs text-gray-400 mt-2">※ 複数の判定縮小スキルが共存する場合、値は按分されます</p>
     </div>
   </section>
-  <p id="breakdown-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6" class:hidden={!!calc}>楽曲と衣装を設定するとスキル詳細が表示されます</p>
+  <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!calc}>楽曲と衣装を設定するとスキル詳細が表示されます</p>
 </details>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+<section class="bg-white rounded-lg shadow p-4">
   <div class="grid grid-cols-2 gap-4 text-center">
     <div>
-      <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest">理論最低</div>
-      <div id="score-min" class="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 mt-1">{scoreMinText}</div>
+      <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最低</div>
+      <div id="score-min" class="text-base md:text-lg font-bold text-gray-700 mt-1">{scoreMinText}</div>
     </div>
     <div>
-      <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest">理論最高</div>
-      <div id="score-max" class="text-base md:text-lg font-bold text-gray-700 dark:text-slate-200 mt-1">{scoreMaxText}</div>
+      <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最高</div>
+      <div id="score-max" class="text-base md:text-lg font-bold text-gray-700 mt-1">{scoreMaxText}</div>
     </div>
   </div>
 </section>
 
 <div class="space-y-2">
   <div class="flex items-center justify-end gap-2 flex-wrap">
-    <label for="mc-iterations-input" class="text-xs text-gray-500 dark:text-slate-400">シミュレーション回数</label>
+    <label for="mc-iterations-input" class="text-xs text-gray-500">シミュレーション回数</label>
     <input
       id="mc-iterations-input"
       type="number"
       min="1"
       step="1"
-      class="w-28 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      class="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       bind:value={mcIterationsValue}
     />
-    <span class="text-xs text-gray-500 dark:text-slate-400">回</span>
-    <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-300 cursor-pointer select-none" title="ON にすると縮小スキルの確率判定を常に成功扱いにし、縮小カバー率が最大値となる前提で MC シミュレーションを実行します">
+    <span class="text-xs text-gray-500">回</span>
+    <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="ON にすると縮小スキルの確率判定を常に成功扱いにし、縮小カバー率が最大値となる前提で MC シミュレーションを実行します">
       <input type="checkbox" id="opt-max-shrink-coverage" class="rounded" bind:checked={maxShrinkCoverageOpt} />
       <span>縮小全発動</span>
     </label>
-    <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-slate-300 cursor-pointer select-none" title="ON にするとスコアアップスキル（タイマー型含む）の確率判定を常に成功扱いにし、スコアアップが理論最大発動回数となる前提で MC シミュレーションを実行します">
+    <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none" title="ON にするとスコアアップスキル（タイマー型含む）の確率判定を常に成功扱いにし、スコアアップが理論最大発動回数となる前提で MC シミュレーションを実行します">
       <input type="checkbox" id="opt-max-scoreup-coverage" class="rounded" bind:checked={maxScoreUpCoverageOpt} />
       <span>スコアアップ全発動</span>
     </label>
@@ -353,59 +353,59 @@
   </button>
   <p id="calc-disabled-reason" class="text-xs text-center text-amber-600">{calcDisabledReason}</p>
   <div id="progress-container" class:hidden={!running}>
-    <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+    <div class="w-full bg-gray-200 rounded-full h-2">
       <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: {progressPercent}%"></div>
     </div>
-    <p id="progress-text" class="text-xs text-gray-500 dark:text-slate-400 mt-1 text-center">{progressText}</p>
+    <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">{progressText}</p>
   </div>
 </div>
 
 <section class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
-  <div class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest text-center">平均スコア</div>
+  <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">平均スコア</div>
   <div id="final-result" class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">{simulationResult ? simulationResult.mean.toLocaleString() : '---'}</div>
   <div class="mt-3 text-center">
-    <span class="text-[10px] text-gray-500 dark:text-slate-400">試行回数: </span>
-    <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700 dark:text-slate-200">{mcIterationsUsed != null ? mcIterationsUsed.toLocaleString() : '-'}</span>
+    <span class="text-[10px] text-gray-500">試行回数: </span>
+    <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700">{mcIterationsUsed != null ? mcIterationsUsed.toLocaleString() : '-'}</span>
   </div>
 </section>
 
-<section class="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-  <h2 class="text-sm font-bold text-gray-700 dark:text-slate-200 mb-3">🎲 シミュレーション統計</h2>
+<section class="bg-white rounded-lg shadow p-4">
+  <h2 class="text-sm font-bold text-gray-700 mb-3">🎲 シミュレーション統計</h2>
   <section id="mc-results" class:hidden={!simulationResult}>
     <table class="w-full text-sm">
       <tbody>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1">{simulationResult ? simulationResult.minScore.toLocaleString() : ''}</td></tr>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">最小</td><td id="mc-min" class="text-right py-1">{simulationResult ? simulationResult.mcMin.toLocaleString() : ''}</td></tr>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">平均</td><td id="mc-mean" class="text-right py-1 font-bold">{simulationResult ? simulationResult.mean.toLocaleString() : ''}</td></tr>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">中央値</td><td id="mc-median" class="text-right py-1">{simulationResult ? simulationResult.median.toLocaleString() : ''}</td></tr>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">最大</td><td id="mc-max" class="text-right py-1">{simulationResult ? simulationResult.mcMax.toLocaleString() : ''}</td></tr>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1">{simulationResult ? simulationResult.maxScore.toLocaleString() : ''}</td></tr>
-        <tr class="border-t"><td class="text-gray-500 dark:text-slate-400 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1">{simulationResult ? simulationResult.stddev.toLocaleString() : ''}</td></tr>
-        <tr><td class="text-gray-500 dark:text-slate-400 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1">{simulationResult ? simulationResult.p90.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">期待最低値</td><td id="mc-min-bound" class="text-right py-1">{simulationResult ? simulationResult.minScore.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">最小</td><td id="mc-min" class="text-right py-1">{simulationResult ? simulationResult.mcMin.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">平均</td><td id="mc-mean" class="text-right py-1 font-bold">{simulationResult ? simulationResult.mean.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">中央値</td><td id="mc-median" class="text-right py-1">{simulationResult ? simulationResult.median.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">最大</td><td id="mc-max" class="text-right py-1">{simulationResult ? simulationResult.mcMax.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">期待最高値</td><td id="mc-max-bound" class="text-right py-1">{simulationResult ? simulationResult.maxScore.toLocaleString() : ''}</td></tr>
+        <tr class="border-t"><td class="text-gray-500 py-1">標準偏差</td><td id="mc-stddev" class="text-right py-1">{simulationResult ? simulationResult.stddev.toLocaleString() : ''}</td></tr>
+        <tr><td class="text-gray-500 py-1">90パーセンタイル</td><td id="mc-p90" class="text-right py-1">{simulationResult ? simulationResult.p90.toLocaleString() : ''}</td></tr>
       </tbody>
     </table>
     <div id="histogram-container" class="mt-4">{#if simulationResult}{@html mainHistogram}{/if}</div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
       <div>
-        <div class="text-xs text-gray-600 dark:text-slate-300 mb-1">縮小スキル寄与量の分布</div>
-        <div id="histogram-shrink">{#if contribHistograms}{#if contribHistograms.shrink}{@html contribHistograms.shrink}{:else}<span class="text-gray-400 dark:text-slate-500 text-xs">データなし</span>{/if}{/if}</div>
+        <div class="text-xs text-gray-600 mb-1">縮小スキル寄与量の分布</div>
+        <div id="histogram-shrink">{#if contribHistograms}{#if contribHistograms.shrink}{@html contribHistograms.shrink}{:else}<span class="text-gray-400 text-xs">データなし</span>{/if}{/if}</div>
       </div>
       <div>
-        <div class="text-xs text-gray-600 dark:text-slate-300 mb-1">スコアアップスキル寄与量の分布</div>
-        <div id="histogram-scoreup">{#if contribHistograms}{#if contribHistograms.scoreup}{@html contribHistograms.scoreup}{:else}<span class="text-gray-400 dark:text-slate-500 text-xs">データなし</span>{/if}{/if}</div>
+        <div class="text-xs text-gray-600 mb-1">スコアアップスキル寄与量の分布</div>
+        <div id="histogram-scoreup">{#if contribHistograms}{#if contribHistograms.scoreup}{@html contribHistograms.scoreup}{:else}<span class="text-gray-400 text-xs">データなし</span>{/if}{/if}</div>
       </div>
     </div>
   </section>
-  <p id="mc-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6" class:hidden={!!simulationResult}>計算を実行するとシミュレーション結果が表示されます</p>
+  <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!simulationResult}>計算を実行するとシミュレーション結果が表示されます</p>
 </section>
 
-<div class="bg-white dark:bg-slate-800 rounded-lg shadow">
+<div class="bg-white rounded-lg shadow">
   <div class="flex border-b overflow-x-auto" role="tablist" aria-label="結果タブ">
     {#each TABS as t (t.key)}
       <button
         type="button"
         data-tab={t.key}
-        class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 dark:text-slate-400 hover:text-indigo-600 transition-colors {activeTab === t.key ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500'}"
+        class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 hover:text-indigo-600 transition-colors {activeTab === t.key ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500'}"
         onclick={() => { activeTab = t.key; }}
       >{t.label}</button>
     {/each}
@@ -413,18 +413,18 @@
 
   <div id="tab-panel-expected" data-tab-panel class="p-4" class:hidden={activeTab !== 'expected'}>
     <section id="expected-score" class:hidden={!expectedScore}>
-      <p class="text-[11px] text-gray-500 dark:text-slate-400 mb-3">外部サイト準拠の単純期待値（シミュレーションの確率的揺れを含まない決定論的な値）</p>
+      <p class="text-[11px] text-gray-500 mb-3">外部サイト準拠の単純期待値（シミュレーションの確率的揺れを含まない決定論的な値）</p>
       <table class="w-full text-sm">
         <tbody>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1">{expectedScore ? expectedScore.baseScore.toLocaleString() : ''}</td></tr>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1">{expectedScore ? expectedScore.scoreUpExpected.toLocaleString() : ''}</td></tr>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1">{expectedScore ? expectedScore.shrinkExpected.toLocaleString() : ''}</td></tr>
-          <tr class="border-t"><td class="text-gray-500 dark:text-slate-400 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1">{expectedScore ? expectedScore.liveEndScore.toLocaleString() : ''}</td></tr>
-          <tr><td class="text-gray-500 dark:text-slate-400 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold">{expectedScore ? expectedScore.finalScore.toLocaleString() : ''}</td></tr>
+          <tr><td class="text-gray-500 py-1">属性値による楽曲スコア</td><td id="exp-base" class="text-right py-1">{expectedScore ? expectedScore.baseScore.toLocaleString() : ''}</td></tr>
+          <tr><td class="text-gray-500 py-1">スコアアップ期待値</td><td id="exp-scoreup" class="text-right py-1">{expectedScore ? expectedScore.scoreUpExpected.toLocaleString() : ''}</td></tr>
+          <tr><td class="text-gray-500 py-1">判定縮小期待値</td><td id="exp-shrink" class="text-right py-1">{expectedScore ? expectedScore.shrinkExpected.toLocaleString() : ''}</td></tr>
+          <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td id="exp-liveend" class="text-right py-1">{expectedScore ? expectedScore.liveEndScore.toLocaleString() : ''}</td></tr>
+          <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td id="exp-final" class="text-right py-1 font-bold">{expectedScore ? expectedScore.finalScore.toLocaleString() : ''}</td></tr>
         </tbody>
       </table>
     </section>
-    <p id="expected-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6" class:hidden={!!expectedScore}>計算を実行すると算術期待値が表示されます</p>
+    <p id="expected-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!expectedScore}>計算を実行すると算術期待値が表示されます</p>
   </div>
 
   <div id="tab-panel-skills" data-tab-panel class="p-4" class:hidden={activeTab !== 'skills'}>
@@ -432,7 +432,7 @@
       <div class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
-            <tr class="text-gray-500 dark:text-slate-400 border-b">
+            <tr class="text-gray-500 border-b">
               <th class="text-left py-1">衣装名</th>
               <th class="text-left py-1">スキル</th>
               <th class="text-right py-1">発動率</th>
@@ -456,14 +456,14 @@
         </table>
       </div>
     </section>
-    <p id="skills-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6" class:hidden={!!(simulationResult && simulationResult.cardStats.length > 0)}>計算を実行するとスキル発動統計が表示されます</p>
+    <p id="skills-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!(simulationResult && simulationResult.cardStats.length > 0)}>計算を実行するとスキル発動統計が表示されます</p>
   </div>
 
   <div id="tab-panel-area" data-tab-panel class="p-4" class:hidden={activeTab !== 'area'}>
     <section id="area-values-section" class:hidden={!area}>
       <table class="w-full text-xs">
         <thead>
-          <tr class="text-gray-500 dark:text-slate-400">
+          <tr class="text-gray-500">
             <th class="text-left py-1">属性</th>
             <th class="text-right py-1">白ノート</th>
             <th class="text-right py-1">色ノート</th>
@@ -477,6 +477,6 @@
         </tbody>
       </table>
     </section>
-    <p id="area-placeholder" class="text-xs text-gray-400 dark:text-slate-500 text-center py-6" class:hidden={!!area}>楽曲と衣装を設定すると楽曲属性面積値が表示されます</p>
+    <p id="area-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!area}>楽曲と衣装を設定すると楽曲属性面積値が表示されます</p>
   </div>
 </div>

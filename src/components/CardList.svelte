@@ -230,25 +230,25 @@
   });
 </script>
 
-<div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-6">
+<div class="bg-white rounded-lg shadow p-4 mb-6">
   <div class="flex flex-wrap gap-3 mb-4">
     <div class="w-full sm:w-64">
-      <label for="search-text" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">名前検索</label>
+      <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">名前検索</label>
       <input
         type="text"
         id="search-text"
         placeholder="衣装名/キャラ名"
         value={text}
         oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
-        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
     </div>
     <div class="w-full sm:w-56">
-      <label for="sort-by" class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">ソート</label>
+      <label for="sort-by" class="block text-xs font-medium text-gray-500 mb-1">ソート</label>
       <select
         id="sort-by"
         bind:value={sortBy}
-        class="w-full border border-gray-300 dark:border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
       >
         <option value="id-desc">ID降順（新しい順）</option>
         <option value="id-asc">ID昇順（古い順）</option>
@@ -299,11 +299,11 @@
   </div>
   <div class="mt-3 flex items-center gap-3 flex-wrap">
     <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
-    <span class="text-sm text-gray-500 dark:text-slate-400">{resultCountText}</span>
-    <div class="ml-auto inline-flex rounded border border-gray-300 dark:border-slate-600 overflow-hidden text-xs" role="group" aria-label="表示モード切替">
+    <span class="text-sm text-gray-500">{resultCountText}</span>
+    <div class="ml-auto inline-flex rounded border border-gray-300 overflow-hidden text-xs" role="group" aria-label="表示モード切替">
       <button
         type="button"
-        class="px-3 py-1 {viewMode === 'list' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 dark:text-slate-200 hover:bg-gray-50'}"
+        class="px-3 py-1 {viewMode === 'list' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
         aria-pressed={viewMode === 'list'}
         onclick={() => setViewMode('list')}
       >
@@ -311,7 +311,7 @@
       </button>
       <button
         type="button"
-        class="px-3 py-1 border-l border-gray-300 dark:border-slate-600 {viewMode === 'tile' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 dark:text-slate-200 hover:bg-gray-50'}"
+        class="px-3 py-1 border-l border-gray-300 {viewMode === 'tile' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
         aria-pressed={viewMode === 'tile'}
         onclick={() => setViewMode('tile')}
       >
@@ -340,7 +340,7 @@
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="bg-gray-100 dark:bg-slate-800 text-left text-xs text-gray-500 dark:text-slate-400 uppercase">
+          <tr class="bg-gray-100 text-left text-xs text-gray-500 uppercase">
             <th class="px-3 py-2 w-16">画像</th>
             <th class="px-3 py-2">ID</th>
             <th class="px-3 py-2">衣装名</th>
@@ -392,7 +392,7 @@
 
 <div bind:this={sentinelEl} class="mt-6 flex justify-center py-8">
   {#if hasMore}
-    <span class="text-sm text-gray-400 dark:text-slate-500">
+    <span class="text-sm text-gray-400">
       <svg class="animate-spin inline-block h-4 w-4 mr-1 align-text-bottom text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -400,6 +400,6 @@
       読み込み中…
     </span>
   {:else if filtered.length > 0}
-    <span class="text-sm text-gray-400 dark:text-slate-500">すべての衣装を表示しました</span>
+    <span class="text-sm text-gray-400">すべての衣装を表示しました</span>
   {/if}
 </div>

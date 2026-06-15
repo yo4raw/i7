@@ -134,26 +134,26 @@ const tiers: TierView[] = [
         client:load
       />
     </div>
-    <div class="mt-2 text-sm text-gray-600 dark:text-slate-300 space-y-0.5">
+    <div class="mt-2 text-sm text-gray-600 space-y-0.5">
       <p>{event.eventtype}</p>
       <p>{event.start_date} 17:00 〜 {event.end_date} 17:00 (JST)</p>
     </div>
     {event.comment && (
-      <p class="mt-3 text-sm text-gray-700 dark:text-slate-200 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-3 py-2">{event.comment}</p>
+      <p class="mt-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded px-3 py-2">{event.comment}</p>
     )}
   </div>
 
   {isHighScore && (
     <p
       data-testid="highscore-ur-note"
-      class="mb-6 text-sm text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded px-3 py-2"
+      class="mb-6 text-sm text-indigo-800 bg-indigo-50 border border-indigo-200 rounded px-3 py-2"
     >
       ハイスコアライブイベントのため、UR 衣装のみ表示しています。
     </p>
   )}
 
   {tiers.map(t => (
-    <section class={`mb-6 rounded-lg bg-white dark:bg-slate-800 shadow p-4 ${t.borderClass}`}>
+    <section class={`mb-6 rounded-lg bg-white shadow p-4 ${t.borderClass}`}>
       <EventBonusCardGrid
         label={t.label}
         badgeClass={t.badgeClass}
