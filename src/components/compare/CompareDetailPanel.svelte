@@ -7,13 +7,25 @@
     entries: CardStrengthEntry[];
     onRemove: (entry: CardStrengthEntry) => void;
     onClear: () => void;
+    songDuration: number;
   };
-  let { entries, onRemove, onClear }: Props = $props();
+  let { entries, onRemove, onClear, songDuration }: Props = $props();
 
   function condLabel(entry: CardStrengthEntry): string {
     const s = entry.skill;
     if (!s) return '-';
     return s.isTimer ? `${s.count}秒毎` : `${s.count}コンボ毎`;
+  }
+
+  function sec(v: number): string {
+    return Number.isInteger(v) ? `${v}` : v.toFixed(1);
+  }
+
+  /** カバー秒数 → 「Ns (P%)」表記。縮小以外は '-' */
+  function coverLabel(entry: CardStrengthEntry, v: number): string {
+    if (!entry.skill?.isShrink) return '-';
+    const rate = songDuration > 0 ? `${Math.round((v / songDuration) * 100)}%` : '-';
+    return `${sec(v)}s (${rate})`;
   }
 
   function effectLabel(entry: CardStrengthEntry): string {
@@ -32,6 +44,9 @@
   const totalMax = $derived(maxIndexes(entries.map((e) => e.totalScore)));
   const baseMax = $derived(maxIndexes(entries.map((e) => e.baseScore)));
   const skillMax = $derived(maxIndexes(entries.map((e) => e.skillExpected)));
+  const hasShrink = $derived(entries.some((e) => e.skill?.isShrink));
+  const maxCoverMax = $derived(maxIndexes(entries.map((e) => e.maxCoverSec)));
+  const expCoverMax = $derived(maxIndexes(entries.map((e) => e.expectedCoverSec)));
 </script>
 
 <div
@@ -92,6 +107,24 @@
               <td class="px-2 py-1 text-center">{entry.skill ? `${entry.maxActivations}回` : '-'}</td>
             {/each}
           </tr>
+          {#if hasShrink}
+            <tr>
+              <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 whitespace-nowrap">最大カバー秒数</td>
+              {#each entries as entry, i (entry.card.ID)}
+                <td class="px-2 py-1 text-center whitespace-nowrap" class:font-bold={maxCoverMax.has(i)} class:text-red-600={maxCoverMax.has(i)} class:dark:text-red-400={maxCoverMax.has(i)}>
+                  {coverLabel(entry, entry.maxCoverSec)}
+                </td>
+              {/each}
+            </tr>
+            <tr>
+              <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 whitespace-nowrap">期待カバー秒数</td>
+              {#each entries as entry, i (entry.card.ID)}
+                <td class="px-2 py-1 text-center whitespace-nowrap" class:font-bold={expCoverMax.has(i)} class:text-red-600={expCoverMax.has(i)} class:dark:text-red-400={expCoverMax.has(i)}>
+                  {coverLabel(entry, entry.expectedCoverSec)}
+                </td>
+              {/each}
+            </tr>
+          {/if}
           <tr>
             <td class="text-gray-500 dark:text-slate-400 pr-2 py-1 whitespace-nowrap">属性値由来スコア</td>
             {#each entries as entry, i (entry.card.ID)}

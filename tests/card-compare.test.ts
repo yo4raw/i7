@@ -19,6 +19,16 @@ test.describe('衣装比較ページ', () => {
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
   });
 
+  test('判定縮小タブにカバー秒数のソートセレクタがあり既定は期待カバー秒数', async ({ page }) => {
+    await page.getByRole('tab', { name: '判定縮小' }).click();
+    await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
+    const select = page.getByLabel('縮小ソート');
+    await expect(select).toBeVisible();
+    await expect(select).toHaveValue('expected');
+    await select.selectOption('max');
+    await expect(page.getByTestId('shrink-col').first()).toBeVisible();
+  });
+
   test('棒のサムネイルが card.ID ベースの th_cards 画像を指す', async ({ page }) => {
     const bar = page.getByTestId('scoreup-bar').first();
     await bar.waitFor({ timeout: 20000 });

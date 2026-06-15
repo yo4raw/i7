@@ -12,7 +12,8 @@
   } from '../lib/data/eventBonusTiers';
   import { STORAGE_KEYS, loadJson } from '../lib/storage';
   import {
-    buildCardStrengthEntry, classifyCard, compareShrink, type CardStrengthEntry,
+    buildCardStrengthEntry, classifyCard, compareShrinkBy,
+    type CardStrengthEntry, type ShrinkSortKey,
   } from '../lib/score/cardStrength';
   import ScoreUpChart from './compare/ScoreUpChart.svelte';
   import ShrinkChart from './compare/ShrinkChart.svelte';
@@ -41,6 +42,7 @@
   let ownedOnly = $state(false);
   let applyBonus = $state(false);
   let tab = $state<'scoreUp' | 'shrink'>('scoreUp');
+  let shrinkSort = $state<ShrinkSortKey>('expected');
   let selectedSongId = $state<number | null>(null);
   let selectedIds = $state<number[]>([]);
 
@@ -91,7 +93,7 @@
     [...entries.filter((e) => classifyCard(e.card) === 'scoreUp')].sort((a, b) => b.totalScore - a.totalScore),
   );
   const shrinkEntries = $derived(
-    [...entries.filter((e) => classifyCard(e.card) === 'shrink')].sort(compareShrink),
+    [...entries.filter((e) => classifyCard(e.card) === 'shrink')].sort(compareShrinkBy(shrinkSort)),
   );
 
   const selectedEntries = $derived(
@@ -174,10 +176,33 @@
   {:else if tab === 'scoreUp'}
     <ScoreUpChart entries={scoreUpEntries} selectedIds={selectedIds} tierOf={tierOf} onToggle={toggleSelect} />
   {:else}
-    <ShrinkChart entries={shrinkEntries} selectedIds={selectedIds} tierOf={tierOf} onToggle={toggleSelect} />
+    <div class="flex items-center gap-2 px-3 pt-3 text-sm">
+      <span class="text-gray-600 dark:text-slate-300 shrink-0">並び替え</span>
+      <select
+        class="border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        bind:value={shrinkSort}
+        aria-label="縮小ソート"
+      >
+        <option value="expected">期待カバー秒数</option>
+        <option value="max">最大カバー秒数</option>
+      </select>
+    </div>
+    <ShrinkChart
+      entries={shrinkEntries}
+      selectedIds={selectedIds}
+      tierOf={tierOf}
+      onToggle={toggleSelect}
+      sortKey={shrinkSort}
+      songDuration={selectedSong.duration || 0}
+    />
   {/if}
 </div>
 
 {#if selectedEntries.length > 0}
-  <CompareDetailPanel entries={selectedEntries} onRemove={toggleSelect} onClear={() => (selectedIds = [])} />
+  <CompareDetailPanel
+    entries={selectedEntries}
+    onRemove={toggleSelect}
+    onClear={() => (selectedIds = [])}
+    songDuration={selectedSong?.duration || 0}
+  />
 {/if}

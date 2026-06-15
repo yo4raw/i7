@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { shrinkTieKey, type CardStrengthEntry } from '../../lib/score/cardStrength';
+  import type { CardStrengthEntry, ShrinkSortKey } from '../../lib/score/cardStrength';
   import { ATTR_HEX } from '../../lib/constants';
   import { cardThumbUrl } from '../../lib/ui';
   import { bonusBadgeHtml, type EventBonusTier } from '../../lib/data/eventBonusTiers';
@@ -9,36 +9,29 @@
     selectedIds: number[];
     tierOf: (entry: CardStrengthEntry) => EventBonusTier;
     onToggle: (entry: CardStrengthEntry) => void;
+    sortKey: ShrinkSortKey;
+    songDuration: number;
   };
-  let { entries, selectedIds, tierOf, onToggle }: Props = $props();
+  let { entries, selectedIds, tierOf, onToggle, sortKey, songDuration }: Props = $props();
 
   const CHART_HEIGHT = 150;
 
-  interface ShrinkColumn {
-    key: string;
-    seconds: number;
-    entries: CardStrengthEntry[];
+  /** カバー率（0〜1+）。曲秒数が不明なら 0 */
+  function maxRate(e: CardStrengthEntry): number {
+    return songDuration > 0 ? e.maxCoverSec / songDuration : 0;
   }
-
-  /** ソート済み entries を同率（秒数・発動回数・確率が一致）ごとに1列へまとめる */
-  const columns = $derived.by(() => {
-    const cols: ShrinkColumn[] = [];
-    for (const e of entries) {
-      const key = shrinkTieKey(e);
-      const last = cols[cols.length - 1];
-      if (last && last.key === key) {
-        last.entries.push(e);
-      } else {
-        cols.push({ key, seconds: e.skill?.value ?? 0, entries: [e] });
-      }
-    }
-    return cols;
-  });
-
-  const maxSeconds = $derived(columns.length > 0 ? columns[0].seconds : 0);
-
-  function px(seconds: number): number {
-    return maxSeconds > 0 ? Math.round((seconds / maxSeconds) * CHART_HEIGHT) : 0;
+  function expRate(e: CardStrengthEntry): number {
+    return songDuration > 0 ? e.expectedCoverSec / songDuration : 0;
+  }
+  /** 0〜100% を CHART_HEIGHT へマップ（100% 超はクランプ） */
+  function px(rate: number): number {
+    return Math.round(Math.min(rate, 1) * CHART_HEIGHT);
+  }
+  function pct(rate: number): string {
+    return `${Math.round(rate * 100)}%`;
+  }
+  function sec(v: number): string {
+    return Number.isInteger(v) ? `${v}` : v.toFixed(1);
   }
 
   function condLabel(entry: CardStrengthEntry): string {
@@ -48,49 +41,58 @@
   }
 </script>
 
-{#if columns.length === 0}
+{#if entries.length === 0}
   <p class="text-sm text-gray-500 dark:text-slate-400 py-10 text-center">対象の衣装がありません</p>
 {:else}
   <div class="overflow-x-auto">
-    <div class="flex items-start gap-4 px-3 pt-5 pb-3 min-w-max">
-      {#each columns as col (col.key)}
+    <div class="flex items-start gap-3 px-3 pt-5 pb-3 min-w-max">
+      {#each entries as entry (entry.card.ID)}
+        {@const selected = entry.card.ID != null && selectedIds.includes(entry.card.ID)}
+        {@const mr = maxRate(entry)}
+        {@const er = expRate(entry)}
+        {@const overflow = mr > 1}
         <div class="flex flex-col items-center w-20 shrink-0" data-testid="shrink-col">
-          <span class="text-[11px] font-bold text-gray-700 dark:text-slate-200">{col.seconds}秒</span>
-          <span class="flex flex-col justify-end w-9" style={`height:${CHART_HEIGHT}px`}>
-            <span class="block w-full bg-amber-400 dark:bg-amber-500 rounded-t-sm" style={`height:${px(col.seconds)}px`}></span>
+          <span class="text-[11px] font-bold text-gray-700 dark:text-slate-200">{pct(sortKey === 'max' ? mr : er)}</span>
+          <span class="relative flex flex-col justify-end w-9" style={`height:${CHART_HEIGHT}px`}>
+            {#if overflow}
+              <span class="absolute -top-0.5 inset-x-0 text-center text-[9px] leading-none text-amber-600 dark:text-amber-400">▲</span>
+            {/if}
+            <!-- 上乗せ: 最大カバー率 − 期待カバー率（発動率による目減り分） -->
+            <span
+              class="block w-full bg-amber-200 dark:bg-amber-800/60"
+              style={`height:${px(mr) - px(er)}px`}
+            ></span>
+            <!-- 実体: 期待カバー率 -->
+            <span class="block w-full bg-amber-400 dark:bg-amber-500 rounded-t-sm" style={`height:${px(er)}px`}></span>
           </span>
-          <div class="flex flex-col gap-2 mt-1.5">
-            {#each col.entries as entry (entry.card.ID)}
-              {@const selected = entry.card.ID != null && selectedIds.includes(entry.card.ID)}
-              <button
-                type="button"
-                class="flex flex-col items-center cursor-pointer"
-                title={entry.card.cardname}
-                onclick={() => onToggle(entry)}
-              >
-                <img
-                  src={cardThumbUrl(entry.card.ID ?? '')}
-                  alt={entry.card.cardname || ''}
-                  loading="lazy"
-                  class="w-12 h-12 rounded border-[3px] object-cover"
-                  class:ring-2={selected}
-                  class:ring-indigo-500={selected}
-                  class:ring-offset-1={selected}
-                  style={`border-color:${ATTR_HEX[entry.attribute]}`}
-                />
-                <span class="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 leading-tight text-center">
-                  {condLabel(entry)} / {entry.skill?.per ?? 0}%<br />
-                  属性値 {entry.appealTotal.toLocaleString('ja-JP')}
-                </span>
-                {@html bonusBadgeHtml(tierOf(entry))}
-              </button>
-            {/each}
-          </div>
+          <button
+            type="button"
+            class="flex flex-col items-center cursor-pointer mt-1.5"
+            title={entry.card.cardname}
+            onclick={() => onToggle(entry)}
+          >
+            <img
+              src={cardThumbUrl(entry.card.ID ?? '')}
+              alt={entry.card.cardname || ''}
+              loading="lazy"
+              class="w-12 h-12 rounded border-[3px] object-cover"
+              class:ring-2={selected}
+              class:ring-indigo-500={selected}
+              class:ring-offset-1={selected}
+              style={`border-color:${ATTR_HEX[entry.attribute]}`}
+            />
+            <span class="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 leading-tight text-center">
+              最大 {sec(entry.maxCoverSec)}s ({pct(mr)})<br />
+              期待 {sec(entry.expectedCoverSec)}s ({pct(er)})<br />
+              {condLabel(entry)} / {entry.skill?.per ?? 0}%
+            </span>
+            {@html bonusBadgeHtml(tierOf(entry))}
+          </button>
         </div>
       {/each}
     </div>
   </div>
   <div class="px-3 pb-3 text-[11px] text-gray-400 dark:text-slate-500">
-    棒の高さ = 1回あたりの効果秒数。秒数・発動回数・確率が同じ衣装は1列に縦積み。並び順: 効果秒数 → 最大発動回数 → 確率 → 属性値合計
+    棒の高さ = カバー率（曲全体に対する縮小秒数の割合）。濃い部分 = 期待カバー率（発動確率込み）、薄い部分 = 最大との差（発動率による目減り）。▲ は 100% 超。並び順: {sortKey === 'max' ? '最大カバー秒数' : '期待カバー秒数'}の降順
   </div>
 {/if}
