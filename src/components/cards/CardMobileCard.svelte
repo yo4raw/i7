@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { CardListItem } from '../../lib/cardListData';
+  import type { Card } from '../../lib/data/fetchCardsJson';
+  import { formatSkillEffectMax } from '../../lib/score/skillFormatter';
   import { ATTR_BG, ATTR_HEX } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { ATTR_TEXT_CLASS } from '../../lib/ui';
@@ -37,6 +39,7 @@
   const donut = $derived(attrDonutSvg(s, b, m));
 
   const bonusDef = $derived(bonusTier && bonusTier !== 'none' ? EVENT_BONUS_TIERS.find((t) => t.key === bonusTier) ?? null : null);
+  const skillEffect = $derived(formatSkillEffectMax(card as unknown as Card));
 
   function handleRowClick() {
     window.location.href = `${base}cards/${card.ID}/`;
@@ -80,6 +83,16 @@
           <span class={ATTR_TEXT_CLASS.Melody}>M:{m} <span class="text-gray-400 dark:text-slate-500">{mPct}%</span></span>
         </div>
       </div>
+      {#if card.ap_skill_type}
+        <div class="mt-1 text-xs">
+          <span class="text-gray-600 dark:text-slate-300">{card.ap_skill_type}</span>
+          {#if skillEffect}
+            <span class="block text-[10px] text-gray-500 dark:text-slate-400">
+              <span class="font-medium">Lv{skillEffect.level}</span> {skillEffect.text}
+            </span>
+          {/if}
+        </div>
+      {/if}
     </div>
   </div>
   <div class="mt-2 flex items-center justify-between border-t pt-2">
