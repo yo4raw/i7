@@ -2,6 +2,7 @@
   import { formatScore, type CardStrengthEntry, type ScoreUpSortKey } from '../../lib/score/cardStrength';
   import { ATTR_HEX } from '../../lib/constants';
   import { cardThumbUrl } from '../../lib/ui';
+  import { skillTypeShortLabel } from '../../lib/score/skillFormatter';
   import { bonusBadgeHtml, type EventBonusTier } from '../../lib/data/eventBonusTiers';
 
   type Props = {
@@ -61,7 +62,7 @@
           <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
             期待 {formatScore(entry.totalScore)}<br />
             最大 {formatScore(entry.maxTotalScore)}<br />
-            {entry.skill?.originalType ?? entry.card.ap_skill_type ?? 'スキルなし'}
+            {skillTypeShortLabel(entry.skill?.originalType ?? entry.card.ap_skill_type)}
           </span>
           {@html bonusBadgeHtml(tierOf(entry))}
         </button>
