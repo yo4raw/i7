@@ -75,6 +75,7 @@
   // ボタンの一時フィードバック表示
   let deckSaved = $state(false);
   let shareCopied = $state(false);
+  let imageBusy = $state(false);
 
   function handleSongChange(id: number | null) {
     selectedSong = id != null ? allSongsState.find(s => s.id === id) || null : null;
@@ -162,6 +163,34 @@
     }
   }
 
+  // 編成＋スコアを PNG 画像として保存（data-noshot を付けた操作ボタン類は除外）
+  async function shareDeckImage() {
+    if (imageBusy) return;
+    if (isDeckEmpty(buildStateObject())) { alert('編成が空です。楽曲や衣装を選んでから画像化してください。'); return; }
+    const node = document.getElementById('score-share-target');
+    if (!node) return;
+    imageBusy = true;
+    try {
+      const { domToPng } = await import('modern-screenshot');
+      const dataUrl = await domToPng(node, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        filter: (n: Node) => !(n instanceof HTMLElement && n.hasAttribute('data-noshot')),
+      });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `i7-score-${selectedSong?.song_name ?? 'deck'}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error(e);
+      alert('画像の生成に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      imageBusy = false;
+    }
+  }
+
   type SavedDeck = { id: string; name: string; createdAt: number; updatedAt: number; state: ReturnType<typeof buildStateObject> };
 
   function loadSavedDecks(): SavedDeck[] { return loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, []); }
@@ -240,7 +269,7 @@
   });
 </script>
 
-<div>
+<div id="score-share-target">
   <!-- 楽曲サマリーバー（全幅・横長） -->
   <section class="bg-white rounded-lg shadow p-4 mb-4">
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
@@ -318,10 +347,11 @@
     <section class="bg-white rounded-lg shadow p-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
-        <div class="relative flex gap-2">
+        <div class="relative flex gap-2" data-noshot>
           <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'} rounded hover:bg-indigo-200 transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
           <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors" onclick={showLoadDropdown}>読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー" disabled={shareCopied} onclick={shareDeckUrl}>{shareCopied ? '✅ コピーしました' : '🔗 URLコピー'}</button>
+          <button id="btn-share-image" type="button" class="text-xs px-2 py-1 bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-colors disabled:opacity-60" aria-label="編成とスコアを画像で保存" disabled={imageBusy} onclick={shareDeckImage}>{imageBusy ? '生成中…' : '📷 画像'}</button>
           <div id="load-deck-dropdown" class="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" class:hidden={loadDeckItems === null}>
             {#if loadDeckItems !== null}
               {#if loadDeckItems.length === 0}
@@ -355,5 +385,7 @@
     <ScoreCalcResults deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} scoreUpAssist={scoreUpAssist} scoreUpBadgeRate={scoreUpBadgeRate} />
   </div>
 
-  <CardPickerModal bind:this={picker} allCards={allCardsState} onPick={handlePick} onClear={handleClear} />
+  <div data-noshot>
+    <CardPickerModal bind:this={picker} allCards={allCardsState} onPick={handlePick} onClear={handleClear} />
+  </div>
 </div>
