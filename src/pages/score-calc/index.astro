@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ScoreCalc from '../../components/ScoreCalc.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { fetchEventsCsv, toEventForBonus } from '../../lib/data/fetchEventsCsv.ts';
 
@@ -13,7 +13,7 @@ const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
   fetchEventsCsv(),
 ]);
 
-const allSongs = filterAllowedSongs(filterValidSongs(allSongsRaw));
+const allSongs = filterValidSongs(allSongsRaw);
 
 const eventsForBonus = allEvents.map(toEventForBonus);
 

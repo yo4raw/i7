@@ -1,9 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SongList from '../../components/SongList.svelte';
-import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 
-const allSongs = filterAllowedSongs(filterValidSongs(await fetchSongsJson()));
+const allSongs = filterValidSongs(await fetchSongsJson());
 const categories = [...new Set(allSongs.map((s: any) => s.category))].sort() as string[];
 const base = import.meta.env.BASE_URL;
 ---

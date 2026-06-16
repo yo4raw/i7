@@ -2,13 +2,13 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DeckList from '../../components/DeckList.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
 
 const [allCards, allSongsRaw] = await Promise.all([
   fetchCardsJson(),
   fetchSongsJson(),
 ]);
-const allSongs = filterAllowedSongs(filterValidSongs(allSongsRaw));
+const allSongs = filterValidSongs(allSongsRaw);
 const base = import.meta.env.BASE_URL;
 ---
 

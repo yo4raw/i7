@@ -3,7 +3,8 @@
   import type { Card } from '../lib/data/fetchCardsJson';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import type { Song } from '../lib/data/fetchSongsJson';
-  import { fetchSongsJson, filterAllowedSongs, filterValidSongs } from '../lib/data/fetchSongsJson';
+  import { fetchSongsJson, filterValidSongs, firstEventSongId } from '../lib/data/fetchSongsJson';
+  import SongSelect from './SongSelect.svelte';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { refreshData } from '../lib/data/clientRefresh';
@@ -27,8 +28,6 @@
     base: string;
   };
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events }: Props = $props();
-
-  const DEFAULT_SONG_NAME = 'DIAMOND FUSION';
 
   let allCardsState = $state<Card[]>(initialCards);
   let allSongsState = $state<Song[]>(initialSongs);
@@ -56,7 +55,7 @@
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCardsState = fresh as Card[];
     });
-    refreshData('songs', async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())), (fresh) => {
+    refreshData('songs', async () => filterValidSongs(await fetchSongsJson()), (fresh) => {
       allSongsState = fresh as Song[];
     });
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => {
@@ -64,13 +63,10 @@
     });
   });
 
-  // 初期選択曲: DIAMOND FUSION のうちノーツ数最大の難易度。見つからなければ先頭の曲
+  // 初期選択曲: イベント対象楽曲の先頭。無ければ先頭の曲
   $effect(() => {
     if (selectedSongId != null || allSongsState.length === 0) return;
-    const candidates = allSongsState.filter((s) => s.song_name === DEFAULT_SONG_NAME);
-    const pool = candidates.length > 0 ? candidates : allSongsState;
-    const sorted = [...pool].sort((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
-    selectedSongId = sorted[0]?.id ?? null;
+    selectedSongId = firstEventSongId(allSongsState) ?? allSongsState[0]?.id ?? null;
   });
 
   const selectedSong = $derived(allSongsState.find((s) => s.id === selectedSongId) ?? null);
@@ -113,9 +109,7 @@
     }
   }
 
-  function handleSongChange(e: Event) {
-    const v = Number((e.currentTarget as HTMLSelectElement).value);
-    selectedSongId = Number.isNaN(v) ? null : v;
+  function handleSongChange() {
     selectedIds = [];
   }
 
@@ -125,15 +119,13 @@
 <div class="bg-white border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
   <label class="flex items-center gap-2">
     <span class="text-gray-600 shrink-0">楽曲</span>
-    <select
+    <SongSelect
+      songs={allSongsState}
+      bind:value={selectedSongId}
+      onChange={handleSongChange}
       class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-      value={selectedSongId != null ? String(selectedSongId) : ''}
-      onchange={handleSongChange}
-    >
-      {#each allSongsState as s (s.id)}
-        <option value={String(s.id)}>{s.song_name} ({s.difficulty || ''}) - {s.duration || '?'}秒 / {s.notes_count || '?'}ノーツ</option>
-      {/each}
-    </select>
+      placeholder={null}
+    />
   </label>
   <label class="flex items-center gap-1.5 cursor-pointer">
     <input type="checkbox" bind:checked={ownedOnly} disabled={!hasOwned} class="accent-indigo-600" />
