@@ -32,3 +32,4 @@
 | [0018](0018-card-compare-scoreup-max-overlay.md) | 衣装比較 スコアアップタブに最大値を重ね、期待/最大ソートを追加 | 承認 |
 | [0019](0019-home-page-dashboard-redesign.md) | トップページをダッシュボード型へフルリデザイン | 承認 |
 | [0020](0020-abolish-dark-mode.md) | ダークモードの廃止（段階的） | 承認 |
+| [0021](0021-event-songs-pinned-select.md) | 楽曲許可リストを「イベント対象楽曲」のピン留めに転換 | 承認 |

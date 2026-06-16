@@ -2,7 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import MaxScoreFinder from '../../../components/MaxScoreFinder.svelte';
 import { fetchCardsJson } from '../../../lib/data/fetchCardsJson';
-import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../../../lib/data/fetchSongsJson';
+import { fetchSongsJson, filterValidSongs } from '../../../lib/data/fetchSongsJson';
 import { fetchFixedBroachsJson } from '../../../lib/data/fetchFixedBroachsJson';
 import { fetchEventsCsv, toEventForBonus } from '../../../lib/data/fetchEventsCsv';
 
@@ -13,7 +13,7 @@ const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
   fetchEventsCsv(),
 ]);
 
-const allSongs = filterAllowedSongs(filterValidSongs(allSongsRaw));
+const allSongs = filterValidSongs(allSongsRaw);
 
 const eventsForBonus = allEvents.map(toEventForBonus);
 

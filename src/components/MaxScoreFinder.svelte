@@ -19,12 +19,12 @@
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { ATTR_HEX } from '../lib/constants';
   import SearchResults from './score/SearchResults.svelte';
-  import { STORAGE_KEYS, loadJson } from '../lib/storage';
   import { formatElapsed } from '../lib/ui';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
-  import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
+  import { fetchSongsJson, filterValidSongs, firstEventSongId } from '../lib/data/fetchSongsJson';
+  import SongSelect from './SongSelect.svelte';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
@@ -46,7 +46,7 @@
   let allBroachs = $state<FixedBroach[]>(initialBroachs);
   const allEventsData = initialEvents;
 
-  let selectedSongId = $state<number | ''>('');
+  let selectedSongId = $state<number | null>(null);
   let evalMode = $state<'expected' | 'max'>('expected');
   let scoreUpAssist = $state(false);
   let scoreUpBadgeRate = $state(0);
@@ -79,13 +79,19 @@
 
   $effect(() => {
     refreshData('cards', fetchCardsJson, (fresh) => { allCards = fresh as Card[]; });
-    refreshData('songs', async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())), (fresh) => { allSongs = fresh as Song[]; });
+    refreshData('songs', async () => filterValidSongs(await fetchSongsJson()), (fresh) => { allSongs = fresh as Song[]; });
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => { allBroachs = fresh as FixedBroach[]; });
     reloadCardCounts();
     reloadBroachCountsFromStorage();
   });
 
-  const selectedSong = $derived(selectedSongId ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
+  const selectedSong = $derived(selectedSongId != null ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
+
+  // 初期選択曲: イベント対象楽曲の先頭。無ければ未選択のまま
+  $effect(() => {
+    if (selectedSongId != null || allSongs.length === 0) return;
+    selectedSongId = firstEventSongId(allSongs);
+  });
 
   const currentLiveEvents = $derived(allEventsData.filter((ev) => isEventLive(ev.start_date, ev.end_date, now)));
   const currentTierMap = $derived(buildLiveTierMap(currentLiveEvents, now));
@@ -160,20 +166,6 @@
       : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : ''
   );
-
-  const pickedSongIds = $derived<Set<number>>(new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, [])));
-  const pickedSongs = $derived(
-    allSongs.filter((s) => s.id != null && pickedSongIds.has(s.id)).sort((a, b) => (a.duration || 0) - (b.duration || 0))
-  );
-  const categorizedSongs = $derived.by(() => {
-    const groups = new Map<string, Song[]>();
-    for (const s of allSongs) {
-      const cat = s.category || 'その他';
-      if (!groups.has(cat)) groups.set(cat, []);
-      groups.get(cat)!.push(s);
-    }
-    return [...groups.entries()];
-  });
 
   async function runSearch() {
     const input = buildSearchInput();
@@ -250,27 +242,7 @@
 
 <section class="bg-white rounded-lg shadow p-4 mb-4">
   <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
-  <select
-    id="song-select"
-    bind:value={selectedSongId}
-    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-  >
-    <option value="">楽曲を選択</option>
-    {#if pickedSongs.length > 0}
-      <optgroup label={`選択中の曲（${pickedSongs.length}曲・秒数順）`}>
-        {#each pickedSongs as s}
-          <option value={s.id}>{s.song_name} ({s.difficulty || ''}) - {s.duration || '?'}秒</option>
-        {/each}
-      </optgroup>
-    {/if}
-    {#each categorizedSongs as [cat, songs]}
-      <optgroup label={cat}>
-        {#each songs as s}
-          <option value={s.id}>{s.song_name} ({s.difficulty || ''})</option>
-        {/each}
-      </optgroup>
-    {/each}
-  </select>
+  <SongSelect id="song-select" songs={allSongs} bind:value={selectedSongId} />
   {#if selectedSong}
     <div class="mt-3 text-xs text-gray-600">
       <div class="flex flex-wrap gap-3">

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fetchCardsJson, type Card } from '../lib/data/fetchCardsJson';
-  import { fetchSongsJson, filterValidSongs, filterAllowedSongs, SONG_NOTE_GROUP_KEYS, type Song } from '../lib/data/fetchSongsJson';
+  import { fetchSongsJson, filterValidSongs, firstEventSongId, SONG_NOTE_GROUP_KEYS, type Song } from '../lib/data/fetchSongsJson';
+  import SongSelect from './SongSelect.svelte';
   import { fetchFixedBroachsJson, type FixedBroach } from '../lib/data/fetchFixedBroachsJson';
   import { buildLiveTierMap, type EventBonusTier, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { attrDonutSvg } from '../lib/donutChart';
@@ -49,21 +50,6 @@
     return card?.ID != null ? (defaultTierMap.get(card.ID) ?? 'none') : 'none';
   }
 
-  // 楽曲セレクト用の派生値（選択中の曲 optgroup + カテゴリ別 optgroup）
-  const pickedSongs = $derived.by(() => {
-    const pickedIds = new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
-    return allSongsState.filter(s => s.id != null && pickedIds.has(s.id)).sort((a, b) => (a.duration || 0) - (b.duration || 0));
-  });
-  const categorizedSongs = $derived.by(() => {
-    const groups = new Map<string, Song[]>();
-    for (const s of allSongsState) {
-      const cat = s.category || 'その他';
-      if (!groups.has(cat)) groups.set(cat, []);
-      groups.get(cat)!.push(s);
-    }
-    return [...groups];
-  });
-
   // 楽曲サマリー表示用の派生値
   const songAttrCounts = $derived.by(() => {
     if (!selectedSong) return null;
@@ -90,9 +76,8 @@
   let deckSaved = $state(false);
   let shareCopied = $state(false);
 
-  function handleSongChange(e: Event) {
-    const id = Number((e.currentTarget as HTMLSelectElement).value);
-    selectedSong = allSongsState.find(s => s.id === id) || null;
+  function handleSongChange(id: number | null) {
+    selectedSong = id != null ? allSongsState.find(s => s.id === id) || null : null;
     saveState();
   }
   function handlePick(slot: number, card: Card) { setCard(deckState, slot, card, defaultTierFor(card), allBroachsState); saveState(); }
@@ -224,12 +209,17 @@
   onMount(() => {
     reloadBroachCountsFromStorage();
     if (!tryRestoreFromUrl()) restoreState();
+    // 復元結果に楽曲が無ければイベント対象楽曲の先頭を既定に
+    if (!selectedSong) {
+      const eid = firstEventSongId(allSongsState);
+      selectedSong = eid != null ? allSongsState.find(s => s.id === eid) || null : null;
+    }
 
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCardsState = fresh as Card[];
       deckState.cards = deckState.cards.map(c => c ? allCardsState.find(fc => fc.ID === c.ID) || null : null);
     });
-    refreshData('songs', async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())), (fresh) => {
+    refreshData('songs', async () => filterValidSongs(await fetchSongsJson()), (fresh) => {
       allSongsState = fresh as Song[];
       if (selectedSong) selectedSong = allSongsState.find(s => s.id === selectedSong!.id) || null;
     });
@@ -256,23 +246,7 @@
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
       <div class="min-w-0">
         <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
-        <select id="song-select" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={selectedSong?.id != null ? String(selectedSong.id) : ''} onchange={handleSongChange}>
-          <option value="">楽曲を選択</option>
-          {#if pickedSongs.length > 0}
-            <optgroup label={`選択中の曲（${pickedSongs.length}曲・秒数順）`}>
-              {#each pickedSongs as s (s.id)}
-                <option value={String(s.id)}>{s.song_name} ({s.difficulty || ''}) - {s.duration || '?'}秒</option>
-              {/each}
-            </optgroup>
-          {/if}
-          {#each categorizedSongs as [cat, songs] (cat)}
-            <optgroup label={cat}>
-              {#each songs as s}
-                <option value={String(s.id)}>{s.song_name} ({s.difficulty || ''})</option>
-              {/each}
-            </optgroup>
-          {/each}
-        </select>
+        <SongSelect id="song-select" songs={allSongsState} value={selectedSong?.id ?? null} onChange={handleSongChange} />
         <div id="song-info" class="mt-3" class:hidden={!selectedSong}>
           <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
             <div><dt class="text-gray-500 text-[10px]">曲名</dt><dd id="song-name-val" class="font-medium truncate">{selectedSong ? selectedSong.song_name || '-' : ''}</dd></div>

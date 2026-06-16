@@ -66,21 +66,15 @@ test.describe('衣装比較ページ', () => {
     await expect(page.getByTestId('compare-detail')).toBeHidden();
   });
 
-  test('楽曲セレクタの初期選択が既定曲（DIAMOND FUSION）または最大ノーツ曲', async ({ page }) => {
+  test('楽曲セレクタの先頭グループがイベント対象楽曲で初期選択がその先頭', async ({ page }) => {
     const select = page.getByLabel(/楽曲/);
     await expect(select).toBeVisible({ timeout: 20000 });
-    const optionTexts = await select.locator('option').allTextContents();
+    // 先頭の optgroup は「イベント対象楽曲」
+    const firstGroup = select.locator('optgroup').first();
+    await expect(firstGroup).toHaveAttribute('label', 'イベント対象楽曲');
+    // 初期選択はイベント対象楽曲グループの先頭 option
+    const firstEventOption = firstGroup.locator('option').first();
     const checked = (await select.locator('option:checked').textContent()) ?? '';
-
-    // 既定曲ロジック: DIAMOND FUSION が候補にあれば優先、なければノーツ数最大の曲。
-    // 許可リスト (allowed-songs.json) で DIAMOND FUSION が除外されている場合は後者になる。
-    if (optionTexts.some((t) => t.includes('DIAMOND FUSION'))) {
-      expect(checked).toContain('DIAMOND FUSION');
-    } else {
-      const parseNotes = (t: string) =>
-        Number((t.match(/([\d,]+)\s*ノーツ/)?.[1] ?? '0').replace(/,/g, ''));
-      const maxNotes = Math.max(...optionTexts.map(parseNotes));
-      expect(parseNotes(checked)).toBe(maxNotes);
-    }
+    expect(checked).toBe((await firstEventOption.textContent()) ?? '');
   });
 });

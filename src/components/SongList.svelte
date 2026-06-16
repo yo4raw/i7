@@ -5,7 +5,7 @@
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import { songImageUrl, starsText } from '../lib/ui';
   import { refreshData } from '../lib/data/clientRefresh';
-  import { fetchSongsJson, filterValidSongs, filterAllowedSongs } from '../lib/data/fetchSongsJson';
+  import { fetchSongsJson, filterValidSongs } from '../lib/data/fetchSongsJson';
 
   type Props = {
     songs: Song[];
@@ -34,7 +34,7 @@
 
     refreshData(
       'songs',
-      async () => filterAllowedSongs(filterValidSongs(await fetchSongsJson())),
+      async () => filterValidSongs(await fetchSongsJson()),
       (fresh) => { allSongs = fresh as Song[]; }
     );
   });
