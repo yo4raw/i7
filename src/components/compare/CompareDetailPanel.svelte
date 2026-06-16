@@ -1,5 +1,6 @@
 <script lang="ts">
   import { formatScore, type CardStrengthEntry } from '../../lib/score/cardStrength';
+  import { skillTypeShortLabel } from '../../lib/score/skillFormatter';
   import { ATTR_HEX } from '../../lib/constants';
   import { cardThumbUrl } from '../../lib/ui';
 
@@ -95,7 +96,7 @@
           <tr>
             <td class="text-gray-500 pr-2 py-1">スキル</td>
             {#each entries as entry (entry.card.ID)}
-              <td class="px-2 py-1 text-center whitespace-nowrap">{entry.skill?.originalType ?? entry.card.ap_skill_type ?? 'スキルなし'}</td>
+              <td class="px-2 py-1 text-center whitespace-nowrap">{skillTypeShortLabel(entry.skill?.originalType ?? entry.card.ap_skill_type)}</td>
             {/each}
           </tr>
           <tr>
