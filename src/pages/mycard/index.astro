@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import MyCardList from '../../components/MyCardList.svelte';
+import CollectionDashboard from '../../components/CollectionDashboard.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { CARD_THUMB_BASE_URL } from '../../lib/constants';
 
@@ -11,5 +12,6 @@ const base = import.meta.env.BASE_URL;
 <BaseLayout title="所持衣装一覧">
   <h1 class="text-2xl font-bold mb-6">所持衣装一覧</h1>
 
+  <CollectionDashboard cards={allCards} client:load />
   <MyCardList cards={allCards} base={base} thumbUrl={CARD_THUMB_BASE_URL} client:load />
 </BaseLayout>
