@@ -34,3 +34,4 @@
 | [0020](0020-abolish-dark-mode.md) | ダークモードの廃止（段階的） | 承認 |
 | [0021](0021-event-songs-pinned-select.md) | 楽曲許可リストを「イベント対象楽曲」のピン留めに転換 | 承認 |
 | [0022](0022-collection-dashboard.md) | 所持コレクションダッシュボードの追加 | 承認 |
+| [0023](0023-score-deck-share-image.md) | スコア計算の編成・スコアを画像で共有 | 承認 |
