@@ -318,3 +318,4 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 4. **本番ビルドでしか検出できない項目**（動的ルート全件生成・`@playform/compress` の圧縮後挙動・`BASE_URL` 解決など）に関わる変更の場合のみ、追加で `npm run preview` を実行して最終確認する
 5. `git` に `commit` する前に必ずリリースノートを更新する
 6. ユーザーの確認が取れたら 対応内容に応じたブランチを作成して `git commit` → `git push` と PR の作成を行い、CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない。
+7. **リリース（タグ push）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照。
