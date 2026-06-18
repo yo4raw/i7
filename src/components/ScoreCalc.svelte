@@ -21,6 +21,7 @@
   import CardDetailTable from './score/CardDetailTable.svelte';
   import ScoreCalcResults from './score/ScoreCalcResults.svelte';
   import BroachRankingChart from './score/BroachRankingChart.svelte';
+  import DeckSkillDistribution from './score/DeckSkillDistribution.svelte';
   type Props = { cards: Card[]; songs: Song[]; broachs: FixedBroach[]; events: EventForBonus[]; base: string };
 
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events: initialEvents, base }: Props = $props();
@@ -381,6 +382,8 @@
     </section>
 
     <CardDetailTable deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} scoreUpAssist={scoreUpAssist} />
+
+    <DeckSkillDistribution deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} scoreUpAssist={scoreUpAssist} scoreUpBadgeRate={scoreUpBadgeRate} />
 
     <ScoreCalcResults deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} scoreUpAssist={scoreUpAssist} scoreUpBadgeRate={scoreUpBadgeRate} />
   </div>
