@@ -29,7 +29,8 @@
 
 各衣装のスキル発動成功回数 `K` は二項分布 `K ~ Binomial(n, p)` に従う。
 
-- `n` = 選択曲での最大発動回数。`Math.floor(発動機会 ÷ skill.count)`。発動機会は通常スキルはノーツ数、タイマー系は曲尺（`songDuration`）。**シミュレーションと同一のロジックを再利用する**（`src/lib/score/simulation.ts` の最大発動回数算出を共有関数として切り出して使う）。
+- `n` = 選択曲での最大発動回数。`Math.floor(発動機会 ÷ skill.count)`。発動機会は通常スキルはノーツ数、タイマー系は曲尺（`songDuration`）。**シミュレーションと同一のロジック（`calcCardSkillMaxActivations`）を再利用する**。
+  - 注: 判定縮小系の実シミュレーション（`calcShrinkActivationCount`）は先頭除外ノーツ分を分母から控除するが、本チャートの `n` は `calcCardSkillMaxActivations`（控除なし）を用いるため縮小系のカバー秒数上限がごく僅か大きめに出る。縮小軸はそもそもキャップなしのカバー秒数という近似（本 spec の「縮小はカバー秒数」前提）なので、整合の取れた割り切りとして許容する。
 - `p` = `skill.per / 100`。スキルレベル（`deckState.skillLevels[slotIndex]`）由来。
 - `value` = `skill.value`。1 発動あたりの上乗せ（スコアアップ系はスコア、判定縮小系はカバー秒数）。スキルレベル由来でデッキ非依存。
 - 分布点: `points[k] = { x: K × value, prob: pmf[k] }`（k = 0..n）。**0 起点**（チーム土台は曲線に含めない）。`pmf` は `src/lib/score/cardDistribution.ts` の `binomialPmf(n, p)` を再利用する。
