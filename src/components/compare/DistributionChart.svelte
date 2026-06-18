@@ -16,6 +16,9 @@
   // 衣装ごとのしきい値割合 t（0〜1）。index 対応。既定 0.8
   let thresholds = $state<number[]>([]);
   $effect(() => {
+    // NOTE: thresholds は entries の並び順に対応する位置結合。
+    // 末尾以外の衣装を削除すると残りの衣装のしきい値が 1 スロット前にずれるが、
+    // 再ドラッグで補正されるため既知の許容済み制限とする。
     if (thresholds.length !== entries.length) {
       thresholds = entries.map((_, i) => thresholds[i] ?? 0.8);
     }
@@ -124,6 +127,13 @@
   function onSlider() {
     thresholds = entries.map(() => sliderVal / 100);
   }
+
+  // スライダー表示ラベル: 全衣装のしきい値が一致していれば「XX%」、ばらついていれば「混在」
+  const sliderLabel = $derived.by(() => {
+    if (thresholds.length === 0) return `${sliderVal}%`;
+    const allEqual = thresholds.every((t) => Math.abs(t - thresholds[0]) < 1e-9);
+    return allEqual ? `${Math.round(thresholds[0] * 100)}%` : '混在';
+  });
 </script>
 
 <div class="border-t border-gray-100 pt-2 mt-1" data-testid="distribution-chart">
@@ -133,7 +143,7 @@
       type="range" min="0" max="100" bind:value={sliderVal} oninput={onSlider}
       class="flex-1 accent-indigo-600" aria-label="一括しきい値"
     />
-    <span class="shrink-0 w-8 text-right">{sliderVal}%</span>
+    <span class="shrink-0 w-8 text-right">{sliderLabel}</span>
   </div>
 
   <svg
