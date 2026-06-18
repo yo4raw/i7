@@ -163,7 +163,7 @@
   >判定縮小</button>
 </div>
 
-<div class="bg-white border border-gray-200 rounded-b-lg rounded-tr-lg" class:pb-24={selectedEntries.length > 0}>
+<div class="bg-white border border-gray-200 rounded-b-lg rounded-tr-lg" class:pb-[600px]={selectedEntries.length > 0}>
   {#if !selectedSong}
     <p class="text-sm text-gray-500 py-10 text-center">楽曲データを読み込んでいます…</p>
   {:else if tab === 'scoreUp'}

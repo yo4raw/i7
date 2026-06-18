@@ -3,6 +3,7 @@
   import { skillTypeShortLabel } from '../../lib/score/skillFormatter';
   import { ATTR_HEX } from '../../lib/constants';
   import { cardThumbUrl } from '../../lib/ui';
+  import DistributionChart from './DistributionChart.svelte';
 
   type Props = {
     entries: CardStrengthEntry[];
@@ -51,6 +52,11 @@
   const hasShrink = $derived(entries.some((e) => e.skill?.isShrink));
   const maxCoverMax = $derived(maxIndexes(entries.map((e) => e.maxCoverSec)));
   const expCoverMax = $derived(maxIndexes(entries.map((e) => e.expectedCoverSec)));
+
+  // 分布チャートは単位ごとに分割（スコア＝点 / 縮小＝秒）
+  const scoreChartEntries = $derived(entries.filter((e) => !e.skill?.isShrink));
+  const coverChartEntries = $derived(entries.filter((e) => e.skill?.isShrink));
+  const coverFormat = (v: number) => `${sec(v)}s`;
 </script>
 
 <div
@@ -62,7 +68,13 @@
       <span class="text-xs font-bold text-indigo-700">詳細比較（{entries.length}/4枚）</span>
       <button type="button" class="text-xs text-gray-500 hover:text-red-600 cursor-pointer" onclick={onClear}>✕ クリア</button>
     </div>
-    <div class="overflow-x-auto max-h-[45vh] overflow-y-auto">
+    {#if scoreChartEntries.length > 0}
+      <DistributionChart entries={scoreChartEntries} metric="score" formatX={formatScore} />
+    {/if}
+    {#if coverChartEntries.length > 0}
+      <DistributionChart entries={coverChartEntries} metric="cover" formatX={coverFormat} />
+    {/if}
+    <div class="overflow-x-auto max-h-[22vh] overflow-y-auto">
       <table class="text-[11px] border-collapse w-full min-w-max">
         <thead>
           <tr>

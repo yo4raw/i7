@@ -35,3 +35,4 @@
 | [0021](0021-event-songs-pinned-select.md) | 楽曲許可リストを「イベント対象楽曲」のピン留めに転換 | 承認 |
 | [0022](0022-collection-dashboard.md) | 所持コレクションダッシュボードの追加 | 承認 |
 | [0023](0023-score-deck-share-image.md) | スコア計算の編成・スコアを画像で共有 | 承認 |
+| [0024](0024-card-compare-distribution.md) | 衣装比較 詳細パネルにスコア分布（二項分布）を追加 | 承認 |

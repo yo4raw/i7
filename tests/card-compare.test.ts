@@ -77,4 +77,32 @@ test.describe('衣装比較ページ', () => {
     const checked = (await select.locator('option:checked').textContent()) ?? '';
     expect(checked).toBe((await firstEventOption.textContent()) ?? '');
   });
+
+  test('衣装を選ぶと詳細パネルに分布チャートと一括しきい値スライダーが出る', async ({ page }) => {
+    const bar = page.getByTestId('scoreup-bar').first();
+    await expect(bar).toBeVisible({ timeout: 20000 });
+    await bar.click();
+    await expect(page.getByTestId('compare-detail')).toBeVisible();
+    await expect(page.getByTestId('distribution-chart').first()).toBeVisible();
+    await expect(page.getByLabel('一括しきい値').first()).toBeVisible();
+  });
+
+  test('スコアアップ衣装と縮小衣装を両方選ぶと分布チャートが2つに分かれる', async ({ page }) => {
+    // 縦に長いビューポートで固定パネルがタブを覆わないようにする
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    // 判定縮小タブを先に開いて縮小衣装を選択（詳細パネルが出る前にタブを切り替える）
+    await page.getByRole('tab', { name: '判定縮小' }).click();
+    const shrinkCol = page.getByTestId('shrink-col').first();
+    await expect(shrinkCol).toBeVisible({ timeout: 20000 });
+    // shrink-col 内のボタン（サムネイル）をクリックして選択
+    await shrinkCol.locator('button').click();
+    // 詳細パネルが表示されたことを確認
+    await expect(page.getByTestId('compare-detail')).toBeVisible();
+    // スコアアップタブに切り替えてスコアアップ衣装を追加選択
+    await page.getByRole('tab', { name: 'スコアアップ' }).click();
+    const scoreBar = page.getByTestId('scoreup-bar').first();
+    await expect(scoreBar).toBeVisible({ timeout: 20000 });
+    await scoreBar.click();
+    await expect(page.getByTestId('distribution-chart')).toHaveCount(2);
+  });
 });
