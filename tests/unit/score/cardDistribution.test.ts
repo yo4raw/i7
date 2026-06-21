@@ -26,7 +26,7 @@ function skill(partial: Partial<CardSkill>): CardSkill {
 
 function entry(partial: Partial<CardStrengthEntry>): CardStrengthEntry {
   return {
-    card: { ID: '1' } as CardStrengthEntry['card'],
+    card: { ID: '1' } as unknown as CardStrengthEntry['card'],
     attribute: 'Shout',
     appeal: { Shout: 0, Beat: 0, Melody: 0 },
     appealTotal: 0,
