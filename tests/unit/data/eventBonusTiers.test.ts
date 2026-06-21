@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isEventLive, buildLiveTierMap, type EventForBonus } from '../../../src/lib/data/eventBonusTiers';
+import { isEventLive, buildLiveTierMap, buildTierMapForEvent, type EventForBonus } from '../../../src/lib/data/eventBonusTiers';
 
 const T = (iso: string) => Date.parse(iso);
 
@@ -69,5 +69,25 @@ describe('buildLiveTierMap (開催中イベントの特効ティアマップ)', 
     const map = buildLiveTierMap([overlapping, liveEvent], now);
     expect(map.get(100)).toBe('gold');   // silver < gold
     expect(map.get(200)).toBe('silver'); // bronze < silver
+  });
+});
+
+describe('buildTierMapForEvent (単一イベントの特効ティアマップ)', () => {
+  it('金/銀/銅をそれぞれのティアに割り当てる', () => {
+    const map = buildTierMapForEvent({ gold: [1], silver: [2], bronze: [3] });
+    expect(map.get(1)).toBe('gold');
+    expect(map.get(2)).toBe('silver');
+    expect(map.get(3)).toBe('bronze');
+    expect(map.get(99)).toBeUndefined();
+  });
+
+  it('同一カードが複数ティアにある場合は上位（金>銀>銅）を採用する', () => {
+    const map = buildTierMapForEvent({ gold: [5], silver: [5], bronze: [5] });
+    expect(map.get(5)).toBe('gold');
+  });
+
+  it('開催期間に関係なくマップを生成する（live 判定をしない）', () => {
+    const map = buildTierMapForEvent({ gold: [7], silver: [], bronze: [] });
+    expect(map.get(7)).toBe('gold');
   });
 });

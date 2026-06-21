@@ -9,9 +9,10 @@
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { refreshData } from '../lib/data/clientRefresh';
   import {
-    buildLiveTierMap, EVENT_BONUS_MULTIPLIER, type EventBonusTier, type EventForBonus,
+    buildTierMapForEvent, EVENT_BONUS_MULTIPLIER, isHighScoreEvent, isEventLive,
+    type EventBonusTier, type EventForBonus,
   } from '../lib/data/eventBonusTiers';
-  import { STORAGE_KEYS, loadJson } from '../lib/storage';
+  import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import {
     buildCardStrengthEntry, classifyCard, compareShrinkBy, compareScoreUpBy,
     type CardStrengthEntry, type ShrinkSortKey, type ScoreUpSortKey,
@@ -20,11 +21,12 @@
   import ShrinkChart from './compare/ShrinkChart.svelte';
   import CompareDetailPanel from './compare/CompareDetailPanel.svelte';
 
+  type CompareEvent = EventForBonus & { eventname: string; eventtype: string };
   type Props = {
     cards: Card[];
     songs: Song[];
     broachs: FixedBroach[];
-    events: EventForBonus[];
+    events: CompareEvent[];
     base: string;
   };
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events }: Props = $props();
@@ -33,13 +35,18 @@
   let allSongsState = $state<Song[]>(initialSongs);
   let allBroachsState = $state<FixedBroach[]>(initialBroachs);
 
-  const tierMap = buildLiveTierMap(events);
-  const hasLiveEvent = tierMap.size > 0;
+  // ハイスコアイベントを新しい順に。開催中があれば既定選択。
+  const highScoreEvents = [...events]
+    .filter((e) => isHighScoreEvent(e.eventtype))
+    .sort((a, b) => b.start_date.localeCompare(a.start_date));
+  const defaultEventId =
+    highScoreEvents.find((e) => isEventLive(e.start_date, e.end_date))?.id ?? null;
 
   let ownedIds = $state<Set<string>>(new Set());
   let hasOwned = $state(false);
   let ownedOnly = $state(false);
-  let applyBonus = $state(false);
+  let selectedEventId = $state<number | null>(defaultEventId);
+  let mounted = $state(false);
   let tab = $state<'scoreUp' | 'shrink'>('scoreUp');
   let scoreUpSort = $state<ScoreUpSortKey>('expected');
   let shrinkSort = $state<ShrinkSortKey>('expected');
@@ -51,6 +58,12 @@
     ownedIds = new Set(Object.keys(counts).filter((k) => counts[k] > 0));
     hasOwned = ownedIds.size > 0;
     ownedOnly = hasOwned;
+
+    const savedEventId = loadJson<number | null>(STORAGE_KEYS.COMPARE_EVENT_ID, null);
+    if (savedEventId != null && highScoreEvents.some((e) => e.id === savedEventId)) {
+      selectedEventId = savedEventId;
+    }
+    mounted = true;
 
     refreshData('cards', fetchCardsJson, (fresh) => {
       allCardsState = fresh as Card[];
@@ -73,8 +86,21 @@
   const urCards = $derived(allCardsState.filter((c) => c.rarity === 'UR'));
   const visibleCards = $derived(urCards.filter((c) => !ownedOnly || ownedIds.has(String(c.ID))));
 
+  // 選択中イベントを localStorage に保持
+  $effect(() => {
+    if (!mounted) return;
+    saveJson(STORAGE_KEYS.COMPARE_EVENT_ID, selectedEventId);
+  });
+
+  const selectedEvent = $derived(
+    selectedEventId == null ? null : highScoreEvents.find((e) => e.id === selectedEventId) ?? null,
+  );
+  const tierMap = $derived(
+    selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>(),
+  );
+
   function tierFor(card: Card): EventBonusTier {
-    if (!applyBonus || card.ID == null) return 'none';
+    if (!selectedEvent || card.ID == null) return 'none';
     return tierMap.get(card.ID) ?? 'none';
   }
 
@@ -131,10 +157,23 @@
     <input type="checkbox" bind:checked={ownedOnly} disabled={!hasOwned} class="accent-indigo-600" />
     <span class="text-gray-700" class:opacity-50={!hasOwned}>所持のみ</span>
   </label>
-  {#if hasLiveEvent}
-    <label class="flex items-center gap-1.5 cursor-pointer">
-      <input type="checkbox" bind:checked={applyBonus} class="accent-indigo-600" />
-      <span class="text-gray-700">イベント特効を反映</span>
+  {#if highScoreEvents.length > 0}
+    <label class="flex items-center gap-2">
+      <span class="text-gray-600 shrink-0">特効</span>
+      <select
+        aria-label="特効イベント"
+        class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        value={selectedEventId == null ? '' : String(selectedEventId)}
+        onchange={(e) => {
+          const v = e.currentTarget.value;
+          selectedEventId = v === '' ? null : Number(v);
+        }}
+      >
+        <option value="">特効なし</option>
+        {#each highScoreEvents as ev (ev.id)}
+          <option value={String(ev.id)}>{ev.eventname}</option>
+        {/each}
+      </select>
     </label>
   {/if}
   {#if !hasOwned}

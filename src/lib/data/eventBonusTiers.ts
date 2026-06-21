@@ -45,17 +45,26 @@ export function isEventLive(start_date: string, end_date: string, now: number = 
   return now >= s && now < e;
 }
 
-export function buildLiveTierMap(events: EventForBonus[], now: number = Date.now()): Map<number, EventBonusTier> {
-  const map = new Map<number, EventBonusTier>();
+/** 単一イベントの gold/silver/bronze を金>銀>銅優先でティアマップへ集約する（開催判定なし）。 */
+export function buildTierMapForEvent(
+  event: { gold: number[]; silver: number[]; bronze: number[] },
+  map: Map<number, EventBonusTier> = new Map(),
+): Map<number, EventBonusTier> {
   const upgrade = (id: number, tier: EventBonusTier) => {
     const cur = map.get(id) ?? 'none';
     if (TIER_RANK[tier] > TIER_RANK[cur]) map.set(id, tier);
   };
+  for (const id of event.gold) upgrade(id, 'gold');
+  for (const id of event.silver) upgrade(id, 'silver');
+  for (const id of event.bronze) upgrade(id, 'bronze');
+  return map;
+}
+
+export function buildLiveTierMap(events: EventForBonus[], now: number = Date.now()): Map<number, EventBonusTier> {
+  const map = new Map<number, EventBonusTier>();
   for (const ev of events) {
     if (!isEventLive(ev.start_date, ev.end_date, now)) continue;
-    for (const id of ev.gold) upgrade(id, 'gold');
-    for (const id of ev.silver) upgrade(id, 'silver');
-    for (const id of ev.bronze) upgrade(id, 'bronze');
+    buildTierMapForEvent(ev, map);
   }
   return map;
 }
