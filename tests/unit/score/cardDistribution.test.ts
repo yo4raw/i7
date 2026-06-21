@@ -7,6 +7,7 @@ import {
   cardScorePmf,
   valueToThreshold,
 } from '../../../src/lib/score/cardDistribution';
+import { allCards } from '../../fixtures';
 
 function skill(partial: Partial<CardSkill>): CardSkill {
   return {
@@ -26,7 +27,7 @@ function skill(partial: Partial<CardSkill>): CardSkill {
 
 function entry(partial: Partial<CardStrengthEntry>): CardStrengthEntry {
   return {
-    card: { ID: '1' } as unknown as CardStrengthEntry['card'],
+    card: allCards[0],
     attribute: 'Shout',
     appeal: { Shout: 0, Beat: 0, Melody: 0 },
     appealTotal: 0,
