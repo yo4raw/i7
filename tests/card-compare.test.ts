@@ -105,4 +105,23 @@ test.describe('衣装比較ページ', () => {
     await scoreBar.click();
     await expect(page.getByTestId('distribution-chart')).toHaveCount(2);
   });
+
+  test('特効イベントセレクタがあり、選択を切り替えられる', async ({ page }) => {
+    const select = page.getByLabel('特効イベント');
+    await expect(select).toBeVisible({ timeout: 20000 });
+
+    // 先頭オプションは「特効なし」（value 空）
+    await expect(select.locator('option').first()).toHaveText('特効なし');
+
+    // 「特効なし」を選ぶと棒グラフは表示されたまま
+    await select.selectOption('');
+    await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
+    await expect(select).toHaveValue('');
+
+    // 先頭の実イベント（value が空でない最初の option）を選ぶと値が反映される
+    const firstEventValue = await select.locator('option').nth(1).getAttribute('value');
+    expect(firstEventValue).toBeTruthy();
+    await select.selectOption(firstEventValue!);
+    await expect(select).toHaveValue(firstEventValue!);
+  });
 });
