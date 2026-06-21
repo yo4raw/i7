@@ -138,10 +138,11 @@ export async function fetchEventsCsv(): Promise<EventRow[]> {
 }
 
 /** EventRow をクライアントへ渡す特効ボーナス用の最小形に変換する（各ページで重複していた map を集約） */
-export function toEventForBonus(e: EventRow): EventForBonus & { eventname: string } {
+export function toEventForBonus(e: EventRow): EventForBonus & { eventname: string; eventtype: string } {
   return {
     id: e.id,
     eventname: e.eventname,
+    eventtype: e.eventtype,
     start_date: e.start_date,
     end_date: e.end_date,
     gold: e.gold.cardIds,
