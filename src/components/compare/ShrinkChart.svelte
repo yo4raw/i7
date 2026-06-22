@@ -16,6 +16,13 @@
 
   const CHART_HEIGHT = 150;
 
+  /** 属性値バー正規化用: 表示中エントリの最大 baseScore（0 のときは 0） */
+  const maxBaseScore = $derived(entries.reduce((m, e) => Math.max(m, e.baseScore), 0));
+  /** baseScore を maxBaseScore 基準で CHART_HEIGHT へマップ */
+  function attrPx(e: CardStrengthEntry): number {
+    return maxBaseScore > 0 ? Math.round((e.baseScore / maxBaseScore) * CHART_HEIGHT) : 0;
+  }
+
   /** カバー率（0〜1+）。曲秒数が不明なら 0 */
   function maxRate(e: CardStrengthEntry): number {
     return songDuration > 0 ? e.maxCoverSec / songDuration : 0;
@@ -52,18 +59,24 @@
         {@const er = expRate(entry)}
         {@const overflow = mr > 1}
         <div class="flex flex-col items-center w-20 shrink-0" data-testid="shrink-col">
-          <span class="text-[11px] font-bold text-gray-700">{pct(sortKey === 'max' ? mr : er)}</span>
-          <span class="relative flex flex-col justify-end w-9" style={`height:${CHART_HEIGHT}px`}>
-            {#if overflow}
-              <span class="absolute -top-0.5 inset-x-0 text-center text-[9px] leading-none text-amber-600">▲</span>
-            {/if}
-            <!-- 上乗せ: 最大カバー率 − 期待カバー率（発動率による目減り分） -->
-            <span
-              class="block w-full bg-amber-200"
-              style={`height:${px(mr) - px(er)}px`}
-            ></span>
-            <!-- 実体: 期待カバー率 -->
-            <span class="block w-full bg-amber-400 rounded-t-sm" style={`height:${px(er)}px`}></span>
+          <span class="text-[11px] font-bold text-gray-700">
+            {#if sortKey === 'attr'}{formatScore(entry.baseScore)}{:else}{pct(sortKey === 'max' ? mr : er)}{/if}
+          </span>
+          <span class="flex items-end justify-center gap-0.5" style={`height:${CHART_HEIGHT}px`}>
+            <!-- 左: カバー率バー（2段積み） -->
+            <span class="relative flex flex-col justify-end w-4">
+              {#if overflow}
+                <span class="absolute -top-0.5 inset-x-0 text-center text-[9px] leading-none text-amber-600">▲</span>
+              {/if}
+              <!-- 上乗せ: 最大カバー率 − 期待カバー率（発動率による目減り分） -->
+              <span class="block w-full bg-amber-200" style={`height:${px(mr) - px(er)}px`}></span>
+              <!-- 実体: 期待カバー率 -->
+              <span class="block w-full bg-amber-400 rounded-t-sm" style={`height:${px(er)}px`}></span>
+            </span>
+            <!-- 右: 属性値由来スコアバー（表示中の最大を 100% とした相対高さ） -->
+            <span class="relative flex flex-col justify-end w-4">
+              <span class="block w-full bg-indigo-400 rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
+            </span>
           </span>
           <button
             type="button"
@@ -94,6 +107,6 @@
     </div>
   </div>
   <div class="px-3 pb-3 text-[11px] text-gray-400">
-    棒の高さ = カバー率（曲全体に対する縮小秒数の割合）。濃い部分 = 期待カバー率（発動確率込み）、薄い部分 = 最大との差（発動率による目減り）。▲ は 100% 超。並び順: {sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順（同率は属性値由来スコア順）。属性 = 選択曲での属性値由来スコア（多色拮抗曲の参考値）
+    各列に2本の棒。左（オレンジ）= カバー率（曲全体に対する縮小秒数の割合。濃い = 期待カバー率／薄い = 最大との差。▲ は 100% 超）。右（紫）= 選択曲での属性値由来スコア（表示中の最大を 100% とした相対高さ、多色拮抗曲の参考値）。並び順: {sortKey === 'attr' ? '属性値由来スコア' : sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順
   </div>
 {/if}

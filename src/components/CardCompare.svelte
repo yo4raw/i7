@@ -49,7 +49,7 @@
   let mounted = $state(false);
   let tab = $state<'scoreUp' | 'shrink'>('scoreUp');
   let scoreUpSort = $state<ScoreUpSortKey>('expected');
-  let shrinkSort = $state<ShrinkSortKey>('expected');
+  let shrinkSort = $state<ShrinkSortKey>('attr');
   let selectedSongId = $state<number | null>(null);
   let selectedIds = $state<number[]>([]);
 
@@ -226,6 +226,7 @@
         bind:value={shrinkSort}
         aria-label="縮小ソート"
       >
+        <option value="attr">属性値由来スコア</option>
         <option value="expected">期待カバー率</option>
         <option value="max">最大カバー率</option>
       </select>
