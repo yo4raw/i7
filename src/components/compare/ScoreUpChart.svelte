@@ -27,7 +27,9 @@
   <p class="text-sm text-gray-500 py-10 text-center">対象の衣装がありません</p>
 {:else}
   <div class="overflow-x-auto">
-    <div class="flex items-end gap-3 px-3 pt-5 pb-3 min-w-max">
+    <!-- items-start でバー上端を揃える。バー下のサムネ/ラベル/バッジは可変高だが、
+         バーより下にあるため下端揃え (items-end) のようにバー位置へ波及しない。 -->
+    <div class="flex items-start gap-3 px-3 pt-5 pb-3 min-w-max">
       {#each entries as entry (entry.card.ID)}
         {@const selected = entry.card.ID != null && selectedIds.includes(entry.card.ID)}
         <button
