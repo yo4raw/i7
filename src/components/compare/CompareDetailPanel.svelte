@@ -23,11 +23,11 @@
     return Number.isInteger(v) ? `${v}` : v.toFixed(1);
   }
 
-  /** カバー秒数 → 「Ns (P%)」表記。縮小以外は '-' */
+  /** カバー秒数 → 「P% (Ns)」表記（カバー率を主、秒数を括弧）。縮小以外は '-' */
   function coverLabel(entry: CardStrengthEntry, v: number): string {
     if (!entry.skill?.isShrink) return '-';
     const rate = songDuration > 0 ? `${Math.round((v / songDuration) * 100)}%` : '-';
-    return `${sec(v)}s (${rate})`;
+    return `${rate} (${sec(v)}s)`;
   }
 
   function effectLabel(entry: CardStrengthEntry): string {
@@ -125,7 +125,7 @@
           </tr>
           {#if hasShrink}
             <tr>
-              <td class="text-gray-500 pr-2 py-1 whitespace-nowrap">最大カバー秒数</td>
+              <td class="text-gray-500 pr-2 py-1 whitespace-nowrap">最大カバー率</td>
               {#each entries as entry, i (entry.card.ID)}
                 <td class="px-2 py-1 text-center whitespace-nowrap" class:font-bold={maxCoverMax.has(i)} class:text-red-600={maxCoverMax.has(i)}>
                   {coverLabel(entry, entry.maxCoverSec)}
@@ -133,7 +133,7 @@
               {/each}
             </tr>
             <tr>
-              <td class="text-gray-500 pr-2 py-1 whitespace-nowrap">期待カバー秒数</td>
+              <td class="text-gray-500 pr-2 py-1 whitespace-nowrap">期待カバー率</td>
               {#each entries as entry, i (entry.card.ID)}
                 <td class="px-2 py-1 text-center whitespace-nowrap" class:font-bold={expCoverMax.has(i)} class:text-red-600={expCoverMax.has(i)}>
                   {coverLabel(entry, entry.expectedCoverSec)}

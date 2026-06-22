@@ -38,3 +38,4 @@
 | [0024](0024-card-compare-distribution.md) | 衣装比較 詳細パネルにスコア分布（二項分布）を追加 | 承認 |
 | [0025](0025-deck-skill-distribution.md) | スコア計算画面に各衣装のスキル上乗せ分布チャートを追加 | 承認 |
 | [0026](0026-card-compare-event-bonus-select.md) | 衣装比較のイベント特効反映をハイスコアイベント選択式へ変更 | 承認 |
+| [0027](0027-card-compare-shrink-attribute-tiebreak.md) | 衣装比較 判定縮小タブの属性値タイブレーク化とカバー率用語統一 | 承認 |

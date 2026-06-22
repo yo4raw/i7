@@ -37,7 +37,7 @@ test.describe('衣装比較ページ', () => {
     await expect(col.getByText(/属性 /)).toBeVisible();
   });
 
-  test('判定縮小タブにカバー秒数のソートセレクタがあり既定は期待カバー秒数', async ({ page }) => {
+  test('判定縮小タブにカバー率のソートセレクタがあり既定は期待カバー率', async ({ page }) => {
     await page.getByRole('tab', { name: '判定縮小' }).click();
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
     const select = page.getByLabel('縮小ソート');

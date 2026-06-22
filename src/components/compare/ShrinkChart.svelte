@@ -82,8 +82,8 @@
               style={`border-color:${ATTR_HEX[entry.attribute]}`}
             />
             <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center">
-              最大 {sec(entry.maxCoverSec)}s ({pct(mr)})<br />
-              期待 {sec(entry.expectedCoverSec)}s ({pct(er)})<br />
+              最大 {pct(mr)} ({sec(entry.maxCoverSec)}s)<br />
+              期待 {pct(er)} ({sec(entry.expectedCoverSec)}s)<br />
               {condLabel(entry)} / {entry.skill?.per ?? 0}%<br />
               属性 {formatScore(entry.baseScore)}
             </span>
@@ -94,6 +94,6 @@
     </div>
   </div>
   <div class="px-3 pb-3 text-[11px] text-gray-400">
-    棒の高さ = カバー率（曲全体に対する縮小秒数の割合）。濃い部分 = 期待カバー率（発動確率込み）、薄い部分 = 最大との差（発動率による目減り）。▲ は 100% 超。並び順: {sortKey === 'max' ? '最大カバー秒数' : '期待カバー秒数'}の降順。属性 = 選択曲での属性値由来スコア（多色拮抗曲の参考値、順位には影響しません）
+    棒の高さ = カバー率（曲全体に対する縮小秒数の割合）。濃い部分 = 期待カバー率（発動確率込み）、薄い部分 = 最大との差（発動率による目減り）。▲ は 100% 超。並び順: {sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順（同率は属性値由来スコア順）。属性 = 選択曲での属性値由来スコア（多色拮抗曲の参考値）
   </div>
 {/if}

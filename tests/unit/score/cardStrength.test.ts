@@ -184,7 +184,7 @@ describe('判定縮小系', () => {
     expect(entry.expectedCoverSec).toBe(0);
   });
 
-  it("compareShrinkBy('max'): 最大カバー秒数の降順、同値は属性値合計", () => {
+  it("compareShrinkBy('max'): 最大カバー秒数の降順、同値は選択曲の属性値由来スコア", () => {
     const song = makeSong();
     const cmp = compareShrinkBy('max');
     const base = buildCardStrengthEntry(shrinkCard(), [], song); // 128s
@@ -192,7 +192,20 @@ describe('判定縮小系', () => {
     expect(cmp(higher, base)).toBeLessThan(0); // 144 > 128 が先
 
     const sameCover = buildCardStrengthEntry(shrinkCard({ melody_max: 5000 }), [], song); // 128s, 属性値↑
-    expect(cmp(sameCover, base)).toBeLessThan(0); // 同カバー秒数 → 属性値合計
+    expect(cmp(sameCover, base)).toBeLessThan(0); // 同カバー秒数 → baseScore 降順
+  });
+
+  it("compareShrinkBy: カバー秒数・属性値合計が同値でも選択曲の属性値由来スコアで決まる", () => {
+    // 曲は melody ノート(25) > shout ノート(10)。属性値合計を 6000 に揃えても
+    // melody 偏重カードの baseScore が高く、appealTotal タイブレークでは区別できない差を検証する
+    const song = makeSong();
+    const cmp = compareShrinkBy('max');
+    const shoutCard = buildCardStrengthEntry(shrinkCard({ shout_max: 6000, beat_max: 0, melody_max: 0 }), [], song);
+    const melodyCard = buildCardStrengthEntry(shrinkCard({ shout_max: 0, beat_max: 0, melody_max: 6000 }), [], song);
+    expect(shoutCard.appealTotal).toBe(melodyCard.appealTotal); // 属性値合計は同値
+    expect(melodyCard.baseScore).toBeGreaterThan(shoutCard.baseScore);
+    expect(cmp(melodyCard, shoutCard)).toBeLessThan(0); // baseScore の高い melody が先
+    expect(cmp(shoutCard, melodyCard)).toBeGreaterThan(0);
   });
 
   it("compareShrinkBy('expected'): 期待カバー秒数の降順", () => {
@@ -202,8 +215,8 @@ describe('判定縮小系', () => {
     // 確率↑で期待カバー秒数が増える（最大カバー秒数は同じ）
     const higherPer = buildCardStrengthEntry(shrinkCard({ ap_skill_5_per: 50 }), [], song); // 128×0.5=64s
     expect(cmp(higherPer, base)).toBeLessThan(0);
-    // 'max' では同値だが 'expected' では確率の高い方が先
-    expect(compareShrinkBy('max')(higherPer, base)).toBe(base.appealTotal - higherPer.appealTotal);
+    // 'max' では確率違いはカバー秒数も baseScore も同値なので同順 (0)
+    expect(compareShrinkBy('max')(higherPer, base)).toBe(0);
   });
 });
 

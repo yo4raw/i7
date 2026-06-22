@@ -226,8 +226,8 @@
         bind:value={shrinkSort}
         aria-label="縮小ソート"
       >
-        <option value="expected">期待カバー秒数</option>
-        <option value="max">最大カバー秒数</option>
+        <option value="expected">期待カバー率</option>
+        <option value="max">最大カバー率</option>
       </select>
     </div>
     <ShrinkChart
