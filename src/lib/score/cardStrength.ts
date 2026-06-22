@@ -49,8 +49,8 @@ export interface CardStrengthEntry {
   broachScoreBonus: number;
 }
 
-/** 判定縮小タブのソートキー: 最大カバー秒数 / 期待カバー秒数 */
-export type ShrinkSortKey = 'max' | 'expected';
+/** 判定縮小タブのソートキー: 属性値由来スコア / 最大カバー率 / 期待カバー率 */
+export type ShrinkSortKey = 'attr' | 'max' | 'expected';
 
 /** スコアアップタブのソートキー: 期待スコア合計 / 最大スコア合計 */
 export type ScoreUpSortKey = 'expected' | 'max';
@@ -197,12 +197,17 @@ export function compareScoreUpBy(key: ScoreUpSortKey): (a: CardStrengthEntry, b:
 
 /**
  * 判定縮小系のソート比較関数を生成する。
- * 指定キー（最大カバー率 / 期待カバー率 = カバー秒数 ÷ 曲尺。曲固定のため並び順は秒数と一致）の降順、
- * 同値は選択曲での属性値由来スコア (baseScore) の降順。
- * baseScore はチャート脚注・詳細パネルに表示される「属性」値と同一定義のため、表示と並び順が一致する。
+ * - 'attr': 選択曲での属性値由来スコア (baseScore) 降順、同値は期待カバー率（expectedCoverSec）降順
+ * - 'max' / 'expected': カバー率（= カバー秒数 ÷ 曲尺。曲固定のため並び順は秒数と一致）降順、
+ *   同値は選択曲での属性値由来スコア (baseScore) 降順
+ * baseScore はチャート・詳細パネルに表示される「属性」値と同一定義のため、表示と並び順が一致する。
  */
 export function compareShrinkBy(key: ShrinkSortKey): (a: CardStrengthEntry, b: CardStrengthEntry) => number {
   return (a, b) => {
+    if (key === 'attr') {
+      if (a.baseScore !== b.baseScore) return b.baseScore - a.baseScore;
+      return b.expectedCoverSec - a.expectedCoverSec;
+    }
     const av = key === 'max' ? a.maxCoverSec : a.expectedCoverSec;
     const bv = key === 'max' ? b.maxCoverSec : b.expectedCoverSec;
     if (av !== bv) return bv - av;

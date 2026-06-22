@@ -218,6 +218,23 @@ describe('判定縮小系', () => {
     // 'max' では確率違いはカバー秒数も baseScore も同値なので同順 (0)
     expect(compareShrinkBy('max')(higherPer, base)).toBe(0);
   });
+
+  it("compareShrinkBy('attr'): 属性値由来スコアの降順、同値は期待カバー率", () => {
+    const song = makeSong();
+    const cmp = compareShrinkBy('attr');
+    const base = buildCardStrengthEntry(shrinkCard(), [], song);
+    // melody_max↑で baseScore↑（曲は melody ノートが多い）→ 属性値由来スコアの高い方が先
+    const higherAttr = buildCardStrengthEntry(shrinkCard({ melody_max: 6000 }), [], song);
+    expect(higherAttr.baseScore).toBeGreaterThan(base.baseScore);
+    expect(cmp(higherAttr, base)).toBeLessThan(0);
+
+    // baseScore 同値（per だけ違う）なら期待カバー率の高い方が先
+    const samePer = buildCardStrengthEntry(shrinkCard(), [], song);
+    const higherPer = buildCardStrengthEntry(shrinkCard({ ap_skill_5_per: 60 }), [], song);
+    expect(higherPer.baseScore).toBe(samePer.baseScore);
+    expect(higherPer.expectedCoverSec).toBeGreaterThan(samePer.expectedCoverSec);
+    expect(cmp(higherPer, samePer)).toBeLessThan(0);
+  });
 });
 
 describe('compareScoreUpBy', () => {

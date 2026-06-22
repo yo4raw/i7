@@ -37,14 +37,21 @@ test.describe('衣装比較ページ', () => {
     await expect(col.getByText(/属性 /)).toBeVisible();
   });
 
-  test('判定縮小タブにカバー率のソートセレクタがあり既定は期待カバー率', async ({ page }) => {
+  test('判定縮小タブのソートセレクタは属性値/期待/最大の3択で既定は属性値由来スコア', async ({ page }) => {
     await page.getByRole('tab', { name: '判定縮小' }).click();
     await expect(page.getByTestId('shrink-col').first()).toBeVisible({ timeout: 20000 });
     const select = page.getByLabel('縮小ソート');
     await expect(select).toBeVisible();
-    await expect(select).toHaveValue('expected');
+    await expect(select).toHaveValue('attr');
+    await select.selectOption('expected');
+    await expect(page.getByTestId('shrink-col').first()).toBeVisible();
     await select.selectOption('max');
     await expect(page.getByTestId('shrink-col').first()).toBeVisible();
+  });
+
+  test('判定縮小タブはデュアルバー（属性値由来スコアの棒）を描画する', async ({ page }) => {
+    await page.getByRole('tab', { name: '判定縮小' }).click();
+    await expect(page.getByTestId('shrink-attr-bar').first()).toBeVisible({ timeout: 20000 });
   });
 
   test('棒のサムネイルが card.ID ベースの th_cards 画像を指す', async ({ page }) => {
