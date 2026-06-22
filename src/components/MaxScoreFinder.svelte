@@ -15,6 +15,7 @@
     type SearchResult,
   } from '../lib/score/maxScoreFinder';
   import { startWorkerSearch, type SearchPoolRun } from '../lib/score/searchWorkerPool';
+  import { DEFAULT_SCOREUP_BADGE_RATE } from '../lib/score/constants';
   import { buildLiveTierMap, isEventLive } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
   import { ATTR_HEX } from '../lib/constants';
@@ -49,7 +50,7 @@
   let selectedSongId = $state<number | null>(null);
   let evalMode = $state<'expected' | 'max'>('expected');
   let scoreUpAssist = $state(false);
-  let scoreUpBadgeRate = $state(0);
+  let scoreUpBadgeRate = $state(DEFAULT_SCOREUP_BADGE_RATE);
   let ownedOnly = $state(false);
   let shrinkPairOnly = $state(false);
   let useOwnedBroachs = $state(false);
