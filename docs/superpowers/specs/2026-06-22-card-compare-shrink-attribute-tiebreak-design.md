@@ -38,7 +38,7 @@
 |---------|------|
 | `src/components/CardCompare.svelte` | ソートドロップダウン「最大カバー秒数 / 期待カバー秒数」→「最大カバー率 / 期待カバー率」 |
 | `src/components/compare/CompareDetailPanel.svelte` | 行ラベルを「最大カバー率 / 期待カバー率」に変更。`coverLabel` の出力を `Ns (P%)` → `P% (Ns)`（率を主、秒数を括弧）に変更 |
-| `src/components/compare/ShrinkChart.svelte` | 脚注の「並び順: 〜の降順」表記の軸名を率表現に |
+| `src/components/compare/ShrinkChart.svelte` | 棒下ラベルの「最大／期待」を `Ns (P%)` → `P% (Ns)`（率を主、秒数を括弧）に変更。脚注の「並び順: 〜の降順」表記の軸名を率表現に。あわせて属性値の注記「順位には影響しません」を「同率は属性値由来スコア順」に更新（タイブレーク化に伴い ADR 0017 の位置づけを更新） |
 | `src/pages/card-compare/index.astro` | ページ説明文（「最大／期待カバー秒数」）を率表現に |
 
 ### 3. 変更しないもの
