@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { Card } from '../lib/data/fetchCardsJson';
   import type { Song } from '../lib/data/fetchSongsJson';
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
@@ -16,8 +17,9 @@
   } from '../lib/score/maxScoreFinder';
   import { startWorkerSearch, type SearchPoolRun } from '../lib/score/searchWorkerPool';
   import { DEFAULT_SCOREUP_BADGE_RATE } from '../lib/score/constants';
-  import { buildLiveTierMap, isEventLive } from '../lib/data/eventBonusTiers';
+  import { buildTierMapForEvent, isEventLive, isHighScoreEvent } from '../lib/data/eventBonusTiers';
   import type { EventBonusTier, EventForBonus } from '../lib/data/eventBonusTiers';
+  import { loadJson, saveJson, STORAGE_KEYS } from '../lib/storage';
   import { ATTR_HEX } from '../lib/constants';
   import SearchResults from './score/SearchResults.svelte';
   import { formatElapsed } from '../lib/ui';
@@ -30,7 +32,7 @@
   import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
 
-  type LiveEvent = EventForBonus & { eventname: string };
+  type LiveEvent = EventForBonus & { eventname: string; eventtype: string };
 
   type Props = {
     cards: Card[];
@@ -46,6 +48,17 @@
   let allSongs = $state<Song[]>(initialSongs);
   let allBroachs = $state<FixedBroach[]>(initialBroachs);
   const allEventsData = initialEvents;
+
+  // ハイスコアライブイベントを新しい順に。開催中があれば既定選択。
+  const highScoreEvents = [...allEventsData]
+    .filter((ev) => isHighScoreEvent(ev.eventtype))
+    .sort((a, b) => b.start_date.localeCompare(a.start_date));
+  const defaultEventId =
+    highScoreEvents.find((ev) => isEventLive(ev.start_date, ev.end_date))?.id
+    ?? highScoreEvents[0]?.id
+    ?? null;
+  let selectedEventId = $state<number | null>(defaultEventId);
+  let mounted = $state(false);
 
   let selectedSongId = $state<number | null>(null);
   let evalMode = $state<'expected' | 'max'>('expected');
@@ -86,6 +99,21 @@
     reloadBroachCountsFromStorage();
   });
 
+  // 選択中イベントを localStorage から復元（保存値が現存するハイスコアイベントのときのみ採用）
+  onMount(() => {
+    const saved = loadJson<number | null>(STORAGE_KEYS.MAX_FINDER_EVENT_ID, null);
+    if (saved != null && highScoreEvents.some((ev) => ev.id === saved)) {
+      selectedEventId = saved;
+    }
+    mounted = true;
+  });
+
+  // 選択中イベントを localStorage へ保存
+  $effect(() => {
+    if (!mounted) return;
+    saveJson(STORAGE_KEYS.MAX_FINDER_EVENT_ID, selectedEventId);
+  });
+
   const selectedSong = $derived(selectedSongId != null ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
 
   // 初期選択曲: イベント対象楽曲の先頭。無ければ未選択のまま
@@ -94,14 +122,13 @@
     selectedSongId = firstEventSongId(allSongs);
   });
 
-  const currentLiveEvents = $derived(allEventsData.filter((ev) => isEventLive(ev.start_date, ev.end_date, now)));
-  const currentTierMap = $derived(buildLiveTierMap(currentLiveEvents, now));
+  const selectedEvent = $derived(highScoreEvents.find((ev) => ev.id === selectedEventId) ?? null);
+  const currentTierMap = $derived(
+    selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>(),
+  );
   const currentCandidates = $derived.by(() => {
-    const goldSilverIds = new Set<number>();
-    for (const ev of currentLiveEvents) {
-      for (const id of ev.gold) goldSilverIds.add(id);
-      for (const id of ev.silver) goldSilverIds.add(id);
-    }
+    if (!selectedEvent) return [] as Card[];
+    const goldSilverIds = new Set<number>([...selectedEvent.gold, ...selectedEvent.silver]);
     return allCards.filter((c) => c.rarity === 'UR' && c.ID != null && goldSilverIds.has(c.ID));
   });
 
@@ -160,7 +187,7 @@
   );
   const searchDisabledReason = $derived(
     !selectedSong ? '楽曲を選択してください'
-      : currentCandidates.length < 1 ? '開催中イベントに金/銀特効 UR 衣装がありません'
+      : currentCandidates.length < 1 ? '選択中イベントに金/銀特効 UR 衣装がありません'
       : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR 衣装がありません'
       : ownedOnly && comboCount === 0 && !shrinkPairOnly ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : shrinkPairOnly && comboCount === 0 ? '判定縮小2枚以上編成の条件を満たす組合せが作れません（縮小持ち特効候補の不足など）'
@@ -260,16 +287,27 @@
 </section>
 
 <section class="bg-white rounded-lg shadow p-4 mb-4">
-  <h2 class="text-sm font-bold text-gray-700 mb-2">📅 現在開催中のイベント</h2>
+  <h2 class="text-sm font-bold text-gray-700 mb-2">📅 対象イベント</h2>
   <div class="text-xs text-gray-600">
-    {#if currentLiveEvents.length === 0}
-      <p class="text-gray-400">現在開催中のイベントはありません。</p>
+    {#if highScoreEvents.length === 0}
+      <p class="text-gray-400">対象となるハイスコアライブイベントがありません。</p>
     {:else}
-      <ul class="mb-2 list-disc pl-5">
-        {#each currentLiveEvents as ev}
-          <li class="mb-0.5"><b>{ev.eventname}</b> <span class="text-gray-400 text-[11px]">({ev.start_date} 〜 {ev.end_date} 17:00)</span></li>
-        {/each}
-      </ul>
+      <label class="flex items-center gap-2 mb-2">
+        <span class="text-gray-600 shrink-0">イベント</span>
+        <select
+          aria-label="対象イベント"
+          class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={selectedEventId == null ? '' : String(selectedEventId)}
+          onchange={(e) => {
+            const v = e.currentTarget.value;
+            selectedEventId = v === '' ? null : Number(v);
+          }}
+        >
+          {#each highScoreEvents as ev (ev.id)}
+            <option value={String(ev.id)}>{isEventLive(ev.start_date, ev.end_date, now) ? '【開催中】' : ''}{ev.eventname}（{ev.start_date}〜）</option>
+          {/each}
+        </select>
+      </label>
       <div class="mb-2">
         <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-400 mr-1">金特効</span>
         <b>{goldCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedGoldCount}）</span>{/if}

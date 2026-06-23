@@ -40,3 +40,4 @@
 | [0026](0026-card-compare-event-bonus-select.md) | 衣装比較のイベント特効反映をハイスコアイベント選択式へ変更 | 承認 |
 | [0027](0027-card-compare-shrink-attribute-tiebreak.md) | 衣装比較 判定縮小タブの属性値タイブレーク化とカバー率用語統一 | 承認 |
 | [0028](0028-card-compare-shrink-attribute-sort-dualbar.md) | 衣装比較 判定縮小タブに属性値由来スコア順ソートを追加しデュアルバー化 | 承認 |
+| [0029](0029-max-finder-event-select.md) | 編成組合計算で過去のハイスコアイベントを選択可能にする | 承認 |
