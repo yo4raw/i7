@@ -195,6 +195,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 | `i7_score_calc_state` | スコア計算画面の状態 |
 | `i7_shared_broach_counts` | 共通ブローチ所持数 |
 | `i7_compare_event_id` | 衣装比較画面で選択中の特効イベント |
+| `i7_max_finder_event_id` | 編成組合計算画面で選択中の対象イベント |
 
 `src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
 

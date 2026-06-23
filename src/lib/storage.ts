@@ -14,6 +14,7 @@ export const STORAGE_KEYS = {
   SHARED_BROACH_COUNTS: 'i7_shared_broach_counts',
   CARD_LIST_VIEW_MODE: 'i7_card_list_view_mode',
   COMPARE_EVENT_ID: 'i7_compare_event_id',
+  MAX_FINDER_EVENT_ID: 'i7_max_finder_event_id',
 } as const;
 
 export function loadJson<T>(key: string, fallback: T): T {
