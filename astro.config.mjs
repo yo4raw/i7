@@ -28,8 +28,14 @@ export default defineConfig({
         return { ...item, changefreq: 'weekly', priority: 0.6 };
       },
     }),
+    // CSS は Vite 内蔵の cssMinify に任せ、@playform/compress では圧縮しない。
+    // astro 7 / vite 8 では Tailwind v4 のレスポンシブ variant が
+    // `@media (width >= 48rem)` のモダンなレンジ構文で出力されるが、
+    // @playform/compress 0.2.3 の CSS パーサはこれを解釈できず該当 @media ごと
+    // 黙って削除してしまい、md:/lg: 等のレスポンシブ指定が全消失する。
+    // Vite の minifier は同構文を正しく保持するため CSS のみ無効化する。
     compress({
-      CSS: true,
+      CSS: false,
       HTML: true,
       JavaScript: true,
       JSON: true,
