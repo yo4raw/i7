@@ -5,6 +5,7 @@ import { fetchCardsJson } from '../../../lib/data/fetchCardsJson';
 import { fetchSongsJson, filterValidSongs } from '../../../lib/data/fetchSongsJson';
 import { fetchFixedBroachsJson } from '../../../lib/data/fetchFixedBroachsJson';
 import { fetchEventsCsv, toEventForBonus } from '../../../lib/data/fetchEventsCsv';
+import { PAGE_DESCRIPTIONS } from '../../../lib/seo';
 
 const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
   fetchCardsJson(),
@@ -26,7 +27,7 @@ const breadcrumbs = [
 ];
 ---
 
-<BaseLayout title="編成組合計算" breadcrumbs={breadcrumbs}>
+<BaseLayout title="編成組合計算" description={PAGE_DESCRIPTIONS.maxScoreFinder} breadcrumbs={breadcrumbs}>
   <h1 class="text-2xl font-bold mb-4">編成組合計算 — 理論値最大編成探索</h1>
   <p class="text-xs text-gray-500 mb-4">
     楽曲とイベントを選択すると、選択したハイスコアライブイベントの <b>金特効</b> / <b>銀特効</b> の UR 衣装のみを対象に、理論期待値が最大となる 6 枚編成（フレンド含む）を総当たりで探索します。過去のハイスコアイベントも選択できます。

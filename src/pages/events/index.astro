@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EventList from '../../components/EventList.svelte';
 import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv';
+import { PAGE_DESCRIPTIONS, collectionPageLd } from '../../lib/seo.ts';
 
 const allEvents = await fetchEventsCsv();
 allEvents.sort((a, b) => b.id - a.id);
@@ -9,9 +10,20 @@ allEvents.sort((a, b) => b.id - a.id);
 const eventTypes = [...new Set(allEvents.map(e => e.eventtype).filter(Boolean))].sort();
 
 const base = import.meta.env.BASE_URL;
+const pageUrl = new URL(`${base}events/`, Astro.site).toString();
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'イベント情報', url: `${base}events/` },
+];
+const collectionLd = collectionPageLd({
+  name: 'イベント情報',
+  url: pageUrl,
+  description: PAGE_DESCRIPTIONS.events,
+  numberOfItems: allEvents.length,
+});
 ---
 
-<BaseLayout title="イベント情報">
+<BaseLayout title="イベント情報" description={PAGE_DESCRIPTIONS.events} breadcrumbs={breadcrumbs} jsonLd={collectionLd}>
   <h1 class="text-2xl font-bold mb-6">イベント情報</h1>
 
   <EventList events={allEvents} eventTypes={eventTypes} base={base} client:load />

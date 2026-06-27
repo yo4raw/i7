@@ -1,9 +1,16 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SharedBroachEditor from '../../components/SharedBroachEditor.svelte';
+import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
+
+const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: '共通ブローチ', url: `${base}shared-broach/` },
+];
 ---
 
-<BaseLayout title="共通ブローチ">
+<BaseLayout title="共通ブローチ" description={PAGE_DESCRIPTIONS.sharedBroach} breadcrumbs={breadcrumbs}>
   <h1 class="text-2xl font-bold mb-4">共通ブローチ</h1>
   <p class="text-sm text-gray-600 mb-6">所持している共通ブローチの個数を登録してください。スコア計算の「所持ブローチ縛り」と編成組合計算のブローチ割当で使用されます。</p>
 

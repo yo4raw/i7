@@ -5,6 +5,7 @@ import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
 import { fetchEventsCsv } from '../lib/data/fetchEventsCsv.ts';
 import { RARITIES, RARITY_BADGE_CLASSES, SITE_NAME } from '../lib/constants.ts';
+import { PAGE_DESCRIPTIONS } from '../lib/seo.ts';
 
 const [cards, songs, events] = await Promise.all([
   fetchCardsJson(),
@@ -69,7 +70,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
 ];
 ---
 
-<BaseLayout title="ホーム">
+<BaseLayout title="ホーム" description={PAGE_DESCRIPTIONS.home}>
   <!-- ヒーロー -->
   <section class="bg-white rounded-lg shadow border-l-4 border-indigo-500 p-6 mb-6">
     <h1 class="text-2xl font-bold mb-2 text-gray-900">{SITE_NAME}</h1>

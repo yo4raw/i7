@@ -4,12 +4,17 @@ import MyCardList from '../../components/MyCardList.svelte';
 import CollectionDashboard from '../../components/CollectionDashboard.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { CARD_THUMB_BASE_URL } from '../../lib/constants';
+import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
 
 const allCards = await fetchCardsJson() as any[];
 const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: '所持衣装一覧', url: `${base}mycard/` },
+];
 ---
 
-<BaseLayout title="所持衣装一覧">
+<BaseLayout title="所持衣装一覧" description={PAGE_DESCRIPTIONS.mycard} breadcrumbs={breadcrumbs}>
   <h1 class="text-2xl font-bold mb-6">所持衣装一覧</h1>
 
   <CollectionDashboard cards={allCards} client:load />

@@ -10,8 +10,14 @@ import {
   mcDistributionSvg,
   simulateActivationsDeterministic,
 } from '../../lib/score/specDiagrams.ts';
+import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
 
 const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'スコア計算', url: `${base}score-calc/` },
+  { name: '仕様解説', url: `${base}score-calc/spec/` },
+];
 
 // §2 静的タイムライン用のデモパラメータ（MONSTER GENERATiON + Card 1952 Lv5）
 const DEMO_NOTES = 428;
@@ -48,7 +54,7 @@ const formulaSvg = formulaDiagramSvg();
 const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 });
 ---
 
-<BaseLayout title="スコア計算 仕様解説">
+<BaseLayout title="スコア計算 仕様解説" description={PAGE_DESCRIPTIONS.scoreCalcSpec} breadcrumbs={breadcrumbs}>
   <div class="flex items-baseline gap-3 mb-2 flex-wrap">
     <h1 class="text-2xl font-bold">スコア計算 仕様解説</h1>
     <a href={`${base}score-calc/`} class="text-sm text-indigo-600 hover:underline">← 計算ページへ戻る</a>

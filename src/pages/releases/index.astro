@@ -1,6 +1,7 @@
 ---
 import { execSync } from 'node:child_process';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
 
 interface ReleaseCommit {
   subject: string;
@@ -49,9 +50,15 @@ try {
 } catch {
   releases = [];
 }
+
+const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'リリース履歴', url: `${base}releases/` },
+];
 ---
 
-<BaseLayout title="リリース履歴">
+<BaseLayout title="リリース履歴" description={PAGE_DESCRIPTIONS.releases} breadcrumbs={breadcrumbs}>
   <h1 class="text-2xl font-bold mb-2">リリース履歴</h1>
   <p class="text-sm text-gray-500 mb-6">git タグごとに、前タグからのコミット差分を表示しています。</p>
 

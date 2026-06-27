@@ -6,6 +6,7 @@ import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
 import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
 import { ATTR_TEXT_CLASS, cardImageUrl } from '../../lib/ui';
+import { cardCreativeWorkLd } from '../../lib/seo';
 import { attrDonutSvg } from '../../lib/donutChart';
 import { formatSkillEffect } from '../../lib/score/skillFormatter';
 
@@ -55,6 +56,8 @@ const breadcrumbs = [
   { name: card.cardname || `衣装 ${card.ID}`, url: `${base}cards/${card.ID}/` },
 ];
 
+const cardLd = cardCreativeWorkLd(card, Astro.site!.toString());
+
 const infoRows = [
   { label: 'ID', value: card.ID },
   { label: '衣装ID', value: card.cardID },
@@ -103,6 +106,7 @@ const otherSkills = [
   image={cardImageUrl(card.ID)}
   ogType="article"
   breadcrumbs={breadcrumbs}
+  jsonLd={cardLd}
 >
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <div class="md:col-span-1">
