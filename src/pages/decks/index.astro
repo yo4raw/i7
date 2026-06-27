@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import DeckList from '../../components/DeckList.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
+import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
 
 const [allCards, allSongsRaw] = await Promise.all([
   fetchCardsJson(),
@@ -10,9 +11,13 @@ const [allCards, allSongsRaw] = await Promise.all([
 ]);
 const allSongs = filterValidSongs(allSongsRaw);
 const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: '保存デッキ', url: `${base}decks/` },
+];
 ---
 
-<BaseLayout title="保存デッキ">
+<BaseLayout title="保存デッキ" description={PAGE_DESCRIPTIONS.decks} breadcrumbs={breadcrumbs}>
   <h1 class="text-2xl font-bold mb-6">保存デッキ</h1>
 
   <DeckList cards={allCards} songs={allSongs} base={base} client:load />
