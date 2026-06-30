@@ -217,14 +217,16 @@ const otherSkills = [
         {card.ap_skill_req && <p><strong>発動条件:</strong> {card.ap_skill_req}</p>}
       </div>
       {apSkillLevels.length > 0 && (
-        <div class="text-sm space-y-1">
-          {apSkillLevels.map(lv => (
-            <div>
-              <span class="font-medium text-gray-600">【Lv{lv.lv}】</span>
-              {formatSkillEffect(card.ap_skill_type, card.ap_skill_req, { count: lv.count, per: lv.per, value: lv.value, rate: lv.rate })}
-            </div>
-          ))}
-        </div>
+        <table class="w-full text-sm">
+          <tbody class="divide-y divide-gray-100">
+            {apSkillLevels.map(lv => (
+              <tr>
+                <td class="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap align-top w-16">Lv{lv.lv}</td>
+                <td class="py-2">{formatSkillEffect(card.ap_skill_type, card.ap_skill_req, { count: lv.count, per: lv.per, value: lv.value, rate: lv.rate })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </section>
   )}
