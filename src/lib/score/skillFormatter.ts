@@ -10,7 +10,7 @@ export function formatSkillEffect(
   req: string | null,
   sl: ApSkillLevel,
 ): string {
-  if (!skillType || sl.count == null || sl.per == null || sl.value == null) return '-';
+  if (!skillType || !isValidApSkillLevel(sl)) return '-';
   const c = sl.count;
   const p = sl.per;
   const v = sl.value;
@@ -38,15 +38,22 @@ export function formatSkillEffect(
 }
 
 /**
+ * スキルレベルが有効データ（登録済み）かどうかを判定する。
+ * 「有効」= count/per/value がいずれも 0 より大きい。null・0 は未登録扱い。
+ * 新規衣装で値が 0 埋めになっているレベルや、欠損レベルを除外する用途で使う。
+ */
+export function isValidApSkillLevel(sl: ApSkillLevel): boolean {
+  return (sl.count ?? 0) > 0 && (sl.per ?? 0) > 0 && (sl.value ?? 0) > 0;
+}
+
+/**
  * 数値（count/per/value）が有効な最上位スキルレベルを返す。
  * Lv5 が無い衣装（SSR）や Lv5 未登録の新規衣装（値が 0 で埋まっている）は Lv4 以下に
  * フォールバックする。いずれのレベルも有効でなければ null。
- * 「有効」= count/per/value がいずれも 0 より大きい（null・0 は未登録扱い）。
  */
 export function getMaxApSkillLevel(card: Card): 1 | 2 | 3 | 4 | 5 | null {
   for (const level of [5, 4, 3, 2, 1] as const) {
-    const sl = getApSkillLevel(card, level);
-    if ((sl.count ?? 0) > 0 && (sl.per ?? 0) > 0 && (sl.value ?? 0) > 0) return level;
+    if (isValidApSkillLevel(getApSkillLevel(card, level))) return level;
   }
   return null;
 }
