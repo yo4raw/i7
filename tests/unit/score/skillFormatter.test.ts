@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatSkillEffect, formatSkillBadge, getMaxApSkillLevel, formatSkillEffectMax } from '../../../src/lib/score/skillFormatter';
+import { formatSkillEffect, formatSkillBadge, getMaxApSkillLevel, formatSkillEffectMax, isValidApSkillLevel } from '../../../src/lib/score/skillFormatter';
 import { SKILL_TYPE, type ApSkillLevel, type Card } from '../../../src/lib/data/fetchCardsJson';
 
 const sl = (
@@ -51,6 +51,12 @@ describe('formatSkillEffect (スキル効果の自然文生成)', () => {
 
   it('レベル値 (count/per/value) が欠けていたら "-"', () => {
     expect(formatSkillEffect(SKILL_TYPE.SCOREUP_TIMER, null, sl(null, 40, 300))).toBe('-');
+  });
+
+  it('レベル値 (count/per/value) のいずれかが 0（未登録）なら "-"', () => {
+    expect(formatSkillEffect(SKILL_TYPE.SCOREUP_TIMER, null, sl(0, 0, 0))).toBe('-');
+    expect(formatSkillEffect(SKILL_TYPE.SCOREUP_TIMER, null, sl(15, 0, 300))).toBe('-');
+    expect(formatSkillEffect('スコアアップ（Perfectのみ）', 'Perfect', sl(25, 35, 0))).toBe('-');
   });
 
   it('縮小系で rate が null なら "-"', () => {
@@ -108,6 +114,26 @@ function makeCardWithLevels(
   }
   return card as unknown as Card;
 }
+
+describe('isValidApSkillLevel (レベルが有効データか)', () => {
+  it('count/per/value がすべて 0 より大きければ true', () => {
+    expect(isValidApSkillLevel(sl(15, 40, 300))).toBe(true);
+    expect(isValidApSkillLevel(sl(15, 40, 300, 250))).toBe(true);
+  });
+
+  it('count/per/value のいずれかが 0 なら false（未登録扱い）', () => {
+    expect(isValidApSkillLevel(sl(0, 0, 0))).toBe(false);
+    expect(isValidApSkillLevel(sl(0, 40, 300))).toBe(false);
+    expect(isValidApSkillLevel(sl(15, 0, 300))).toBe(false);
+    expect(isValidApSkillLevel(sl(15, 40, 0))).toBe(false);
+  });
+
+  it('count/per/value のいずれかが null なら false', () => {
+    expect(isValidApSkillLevel(sl(null, 40, 300))).toBe(false);
+    expect(isValidApSkillLevel(sl(15, null, 300))).toBe(false);
+    expect(isValidApSkillLevel(sl(15, 40, null))).toBe(false);
+  });
+});
 
 describe('getMaxApSkillLevel (最上位スキルレベルの判定)', () => {
   it('Lv5 まで揃っていれば 5', () => {

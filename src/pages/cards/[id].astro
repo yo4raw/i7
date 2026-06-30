@@ -8,7 +8,7 @@ import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constan
 import { ATTR_TEXT_CLASS, cardImageUrl } from '../../lib/ui';
 import { cardCreativeWorkLd } from '../../lib/seo';
 import { attrDonutSvg } from '../../lib/donutChart';
-import { formatSkillEffect } from '../../lib/score/skillFormatter';
+import { formatSkillEffect, isValidApSkillLevel } from '../../lib/score/skillFormatter';
 
 export async function getStaticPaths() {
   const [cards, broachs, events] = await Promise.all([
@@ -88,7 +88,8 @@ if (card.ap_skill_name) {
     const per = card[`ap_skill_${i}_per`];
     const value = card[`ap_skill_${i}_value`];
     const rate = card[`ap_skill_${i}_rate`];
-    if (count != null || per != null || value != null || rate != null) {
+    // count/per/value がいずれも未登録（null・0）のレベルはデータ欠損なので除外する
+    if (isValidApSkillLevel({ count, per, value, rate })) {
       apSkillLevels.push({ lv: i, count, per, value, rate });
     }
   }
