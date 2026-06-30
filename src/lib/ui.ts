@@ -16,15 +16,15 @@ export const ATTR_TEXT_CLASS: Record<AttributeName, string> = {
 };
 
 export function cardImageUrl(id: number | string): string {
-  return `${CARD_IMAGE_BASE_URL}/${id}.png`;
+  return `${CARD_IMAGE_BASE_URL}/${id}.webp`;
 }
 
 export function cardThumbUrl(id: number | string): string {
-  return `${CARD_THUMB_BASE_URL}/${id}.png`;
+  return `${CARD_THUMB_BASE_URL}/${id}.webp`;
 }
 
 export function songImageUrl(id: number | string): string {
-  return `${SONG_IMAGE_BASE_URL}/${id}.png`;
+  return `${SONG_IMAGE_BASE_URL}/${id}.webp`;
 }
 
 /** ミリ秒を「123 ms」「12.34 秒」「1分 5.0秒」形式で整形する */

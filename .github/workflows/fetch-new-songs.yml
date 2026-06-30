@@ -29,10 +29,10 @@ jobs:
           node scripts/fetch-song-images.mjs
 
           NEW_FILES=$(git ls-files --others --exclude-standard public/assets/songs/ || true)
-          NEW_COUNT=$(printf '%s\n' "$NEW_FILES" | grep -c '\.png$' || true)
+          NEW_COUNT=$(printf '%s\n' "$NEW_FILES" | grep -c '\.webp$' || true)
           NEW_IDS=$(printf '%s\n' "$NEW_FILES" \
-            | grep -oE '[0-9]+\.png$' \
-            | sed 's/\.png$//' \
+            | grep -oE '[0-9]+\.webp$' \
+            | sed 's/\.webp$//' \
             | sort -n \
             | paste -sd ', ' - || true)
 

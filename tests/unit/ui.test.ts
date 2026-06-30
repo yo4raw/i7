@@ -25,19 +25,19 @@ describe('ATTR_TEXT_CLASS', () => {
 
 describe('cardImageUrl / cardThumbUrl / songImageUrl', () => {
   it('数値 ID からフルサイズ画像 URL を生成', () => {
-    expect(cardImageUrl(123)).toBe(`${CARD_IMAGE_BASE_URL}/123.png`);
+    expect(cardImageUrl(123)).toBe(`${CARD_IMAGE_BASE_URL}/123.webp`);
   });
 
   it('文字列 ID も受け付ける', () => {
-    expect(cardImageUrl('999')).toBe(`${CARD_IMAGE_BASE_URL}/999.png`);
+    expect(cardImageUrl('999')).toBe(`${CARD_IMAGE_BASE_URL}/999.webp`);
   });
 
   it('サムネイル URL を生成', () => {
-    expect(cardThumbUrl(42)).toBe(`${CARD_THUMB_BASE_URL}/42.png`);
+    expect(cardThumbUrl(42)).toBe(`${CARD_THUMB_BASE_URL}/42.webp`);
   });
 
   it('楽曲画像 URL を生成', () => {
-    expect(songImageUrl(7)).toBe(`${SONG_IMAGE_BASE_URL}/7.png`);
+    expect(songImageUrl(7)).toBe(`${SONG_IMAGE_BASE_URL}/7.webp`);
   });
 });
 

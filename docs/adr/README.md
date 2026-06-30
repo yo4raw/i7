@@ -44,3 +44,4 @@
 | [0030](0030-upgrade-astro7-svelte9.md) | astro 7 / @astrojs/svelte 9 へのメジャーアップグレードと CSS 圧縮の Vite 一本化 | 承認 |
 | [0031](0031-seo-structured-data.md) | SEO メタデータ／構造化データの強化 | 承認 |
 | [0032](0032-unit-test-coverage-gate.md) | 単体テストカバレッジ 95% ゲートを CI に導入 | 承認 |
+| [0033](0033-webp-image-format.md) | コンテンツ画像を PNG から WebP へ全面移行 | 承認 |

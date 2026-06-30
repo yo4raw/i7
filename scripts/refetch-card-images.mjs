@@ -27,10 +27,11 @@
  *   --quiet                進捗を抑止
  */
 
-import { readFile, writeFile, stat } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..');
@@ -116,15 +117,6 @@ async function fetchRemote(url, retries = 2) {
   }
 }
 
-async function localHash(path) {
-  try {
-    const buf = await readFile(path);
-    return createHash('sha256').update(buf).digest('hex');
-  } catch {
-    return null;
-  }
-}
-
 async function runPool(items, concurrency, worker) {
   const results = new Array(items.length);
   let cursor = 0;
@@ -140,7 +132,9 @@ async function runPool(items, concurrency, worker) {
 }
 
 async function processOne(id, args, localDir, urlPrefix) {
-  const localPath = join(localDir, `${id}.png`);
+  // ローカルは WebP、ソースは PNG。取得した PNG を WebP へ変換して上書きする。
+  // フルカード (full) はロスレス、サムネ (th) は lossy q85。
+  const localPath = join(localDir, `${id}.webp`);
   const url = `${urlPrefix}${id}.png`;
   const remote = await fetchRemote(url);
 
@@ -154,17 +148,16 @@ async function processOne(id, args, localDir, urlPrefix) {
     return { id, action: 'skip_placeholder', remoteSize: remote.size };
   }
 
-  const lHash = await localHash(localPath);
-  if (lHash === remote.hash) {
-    return { id, action: 'already_match', size: remote.size };
-  }
-
+  // 形式が異なるためバイト一致比較は行わず、対象 ID は常に再生成する。
   if (args.dryRun) {
-    return { id, action: 'would_write', remoteSize: remote.size, localHash: lHash, remoteHash: remote.hash };
+    return { id, action: 'would_write', remoteSize: remote.size, remoteHash: remote.hash };
   }
 
-  await writeFile(localPath, remote.buf);
-  return { id, action: 'written', remoteSize: remote.size, localHash: lHash, remoteHash: remote.hash };
+  const webp = await sharp(remote.buf)
+    .webp(args.type === 'th' ? { quality: 85 } : { lossless: true })
+    .toBuffer();
+  await writeFile(localPath, webp);
+  return { id, action: 'written', remoteSize: remote.size, webpSize: webp.length };
 }
 
 async function main() {

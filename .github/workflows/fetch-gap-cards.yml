@@ -15,15 +15,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install dependencies (sharp for WebP conversion)
+        run: npm ci
+
       - name: Fetch gap card images
         id: fetch
         shell: bash
         run: |
           set -e -o pipefail
 
-          EXISTING_IDS=$(ls public/assets/cards/*.png \
+          EXISTING_IDS=$(ls public/assets/cards/*.webp \
             | xargs -n1 basename \
-            | sed 's/\.png$//' \
+            | sed 's/\.webp$//' \
             | grep -E '^[0-9]+$' \
             | sort -n)
 
@@ -82,6 +90,9 @@ jobs:
           RESULTS=$(echo "$FETCH_IDS" | grep -E '^[0-9]+$' \
             | xargs -P 10 -I {} bash -c 'fetch_card "$@"' _ {} || true)
 
+          # ダウンロードした PNG をロスレス WebP へ変換し、PNG を破棄する。
+          node scripts/png-to-webp.mjs public/assets/cards --lossless --quiet
+
           DOWNLOADED=$(echo "$RESULTS" | grep -c "^OK:" || true)
           NEW_IDS=$(echo "$RESULTS" | grep "^OK:" | sed 's/^OK://' | sort -n | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g' || true)
 
@@ -96,7 +107,7 @@ jobs:
         if: steps.fetch.outputs.downloaded != '0'
         uses: peter-evans/create-pull-request@v8
         with:
-          add-paths: public/assets/cards/
+          add-paths: public/assets/cards/*.webp
           commit-message: "Add gap card images: ${{ steps.fetch.outputs.new_ids }}"
           branch: auto/add-gap-cards-${{ github.run_id }}
           delete-branch: true
