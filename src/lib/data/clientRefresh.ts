@@ -48,12 +48,6 @@ function showIndicator(message: string, type: 'loading' | 'success') {
   }
 }
 
-function hideIndicator() {
-  if (indicatorEl) {
-    indicatorEl.classList.replace('opacity-100', 'opacity-0');
-  }
-}
-
 // --- キャッシュ ---
 
 function readCache<T>(key: DataKey, maxAgeMs: number): T[] | null {

@@ -34,6 +34,7 @@ export function countDeckAttrs(deck: (Card | null)[]): Record<AttributeName, num
   for (const c of deck) {
     if (!c) continue;
     const a = normalizeAttribute(c.attribute);
+    /* v8 ignore next -- normalizeAttribute の戻り型が全て counts のキーのため else 到達不能 */
     if (a in counts) counts[a]++;
   }
   return counts;

@@ -36,6 +36,7 @@ export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 
   const value = sl.value;
   const rate = sl.rate;
 
+  /* v8 ignore next -- resolveEffectiveSkillLevel が count/per truthy のレベルのみ返すため null 到達不能 */
   if (count == null || per == null) return null;
 
   const isTimer = type === SKILL_TYPE.SCOREUP_TIMER || type === SKILL_TYPE.SHRINK_TIMER;
@@ -48,6 +49,7 @@ export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 
     cardIndex: slotIndex,
     skillType,
     originalType: type,
+    /* v8 ignore next 3 -- count/per/value は usable レベルで truthy 保証済みのため || 0 の偽側へ到達しない */
     count: count || 0,
     per: per || 0,
     value: value || 0,
@@ -115,6 +117,7 @@ export function computeTeam(
   for (const c of deck) {
     if (!c) continue;
     const a = normalizeAttribute(c.attribute);
+    /* v8 ignore next -- normalizeAttribute の戻り型が全て attrCounts のキーのため else 到達不能 */
     if (a in attrCounts) attrCounts[a]++;
   }
 
@@ -152,6 +155,7 @@ export function computeTeam(
       if (!rb.active) continue;
       // 種類9（スコアUP）はステータスではなくスコア直接加算なのでここではスキップ
       if (rb.broach.broach_type === 9) continue;
+      /* v8 ignore next -- resolveDeckBroachs が multiplier を常に number 設定するため ?? 1 へ到達しない */
       const mult = rb.multiplier ?? 1;
       bShout += (rb.broach.shout || 0) * mult;
       bBeat += (rb.broach.beat || 0) * mult;

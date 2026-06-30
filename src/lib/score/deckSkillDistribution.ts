@@ -75,6 +75,7 @@ export function buildDeckSkillDistribution(
 
     const colorIdx = DISPLAY_ORDER.indexOf(slotIndex);
     const color = SERIES_COLORS[colorIdx % SERIES_COLORS.length];
+    /* v8 ignore next -- slotIndex は直前で baseAppeal に登録済みのため ?? 0 へ到達しない */
     const base = baseAppeal.get(slotIndex) ?? 0;
     const effectiveAppeal = Math.round(base * assistFactor * badgeFactor);
     const contribRatio = totalBase > 0 ? base / totalBase : 0;

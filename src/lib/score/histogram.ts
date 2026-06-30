@@ -36,6 +36,7 @@ export function renderHistogramSvg(
   }
 
   const maxCount = Math.max(...bins);
+  /* v8 ignore next 3 -- scores 非空かつ range>0 なら必ず最低1ビンが加算され maxCount>=1 となる */
   if (maxCount === 0) {
     return '<span class="text-gray-400 text-xs">データなし</span>';
   }
