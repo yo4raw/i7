@@ -24,7 +24,7 @@ test.describe('カード詳細ページ', () => {
     const img = page.locator('img').first();
     await expect(img).toBeVisible();
     const src = await img.getAttribute('src');
-    expect(src).toContain('.png');
+    expect(src).toContain('.webp');
   });
 
   test('レアリティバッジと属性バッジが表示される', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe('カード詳細ページ', () => {
     await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /.+/);
     await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'article');
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', /^https:\/\/.+\/cards\/.+/);
-    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/assets\/cards\/.+\.png$/);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /^https:\/\/.+\/assets\/cards\/.+\.webp$/);
     await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', /.+/);
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /^https:\/\/.+\/cards\/.+/);

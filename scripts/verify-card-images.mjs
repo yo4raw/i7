@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 /**
- * ローカルのカード画像 (public/assets/cards | th_cards) がコピー元サーバー
- * (i7.step-on-dream.net) と一致するかを網羅的に検証する。
+ * ローカルのカード画像 (public/assets/cards | th_cards) と、コピー元サーバー
+ * (i7.step-on-dream.net) のソース画像の整合性を検証する。
  * 実行: node scripts/verify-card-images.mjs [options] （結果は --out で JSON 出力し refetch-card-images.mjs に渡せる）
- * 頻度: 必要時のみ（画像破損・プレースホルダー混入が疑われるときの手動検証用）
+ * 頻度: 必要時のみ（ソース側の欠落・プレースホルダー混入が疑われるときの手動検証用）
  *
- * - デフォルトは Content-Length 比較（HEAD のみ）で高速にサイズ不一致を検出
- * - --hash で全ファイルを GET して SHA-256 比較（厳密だが重い）
+ * 注意: ローカルは WebP、ソースは PNG のためバイト/サイズの一致比較は成立しない。
+ * 本ツールは「ローカル WebP の存在」と「ソース PNG が今も有効に取得できるか
+ * (404・プレースホルダー(HTML)・非 PNG をソース異常として検出)」を検証する。
+ *
+ * - デフォルトは HEAD でソース PNG の到達性のみ確認（高速）
+ * - --hash で GET してソース PNG の実体まで確認（非 PNG/プレースホルダー検出、重い）
  *
  * Usage:
  *   node scripts/verify-card-images.mjs [options]
  *
  * Options:
  *   --type <th|full>       'th' (th_cards) または 'full' (cards)。既定: th
- *   --hash                 サイズ一致でも内容を SHA-256 で比較する
- *   --hash-on-match        サイズ一致した分のみ追加で SHA-256 比較
+ *   --hash                 GET でソース PNG 本体を取得し実体が PNG か確認する
  *   --concurrency <n>      並列リクエスト数。既定: 10
  *   --ids <csv>            特定 ID のみ検証 (例: --ids 100,200,3688)
  *   --limit <n>            先頭 n 件のみ検証
@@ -22,7 +25,7 @@
  *   --quiet                進捗出力を抑止
  */
 
-import { readdir, stat, readFile, writeFile } from 'node:fs/promises';
+import { readdir, stat, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,12 +43,11 @@ const LOCAL_DIRS = {
 };
 
 function parseArgs(argv) {
-  const args = { type: 'th', concurrency: 10, hash: false, hashOnMatch: false, quiet: false };
+  const args = { type: 'th', concurrency: 10, hash: false, quiet: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--type') args.type = argv[++i];
     else if (a === '--hash') args.hash = true;
-    else if (a === '--hash-on-match') args.hashOnMatch = true;
     else if (a === '--concurrency') args.concurrency = Number(argv[++i]);
     else if (a === '--ids') args.ids = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
     else if (a === '--limit') args.limit = Number(argv[++i]);
@@ -71,8 +73,7 @@ function getHelpText() {
 
 Options:
   --type <th|full>       th_cards または cards。既定: th
-  --hash                 全ファイルを SHA-256 比較（重い）
-  --hash-on-match        サイズ一致分のみ SHA-256 で追加検証（推奨）
+  --hash                 GET でソース PNG 本体を取得し実体が PNG か確認（重い）
   --concurrency <n>      並列数。既定: 10
   --ids <csv>            特定 ID のみ検証
   --limit <n>            先頭 n 件のみ検証
@@ -84,14 +85,9 @@ Options:
 async function listLocalIds(dir) {
   const entries = await readdir(dir);
   return entries
-    .filter((n) => /^\d+\.png$/.test(n))
-    .map((n) => n.replace(/\.png$/, ''))
+    .filter((n) => /^\d+\.webp$/.test(n))
+    .map((n) => n.replace(/\.webp$/, ''))
     .sort((a, b) => Number(a) - Number(b));
-}
-
-async function sha256OfFile(path) {
-  const buf = await readFile(path);
-  return { hash: createHash('sha256').update(buf).digest('hex'), size: buf.length };
 }
 
 async function headRemote(url, retries = 2) {
@@ -153,80 +149,36 @@ async function runPool(items, concurrency, worker) {
   return results;
 }
 
+// ローカルは WebP、ソースは PNG のためバイト/サイズの一致比較は成立しない。
+// ここでは「ローカル WebP が存在し、かつソース PNG が今も有効に取得できるか」を検証する
+// （404・プレースホルダー(HTML)・非 PNG をソース側の異常として検出する）。
 async function verifyOne(id, args, localDir, urlPrefix) {
-  const localPath = join(localDir, `${id}.png`);
-  const localStat = await stat(localPath);
-  const localSize = localStat.size;
+  const localPath = join(localDir, `${id}.webp`);
+  let localSize;
+  try {
+    localSize = (await stat(localPath)).size;
+  } catch {
+    return { id, status: 'local_missing' };
+  }
   const url = `${urlPrefix}${id}.png`;
 
   if (args.hash) {
-    const [local, remote] = await Promise.all([sha256OfFile(localPath), getRemote(url)]);
+    // GET でソース PNG 本体を取得し、実体が PNG であることまで確認する。
+    const remote = await getRemote(url);
     if (remote.status !== 200) {
       return { id, status: 'remote_error', remoteStatus: remote.status, localSize };
     }
     if (!remote.isPng) {
-      return {
-        id,
-        status: 'remote_not_png',
-        localSize: local.size,
-        remoteSize: remote.size,
-        remoteHash: remote.hash,
-      };
+      return { id, status: 'remote_not_png', localSize, remoteSize: remote.size };
     }
-    if (local.hash !== remote.hash) {
-      return {
-        id,
-        status: 'hash_mismatch',
-        localSize: local.size,
-        remoteSize: remote.size,
-        localHash: local.hash,
-        remoteHash: remote.hash,
-      };
-    }
-    return { id, status: 'ok', size: local.size };
+    return { id, status: 'ok', localSize, remoteSize: remote.size };
   }
 
   const remote = await headRemote(url);
   if (remote.status !== 200) {
     return { id, status: 'remote_error', remoteStatus: remote.status, localSize };
   }
-  if (remote.size !== null && remote.size !== localSize) {
-    return {
-      id,
-      status: 'size_mismatch',
-      localSize,
-      remoteSize: remote.size,
-      etag: remote.etag,
-    };
-  }
-
-  if (args.hashOnMatch) {
-    const [local, remoteFull] = await Promise.all([sha256OfFile(localPath), getRemote(url)]);
-    if (remoteFull.status !== 200) {
-      return { id, status: 'remote_error', remoteStatus: remoteFull.status, localSize };
-    }
-    if (!remoteFull.isPng) {
-      return {
-        id,
-        status: 'remote_not_png',
-        localSize: local.size,
-        remoteSize: remoteFull.size,
-        remoteHash: remoteFull.hash,
-      };
-    }
-    if (local.hash !== remoteFull.hash) {
-      return {
-        id,
-        status: 'hash_mismatch',
-        localSize: local.size,
-        remoteSize: remoteFull.size,
-        localHash: local.hash,
-        remoteHash: remoteFull.hash,
-      };
-    }
-  }
-
-  return { id, status: 'ok', size: localSize };
+  return { id, status: 'ok', localSize, remoteSize: remote.size };
 }
 
 async function main() {
@@ -240,7 +192,7 @@ async function main() {
   if (!args.quiet) {
     console.error(`Verifying ${ids.length} ${args.type}_cards against ${urlPrefix}`);
     console.error(
-      `Mode: ${args.hash ? 'full hash' : args.hashOnMatch ? 'size + hash-on-match' : 'size only'}, concurrency=${args.concurrency}`,
+      `Mode: ${args.hash ? 'GET (validate source PNG body)' : 'HEAD (source availability)'}, concurrency=${args.concurrency}`,
     );
   }
 
@@ -256,7 +208,7 @@ async function main() {
     return r;
   });
 
-  const summary = { ok: 0, size_mismatch: 0, hash_mismatch: 0, remote_not_png: 0, remote_error: 0 };
+  const summary = { ok: 0, local_missing: 0, remote_not_png: 0, remote_error: 0 };
   const mismatches = [];
   for (const r of results) {
     summary[r.status] = (summary[r.status] ?? 0) + 1;

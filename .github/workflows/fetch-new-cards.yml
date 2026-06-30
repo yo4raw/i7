@@ -15,21 +15,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install dependencies (sharp for WebP conversion)
+        run: npm ci
+
       - name: Fetch new card images (full + thumbnail)
         id: fetch
         shell: bash
         run: |
           mkdir -p public/assets/cards public/assets/th_cards
 
-          EXISTING_CARDS=$(ls public/assets/cards/*.png 2>/dev/null \
+          EXISTING_CARDS=$(ls public/assets/cards/*.webp 2>/dev/null \
             | xargs -n1 basename \
-            | sed 's/\.png$//' \
+            | sed 's/\.webp$//' \
             | grep -E '^[0-9]+$' \
             | sort -n || true)
 
-          EXISTING_TH=$(ls public/assets/th_cards/*.png 2>/dev/null \
+          EXISTING_TH=$(ls public/assets/th_cards/*.webp 2>/dev/null \
             | xargs -n1 basename \
-            | sed 's/\.png$//' \
+            | sed 's/\.webp$//' \
             | grep -E '^[0-9]+$' \
             | sort -n || true)
 
@@ -78,11 +86,12 @@ jobs:
             exit 0
           fi
 
+          # 取得は一時的に PNG としてダウンロードし、後段で WebP に変換する。
           fetch_card_pair() {
             local ID=$1
             local FETCHED=""
 
-            if [ ! -f "public/assets/cards/${ID}.png" ]; then
+            if [ ! -f "public/assets/cards/${ID}.webp" ]; then
               local URL="https://i7.step-on-dream.net/img/cards/${ID}.png"
               local DEST="public/assets/cards/${ID}.png"
               local HTTP_CODE
@@ -95,7 +104,7 @@ jobs:
               fi
             fi
 
-            if [ ! -f "public/assets/th_cards/${ID}.png" ]; then
+            if [ ! -f "public/assets/th_cards/${ID}.webp" ]; then
               local URL="https://i7.step-on-dream.net/img/cards/th/${ID}.png"
               local DEST="public/assets/th_cards/${ID}.png"
               local HTTP_CODE
@@ -116,6 +125,11 @@ jobs:
 
           RESULTS=$(echo "$MISSING_IDS" | grep -E '^[0-9]+$' \
             | xargs -P 10 -I {} bash -c 'fetch_card_pair "$@"' _ {} || true)
+
+          # ダウンロードした PNG を WebP へ変換し、PNG を破棄する。
+          # フルカードはロスレス（劣化ゼロ）、サムネは lossy q85。
+          node scripts/png-to-webp.mjs public/assets/cards --lossless --quiet
+          node scripts/png-to-webp.mjs public/assets/th_cards --quality 85 --quiet
 
           DOWNLOADED_FULL=$(echo "$RESULTS" | grep -c "^OK:[0-9]*:.*F" || true)
           DOWNLOADED_TH=$(echo "$RESULTS" | grep -c "^OK:[0-9]*:.*T" || true)
@@ -139,8 +153,8 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           add-paths: |
-            public/assets/cards/
-            public/assets/th_cards/
+            public/assets/cards/*.webp
+            public/assets/th_cards/*.webp
           commit-message: "Add card images: ${{ steps.fetch.outputs.new_ids }}"
           branch: auto/add-cards-${{ github.run_id }}
           delete-branch: true

@@ -61,7 +61,7 @@ test.describe('衣装比較ページ', () => {
     const src = await bar.locator('img').getAttribute('src');
     // cardID ではなく ID ベースであること（過去のフィールド取り違えバグの再発防止）
     expect(cardId).toBeTruthy();
-    expect(src).toMatch(new RegExp(`/assets/th_cards/${cardId}\\.png$`));
+    expect(src).toMatch(new RegExp(`/assets/th_cards/${cardId}\\.webp$`));
   });
 
   test('棒をクリックすると詳細比較パネルが開閉する', async ({ page }) => {

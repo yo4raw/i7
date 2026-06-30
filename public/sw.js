@@ -10,9 +10,11 @@
 //
 // SW_VERSION を上げると古い static キャッシュをパージする。
 
-const SW_VERSION = 'v1';
+const SW_VERSION = 'v2';
 const STATIC_CACHE = `i7-static-${SW_VERSION}`;
-const IMG_CACHE = 'i7-images';
+// PNG → WebP 移行に伴い旧画像キャッシュ (i7-images) を破棄させるためバージョンを付与。
+// 旧キャッシュは activate の「未知キャッシュ掃除」で削除される。
+const IMG_CACHE = `i7-images-${SW_VERSION}`;
 const GVIZ_CACHE = 'i7-gviz';
 const KNOWN_CACHES = [STATIC_CACHE, IMG_CACHE, GVIZ_CACHE];
 const APP_SHELL = ['/', '/manifest.webmanifest', '/favicon.svg'];

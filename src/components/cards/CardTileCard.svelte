@@ -19,7 +19,7 @@
   let { card, base, thumbUrl, bonusTier, enableNameFilter = false, pageMarker = null, onFilterByName }: Props = $props();
 
   const borderColor = $derived(ATTR_HEX[card.attribute] || 'transparent');
-  const thumb = $derived(`${thumbUrl}/${card.ID}.png`);
+  const thumb = $derived(`${thumbUrl}/${card.ID}.webp`);
   const bonusDef = $derived(bonusTier && bonusTier !== 'none' ? EVENT_BONUS_TIERS.find((t) => t.key === bonusTier) ?? null : null);
 
   function handleImageClick() {

@@ -9,6 +9,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import sharp from 'sharp';
 
 // ---------- 定数 ----------
 const WIKI_API = 'https://idolish7.miraheze.org/w/api.php';
@@ -342,7 +343,8 @@ async function downloadImages(mapped, urlMap) {
   const downloadedImages = new Map(); // image → Buffer
 
   const tasks = mapped.map((entry) => async () => {
-    const outPath = join(OUTPUT_DIR, `${entry.id}.png`);
+    // Wiki 画像 (PNG/JPG 等) は lossy WebP q85 で保存する。
+    const outPath = join(OUTPUT_DIR, `${entry.id}.webp`);
 
     // 既存ファイルがあればスキップ
     if (existsSync(outPath)) {
@@ -377,7 +379,8 @@ async function downloadImages(mapped, urlMap) {
         buffer = Buffer.from(await res.arrayBuffer());
         downloadedImages.set(entry.image, buffer);
       }
-      await writeFile(outPath, buffer);
+      const webp = await sharp(buffer).webp({ quality: 85 }).toBuffer();
+      await writeFile(outPath, webp);
       downloaded++;
       if (downloaded % 10 === 0) {
         process.stdout.write(`  → ${downloaded} ダウンロード済み\r`);

@@ -24,7 +24,7 @@
 
   const attrBg = $derived(ATTR_BG[card.attribute] || 'transparent');
   const borderColor = $derived(ATTR_HEX[card.attribute] || 'transparent');
-  const thumb = $derived(`${thumbUrl}/${card.ID}.png`);
+  const thumb = $derived(`${thumbUrl}/${card.ID}.webp`);
   const bg = $derived(
     `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${attrBg}, ${attrBg}), url(${thumb}) no-repeat right 25% / auto 500%`
   );

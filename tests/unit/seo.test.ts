@@ -18,7 +18,7 @@ describe('cardCreativeWorkLd', () => {
     expect(ld['@type']).toBe('CreativeWork');
     expect(ld.name).toBe('テスト衣装');
     expect(ld.url).toBe('https://i7.yo4raw.com/cards/1234/');
-    expect(ld.image).toBe('https://i7.yo4raw.com/assets/cards/1234.png');
+    expect(ld.image).toBe('https://i7.yo4raw.com/assets/cards/1234.webp');
     expect(ld.inLanguage).toBe('ja');
     expect(ld.isPartOf).toMatchObject({ '@type': 'WebSite' });
   });

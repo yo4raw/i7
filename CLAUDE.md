@@ -94,12 +94,12 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 ### Card Images
 
-カード画像は `public/assets/` に配置（ビルド時に `dist/assets/` へコピー）。
+カード画像は `public/assets/` に配置（ビルド時に `dist/assets/` へコピー）。画像形式は **WebP**（フルカードはロスレス、サムネ・楽曲は lossy q85。ADR 0033）。ソースサーバー (`i7.step-on-dream.net`) は PNG 配信のため、GHA フェッチ時に `scripts/png-to-webp.mjs` で WebP へ変換して取り込む。
 
 | 種別 | ディレクトリ | URL パターン |
 |------|-------------|-------------|
-| フルサイズ画像 | `public/assets/cards/` | `{BASE_URL}assets/cards/{ID}.png` |
-| サムネイル画像 | `public/assets/th_cards/` | `{BASE_URL}assets/th_cards/{ID}.png` |
+| フルサイズ画像 | `public/assets/cards/` | `{BASE_URL}assets/cards/{ID}.webp` |
+| サムネイル画像 | `public/assets/th_cards/` | `{BASE_URL}assets/th_cards/{ID}.webp` |
 
 > ⚠️ **`Card.ID` と `Card.cardID` は別物**（`fetchCardsJson.ts` で別フィールド）。画像ファイル名・カード詳細パス (`cards/{id}/`)・localStorage の所持数キー・特効ティア照合など、**カードを指す ID はすべて `Card.ID`** を使う。`cardID` は固有ブローチ照合（`FixedBroach.card_id === Card.cardID`）など限られた用途専用で、画像やルーティングに使うと別カードを指してしまう。画像 URL は文字列を直書きせず `cardImageUrl(card.ID)` / `cardThumbUrl(card.ID)`（`src/lib/ui.ts`）を使うこと。
 
@@ -107,10 +107,10 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 | ワークフロー | スケジュール | 内容 |
 |-------------|------------|------|
-| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め |
-| `fetch-gap-cards.yml` | 毎時 00 分 (UTC) | カード ID ギャップの補完 |
+| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め。PNG 取得後 WebP へ変換 |
+| `fetch-gap-cards.yml` | 毎時 00 分 (UTC) | カード ID ギャップの補完。PNG 取得後 WebP へ変換 |
 | `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
-| `fetch-new-songs.yml` | 毎時 00 分 (UTC) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得 |
+| `fetch-new-songs.yml` | 毎時 00 分 (UTC) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得し WebP へ変換 |
 
 楽曲ジャケット画像は `public/assets/songs/` に配置される（`SONG_IMAGE_BASE_URL` 経由で参照）。Wiki クローラー本体は `scripts/fetch-song-images.mjs`。
 
