@@ -118,6 +118,7 @@ export function calcCardStrengthAppeal(
     let aS = s, aB = b, aM = m;
     for (const rb of resolved.get(0) ?? []) {
       if (!rb.active || rb.broach.broach_type === 9) continue;
+      /* v8 ignore next -- resolveDeckBroachs が multiplier を常に number 設定するため ?? 1 へ到達しない */
       const mult = rb.multiplier ?? 1;
       aS += (rb.broach.shout || 0) * mult;
       aB += (rb.broach.beat || 0) * mult;

@@ -43,3 +43,4 @@
 | [0029](0029-max-finder-event-select.md) | 編成組合計算で過去のハイスコアイベントを選択可能にする | 承認 |
 | [0030](0030-upgrade-astro7-svelte9.md) | astro 7 / @astrojs/svelte 9 へのメジャーアップグレードと CSS 圧縮の Vite 一本化 | 承認 |
 | [0031](0031-seo-structured-data.md) | SEO メタデータ／構造化データの強化 | 承認 |
+| [0032](0032-unit-test-coverage-gate.md) | 単体テストカバレッジ 95% ゲートを CI に導入 | 承認 |

@@ -38,6 +38,7 @@ export function extractCellValue(cell: GVizCell | null | undefined): string | nu
   // GViz Date型: "Date(2024,0,15)" のようなパターン
   if (typeof v === 'string' && /^Date\(\d+,\d+,\d+/.test(v)) {
     const m = v.match(/Date\((\d+),(\d+),(\d+)/);
+    /* v8 ignore next -- 直前の test() が一致した値は match も必ず一致するため if(m) の偽側は到達不能 */
     if (m) return new Date(Number(m[1]), Number(m[2]), Number(m[3])).toISOString().split('T')[0];
   }
   return v;

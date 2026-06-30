@@ -179,6 +179,7 @@ function calcShrinkActivationCount(
   notesCount: number,
   excludeHeadCount: number,
 ): number {
+  /* v8 ignore next -- 全呼出元が count>0 を保証しており count<=0 でここへ到達しない */
   if (skill.count <= 0) return 0;
   if (isShrinkTimer(skill)) {
     return team.songDuration > 0 ? Math.floor(team.songDuration / skill.count) : 0;

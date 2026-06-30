@@ -124,6 +124,7 @@ export async function fetchEventsCsv(): Promise<EventRow[]> {
   }
 
   return rows.slice(1).map(r => ({
+    /* v8 ignore next -- iId=0 で行が存在すれば r[0] は常に定義され ?? 0 へ到達しない */
     id: Number(r[iId] ?? 0),
     eventname: (r[iName] ?? '').trim(),
     eventtype: (r[iType] ?? '').trim(),
@@ -172,6 +173,7 @@ export function formatEffectSummary(tier: EventSpecialTier): string {
   ];
   for (const [key, v] of map) {
     if (v > 0 && tier.effect.includes(key)) {
+      /* v8 ignore next -- key は固定の effect キーのみで EFFECT_LABEL に必ず存在し ?? key へ到達しない */
       parts.push(`${EFFECT_LABEL[key] ?? key} +${v}%`);
     }
   }

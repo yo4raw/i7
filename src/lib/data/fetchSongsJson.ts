@@ -140,6 +140,7 @@ export function filterValidSongs(songs: Song[]): Song[] {
  * 曲選択ドロップダウンで「イベント対象楽曲」グループとして先頭に出す。
  */
 export function getEventSongIds(): number[] {
+  /* v8 ignore next 3 -- event-songs.json の eventSongIds は実 config で常に配列のため : [] へ到達しない */
   return Array.isArray(eventSongsConfig.eventSongIds)
     ? (eventSongsConfig.eventSongIds as number[])
     : [];

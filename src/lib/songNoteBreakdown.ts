@@ -78,6 +78,7 @@ export function buildNoteBreakdown(song: Song): NoteBreakdown {
 
     rows.push({
       key,
+      /* v8 ignore next 2 -- key は SONG_NOTE_GROUP_KEYS 固定で両 map に必ず存在し ?? 側へ到達しない */
       label: STAGE_LABELS[key] ?? key,
       multiplier: LIGHT_MULTIPLIER[key] ?? 1,
       shoutWhite, shoutColor,
