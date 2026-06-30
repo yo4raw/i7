@@ -41,6 +41,7 @@ function entry(partial: Partial<CardStrengthEntry>): CardStrengthEntry {
     expectedCoverSec: 0,
     skill: null,
     broachScoreBonus: 0,
+    appliedBroach: null,
     ...partial,
   };
 }

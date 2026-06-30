@@ -80,9 +80,10 @@ describe('calcCardStrengthAppeal: 非 UR カード + ブローチで resolved.ge
 });
 
 describe('calcCardStrengthAppeal: 非アクティブ / 種類9 ブローチは属性加算しない (line 121)', () => {
-  it('発動条件を満たさない種類7 ブローチは属性に加算されない (rb.active=false)', () => {
-    // 単独デッキでは 3 属性そろわず type7 は非アクティブ
-    const broach = makeBroach({ broach_type: 7, melody: 9000, limit: 2 });
+  it('発動条件を満たさない種類8 (オート専用) ブローチは属性に加算されない (rb.active=false)', () => {
+    // 種類8 は常に無効 (スコープ外) なので加算されない。
+    // 種類7 は ADR 0035 でベストケース前提として常時発動扱いに変わったため非アクティブ検証には使えない
+    const broach = makeBroach({ broach_type: 8, melody: 9000 });
     const { appeal } = calcCardStrengthAppeal(makeCard(), [broach], makeSong());
     expect(appeal.Melody).toBe(4000);
   });
