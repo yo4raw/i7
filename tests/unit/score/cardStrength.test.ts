@@ -4,6 +4,7 @@ import type { Card } from '../../../src/lib/data/fetchCardsJson';
 import type { FixedBroach } from '../../../src/lib/data/fetchFixedBroachsJson';
 import type { Song } from '../../../src/lib/data/fetchSongsJson';
 import {
+  broachPremiseNote,
   buildCardStrengthEntry,
   calcBaseScore,
   classifyCard,
@@ -130,10 +131,10 @@ describe('固有ブローチ', () => {
     expect(entry.appeal.Melody).toBe(8500);
   });
 
-  it('種類7 (3属性条件) は単独デッキでは発動しない', () => {
+  it('種類7 (3属性条件) は比較ではベストケース前提で発動し加算される (ADR 0035)', () => {
     const broach = makeBroach({ broach_type: 7, melody: 9000, limit: 2 });
     const entry = buildCardStrengthEntry(makeCard(), [broach], makeSong());
-    expect(entry.appeal.Melody).toBe(4000);
+    expect(entry.appeal.Melody).toBe(13000);
   });
 
   it('複数ブローチからスコアが最大になる1個を選ぶ (Melody 偏重曲では melody ブローチ)', () => {
@@ -263,5 +264,34 @@ describe('formatScore', () => {
   it('1万以上は万表記、未満はカンマ区切り', () => {
     expect(formatScore(152340)).toBe('15.2万');
     expect(formatScore(9999)).toBe('9,999');
+  });
+});
+
+describe('種類7(全属性編成)ブローチの加算と appliedBroach 追跡', () => {
+  const song = makeSong();
+
+  it('種類7ブローチを持つカードは比較で属性値が加算され appliedBroach が種類7を指す', () => {
+    const card = makeCard({ cardID: 9001, shout_max: 1000, beat_max: 1000, melody_max: 4000 });
+    const br = makeBroach({ id: 701, card_id: 9001, broach_type: 7, shout: 600, beat: 600, melody: 600, limit: 2 });
+    const entry = buildCardStrengthEntry(card, [br], song);
+    expect(entry.appeal).toEqual({ Shout: 1600, Beat: 1600, Melody: 4600 });
+    expect(entry.appliedBroach?.broach_type).toBe(7);
+  });
+
+  it('ブローチが無い／全て無効ならば appliedBroach は null', () => {
+    const entry = buildCardStrengthEntry(makeCard(), [], song);
+    expect(entry.appliedBroach).toBeNull();
+  });
+});
+
+describe('broachPremiseNote', () => {
+  it('種類4/5/7/9 は前提文、種類1/6・null は null', () => {
+    expect(broachPremiseNote(makeBroach({ broach_type: 4 }))).toContain('同グループ');
+    expect(broachPremiseNote(makeBroach({ broach_type: 5 }))).toContain('同アイドル');
+    expect(broachPremiseNote(makeBroach({ broach_type: 7 }))).toContain('全属性編成');
+    expect(broachPremiseNote(makeBroach({ broach_type: 9 }))).toContain('対象楽曲');
+    expect(broachPremiseNote(makeBroach({ broach_type: 1 }))).toBeNull();
+    expect(broachPremiseNote(makeBroach({ broach_type: 6 }))).toBeNull();
+    expect(broachPremiseNote(null)).toBeNull();
   });
 });

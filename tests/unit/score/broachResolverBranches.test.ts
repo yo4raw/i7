@@ -117,3 +117,23 @@ describe('calcBroachScoreBonus: score が falsy の type9 は 0 加算 (line 208
     expect(calcBroachScoreBonus(resolved)).toBe(1000);
   });
 });
+
+describe('resolveDeckBroachs: assumeAllAttributes オプション (衣装比較の種類7発動)', () => {
+  it('未指定なら 3 属性不在の単一デッキで種類7は未発動', () => {
+    const b = makeBroach({ broach_type: 7, shout: 600, beat: 600, melody: 600, limit: 2 });
+    const resolved = resolveDeckBroachs(deck, [b], song);
+    expect((resolved.get(0) ?? [])[0].active).toBe(false);
+  });
+
+  it('assumeAllAttributes:true なら 3 属性不在でも種類7が発動', () => {
+    const b = makeBroach({ broach_type: 7, shout: 600, beat: 600, melody: 600, limit: 2 });
+    const resolved = resolveDeckBroachs(deck, [b], song, undefined, { assumeAllAttributes: true });
+    expect((resolved.get(0) ?? [])[0].active).toBe(true);
+  });
+
+  it('assumeAllAttributes:true でも種類4(グループ)など他種別の条件判定は変わらない', () => {
+    const b = makeBroach({ broach_type: 4, group: 'NON_EXISTENT_GROUP', beat: 500 });
+    const resolved = resolveDeckBroachs(deck, [b], song, undefined, { assumeAllAttributes: true });
+    expect((resolved.get(0) ?? [])[0].active).toBe(false);
+  });
+});

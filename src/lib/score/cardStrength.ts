@@ -47,6 +47,8 @@ export interface CardStrengthEntry {
   expectedCoverSec: number;
   skill: CardSkill | null;
   broachScoreBonus: number;
+  /** 採用された固有ブローチ（属性値由来スコアが最大のもの）。ブローチ無しが最良なら null */
+  appliedBroach: FixedBroach | null;
 }
 
 /** 判定縮小タブのソートキー: 属性値由来スコア / 最大カバー率 / 期待カバー率 */
@@ -98,14 +100,15 @@ export function calcCardStrengthAppeal(
   allBroachs: FixedBroach[],
   song: Song,
   bonusMultiplier = 1,
-): { appeal: CardAppeal; broachScoreBonus: number } {
+): { appeal: CardAppeal; broachScoreBonus: number; appliedBroach: FixedBroach | null } {
   const s = Math.round((card.shout_max || 0) * bonusMultiplier);
   const b = Math.round((card.beat_max || 0) * bonusMultiplier);
   const m = Math.round((card.melody_max || 0) * bonusMultiplier);
 
-  let best: { appeal: CardAppeal; broachScoreBonus: number } = {
+  let best: { appeal: CardAppeal; broachScoreBonus: number; appliedBroach: FixedBroach | null } = {
     appeal: { Shout: s, Beat: b, Melody: m },
     broachScoreBonus: 0,
+    appliedBroach: null,
   };
   let bestScore = calcBaseScore(best.appeal, song);
 
@@ -113,7 +116,10 @@ export function calcCardStrengthAppeal(
   const cardBroachs = allBroachs.filter((br) => br.card_id === card.cardID);
   for (const br of cardBroachs) {
     if (br.id == null) continue;
-    const resolved = resolveDeckBroachs(deck, cardBroachs, song, [br.id, null, null, null, null, null]);
+    // 比較はベストケース前提のため、種類7（全属性編成）は常に発動扱いにする
+    const resolved = resolveDeckBroachs(
+      deck, cardBroachs, song, [br.id, null, null, null, null, null], { assumeAllAttributes: true },
+    );
     const broachScoreBonus = calcBroachScoreBonus(resolved);
     let aS = s, aB = b, aM = m;
     for (const rb of resolved.get(0) ?? []) {
@@ -127,11 +133,31 @@ export function calcCardStrengthAppeal(
     const appeal = { Shout: aS, Beat: aB, Melody: aM };
     const score = calcBaseScore(appeal, song) + broachScoreBonus;
     if (score > bestScore) {
-      best = { appeal, broachScoreBonus };
+      best = { appeal, broachScoreBonus, appliedBroach: br };
       bestScore = score;
     }
   }
   return best;
+}
+
+/**
+ * 採用された固有ブローチの発動前提を表す注記文を返す（衣装比較の詳細パネル用）。
+ * デッキ構成・楽曲に依存する条件を持つ種類のみ前提文を返し、無条件（種類1/6）や
+ * ブローチ無し（null）は null。
+ */
+export function broachPremiseNote(broach: FixedBroach | null): string | null {
+  switch (broach?.broach_type) {
+    case 4:
+      return '同グループ編成が前提';
+    case 5:
+      return '同アイドル・同属性編成が前提（比較では1枚分のみ加算）';
+    case 7:
+      return '全属性編成が前提';
+    case 9:
+      return '対象楽曲でのみ発動';
+    default:
+      return null;
+  }
 }
 
 /** 1枚分の強さエントリを構築する */
@@ -141,7 +167,7 @@ export function buildCardStrengthEntry(
   song: Song,
   bonusMultiplier = 1,
 ): CardStrengthEntry {
-  const { appeal, broachScoreBonus } = calcCardStrengthAppeal(card, allBroachs, song, bonusMultiplier);
+  const { appeal, broachScoreBonus, appliedBroach } = calcCardStrengthAppeal(card, allBroachs, song, bonusMultiplier);
   const skill = parseSkill(card, 0);
   const baseScore = calcBaseScore(appeal, song) + broachScoreBonus;
 
@@ -180,6 +206,7 @@ export function buildCardStrengthEntry(
     expectedCoverSec,
     skill,
     broachScoreBonus,
+    appliedBroach,
   };
 }
 

@@ -46,3 +46,4 @@
 | [0032](0032-unit-test-coverage-gate.md) | 単体テストカバレッジ 95% ゲートを CI に導入 | 承認 |
 | [0033](0033-webp-image-format.md) | コンテンツ画像を PNG から WebP へ全面移行 | 承認 |
 | [0034](0034-llms-txt.md) | llms.txt の追加 | 承認 |
+| [0035](0035-card-compare-broach-condition-notes.md) | 衣装比較で全属性編成ブローチを加算し条件付きブローチの前提を注記する | 承認 |

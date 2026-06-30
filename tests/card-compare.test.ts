@@ -113,6 +113,18 @@ test.describe('衣装比較ページ', () => {
     await expect(page.getByTestId('distribution-chart')).toHaveCount(2);
   });
 
+  test('種類7(全属性編成)ブローチ衣装を選ぶと詳細パネルに前提注記が出る', async ({ page }) => {
+    // 二階堂大和 5th Anniversary (ID 1012) は種類7ブローチ (全属性編成) を持つ
+    const bar = page.locator('[data-testid="scoreup-bar"][data-card-id="1012"]');
+    await expect(bar).toBeVisible({ timeout: 20000 });
+    await bar.click();
+    const detail = page.getByTestId('compare-detail');
+    await expect(detail).toBeVisible();
+    const noteRow = detail.locator('tr', { hasText: 'ブローチ前提' });
+    await expect(noteRow).toBeVisible();
+    await expect(noteRow.getByText('全属性編成が前提')).toBeVisible();
+  });
+
   test('特効イベントセレクタがあり、選択を切り替えられる', async ({ page }) => {
     const select = page.getByLabel('特効イベント');
     await expect(select).toBeVisible({ timeout: 20000 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatScore, type CardStrengthEntry } from '../../lib/score/cardStrength';
+  import { broachPremiseNote, formatScore, type CardStrengthEntry } from '../../lib/score/cardStrength';
   import { skillTypeShortLabel } from '../../lib/score/skillFormatter';
   import { ATTR_HEX } from '../../lib/constants';
   import { cardThumbUrl } from '../../lib/ui';
@@ -49,6 +49,7 @@
   const skillExpMax = $derived(maxIndexes(entries.map((e) => e.skillExpected)));
   const skillMaxMax = $derived(maxIndexes(entries.map((e) => e.skillMax)));
   const hasScoreUpSkill = $derived(entries.some((e) => e.skillMax > 0));
+  const hasBroachNote = $derived(entries.some((e) => broachPremiseNote(e.appliedBroach) != null));
   const hasShrink = $derived(entries.some((e) => e.skill?.isShrink));
   const maxCoverMax = $derived(maxIndexes(entries.map((e) => e.maxCoverSec)));
   const expCoverMax = $derived(maxIndexes(entries.map((e) => e.expectedCoverSec)));
@@ -105,6 +106,18 @@
               </td>
             {/each}
           </tr>
+          {#if hasBroachNote}
+            <tr>
+              <td class="text-gray-500 pr-2 py-1 whitespace-nowrap">ブローチ前提</td>
+              {#each entries as entry (entry.card.ID)}
+                <td class="px-2 py-1 text-center align-top">
+                  <span class="text-[10px] text-amber-700 leading-tight inline-block max-w-40">
+                    {broachPremiseNote(entry.appliedBroach) ?? '-'}
+                  </span>
+                </td>
+              {/each}
+            </tr>
+          {/if}
           <tr>
             <td class="text-gray-500 pr-2 py-1">スキル</td>
             {#each entries as entry (entry.card.ID)}

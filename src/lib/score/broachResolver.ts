@@ -57,11 +57,22 @@ function countIdolAttrMatch(deck: (Card | null)[], idol: string, attribute: stri
   return count;
 }
 
+/** resolveDeckBroachs のオプション */
+export interface ResolveBroachOptions {
+  /**
+   * 種類7（全属性編成）の条件を、デッキの属性構成に依らず常に成立とみなす。
+   * 衣装比較（1枚デッキ評価）専用。実プレイでは全属性を含むデッキを組めば必ず発動できるため、
+   * ベストケース前提の比較で種類7を加算するために使う。スコア計算・編成組合計算では使わない。
+   */
+  assumeAllAttributes?: boolean;
+}
+
 /** 個別ブローチの条件判定（デッキ内上限以外） */
 function checkBroachCondition(
   broach: FixedBroach,
   deck: (Card | null)[],
   song: Pick<Song, 'song_name'>,
+  assumeAllAttributes: boolean,
 ): boolean {
   const type = broach.broach_type;
 
@@ -82,7 +93,7 @@ function checkBroachCondition(
       return true;
 
     case BROACH_TYPE.ALL_ATTRIBUTES:
-      return hasAllAttributes(deck);
+      return assumeAllAttributes || hasAllAttributes(deck);
 
     case BROACH_TYPE.AUTO_ONLY:
       // スコープ外: 常に無効
@@ -108,7 +119,9 @@ export function resolveDeckBroachs(
   allBroachs: FixedBroach[],
   song: Pick<Song, 'song_name'>,
   selectedBroachIds?: (number | null)[],
+  options?: ResolveBroachOptions,
 ): Map<number, ResolvedBroach[]> {
+  const assumeAllAttributes = options?.assumeAllAttributes ?? false;
   const result = new Map<number, ResolvedBroach[]>();
 
   // Phase 1: 各カードのブローチを条件判定（上限以外）
@@ -139,7 +152,7 @@ export function resolveDeckBroachs(
       }
     }
     for (const broach of cardBroachs) {
-      const conditionMet = checkBroachCondition(broach, deck, song);
+      const conditionMet = checkBroachCondition(broach, deck, song, assumeAllAttributes);
       pending.push({ slotIndex: i, broach, conditionMet });
     }
   }

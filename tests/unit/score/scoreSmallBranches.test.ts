@@ -233,7 +233,7 @@ describe('cardDistribution: 縮小・範囲外分岐', () => {
       skillExpected: 0, skillMax: 0,
       totalScore: 100000, maxTotalScore: 100000,
       maxActivations: 0, maxCoverSec: 0, expectedCoverSec: 0,
-      skill: null, broachScoreBonus: 0,
+      skill: null, broachScoreBonus: 0, appliedBroach: null,
       ...partial,
     };
   }
