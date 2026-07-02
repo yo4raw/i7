@@ -47,3 +47,7 @@
 | [0033](0033-webp-image-format.md) | コンテンツ画像を PNG から WebP へ全面移行 | 承認 |
 | [0034](0034-llms-txt.md) | llms.txt の追加 | 承認 |
 | [0035](0035-card-compare-broach-condition-notes.md) | 衣装比較で全属性編成ブローチを加算し条件付きブローチの前提を注記する | 承認 |
+| [0036](0036-expected-score-rate-weighting.md) | 期待値スコアの縮小 rate 加重化と発動回数分母の実挙動統一 | 承認 |
+| [0037](0037-parse-skill-input-hygiene.md) | 判定ガード・判定拡大スコアダウンのスコア計算除外と発動率クランプ | 承認 |
+| [0038](0038-replace-rng-sfc32.md) | MC シミュレーションの乱数生成器を sfc32 へ差し替え | 承認 |
+| [0039](0039-shared-broach-capacity-single-source.md) | 共有ブローチ容量ルールの単一ソース化と CardDetailTable の engine 出力化 | 承認 |
