@@ -69,9 +69,9 @@ rate 加重・構造キャップ後も、縮小の秒→ノート離散化（flo
 - 呼び出し元: `ScoreCalcResults.svelte`（スキル発動タブ）と `deckSkillDistribution.ts`（二項分布の n）が excluded 数を渡す
 - 「先頭除外は発動回数に影響しない」とする docstring を削除・訂正
 
-## M3: 探索 → スコア計算の scoreOptions 引き継ぎ（SearchResults.svelte）
+## M3: 探索 → スコア計算の scoreOptions 引き継ぎ（SearchResults.svelte / ScoreCalc.svelte）
 
-`sendToScoreCalc` が保存する state に `scoreUpAssist` / `badgeRate` を追加する（`ScoreCalc.svelte` の `applyState` が読むキー名に合わせる。受け側は既に対応済みで変更不要）。探索時の評価条件とスコア計算画面の再計算条件が一致する。
+`sendToScoreCalc` が保存する state に `scoreUpAssist` / `badgeRate` を追加する（キー名は `ScoreCalc.svelte` の `applyState` に合わせる）。実装調査で `ScoreCalc` 側は `badgeRate` のみ永続化しており `scoreUpAssist` は保存・復元されていないことが判明したため、受け側にも `scoreUpAssist` の保存（`buildStateObject`）・復元（`applyState`）・チェックボックス変更時の即時保存を追加する。これにより探索時の評価条件とスコア計算画面の再計算条件が一致する。
 
 ## M4: 共有ブローチ容量ルールの一本化と CardDetailTable のリファクタ
 

@@ -350,23 +350,28 @@ for 各 scoreUp/timerScoreUp スキル:
 scoreUpExpected = floor(scoreUpExpected)
 ```
 
-### 9-3. 判定縮小期待値
+### 9-3. 判定縮小期待値（ADR 0036: rate 加重）
 
 ```
-maxRate  = max(デッキ内縮小スキルの rate)
 coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount)
-shrinkExpected = floor(eligibleBaseScore × (maxRate - 1.0) × coverage.expectedCoverageRate)
+shrinkExpected = floor(eligibleBaseScore × coverage.expectedWeightedCoverageRate)
 ```
 
 - `eligibleBaseScore` は `note.excluded !== true` のノートのみを合算した assisted 素点。
-- `expectedCoverageRate = min(rawExpectedCoveredSeconds / effectiveSeconds, 1.0)` （100% キャップ）。
+- `expectedWeightedCoverageRate` はスキルごとの `期待カバー秒ᵢ × (rateᵢ − 1)` を加重合算し、
+  構造的到達可能秒数 `capSeconds` で比例縮小キャップした値（§10-2）。
+- デッキ内の縮小スキルが単一 rate の場合、旧式 `(maxRate − 1.0) × expectedCoverageRate` と同値。
 
 ### 9-4. 最終値
 
 ```
 liveEndScore = baseScore + scoreUpExpected + shrinkExpected
+liveEndScore = min(liveEndScore, スキル全発動時の同段階合計)   // 縮小スキルを含むデッキのみ (ADR 0036)
 finalScore   = floor(liveEndScore × badgeMult) + broachScoreBonus
 ```
+
+クランプ発動時は `shrinkExpected` が差分調整され、内訳の合計整合が保たれる。
+`applyFinalBonus` は単調のため `finalScore ≤ calcMaxScore` が常に成立する。
 
 ## 10. 縮小カバー率 (`calcShrinkCoverage`)
 
@@ -378,8 +383,9 @@ finalScore   = floor(liveEndScore × badgeMult) + broachScoreBonus
 eligibleCount = notesCount − excludeHeadCount
 for 各縮小カード:
   numActivations = floor(eligibleCount / skill.count)
-  rawCoveredSeconds         += numActivations × skill.value
-  rawExpectedCoveredSeconds += numActivations × skill.value × (skill.per / 100)
+  rawCoveredSeconds           += numActivations × skill.value
+  rawExpectedCoveredSeconds   += numActivations × skill.value × (skill.per / 100)
+  rawExpectedWeightedSeconds  += numActivations × skill.value × (skill.per / 100) × (skill.rate − 1.0)  // ADR 0036
 ```
 
 ### 10-2. 100% キャップ
@@ -387,8 +393,15 @@ for 各縮小カード:
 ```
 headSeconds      = (excludeHeadCount / notesCount) × songDuration   // 先頭除外区間の秒換算
 effectiveSeconds = songDuration - offsetSeconds - headSeconds
+
+// 構造的到達可能秒数キャップ (ADR 0036): ノート型縮小の初回発動前区間を控除
+headCapSeconds = (デッキ内ノート型縮小の最小 count / notesCount) × songDuration
+capSeconds     = max(0, effectiveSeconds − headCapSeconds)
+
 coveredSeconds         = min(rawCoveredSeconds,         effectiveSeconds)
-expectedCoveredSeconds = min(rawExpectedCoveredSeconds, effectiveSeconds)
+expectedCoveredSeconds = min(rawExpectedCoveredSeconds, capSeconds)
+expectedScale          = rawExpectedCoveredSeconds > capSeconds ? capSeconds / rawExpectedCoveredSeconds : 1
+expectedWeightedCoverageRate = rawExpectedWeightedSeconds × expectedScale / effectiveSeconds
 coverageRate           = coveredSeconds         / effectiveSeconds    // 100% 以下
 expectedCoverageRate   = expectedCoveredSeconds / effectiveSeconds    // 100% 以下
 rawCoverageRate         = rawCoveredSeconds         / effectiveSeconds  // 100% 超可 (表示用)
@@ -406,10 +419,10 @@ rawExpectedCoverageRate = rawExpectedCoveredSeconds / effectiveSeconds  // 100% 
 | `スコアアップ（タイマー）` | `timerScoreUp` | true | false | 一定秒毎に発動、発動タイミングのノート 1 個に `value` 点を 1 回加算 |
 | `判定縮小スコアアップ` | `shrink` | false | true | N ノーツ毎に発動、`value` 秒間縮小効果 |
 | `判定縮小（タイマー）` | `shrink` | true | true | 一定秒毎に発動、`value` 秒間縮小効果 |
-| `MISS→Good` / `BAD以上をPerfectに変更` / `null` | — | — | — | シミュ対象外（除外） |
+| `MISS→Good` / `BAD以上をPerfectに変更` / `判定ガード(MISS→Perfect)` / `判定拡大スコアダウン` / `null` | — | — | — | シミュ対象外（除外、ADR 0037） |
 | その他（スコアアップ） | `scoreUp` | false | false | N ノーツ毎に発動、発動タイミングのノート 1 個に `value` 点を 1 回加算 |
 
-スキルレベル 1〜5 は `getApSkillLevel(card, skillLevel)` で取得し、`count / per / value` が変化する。Lv5 の `count / per / value / rate` が 0 のカードはデータ未整備を意味するため、指定レベルが無効値の場合は最大有効レベルへフォールバックして計算する。
+スキルレベル 1〜5 は `getApSkillLevel(card, skillLevel)` で取得し、`count / per / value` が変化する。Lv5 の `count / per / value / rate` が 0 のカードはデータ未整備を意味するため、指定レベルが無効値の場合は最大有効レベルへフォールバックして計算する。`per` は 100 を上限にクランプする（シートの per>100 入力ミスに対する防御。期待値・MC・理論値の解釈を「100% 発動」で一致させる。ADR 0037）。
 
 ## 12. データ型リファレンス
 
