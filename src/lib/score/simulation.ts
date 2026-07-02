@@ -449,21 +449,24 @@ export function calcCardSkillExpected(
 /**
  * 単一カードのスキル最大発動数（理論上の上限発動回数）。
  * - タイマー（スコアアップ / 判定縮小）: floor( songDuration / count )
- * - それ以外（スコアアップ / 判定縮小のノート系）: floor( notesCount / count )
+ * - ノート型スコアアップ: floor( notesCount / count )
+ * - ノート型判定縮小: floor( (notesCount − excludedCount) / count )
+ *   — 実シミュレーションは excluded ノーツでカウンタを進めないため分母を揃える (ADR 0036)
  * 発動確率 per は考慮せず、カウント条件を満たし得る最大回数を返す。
- * 判定縮小の先頭除外 (docs/shrink-skill-spec.md §2) は縮小倍率のスコア適用範囲にのみ作用し、
- * 発動回数の算出には影響しない。
  */
 export function calcCardSkillMaxActivations(
   team: ComputedTeam,
   notesCount: number,
   slotIndex: number,
+  excludedCount: number = 0,
 ): number {
   const dc = team.cards.find(c => c.slotIndex === slotIndex);
   if (!dc || !dc.skill || dc.skill.count <= 0) return 0;
   const skill = dc.skill;
-  const isTimerBased = skill.isTimer || isShrinkTimer(skill);
-  const denom = isTimerBased ? team.songDuration : notesCount;
+  if (skill.isShrink) {
+    return calcShrinkActivationCount(skill, team, notesCount, excludedCount);
+  }
+  const denom = skill.isTimer ? team.songDuration : notesCount;
   if (denom <= 0) return 0;
   return Math.floor(denom / skill.count);
 }

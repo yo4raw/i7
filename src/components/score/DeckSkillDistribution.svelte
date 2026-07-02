@@ -31,7 +31,7 @@
     return buildDeckSkillDistribution(team, notes.length, {
       scoreUpAssist,
       scoreUpBadgeRate: Number(scoreUpBadgeRate) || 0,
-    });
+    }, exclusion.totalExcluded);
   });
 
   type Panel = { metric: 'score' | 'cover'; curves: DeckSkillDistEntry[]; legendOnly: DeckSkillDistEntry[] };

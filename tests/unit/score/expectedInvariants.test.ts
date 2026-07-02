@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  calcExpectedScore, calcMaxScore, calcMinScore,
+  calcExpectedScore, calcMaxScore, calcMinScore, calcCardSkillMaxActivations,
 } from '../../../src/lib/score/simulation';
 import type { ComputedTeam, CardSkill, FlatNote, DeckCard } from '../../../src/lib/score/types';
 
@@ -77,5 +77,23 @@ describe('期待値 ≤ 理論最大値の不変条件 (ADR 0036)', () => {
     // eligibleBase = 400 × floor(10007×0.025) = 400 × 250 = 100000
     // 期待カバー率 = 54 / 100 = 0.54 → shrinkExpected = floor(100000 × 0.6 × 0.54) = 32400
     expect(e.shrinkExpected).toBe(32400);
+  });
+});
+
+describe('calcCardSkillMaxActivations の分母統一 (ADR 0036)', () => {
+  it('ノート型縮小スキルは先頭除外ノーツを分母から引く', () => {
+    // 総 500 ノーツ・縮小 count=50・除外 50 → floor((500−50)/50) = 9 (従来は 10)
+    const team = makeTeam([shrinkSkill({ count: 50 }), null, null, null, null]);
+    expect(calcCardSkillMaxActivations(team, 500, 0, 50)).toBe(9);
+    expect(calcCardSkillMaxActivations(team, 500, 0)).toBe(10); // 除外なしは従来どおり
+  });
+
+  it('非縮小スキルは除外ノーツの影響を受けない', () => {
+    const scoreUp: CardSkill = {
+      cardIndex: 0, skillType: 'scoreUp', originalType: 'スコアアップ（Perfect）',
+      count: 50, per: 50, value: 100, rate: 0, isTimer: false, isShrink: false, spTime: 0,
+    };
+    const team = makeTeam([scoreUp, null, null, null, null]);
+    expect(calcCardSkillMaxActivations(team, 500, 0, 50)).toBe(10);
   });
 });

@@ -36,6 +36,7 @@ export function buildDeckSkillDistribution(
   team: ComputedTeam,
   notesCount: number,
   options: { scoreUpAssist: boolean; scoreUpBadgeRate: number },
+  excludedCount: number = 0,
 ): DeckSkillDistEntry[] {
   const center = team.cards.find(c => c.slotIndex === 0) ?? null;
   const friend = team.cards.find(c => c.slotIndex === 5) ?? null;
@@ -89,7 +90,7 @@ export function buildDeckSkillDistribution(
     const skill = dc.skill;
     if (skill) {
       skillGroup = skill.isShrink ? 'shrink' : 'scoreUp';
-      n = calcCardSkillMaxActivations(team, notesCount, slotIndex);
+      n = calcCardSkillMaxActivations(team, notesCount, slotIndex, excludedCount);
       p = skill.per / 100;
       value = skill.value;
       if (n > 0 && value > 0) {
