@@ -95,6 +95,7 @@
       trained: [...deckState.trained],
       sharedBroachs: deckState.sharedBroachs.map(a => [...a]),
       skillLevels: [...deckState.skillLevels],
+      scoreUpAssist: !!scoreUpAssist,
       badgeRate: Number(scoreUpBadgeRate) || 0,
       ownedBroachLimit,
     };
@@ -124,6 +125,7 @@
       }
     }
     for (let i = 0; i < 6; i++) clampSharedBroachs(deckState, i, allBroachsState);
+    if (typeof state.scoreUpAssist === 'boolean') scoreUpAssist = state.scoreUpAssist;
     if (typeof state.badgeRate === 'number') scoreUpBadgeRate = state.badgeRate;
     if (typeof state.ownedBroachLimit === 'boolean') ownedBroachLimit = state.ownedBroachLimit;
   }
@@ -327,7 +329,7 @@
     <div class="px-4 pb-4 border-t border-gray-100 pt-3">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <label class="flex items-center gap-2">
-          <input type="checkbox" id="opt-scoreup-assist" class="rounded" bind:checked={scoreUpAssist} />
+          <input type="checkbox" id="opt-scoreup-assist" class="rounded" bind:checked={scoreUpAssist} onchange={saveState} />
           <span>SCOREUPアシスト（属性値 ×1.2）</span>
         </label>
         <label class="flex items-center gap-2">
