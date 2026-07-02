@@ -65,6 +65,14 @@ export interface ComputedTeam {
   broachBeat: number;
   broachMelody: number;
   broachScoreBonus: number;
+  /** センタースキルによる加算内訳（センター分。対象属性のみ非ゼロ） */
+  centerShout: number;
+  centerBeat: number;
+  centerMelody: number;
+  /** センタースキルによる加算内訳（フレンド分。対象属性のみ非ゼロ） */
+  friendShout: number;
+  friendBeat: number;
+  friendMelody: number;
 }
 
 export interface SimulationResult {

@@ -10,7 +10,6 @@
 import type { ComputedTeam } from './types';
 import { binomialPmf } from './cardDistribution';
 import { calcCardSkillMaxActivations } from './simulation';
-import { getCenterSkillRate } from './teamBuilder';
 import { SCOREUP_ASSIST_RATE } from './constants';
 import { cardThumbUrl } from '../ui';
 import { DISPLAY_ORDER } from './deckState';
@@ -38,23 +37,9 @@ export function buildDeckSkillDistribution(
   options: { scoreUpAssist: boolean; scoreUpBadgeRate: number },
   excludedCount: number = 0,
 ): DeckSkillDistEntry[] {
-  const center = team.cards.find(c => c.slotIndex === 0) ?? null;
-  const friend = team.cards.find(c => c.slotIndex === 5) ?? null;
-
-  // computeTeam と同じ算出: センタースキル分は (raw+broach) のチーム合計 × rate で、対象属性のみ加算
-  const baseByAttr = (attr: 'Shout' | 'Beat' | 'Melody'): number =>
-    attr === 'Shout'
-      ? team.rawShout + team.broachShout
-      : attr === 'Beat'
-        ? team.rawBeat + team.broachBeat
-        : team.rawMelody + team.broachMelody;
-
-  const centerBonus = center
-    ? Math.floor(baseByAttr(center.attribute) * getCenterSkillRate(center.rarity) / 100)
-    : 0;
-  const friendBonus = friend
-    ? Math.floor(baseByAttr(friend.attribute) * getCenterSkillRate(friend.rarity) / 100)
-    : 0;
+  // computeTeam の内訳をそのまま使う (ADR 0039): 対象属性のみ非ゼロなので合計してよい
+  const centerBonus = team.centerShout + team.centerBeat + team.centerMelody;
+  const friendBonus = team.friendShout + team.friendBeat + team.friendMelody;
 
   const assistFactor = options.scoreUpAssist ? 1 + SCOREUP_ASSIST_RATE : 1;
   const badgeFactor = options.scoreUpBadgeRate > 0 ? 1 + options.scoreUpBadgeRate / 100 : 1;

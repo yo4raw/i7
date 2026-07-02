@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildDeckSkillDistribution } from '../../../src/lib/score/deckSkillDistribution';
-import type { ComputedTeam, DeckCard, CardSkill } from '../../../src/lib/score/types';
+import { getCenterSkillRate } from '../../../src/lib/score/teamBuilder';
+import type { ComputedTeam, DeckCard, CardSkill, AttributeName } from '../../../src/lib/score/types';
 
 function skill(partial: Partial<CardSkill>): CardSkill {
   return {
@@ -39,7 +40,7 @@ function card(partial: Partial<DeckCard>): DeckCard {
   } as DeckCard;
 }
 
-/** センター(0)・フレンド(5)・メンバー(1-4) をすべて含むフルチームを組む */
+/** センター(0)・フレンド(5)・メンバー(1-4) をすべて含むフルチームを組む (computeTeam と同じ内訳規則) */
 function fullTeam(cards: DeckCard[]): ComputedTeam {
   const sum = (f: (c: DeckCard) => number) => cards.reduce((s, c) => s + f(c), 0);
   const rawShout = sum((c) => c.shout_max);
@@ -48,23 +49,43 @@ function fullTeam(cards: DeckCard[]): ComputedTeam {
   const broachShout = sum((c) => c.broachShout);
   const broachBeat = sum((c) => c.broachBeat);
   const broachMelody = sum((c) => c.broachMelody);
+  const baseBy = (attr: AttributeName): number =>
+    attr === 'Shout' ? rawShout + broachShout
+      : attr === 'Beat' ? rawBeat + broachBeat
+        : rawMelody + broachMelody;
+  const center = cards.find((c) => c.slotIndex === 0) ?? null;
+  const friend = cards.find((c) => c.slotIndex === 5) ?? null;
+  const centerRate = center ? getCenterSkillRate(center.rarity) : 0;
+  const friendRate = friend ? getCenterSkillRate(friend.rarity) : 0;
+  const centerBonusOf = (attr: AttributeName): number =>
+    center && center.attribute === attr ? Math.floor(baseBy(attr) * centerRate / 100) : 0;
+  const friendBonusOf = (attr: AttributeName): number =>
+    friend && friend.attribute === attr ? Math.floor(baseBy(attr) * friendRate / 100) : 0;
+  const centerShout = centerBonusOf('Shout');
+  const centerBeat = centerBonusOf('Beat');
+  const centerMelody = centerBonusOf('Melody');
+  const friendShout = friendBonusOf('Shout');
+  const friendBeat = friendBonusOf('Beat');
+  const friendMelody = friendBonusOf('Melody');
   return {
-    Shout: rawShout + broachShout,
-    Beat: rawBeat + broachBeat,
-    Melody: rawMelody + broachMelody,
+    Shout: rawShout + broachShout + centerShout + friendShout,
+    Beat: rawBeat + broachBeat + centerBeat + friendBeat,
+    Melody: rawMelody + broachMelody + centerMelody + friendMelody,
     cards,
     songDuration: 120,
     rawShout, rawBeat, rawMelody,
     broachShout, broachBeat, broachMelody,
     broachScoreBonus: 0,
-  } as ComputedTeam;
+    centerShout, centerBeat, centerMelody,
+    friendShout, friendBeat, friendMelody,
+  };
 }
 
 const NO_OPT = { scoreUpAssist: false, scoreUpBadgeRate: 0 };
 
-describe('buildDeckSkillDistribution: 属性別 baseByAttr とセンター/フレンドボーナス', () => {
-  it('Beat/Melody センター/フレンドのセンタースキル分を計上する (L46-49, L52, L55, L65, L66)', () => {
-    // センターを Beat、フレンドを Melody にして baseByAttr の Beat/Melody 分岐を通す
+describe('buildDeckSkillDistribution: センター/フレンドボーナスの計上 (team 内訳フィールド消費)', () => {
+  it('Beat/Melody センター/フレンドのセンタースキル分を計上する', () => {
+    // センターを Beat、フレンドを Melody にしてセンタースキル分の加算を確認する
     const center = card({ slotIndex: 0, attribute: 'Beat', beat_max: 2000 });
     const member = card({ slotIndex: 1, attribute: 'Melody', melody_max: 1000 });
     const friend = card({ slotIndex: 5, attribute: 'Melody', melody_max: 1500 });
@@ -84,7 +105,7 @@ describe('buildDeckSkillDistribution: 属性別 baseByAttr とセンター/フ�
     expect(sum).toBeCloseTo(1, 6);
   });
 
-  it('Shout センターでも baseByAttr の Shout 分岐とボーナス加算が効く', () => {
+  it('Shout センターでもボーナス加算が効く', () => {
     const center = card({ slotIndex: 0, attribute: 'Shout', shout_max: 3000 });
     const friend = card({ slotIndex: 5, attribute: 'Shout', shout_max: 3000 });
     const team = fullTeam([center, friend]);

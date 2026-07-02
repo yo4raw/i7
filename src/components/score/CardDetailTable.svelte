@@ -4,13 +4,10 @@
   import type { Song } from '../../lib/data/fetchSongsJson';
   import type { DeckState } from '../../lib/score/deckState';
   import { SLOT_LABELS, DISPLAY_ORDER } from '../../lib/score/deckState';
-  import { resolveDeckBroachs } from '../../lib/score/broachResolver';
   import { formatSkillEffect } from '../../lib/score/skillFormatter';
-  import { getCenterSkillRate } from '../../lib/score/engine';
-  import { normalizeAttribute } from '../../lib/score/types';
-  import { EVENT_BONUS_MULTIPLIER, BONUS_LABEL, BONUS_CLASS } from '../../lib/data/eventBonusTiers';
-  import { NOTE_RATE, TRAIN_BONUS, SCOREUP_ASSIST_RATE } from '../../lib/score/constants';
-  import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
+  import { computeTeam, getCenterSkillRate } from '../../lib/score/engine';
+  import { BONUS_LABEL, BONUS_CLASS } from '../../lib/data/eventBonusTiers';
+  import { NOTE_RATE, SCOREUP_ASSIST_RATE } from '../../lib/score/constants';
   import { loadRabbitNotes } from '../../lib/data/rabbitNote';
   import { ATTR_TEXT_CLASS } from '../../lib/ui';
 
@@ -40,89 +37,43 @@
     skillEffect: string;
   };
 
+  // 属性値・ブローチ・センタースキルの計算は computeTeam に一本化し、
+  // このコンポーネントは engine の出力を表示するだけにする (ADR 0039)
   const detail = $derived.by(() => {
     const filledCards = deckState.cards.filter(c => c !== null);
     if (filledCards.length === 0) return null;
 
-    const dummySong = selectedSong || { song_name: '' };
-    const resolvedMap = resolveDeckBroachs(deckState.cards, allBroachs, dummySong);
+    const dummySong = (selectedSong || { song_name: '' }) as Song;
+    const team = computeTeam(
+      deckState.cards, allBroachs, dummySong, deckState.bonusTiers, deckState.trained,
+      undefined, deckState.sharedBroachs, deckState.skillLevels, loadRabbitNotes(),
+    );
 
-    const attrCounts: Record<string, number> = { Shout: 0, Beat: 0, Melody: 0 };
-    for (const c of deckState.cards) {
-      if (!c) continue;
-      const a = normalizeAttribute(c.attribute);
-      if (a in attrCounts) attrCounts[a]++;
-    }
-
-    const rnMap = loadRabbitNotes();
-    let totalShout = 0, totalBeat = 0, totalMelody = 0;
-    let totalBS = 0, totalBB = 0, totalBM = 0;
     const rows: DetailRow[] = [];
     for (const i of DISPLAY_ORDER) {
       const card = deckState.cards[i];
-      if (!card) continue;
-      const slotBroachs = resolvedMap.get(i) ?? [];
-      const activeBroachs = slotBroachs.filter(rb => rb.active && rb.broach.broach_type !== 9);
-      let bS = activeBroachs.reduce((s, rb) => s + (rb.broach.shout || 0) * (rb.multiplier ?? 1), 0);
-      let bB = activeBroachs.reduce((s, rb) => s + (rb.broach.beat || 0) * (rb.multiplier ?? 1), 0);
-      let bM = activeBroachs.reduce((s, rb) => s + (rb.broach.melody || 0) * (rb.multiplier ?? 1), 0);
-      if (card.rarity === 'UR') {
-        for (const sbId of (deckState.sharedBroachs[i] || [])) {
-          if (!sbId) continue;
-          const sb = SHARED_BROACHS.find(s => s.id === sbId);
-          if (!sb) continue;
-          if (sb.targetAttribute) {
-            const count = attrCounts[sb.targetAttribute] || 0;
-            bS += sb.shout * count; bB += sb.beat * count; bM += sb.melody * count;
-          } else {
-            bS += sb.shout; bB += sb.beat; bM += sb.melody;
-          }
-        }
-      }
-      const skillType = card.ap_skill_type || '-';
+      const dc = team.cards.find(c => c.slotIndex === i);
+      if (!card || !dc) continue;
       const sl = getApSkillLevel(card, deckState.skillLevels[i]);
-      const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl);
       const tier = deckState.bonusTiers[i];
-      const bonusLabel = BONUS_LABEL[tier];
-      const bonusClass = BONUS_CLASS[tier];
       const trained = deckState.trained[i];
-      const trainedLabel = trained ? '済' : '未';
-      const trainedClass = trained ? 'text-indigo-600 font-bold' : 'text-gray-400';
-      const rn = rnMap[card.name || ''];
-      const bonusMult = EVENT_BONUS_MULTIPLIER[tier];
-      const cardAttr = normalizeAttribute(card.attribute);
-      const trainBonus = TRAIN_BONUS[card.rarity ?? ''] ?? 0;
-      const baseShout = (card.shout_max || 0) - (trained || cardAttr !== 'Shout' ? 0 : trainBonus);
-      const baseBeat = (card.beat_max || 0) - (trained || cardAttr !== 'Beat' ? 0 : trainBonus);
-      const baseMelody = (card.melody_max || 0) - (trained || cardAttr !== 'Melody' ? 0 : trainBonus);
-      const statShout = Math.round((baseShout + (rn?.shout || 0)) * bonusMult);
-      const statBeat = Math.round((baseBeat + (rn?.beat || 0)) * bonusMult);
-      const statMelody = Math.round((baseMelody + (rn?.melody || 0)) * bonusMult);
-
-      totalShout += statShout;
-      totalBeat += statBeat;
-      totalMelody += statMelody;
-      totalBS += bS;
-      totalBB += bB;
-      totalBM += bM;
-
       rows.push({
         i,
         slotClass: i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500',
         cardname: card.cardname || '',
         name: card.name || '',
-        trainedLabel,
-        trainedClass,
-        bonusLabel,
-        bonusClass,
-        statShout,
-        statBeat,
-        statMelody,
-        bS,
-        bB,
-        bM,
-        skillType,
-        skillEffect,
+        trainedLabel: trained ? '済' : '未',
+        trainedClass: trained ? 'text-indigo-600 font-bold' : 'text-gray-400',
+        bonusLabel: BONUS_LABEL[tier],
+        bonusClass: BONUS_CLASS[tier],
+        statShout: dc.shout_max,
+        statBeat: dc.beat_max,
+        statMelody: dc.melody_max,
+        bS: dc.broachShout,
+        bB: dc.broachBeat,
+        bM: dc.broachMelody,
+        skillType: card.ap_skill_type || '-',
+        skillEffect: formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl),
       });
     }
 
@@ -130,28 +81,10 @@
     const friendCard = deckState.cards[5];
     const centerRate = centerCard ? getCenterSkillRate(centerCard.rarity) : 0;
     const friendRate = friendCard ? getCenterSkillRate(friendCard.rarity) : 0;
-    const centerAttr = centerCard ? normalizeAttribute(centerCard.attribute) : null;
-    const friendAttr = friendCard ? normalizeAttribute(friendCard.attribute) : null;
 
-    const baseShout = totalShout + totalBS;
-    const baseBeat = totalBeat + totalBB;
-    const baseMelody = totalMelody + totalBM;
-    const centerShout = centerAttr === 'Shout' ? Math.floor(baseShout * centerRate / 100) : 0;
-    const centerBeat = centerAttr === 'Beat' ? Math.floor(baseBeat * centerRate / 100) : 0;
-    const centerMelody = centerAttr === 'Melody' ? Math.floor(baseMelody * centerRate / 100) : 0;
-    const friendShout = friendAttr === 'Shout' ? Math.floor(baseShout * friendRate / 100) : 0;
-    const friendBeat = friendAttr === 'Beat' ? Math.floor(baseBeat * friendRate / 100) : 0;
-    const friendMelody = friendAttr === 'Melody' ? Math.floor(baseMelody * friendRate / 100) : 0;
-    const csShout = centerShout + friendShout;
-    const csBeat = centerBeat + friendBeat;
-    const csMelody = centerMelody + friendMelody;
-
-    const hasCenter = !!centerCard && centerRate > 0;
-    const hasFriend = !!friendCard && friendRate > 0;
-
-    const teamShout = baseShout + csShout;
-    const teamBeat = baseBeat + csBeat;
-    const teamMelody = baseMelody + csMelody;
+    const teamShout = team.Shout;
+    const teamBeat = team.Beat;
+    const teamMelody = team.Melody;
     const assistShout = scoreUpAssist ? Math.floor(teamShout * (1 + SCOREUP_ASSIST_RATE)) - teamShout : 0;
     const assistBeat = scoreUpAssist ? Math.floor(teamBeat * (1 + SCOREUP_ASSIST_RATE)) - teamBeat : 0;
     const assistMelody = scoreUpAssist ? Math.floor(teamMelody * (1 + SCOREUP_ASSIST_RATE)) - teamMelody : 0;
@@ -171,13 +104,14 @@
     return {
       rows,
       foot: {
-        totalShout, totalBeat, totalMelody,
-        totalBS, totalBB, totalBM,
-        hasBroachRow: (totalBS + totalBB + totalBM) > 0,
-        hasCenter, hasFriend,
+        totalShout: team.rawShout, totalBeat: team.rawBeat, totalMelody: team.rawMelody,
+        totalBS: team.broachShout, totalBB: team.broachBeat, totalBM: team.broachMelody,
+        hasBroachRow: (team.broachShout + team.broachBeat + team.broachMelody) > 0,
+        hasCenter: !!centerCard && centerRate > 0,
+        hasFriend: !!friendCard && friendRate > 0,
         centerRate, friendRate,
-        centerShout, centerBeat, centerMelody,
-        friendShout, friendBeat, friendMelody,
+        centerShout: team.centerShout, centerBeat: team.centerBeat, centerMelody: team.centerMelody,
+        friendShout: team.friendShout, friendBeat: team.friendBeat, friendMelody: team.friendMelody,
         scoreUpAssist,
         assistPct, assistShout, assistBeat, assistMelody,
         deckShout, deckBeat, deckMelody,

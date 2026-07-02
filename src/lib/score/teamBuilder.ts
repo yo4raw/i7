@@ -16,6 +16,7 @@ import {
 } from './constants';
 import { EVENT_BONUS_MULTIPLIER, type EventBonusTier } from '../data/eventBonusTiers';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
+import { broachCapacity } from './broachAssignment';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
 import type { RabbitNoteMap } from '../data/rabbitNote';
@@ -168,9 +169,10 @@ export function computeTeam(
       bBeat += (rb.broach.beat || 0) * mult;
       bMelody += (rb.broach.melody || 0) * mult;
     }
-    // 共有ブローチ加算
+    // 共有ブローチ加算（容量ルール適用: 非 UR=0 / 固有持ち UR=1 / それ以外 UR=2。ADR 0039）
     if (sharedBroachSelections?.[i]) {
-      for (const sbId of sharedBroachSelections[i]) {
+      const capacity = broachCapacity(card, c => allBroachs.some(br => br.card_id === c.cardID));
+      for (const sbId of sharedBroachSelections[i].slice(0, capacity)) {
         if (!sbId) continue;
         const sb = SHARED_BROACHS.find(s => s.id === sbId);
         if (!sb) continue;
@@ -243,5 +245,7 @@ export function computeTeam(
     broachBeat: broachBeatTotal,
     broachMelody: broachMelodyTotal,
     broachScoreBonus,
+    centerShout, centerBeat, centerMelody,
+    friendShout, friendBeat, friendMelody,
   };
 }
