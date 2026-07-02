@@ -65,6 +65,8 @@ function shrinkHeadSeconds(songDuration: number, notesCount: number, excludeHead
  *    (先頭除外区間では縮小が発動できないため分母から控除する)
  *  - 内部計算用カバー率は effectiveSeconds で必ず 100% キャップ
  *  - 表示用 raw* は 100% 超過可 (UI 側で注記する)
+ *  - 期待値スコア用の expectedWeightedCoverageRate はスキルごとに (rateᵢ−1) を加重し、
+ *    構造的到達可能秒数 (effectiveSeconds − 最小 count ノーツ分) でキャップする (ADR 0036)
  *
  * @param excludeHeadCount 先頭から縮小発動判定対象外とするノート数。
  *   通常は {@link computeShrinkExclusion} の `totalExcluded` を渡す
@@ -88,6 +90,8 @@ export function calcShrinkCoverage(
   /** 生の単純加算期待カバー率 (100% 超可、表示用) */
   rawExpectedCoverageRate: number;
   rawExpectedCoveredSeconds: number;
+  /** rate 加重・構造キャップ済みの期待カバー率 (期待値スコア専用、ADR 0036) */
+  expectedWeightedCoverageRate: number;
   effectiveSeconds: number;
 } | null {
   const shrinkCards = team.cards.filter(dc => dc.skill?.isShrink && dc.skill.count > 0);
@@ -98,6 +102,7 @@ export function calcShrinkCoverage(
     rawCoverageRate: 0, rawCoveredSeconds: 0,
     expectedCoverageRate: 0, expectedCoveredSeconds: 0,
     rawExpectedCoverageRate: 0, rawExpectedCoveredSeconds: 0,
+    expectedWeightedCoverageRate: 0,
     effectiveSeconds: 0,
   };
   const headSeconds = shrinkHeadSeconds(team.songDuration, notesCount, excludeHeadCount);
@@ -105,19 +110,37 @@ export function calcShrinkCoverage(
   if (effectiveSeconds <= 0) return zero;
   if (notesCount <= 0) return { ...zero, effectiveSeconds };
 
-  // 各スキルの発動回数 × 持続秒 (と × 確率) を単純加算
+  // 各スキルの発動回数 × 持続秒 (と × 確率 / × (rate−1) 加重) を単純加算 (ADR 0036)
   let rawCoveredSeconds = 0;
   let rawExpectedCoveredSeconds = 0;
+  let rawExpectedWeightedSeconds = 0; // Σ 期待カバー秒ᵢ × (rateᵢ − 1)
+  let minNoteShrinkCount = Infinity;  // ノート型縮小の count 最小値 (構造キャップ用)
   for (const dc of shrinkCards) {
     const skill = dc.skill!;
     const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludeHeadCount);
     rawCoveredSeconds += numActivations * skill.value;
-    rawExpectedCoveredSeconds += numActivations * skill.value * (skill.per / 100);
+    const expSec = numActivations * skill.value * (skill.per / 100);
+    rawExpectedCoveredSeconds += expSec;
+    rawExpectedWeightedSeconds += expSec * (skill.rate - 1.0);
+    if (!isShrinkTimer(skill) && skill.count < minNoteShrinkCount) minNoteShrinkCount = skill.count;
   }
 
-  // 内部計算用は effectiveSeconds で 100% キャップ
+  // 構造的到達可能秒数キャップ (ADR 0036):
+  // 理論最大値の発動モデルでもノート型縮小は先頭 count ノーツ分をカバーできないため、
+  // 期待カバー秒の上限を effectiveSeconds からその区間だけ控除した値にする。
+  const headCapSeconds = Number.isFinite(minNoteShrinkCount)
+    ? (minNoteShrinkCount / notesCount) * team.songDuration
+    : 0;
+  const capSeconds = Math.max(0, effectiveSeconds - headCapSeconds);
+
+  // 表示用カバー率は従来どおり effectiveSeconds でキャップ、期待値系は capSeconds でキャップ
   const coveredSeconds = Math.min(rawCoveredSeconds, effectiveSeconds);
-  const expectedCoveredSeconds = Math.min(rawExpectedCoveredSeconds, effectiveSeconds);
+  const expectedCoveredSeconds = Math.min(rawExpectedCoveredSeconds, capSeconds);
+  const expectedScale = rawExpectedCoveredSeconds > capSeconds && rawExpectedCoveredSeconds > 0
+    ? capSeconds / rawExpectedCoveredSeconds
+    : 1;
+  const expectedWeightedCoverageRate =
+    (rawExpectedWeightedSeconds * expectedScale) / effectiveSeconds;
 
   return {
     coverageRate: coveredSeconds / effectiveSeconds,
@@ -128,6 +151,7 @@ export function calcShrinkCoverage(
     expectedCoveredSeconds,
     rawExpectedCoverageRate: rawExpectedCoveredSeconds / effectiveSeconds,
     rawExpectedCoveredSeconds,
+    expectedWeightedCoverageRate,
     effectiveSeconds,
   };
 }
@@ -206,6 +230,11 @@ function enqueueShrink(
 
 /** スキル全発動の最高スコア */
 export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
+  return applyFinalBonus(calcMaxBaseTotal(team, notes, options), team, options);
+}
+
+/** スキル全発動時のバッジ・ブローチ適用前の合計 (calcMaxScore の内部値。期待値のクランプにも使用) */
+function calcMaxBaseTotal(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const N = notes.length;
   const assist = options?.scoreUpAssist ?? false;
 
@@ -302,14 +331,15 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
     total += noteScore + shrinkExtra + scoreUpSum;
   }
 
-  return applyFinalBonus(total, team, options);
+  return total;
 }
 
 /**
- * 算術期待値によるスコア計算 (docs/shrink-skill-spec.md §5-3 準拠)。
+ * 算術期待値によるスコア計算 (docs/shrink-skill-spec.md §5-3 / ADR 0036 準拠)。
  * - 属性値による楽曲スコア: スキル全不発時の素点合計（アシスト適用後）
  * - スコアアップ期待値: Σ( (タイマーなら songDuration, 通常なら notesCount) / count × per/100 × value )
- * - 縮小期待値: eligibleBaseScore × (maxRate - 1) × min(期待カバー率, 1.0)
+ * - 縮小期待値: eligibleBaseScore × Σ(期待カバー秒ᵢ × (rateᵢ−1)) / effectiveSeconds
+ *   （構造的到達可能秒数キャップ付き。単一 rate の編成では旧 maxRate 式と同値）
  */
 export function calcExpectedScore(
   team: ComputedTeam,
@@ -338,7 +368,7 @@ export function calcExpectedScore(
   }
   scoreUpExpected = Math.floor(scoreUpExpected);
 
-  // 縮小期待値: excluded ノートを除いた対象素点 × (maxRate - 1) × 期待カバー率
+  // 縮小期待値: excluded ノートを除いた対象素点 × rate 加重期待カバー率 (ADR 0036)
   const excludedCount = notes.filter(n => n.excluded).length;
   let eligibleBaseScore = 0;
   for (const note of notes) {
@@ -346,22 +376,25 @@ export function calcExpectedScore(
     eligibleBaseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
   }
 
-  // 代表 rate: デッキ内縮小スキル rate の最大値 (§5-4 effectiveRate と同等)
-  let maxRate = 0;
-  for (const dc of team.cards) {
-    const s = dc.skill;
-    if (s?.isShrink && s.count > 0 && s.rate > maxRate) maxRate = s.rate;
-  }
-
   let shrinkExpected = 0;
   const coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount);
-  if (coverage && coverage.effectiveSeconds > 0 && maxRate > 0) {
-    shrinkExpected = Math.floor(
-      eligibleBaseScore * (maxRate - 1.0) * coverage.expectedCoverageRate,
-    );
+  if (coverage && coverage.effectiveSeconds > 0) {
+    shrinkExpected = Math.floor(eligibleBaseScore * coverage.expectedWeightedCoverageRate);
   }
 
-  const liveEndScore = baseScore + scoreUpExpected + shrinkExpected;
+  let liveEndScore = baseScore + scoreUpExpected + shrinkExpected;
+
+  // 不変条件 expected ≤ max の保証 (ADR 0036):
+  // 縮小の秒→ノート離散化やキュー配信順の近似誤差による僅かな超過を、
+  // スキル全発動時の同段階合計でクランプする (applyFinalBonus は単調のため最終値も max 以下になる)。
+  if (coverage) {
+    const maxBaseTotal = calcMaxBaseTotal(team, notes, options);
+    if (liveEndScore > maxBaseTotal) {
+      liveEndScore = maxBaseTotal;
+      shrinkExpected = Math.max(0, liveEndScore - baseScore - scoreUpExpected);
+    }
+  }
+
   const finalScore = applyFinalBonus(liveEndScore, team, options);
 
   return { baseScore, scoreUpExpected, shrinkExpected, liveEndScore, finalScore };
