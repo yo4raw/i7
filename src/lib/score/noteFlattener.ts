@@ -2,7 +2,7 @@ import type { Song, SongNoteGroup } from '../data/fetchSongsJson';
 import type { FlatNote } from './types';
 import { ATTRS } from '../constants';
 import { LIGHT_MULTIPLIER } from './constants';
-import { XorShift128Plus } from './rng';
+import { Sfc32 } from './rng';
 import type { ShrinkExclusion } from './shrinkExclusion';
 
 const TYPES: { suffix: 'white' | 'color'; type: 'white' | 'color' }[] = [
@@ -28,7 +28,7 @@ export function flattenNotes(
   exclusion?: ShrinkExclusion,
 ): FlatNote[] {
   const notes: FlatNote[] = [];
-  const rng = new XorShift128Plus(seed ?? Date.now());
+  const rng = new Sfc32(seed ?? Date.now());
 
   for (const groupKey of Object.keys(LIGHT_MULTIPLIER)) {
     const group = song[groupKey] as SongNoteGroup | undefined;

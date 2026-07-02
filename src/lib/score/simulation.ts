@@ -12,7 +12,7 @@ import {
   SCOREUP_ASSIST_RATE,
   MC_CHUNK_SIZE,
 } from './constants';
-import { XorShift128Plus } from './rng';
+import { Sfc32 } from './rng';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
 
 /**
@@ -516,7 +516,7 @@ interface RunOnceResult {
 }
 
 /** MC 1回分の実行 */
-function runOnce(team: ComputedTeam, notes: FlatNote[], rng: XorShift128Plus, options?: ScoreOptions): RunOnceResult {
+function runOnce(team: ComputedTeam, notes: FlatNote[], rng: Sfc32, options?: ScoreOptions): RunOnceResult {
   const N = notes.length;
   const cardCount = team.cards.length;
   const activations = new Array<number>(cardCount).fill(0);
@@ -673,7 +673,7 @@ export async function runSimulation(
   const minScore = calcMinScore(team, notes, options);
   const maxScore = calcMaxScore(team, notes, options);
 
-  const rng = new XorShift128Plus(seed ?? Date.now());
+  const rng = new Sfc32(seed ?? Date.now());
   const scores: number[] = [];
   const shrinkScores: number[] = [];
   const scoreUpScores: number[] = [];
