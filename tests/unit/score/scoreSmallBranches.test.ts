@@ -115,6 +115,8 @@ describe('computeShrinkExclusion: groupSizes 欠落キー / サイズ0グルー�
       songDuration,
       rawShout: 0, rawBeat: 0, rawMelody: 0,
       broachShout: 0, broachBeat: 0, broachMelody: 0, broachScoreBonus: 0,
+      centerShout: 0, centerBeat: 0, centerMelody: 0,
+      friendShout: 0, friendBeat: 0, friendMelody: 0,
     };
   }
 

@@ -198,11 +198,16 @@ noteScoreShrunk   = floor(noteScoreAssisted × rate)
 
 ### 5-3. 算術期待値
 
-簡易解析式（§3-3 の近似を用いる）:
+簡易解析式（§3-3 の近似を用いる。ADR 0036 で rate 加重へ変更）:
 
 ```text
-期待スコア ≈ 最低スコア + floor(対象素点 × (rate − 1.0) × min(期待縮小時間合計 / songDuration, 1.0))
+期待スコア ≈ 最低スコア + floor(対象素点 × Σᵢ(期待縮小時間ᵢ × (rateᵢ − 1.0)) / effectiveSeconds)
+期待縮小時間ᵢ = 発動回数ᵢ × valueᵢ × perᵢ/100   （スキルごと）
 ```
+
+- 期待縮小時間の合計が **構造的到達可能秒数** `capSeconds = effectiveSeconds − (デッキ内ノート型縮小の最小 count / notesCount) × songDuration` を超える場合は比例縮小してキャップする（理論最大値の発動モデルでも先頭 count ノーツ分はカバーできないため）
+- デッキ内の縮小スキルが単一 rate の場合、旧式 `(rate − 1.0) × 期待カバー率` と同値
+- さらにライブ終了時スコアはスキル全発動時の同段階合計（`calcMaxScore` のバッジ・ブローチ適用前値）で min クランプされ、**期待値 ≤ 理論最大値** が常に保証される
 
 MC 平均（§5-4）との差は per-note 丸め誤差 + 確率独立仮定の差で説明できる。
 
@@ -394,4 +399,4 @@ if (alwaysTrigger || roll < skill.per) {
 - **7-6 発動位置の線形仮定 vs シャッフル実順序**: `calcShrinkCoverage` は発動時刻を線形計算、`calcMaxScore` / `runOnce` はシャッフル後順序（7-11 対応後はグループ内シャッフル・ステージ順固定）で `counters[c]` を進める。`calcExpectedScore` と MC 平均の微差の原因（7-9 解消後も残る「最初のトリガー成立前のデッドゾーン」と合わせて数% 水準の乖離を生む）。
 - **7-7 寄与按分**: 期待縮小時間比で按分（実装済）。ただし `totalExpectedShrinkTime = 0` のケース（per=0 等）は寄与 0 として扱う。キューイング化後もカード別寄与は期待時間比のまま（実際にキュー経由で割り当てた時間ベースの按分に切り替える場合は別タスクで検討）。
 - **7-8 `notesCount` と `notes.length`**: 依然として `song.notes_count` と `flattenNotes` 結果の整合依存。
-- **7-10 縮小 rate 採用ロジックの関数間差異**: `calcMaxScore` (`engine.ts` の `runOnce`/`calcMaxScore`) はキューイング順で「現在 active の rate」を per-note に適用するのに対し、`calcExpectedScore` は明示的に `maxRate = max(deck内のskill.rate)` を採用する（§5-3 の簡易解析式に整合）。デッキ内の縮小スキルがすべて同じ Lv（同じ rate）であれば結果は一致するが、Lv が混在すると `calcMaxScore` が「真の理論最大」を返さないケースがある。現状 UI はスキル Lv を一括選択する想定のため実害は無いが、Lv 別個別指定 UI を導入する場合は `calcMaxScore` 側も `maxRate` 一択に揃える等の追従修正が必要。
+- **7-10 縮小 rate 採用ロジックの関数間差異**: （2026-07-02 解消、ADR 0036）旧実装の `calcExpectedScore` は `maxRate = max(deck内のskill.rate)` を合算カバー秒全体へ適用しており、Lv5 データ欠落カードの自動フォールバック（縮小カード 135 枚中 104 枚が該当）で rate が混在すると期待値が理論最大値を超えるケースがあった。現在はスキルごとの (rateᵢ−1) 加重（§5-3）+ 構造的到達可能秒数キャップ + `calcMaxScore` 同段階値での min クランプにより、期待値 ≤ 理論最大値が常に成立する。なお「UI はスキル Lv を一括選択する想定のため rate 混在は起きない」という旧前提は、Lv フォールバックにより成立していなかった点に注意。

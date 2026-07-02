@@ -18,13 +18,15 @@
   import { cardThumbUrl, formatElapsed } from '../../lib/ui';
   import { loadRabbitNotes } from '../../lib/data/rabbitNote';
 
-  let { result, selectedSong, allCards, allBroachs, currentTierMap, base }: {
+  let { result, selectedSong, allCards, allBroachs, currentTierMap, base, scoreUpAssist, scoreUpBadgeRate }: {
     result: SearchResult;
     selectedSong: Song | null;
     allCards: Card[];
     allBroachs: FixedBroach[];
     currentTierMap: Map<number, EventBonusTier>;
     base: string;
+    scoreUpAssist: boolean;
+    scoreUpBadgeRate: number;
   } = $props();
 
   const SLOT_LABELS = ['センター', 'メンバー1', 'メンバー2', 'メンバー3', 'メンバー4', 'フレンド'];
@@ -52,6 +54,9 @@
       trained: [true, true, true, true, true, true],
       sharedBroachs: rec.sharedBroachIds ?? [[], [], [], [], [], []],
       skillLevels: [5, 5, 5, 5, 5, 5],
+      // 探索時の評価条件をスコア計算画面へ引き継ぐ (キー名は ScoreCalc の applyState に合わせる)
+      scoreUpAssist,
+      badgeRate: Number(scoreUpBadgeRate) || 0,
     };
     saveJson(STORAGE_KEYS.SCORE_CALC_STATE, state);
     window.location.href = `${base}score-calc/`;

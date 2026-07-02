@@ -1,6 +1,7 @@
 import type { Card } from '../data/fetchCardsJson';
 import type { FixedBroach } from '../data/fetchFixedBroachsJson';
 import type { EventBonusTier } from '../data/eventBonusTiers';
+import { broachCapacity } from './broachAssignment';
 
 export type SkillLevel = 1 | 2 | 3 | 4 | 5;
 
@@ -38,16 +39,11 @@ export function swapSlots(state: DeckState, a: number, b: number): void {
   [state.skillLevels[a], state.skillLevels[b]] = [state.skillLevels[b], state.skillLevels[a]];
 }
 
-/** 共有ブローチ装備数の検証・切り詰め。UR 以外 0 個 / 固有ブローチ持ち UR は 1 個 / それ以外 UR は 2 個まで */
+/** 共有ブローチ装備数の検証・切り詰め。容量ルールは broachCapacity に一本化 (ADR 0039) */
 export function clampSharedBroachs(state: DeckState, slotIndex: number, allBroachs: FixedBroach[]): void {
   const card = state.cards[slotIndex];
-  if (!card || card.rarity !== 'UR') {
-    state.sharedBroachs[slotIndex] = [];
-    return;
-  }
-  const hasFixed = allBroachs.some(br => br.card_id === card.cardID);
-  const maxShared = hasFixed ? 1 : 2;
-  state.sharedBroachs[slotIndex] = state.sharedBroachs[slotIndex].slice(0, maxShared);
+  const cap = broachCapacity(card, c => allBroachs.some(br => br.card_id === c.cardID));
+  state.sharedBroachs[slotIndex] = cap > 0 ? state.sharedBroachs[slotIndex].slice(0, cap) : [];
 }
 
 /** カードをスロットに配置し、デフォルト特効を設定して共有ブローチを検証する */

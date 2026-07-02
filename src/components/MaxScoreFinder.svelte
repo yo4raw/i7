@@ -418,5 +418,5 @@
 </div>
 
 {#if lastResult}
-  <SearchResults result={lastResult} selectedSong={selectedSong} {allCards} {allBroachs} {currentTierMap} {base} />
+  <SearchResults result={lastResult} selectedSong={selectedSong} {allCards} {allBroachs} {currentTierMap} {base} scoreUpAssist={scoreUpAssist} scoreUpBadgeRate={Number(scoreUpBadgeRate) || 0} />
 {/if}

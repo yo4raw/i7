@@ -80,6 +80,7 @@ export const SKILL_TYPE = {
   SHRINK_TIMER: '判定縮小（タイマー）',
   BAD_TO_PERFECT: '判定強化(BAD→Perfect)',
   MISS_TO_PERFECT: '判定ガード(MISS→Perfect)',
+  SCORE_DOWN: '判定拡大スコアダウン',
 } as const;
 
 /** ap_skill_type の表記揺れを正規化するマップ */

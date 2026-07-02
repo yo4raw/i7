@@ -8,7 +8,7 @@
 
 import { ATTR_HEX } from '../constants';
 import { renderHistogramSvg } from './histogram';
-import { XorShift128Plus } from './rng';
+import { Sfc32 } from './rng';
 
 const COLOR = {
   main: '#6366f1',      // indigo-500（メイン枠）
@@ -166,7 +166,7 @@ export function simulateActivationsDeterministic(p: {
   notesCount: number; songDuration: number;
   excludeHead: number; seed: number;
 }): Activation[] {
-  const rng = new XorShift128Plus(p.seed);
+  const rng = new Sfc32(p.seed);
   const acts: Activation[] = [];
   const eligibleCount = Math.max(0, p.notesCount - p.excludeHead);
   const maxActivations = Math.floor(eligibleCount / p.count);
@@ -202,7 +202,7 @@ export function simulateActivationsMulti(p: {
     fired: boolean;
     valueInNotes: number;
   };
-  const rng = new XorShift128Plus(p.seed);
+  const rng = new Sfc32(p.seed);
   const eligibleCount = Math.max(0, p.notesCount - p.excludeHead);
   const triggers: Trigger[] = [];
   for (let i = 0; i < p.cards.length; i++) {
@@ -586,7 +586,7 @@ export function generateDemoScores(params: {
   seed: number;
   n: number;
 }): number[] {
-  const rng = new XorShift128Plus(params.seed);
+  const rng = new Sfc32(params.seed);
   const scores: number[] = [];
   const p = params.per / 100;
   for (let t = 0; t < params.n; t++) {

@@ -283,8 +283,10 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
       expect(calcMinScore(team, notes)).toBe(292683);
     });
 
-    it('calcMaxScore (縮小全発動時) は 426,762 と一致 (§5 の 2 段 floor 準拠)', () => {
-      expect(calcMaxScore(team, notes)).toBe(426762);
+    it('calcMaxScore (縮小全発動時) は 427,948 と一致 (§5 の 2 段 floor 準拠)', () => {
+      // 縮小区間がどのノーツを覆うかはノート順序 (flattenNotes の seed) に依存するため、
+      // RNG 差し替え (ADR 0038) 時はこの固定値を再取得して更新する
+      expect(calcMaxScore(team, notes)).toBe(427948);
     });
 
     it('calcExpectedScore.finalScore (算術期待値、仕様 §5-3) は 348,051 と一致', () => {
@@ -304,10 +306,10 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
         mean: result.mean,
         stddev: result.stddev,
       }).toEqual({
-        mcMin: 317427,
-        mcMax: 397226,
-        mean: 347708,
-        stddev: 16541,
+        mcMin: 303726,
+        mcMax: 388368,
+        mean: 348528,
+        stddev: 18767,
       });
     });
   });

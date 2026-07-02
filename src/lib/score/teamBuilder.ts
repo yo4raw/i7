@@ -16,6 +16,7 @@ import {
 } from './constants';
 import { EVENT_BONUS_MULTIPLIER, type EventBonusTier } from '../data/eventBonusTiers';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
+import { broachCapacity } from './broachAssignment';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
 import type { RabbitNoteMap } from '../data/rabbitNote';
@@ -23,8 +24,14 @@ import type { RabbitNoteMap } from '../data/rabbitNote';
 /** カードからスキル情報を解析する */
 export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 | 4 | 5 = 5): CardSkill | null {
   const type = card.ap_skill_type;
-  // 判定補助系スキルはスコアに影響しないため null を返す
-  if (!type || type === SKILL_TYPE.MISS_TO_GOOD || type === SKILL_TYPE.BAD_TO_PERFECT) return null;
+  // 判定補助系スキル（判定ガード・スコアダウン含む）はスコアに影響しないため null を返す (ADR 0037)
+  if (
+    !type
+    || type === SKILL_TYPE.MISS_TO_GOOD
+    || type === SKILL_TYPE.BAD_TO_PERFECT
+    || type === SKILL_TYPE.MISS_TO_PERFECT
+    || type === SKILL_TYPE.SCORE_DOWN
+  ) return null;
 
   const isShrink = type === SKILL_TYPE.SHRINK || type.startsWith(SKILL_TYPE.SHRINK_PREFIX);
   const resolvedSkillLevel = resolveEffectiveSkillLevel(card, skillLevel, isShrink);
@@ -49,9 +56,10 @@ export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 
     cardIndex: slotIndex,
     skillType,
     originalType: type,
+    // per は入力ミスデータ (per>100) への防御として 100 にクランプする (ADR 0037)
     /* v8 ignore next 3 -- count/per/value は usable レベルで truthy 保証済みのため || 0 の偽側へ到達しない */
     count: count || 0,
-    per: per || 0,
+    per: Math.min(per || 0, 100),
     value: value || 0,
     rate: rate || 0,
     isTimer,
@@ -161,9 +169,10 @@ export function computeTeam(
       bBeat += (rb.broach.beat || 0) * mult;
       bMelody += (rb.broach.melody || 0) * mult;
     }
-    // 共有ブローチ加算
+    // 共有ブローチ加算（容量ルール適用: 非 UR=0 / 固有持ち UR=1 / それ以外 UR=2。ADR 0039）
     if (sharedBroachSelections?.[i]) {
-      for (const sbId of sharedBroachSelections[i]) {
+      const capacity = broachCapacity(card, c => allBroachs.some(br => br.card_id === c.cardID));
+      for (const sbId of sharedBroachSelections[i].slice(0, capacity)) {
         if (!sbId) continue;
         const sb = SHARED_BROACHS.find(s => s.id === sbId);
         if (!sb) continue;
@@ -236,5 +245,7 @@ export function computeTeam(
     broachBeat: broachBeatTotal,
     broachMelody: broachMelodyTotal,
     broachScoreBonus,
+    centerShout, centerBeat, centerMelody,
+    friendShout, friendBeat, friendMelody,
   };
 }
