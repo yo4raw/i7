@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countUsedBroachs, broachViolations } from '../../../src/lib/score/broachInventory';
+import { countUsedBroachs, broachViolations, hasRegisteredBroachCounts } from '../../../src/lib/score/broachInventory';
 
 describe('broachInventory (共通ブローチ在庫突合)', () => {
   it('countUsedBroachs: slot 0-4 のみ数え、フレンド枠(5)は無視する', () => {
@@ -39,5 +39,17 @@ describe('broachInventory (共通ブローチ在庫突合)', () => {
 
   it('broachViolations: フレンド枠の装備は違反にならない', () => {
     expect(broachViolations([[], [], [], [], [], [1, 1]], {})).toEqual([]);
+  });
+
+  it('hasRegisteredBroachCounts: 空の counts では false', () => {
+    expect(hasRegisteredBroachCounts({})).toBe(false);
+  });
+
+  it('hasRegisteredBroachCounts: 全て 0 なら false', () => {
+    expect(hasRegisteredBroachCounts({ '1': 0, '2': 0 })).toBe(false);
+  });
+
+  it('hasRegisteredBroachCounts: 正の値が 1 件でもあれば true', () => {
+    expect(hasRegisteredBroachCounts({ '1': 0, '2': 1 })).toBe(true);
   });
 });
