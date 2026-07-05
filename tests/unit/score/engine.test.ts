@@ -15,7 +15,9 @@ import {
   runSimulation,
 } from '../../../src/lib/score/engine';
 import { CENTER_SKILL_RATES, MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE } from '../../../src/lib/score/constants';
-import { allBroachs, findBroachsByCardId, findCardById, findSongById } from '../../fixtures';
+import { normalizeAttribute } from '../../../src/lib/score/types';
+import type { EventBonusTier } from '../../../src/lib/data/eventBonusTiers';
+import { allBroachs, allCards, findBroachsByCardId, findCardById, findSongById } from '../../fixtures';
 
 /** 10th Anniversary 四葉環 (UR / Beat / BAD→Perfect スキル) */
 const tenthTamakiMainCard = findCardById(2484);
@@ -117,6 +119,47 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(empty.Beat).toBe(0);
       expect(empty.Melody).toBe(0);
       expect(empty.cards).toHaveLength(0);
+    });
+
+    it('ラビットノートはキャラ単位1回・フレンド除外・特効非乗算 (spec §6-4 AN67-69 / §6-7, B2)', () => {
+      // Beat 属性の UR を選ぶ → Shout 成分にはセンター/フレンドボーナスが乗らず差分が裸で見える
+      const card = allCards.find(c => c.rarity === 'UR' && c.name && normalizeAttribute(c.attribute) === 'Beat')!;
+      const rn = { [card.name!]: { shout: 100, beat: 0, melody: 0 } };
+      const tiers = ['gold', 'gold', 'none', 'none', 'none', 'gold'] as EventBonusTier[];
+
+      // (1) 同一キャラ2枚(スロット0,1)でも加算は1回だけ・(2) 特効(×2.4)が乗らない
+      const deck2 = [card, card, null, null, null, null];
+      const diff2 = computeTeam(deck2, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn).Shout
+                  - computeTeam(deck2, [], monsterGenerationSong, tiers).Shout;
+      expect(diff2).toBe(100); // 2枚×2.4=480 ではなく、フラットに 100
+
+      // (3) フレンド枠(スロット5)だけにいるキャラには加算されない
+      const other = allCards.find(c => c.rarity === 'UR' && c.name && c.name !== card.name)!;
+      const deckF = [other, null, null, null, null, card];
+      const diffF = computeTeam(deckF, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn).Shout
+                  - computeTeam(deckF, [], monsterGenerationSong, tiers).Shout;
+      expect(diffF).toBe(0);
+    });
+
+    it('ラビットあり編成でも raw 合計 = Σ per-card 値の不変条件が保たれる (B2 レビュー対応)', () => {
+      // ラビット加算はキャラ初出スロット(0-4)の per-card 値に帰属するため、
+      // rawShout/rawBeat/rawMelody は常に cards[].shout_max/beat_max/melody_max の総和と一致する
+      // (deckSkillDistribution.ts の effectiveAppeal / CardDetailTable の「単純属性値計」が依存する整合条件)
+      const card = allCards.find(c => c.rarity === 'UR' && c.name && normalizeAttribute(c.attribute) === 'Beat')!;
+      const other = allCards.find(c => c.rarity === 'UR' && c.name && c.name !== card.name)!;
+      const rn = {
+        [card.name!]: { shout: 100, beat: 30, melody: 7 },
+        [other.name!]: { shout: 11, beat: 0, melody: 5 },
+      };
+      const tiers = ['gold', 'gold', 'none', 'none', 'none', 'gold'] as EventBonusTier[];
+      // 同一キャラ重複(0,1) + 別キャラ(2) + フレンド(5) を含む編成
+      const deck = [card, card, other, null, null, other];
+      const team = computeTeam(deck, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn);
+      const sum = (k: 'shout_max' | 'beat_max' | 'melody_max') =>
+        team.cards.reduce((acc, c) => acc + c[k], 0);
+      expect(team.rawShout).toBe(sum('shout_max'));
+      expect(team.rawBeat).toBe(sum('beat_max'));
+      expect(team.rawMelody).toBe(sum('melody_max'));
     });
   });
 

@@ -128,6 +128,9 @@ export function computeTeam(
     if (a in attrCounts) attrCounts[a]++;
   }
 
+  // ラビットノート加算の重複防止: キャラ初出スロット(0-4)にのみ帰属させる
+  const rabbitSeen = new Set<string>();
+
   for (let i = 0; i < 6; i++) {
     const card = deck[i];
     if (!card) continue;
@@ -147,11 +150,17 @@ export function computeTeam(
     const baseBeat = beatMax - (trained || cardAttr !== 'Beat' ? 0 : trainBonus);
     const baseMelody = melodyMax - (trained || cardAttr !== 'Melody' ? 0 : trainBonus);
 
-    // ラビットノート加算（イベントボーナス倍率適用前）
-    const rn = rabbitNotes?.[card.name || ''];
-    const s = Math.round((baseShout + (rn?.shout || 0)) * bonusMult);
-    const b = Math.round((baseBeat + (rn?.beat || 0)) * bonusMult);
-    const m = Math.round((baseMelody + (rn?.melody || 0)) * bonusMult);
+    // ラビットノート加算: スロット0-4(フレンド除外)のキャラ初出スロットにのみ1回、
+    // 特効倍率を掛けないフラット加算 (spec §6-4 AN67→AN68 / §6-7 AU26)
+    let rnS = 0, rnB = 0, rnM = 0;
+    if (rabbitNotes && i < 5 && card.name && !rabbitSeen.has(card.name)) {
+      rabbitSeen.add(card.name);
+      const rn = rabbitNotes[card.name];
+      if (rn) { rnS = rn.shout || 0; rnB = rn.beat || 0; rnM = rn.melody || 0; }
+    }
+    const s = Math.round(baseShout * bonusMult) + rnS;
+    const b = Math.round(baseBeat * bonusMult) + rnB;
+    const m = Math.round(baseMelody * bonusMult) + rnM;
     rawShout += s;
     rawBeat += b;
     rawMelody += m;

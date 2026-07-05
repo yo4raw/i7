@@ -199,14 +199,14 @@ describe('computeTeam: falsy なカードフィールドのフォールバック
     expect(team.rawShout).toBe(0); // shoutMax 0 - 0 = 0
   });
 
-  it('card.name が空文字でもラビットノート参照は安全 (L140 || \'\')', () => {
+  it('card.name が空文字の場合はラビットノート参照をスキップし例外なく安全に0扱いする (B2: falsy name は加算対象外)', () => {
     const notes: RabbitNoteMap = { '': { shout: 50, beat: 0, melody: 0 } };
     const team = computeTeam(
       [blankCard, null, null, null, null, null], [], song,
       undefined, undefined, undefined, undefined, undefined, notes,
     );
-    // name='' をキーにしたエントリが拾われる
-    expect(team.rawShout).toBe(50);
+    // name='' (falsy) のカードは、空文字キーの偶発一致を避けるためラビット加算をスキップする
+    expect(team.rawShout).toBe(0);
   });
 });
 
