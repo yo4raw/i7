@@ -816,14 +816,19 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
     expect(team.broachMelody).toBe(0);
   });
 
-  it('センター (ID1500 UR/Beat) + フレンド (ID1139 UR/Beat) が両方 Beat / UR のため、Beat に +10% が 2 回 (独立 floor) 加算される', () => {
+  it('センター (ID1500 UR/Beat) + フレンド (ID1139 UR/Beat) が両方 Beat / UR のため、Beat ボーナスは合算後 1 回 floor される (spec §6-4 AN71, B4)', () => {
     // baseBeat = rawBeat + broachBeat = 100,129 + 800 = 100,929
-    // centerBeat = floor(100,929 × 0.10) = 10,092 (独立 floor)
-    // friendBeat = floor(100,929 × 0.10) = 10,092
-    // teamBeat = 100,929 + 10,092 + 10,092 = 121,113
+    // combinedBeat = floor(100,929 × (0.10+0.10)) = floor(20,185.8) = 20,185 (合算後 1 回 floor)
+    // teamBeat = 100,929 + 20,185 = 121,114
     expect(team.Shout).toBe(55356); // Shout 方向には倍率加算なし
-    expect(team.Beat).toBe(121113);
+    expect(team.Beat).toBe(121114);
     expect(team.Melody).toBe(61212); // Melody 方向にも倍率加算なし
+  });
+
+  it('内訳表示: centerBeat は単独 floor (10,092)、friendBeat は残差 (10,093) で合計が合算 floor と一致する', () => {
+    expect(team.centerBeat).toBe(10092);
+    expect(team.friendBeat).toBe(10093);
+    expect(team.centerBeat + team.friendBeat).toBe(20185);
   });
 
   describe('SCOREUPアシスト ON (+20%) 適用後の「デッキ合計」値', () => {
@@ -832,9 +837,10 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
     const deckBeat = Math.floor(team.Beat * (1 + SCOREUP_ASSIST_RATE));
     const deckMelody = Math.floor(team.Melody * (1 + SCOREUP_ASSIST_RATE));
 
-    it('アシスト後のデッキ合計は (S=66,427 / B=145,335 / M=73,454)', () => {
+    it('アシスト後のデッキ合計は (S=66,427 / B=145,336 / M=73,454)', () => {
+      // B4 変更で team.Beat が 121,113→121,114 になった分、floor(121,114×1.2)=145,336 (旧145,335)
       expect(deckShout).toBe(66427);
-      expect(deckBeat).toBe(145335);
+      expect(deckBeat).toBe(145336);
       expect(deckMelody).toBe(73454);
     });
 

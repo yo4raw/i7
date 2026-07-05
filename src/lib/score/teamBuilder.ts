@@ -222,8 +222,9 @@ export function computeTeam(
     });
   }
 
-  // センター/フレンドのセンタースキルボーナス（docs/score_calc_spec.md §3-5 / §3-6 準拠）
-  // センター分とフレンド分はそれぞれ独立に floor する（合算 floor ではない）
+  // センター/フレンドのセンタースキルボーナス: レアリティ別率(B3: 意図的にシートの一律10%とは異なる、ADR 0040)を
+  // 属性一致分だけ合算し、合算後に 1 回だけ floor する (spec §6-4 AN71 / B4)。
+  // base は整数なので floor(base×(1+c+f)) = base + floor(base×(c+f)) が成り立つ。
   const centerAttr = deck[0] ? normalizeAttribute(deck[0].attribute) : null;
   const friendAttr = deck[5] ? normalizeAttribute(deck[5].attribute) : null;
   const centerRate = deck[0] ? getCenterSkillRate(deck[0].rarity) : 0;
@@ -232,16 +233,24 @@ export function computeTeam(
   const baseShout = rawShout + broachShoutTotal;
   const baseBeat = rawBeat + broachBeatTotal;
   const baseMelody = rawMelody + broachMelodyTotal;
+
+  const bonusRate = (attr: 'Shout' | 'Beat' | 'Melody'): number =>
+    (centerAttr === attr ? centerRate : 0) + (friendAttr === attr ? friendRate : 0);
+  const combinedShout  = Math.floor(baseShout  * bonusRate('Shout')  / 100);
+  const combinedBeat   = Math.floor(baseBeat   * bonusRate('Beat')   / 100);
+  const combinedMelody = Math.floor(baseMelody * bonusRate('Melody') / 100);
+
+  // 表示用内訳: センター分は単独 floor、フレンド分は残差(合計が合算丸めと一致するように)
   const centerShout  = centerAttr === 'Shout'  ? Math.floor(baseShout  * centerRate / 100) : 0;
   const centerBeat   = centerAttr === 'Beat'   ? Math.floor(baseBeat   * centerRate / 100) : 0;
   const centerMelody = centerAttr === 'Melody' ? Math.floor(baseMelody * centerRate / 100) : 0;
-  const friendShout  = friendAttr === 'Shout'  ? Math.floor(baseShout  * friendRate / 100) : 0;
-  const friendBeat   = friendAttr === 'Beat'   ? Math.floor(baseBeat   * friendRate / 100) : 0;
-  const friendMelody = friendAttr === 'Melody' ? Math.floor(baseMelody * friendRate / 100) : 0;
+  const friendShout  = combinedShout  - centerShout;
+  const friendBeat   = combinedBeat   - centerBeat;
+  const friendMelody = combinedMelody - centerMelody;
 
-  const teamShout  = baseShout  + centerShout  + friendShout;
-  const teamBeat   = baseBeat   + centerBeat   + friendBeat;
-  const teamMelody = baseMelody + centerMelody + friendMelody;
+  const teamShout  = baseShout  + combinedShout;
+  const teamBeat   = baseBeat   + combinedBeat;
+  const teamMelody = baseMelody + combinedMelody;
 
   return {
     Shout: teamShout,
