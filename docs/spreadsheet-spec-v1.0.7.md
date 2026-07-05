@@ -1008,11 +1008,11 @@ curl -sL "https://docs.google.com/spreadsheets/d/1UiQ-i2Ofq3DJXz0BOeFsjDId3iVrhe
 python3 tmp/spreadsheet-v107/extract_formulas.py <旧xlsx> snapshot.xlsx <outdir>
 ```
 
-`extract_formulas.py` は zip 展開して `xl/worksheets/*.xml` の `<f>`（数式）/`<v>`（値）要素をパースし、行番号を `#` に正規化したパターンで版間 diff を出す。
+`extract_formulas.py` は zip 展開して `xl/worksheets/*.xml` の `<f>`（数式）/`<v>`（値）要素をパースし、行番号を `#` に正規化したパターンで版間 diff を出す。全ソースは `tmp/` 配下でコミット対象外だが、`docs/superpowers/plans/2026-07-05-spreadsheet-v1.0.7-verification.md` の Task 1 Step 2 に埋め込まれているため、再調査時はそこから復元できる。
 
 ### 17-2. `DUMMYFUNCTION` キャッシュ値ノイズの除去
 
-Google Sheets が xlsx 非対応の関数（`FILTER`/`VLOOKUP`の一部・配列スピル等）をエクスポートする際は `=IFERROR(__xludf.DUMMYFUNCTION("<元の数式文字列>"), <キャッシュ値リテラル>)` にラップされる。この末尾リテラルは、エクスポート時点でシートに入力されていたデモカード・楽曲によって変わるため、版間で数式パターンが「別物」に見えるノイズの主因になる（`tmp/spreadsheet-v107/analyze_real_diff.py` で末尾リテラルを正規表現除去して「本質形状」だけを比較する）。再調査時はこのノイズ除去を必ず行うこと。
+Google Sheets が xlsx 非対応の関数（`FILTER`/`VLOOKUP`の一部・配列スピル等）をエクスポートする際は `=IFERROR(__xludf.DUMMYFUNCTION("<元の数式文字列>"), <キャッシュ値リテラル>)` にラップされる。この末尾リテラルは、エクスポート時点でシートに入力されていたデモカード・楽曲によって変わるため、版間で数式パターンが「別物」に見えるノイズの主因になる（`tmp/spreadsheet-v107/analyze_real_diff.py` で末尾リテラルを正規表現除去して「本質形状」だけを比較する。処理内容は「`IFERROR(__xludf.DUMMYFUNCTION("<本来の数式>"), <キャッシュ値>)` 形式から `DUMMYFUNCTION` 内の文字列（本来の数式）を取り出し、それをパターン比較の対象にする」というもので、これも `tmp/` 配下のためコミット対象外だが、処理内容自体は上記の通りなので `analyze_real_diff.py` の実体がなくても再現できる）。再調査時はこのノイズ除去を必ず行うこと。
 
 ### 17-3. 差分比較で確認すべき項目
 
@@ -1026,7 +1026,7 @@ Google Sheets が xlsx 非対応の関数（`FILTER`/`VLOOKUP`の一部・配列
 
 - `docs/spreadsheet-spec-v1.0.5.md` — 本書のベースラインとした v1.0.5 版仕様書（別コピー ID 対象）
 - `docs/spreadsheet-v1.0.6-investigation.md` — v1.0.6 調査メモ
-- `docs/spreadsheet-score-calc-diff.md` — 本シートと i7 実装の差分比較（縮小スキル重点、Task 6 で全面更新予定）
+- `docs/spreadsheet-score-calc-diff.md` — 本シートと i7 実装の差分比較（縮小スキル重点、v1.0.7 対応で全面更新済み）
 - `docs/superpowers/specs/2026-07-05-spreadsheet-v1.0.7-verification-design.md` — 本書作成の設計書（Phase 0-3 構成、判定ポリシー）
 - `docs/score_calc_spec.md` — i7 実装のスコア計算仕様書
 - `docs/shrink-skill-spec.md` — i7 実装の縮小スキル仕様書
@@ -1038,4 +1038,4 @@ Google Sheets が xlsx 非対応の関数（`FILTER`/`VLOOKUP`の一部・配列
 - `src/lib/score/engine.ts` — i7 の計算エンジン
 - `src/lib/score/shrinkExclusion.ts` — 先頭除外ロジック
 - `src/lib/score/broachResolver.ts` — ブローチ解決ロジック
-- `tests/oracle/` — v1.0.6 数式の engine 非依存な忠実移植（独立オラクル、Task 5 で v1.0.7 追随予定）
+- `tests/oracle/` — v1.0.6 数式の engine 非依存な忠実移植（独立オラクル、`tests/fixtures/golden/spreadsheet-v1.0.7.json` に追随済み）

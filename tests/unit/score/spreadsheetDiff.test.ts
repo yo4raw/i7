@@ -16,7 +16,7 @@ import {
   computeGroupSizes,
 } from '../../../src/lib/score/engine';
 
-describe('スプレッドシート v1.0.6 オラクル — ①ポート忠実性', () => {
+describe('スプレッドシートオラクル(golden 各版) — ①ポート忠実性', () => {
   for (const gc of goldenCases) {
     const input = buildOracleInput(gc);
     if (gc.max) {
@@ -103,6 +103,10 @@ function reorderForEngine(gc: GoldenCase): {
 
   const tier = (i: number): EventBonusTier => (gc.eventTiers?.[i] ?? 'none') as EventBonusTier;
   const deck = order.map((i) => findCardByMasterId(gc.deck[i]));
+  // 注意: デッキに同一カードが重複し、そのカードに固有ブローチが付く golden を将来追加する場合、
+  // この map は各複製（重複した全スロット）に同じブローチ id を割り当ててしまう。オラクル側
+  // （buildOracleInput.ts の sumFixedBroachs）は id ごとの単純合算（1回加算）のため、
+  // その時点でここが乖離要因になる — 要修正。
   const selectedBroachIds = deck.map((card) => {
     const match = allBroachs.find((b) => gc.broachs.includes(b.id) && b.card_id === card.cardID);
     return match ? match.id : null;
@@ -117,7 +121,7 @@ function reorderForEngine(gc: GoldenCase): {
   };
 }
 
-describe('スプレッドシート v1.0.6 オラクル — ②engine差分レポート', () => {
+describe('スプレッドシートオラクル(golden 各版) — ②engine差分レポート', () => {
   for (const gc of goldenCases) {
     const input = buildOracleInput(gc);
     const { deck, bonusTiers, trained, skillLevels, selectedBroachIds, sharedBroachSelections } =
