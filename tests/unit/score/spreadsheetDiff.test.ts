@@ -108,7 +108,7 @@ function reorderForEngine(gc: GoldenCase): {
   // （buildOracleInput.ts の sumFixedBroachs）は id ごとの単純合算（1回加算）のため、
   // その時点でここが乖離要因になる — 要修正。
   const selectedBroachIds = deck.map((card) => {
-    const match = allBroachs.find((b) => gc.broachs.includes(b.id) && b.card_id === card.cardID);
+    const match = allBroachs.find((b) => b.id != null && gc.broachs.includes(b.id) && b.card_id === card.cardID);
     return match ? match.id : null;
   });
   return {
