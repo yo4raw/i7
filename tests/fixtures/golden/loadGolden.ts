@@ -1,4 +1,5 @@
-import golden from './spreadsheet-v1.0.6.json';
+import goldenV106 from './spreadsheet-v1.0.6.json';
+import goldenV107 from './spreadsheet-v1.0.7.json';
 
 export interface GoldenComponents {
   attr: number;
@@ -30,4 +31,7 @@ export interface GoldenCase {
   max: GoldenComponents | null;
 }
 
-export const goldenCases: GoldenCase[] = golden as GoldenCase[];
+export const goldenCases: GoldenCase[] = [
+  ...(goldenV106 as GoldenCase[]),
+  ...(goldenV107 as GoldenCase[]),
+];

@@ -51,3 +51,4 @@
 | [0037](0037-parse-skill-input-hygiene.md) | 判定ガード・判定拡大スコアダウンのスコア計算除外と発動率クランプ | 承認 |
 | [0038](0038-replace-rng-sfc32.md) | MC シミュレーションの乱数生成器を sfc32 へ差し替え | 承認 |
 | [0039](0039-shared-broach-capacity-single-source.md) | 共有ブローチ容量ルールの単一ソース化と CardDetailTable の engine 出力化 | 承認 |
+| [0040](0040-spreadsheet-v107-reference-policy.md) | スコア計算検証は ota-life v1.0.7 スプレッドシートを正とする(縮小開始位置を除く) | 承認 |

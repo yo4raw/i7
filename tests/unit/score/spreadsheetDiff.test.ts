@@ -16,7 +16,7 @@ import {
   computeGroupSizes,
 } from '../../../src/lib/score/engine';
 
-describe('スプレッドシート v1.0.6 オラクル — ①ポート忠実性', () => {
+describe('スプレッドシートオラクル(golden 各版) — ①ポート忠実性', () => {
   for (const gc of goldenCases) {
     const input = buildOracleInput(gc);
     if (gc.max) {
@@ -74,13 +74,23 @@ function findCardByMasterId(id: number): Card {
  * 残りは元の並び順を保って中間枠(1..4)へ詰める。
  * bonusTiers も同じ並べ替えを適用する。
  *
- * @returns 並べ替え済みの { deck, bonusTiers, trained, skillLevels }
+ * GoldenCase.broachs（固有ブローチ id のフラット配列）/ sharedBroachs（元スロット順の
+ * 共有ブローチ id 配列）も computeTeam の引数形状（selectedBroachIds: スロット別 1 件、
+ * sharedBroachSelections: スロット別配列）に変換する。固有ブローチは
+ * `FixedBroach.card_id === card.cardID` で対象カードのスロットへ割り当てる。
+ * オラクル側（buildOracleInput.ts の sumFixedBroachs）は id ごとの単純合算のみで
+ * card_id 照合を行わないが、golden フィクスチャの `broachs` がデッキ所属カードの
+ * 固有ブローチのみを列挙する前提の下で両者の加算結果は一致する。
+ *
+ * @returns 並べ替え済みの { deck, bonusTiers, trained, skillLevels, selectedBroachIds, sharedBroachSelections }
  */
 function reorderForEngine(gc: GoldenCase): {
   deck: Card[];
   bonusTiers: EventBonusTier[];
   trained: boolean[];
   skillLevels: (1 | 2 | 3 | 4 | 5)[];
+  selectedBroachIds: (number | null)[];
+  sharedBroachSelections: number[][];
 } {
   const n = gc.deck.length;
   const order: number[] = [];
@@ -92,30 +102,43 @@ function reorderForEngine(gc: GoldenCase): {
   order.push(gc.friend); // index5 = フレンド
 
   const tier = (i: number): EventBonusTier => (gc.eventTiers?.[i] ?? 'none') as EventBonusTier;
+  const deck = order.map((i) => findCardByMasterId(gc.deck[i]));
+  // 注意: デッキに同一カードが重複し、そのカードに固有ブローチが付く golden を将来追加する場合、
+  // この map は各複製（重複した全スロット）に同じブローチ id を割り当ててしまう。オラクル側
+  // （buildOracleInput.ts の sumFixedBroachs）は id ごとの単純合算（1回加算）のため、
+  // その時点でここが乖離要因になる — 要修正。
+  const selectedBroachIds = deck.map((card) => {
+    const match = allBroachs.find((b) => gc.broachs.includes(b.id) && b.card_id === card.cardID);
+    return match ? match.id : null;
+  });
   return {
-    deck: order.map((i) => findCardByMasterId(gc.deck[i])),
+    deck,
     bonusTiers: order.map((i) => tier(i)),
     trained: order.map((i) => gc.trained[i]),
     skillLevels: order.map((i) => gc.skillLevels[i]),
+    selectedBroachIds,
+    sharedBroachSelections: order.map((i) => gc.sharedBroachs[i]),
   };
 }
 
-describe('スプレッドシート v1.0.6 オラクル — ②engine差分レポート', () => {
+describe('スプレッドシートオラクル(golden 各版) — ②engine差分レポート', () => {
   for (const gc of goldenCases) {
     const input = buildOracleInput(gc);
-    const { deck, bonusTiers, trained, skillLevels } = reorderForEngine(gc);
+    const { deck, bonusTiers, trained, skillLevels, selectedBroachIds, sharedBroachSelections } =
+      reorderForEngine(gc);
     const song = findSongById(gc.songId);
     const options = { scoreUpAssist: gc.assist, scoreUpBadgeRate: gc.badgeRate };
 
-    // golden #1 はブローチ/ラビットノート無し（buildOracleInput と同条件）→ engine も未指定
+    // ラビットノートは golden 未登録（buildOracleInput と同条件）→ engine も未指定。
+    // ブローチは gc.broachs/gc.sharedBroachs から reorderForEngine が組み立てた値を配線する。
     const team = computeTeam(
       deck,
       allBroachs,
       song,
       bonusTiers,
       trained,
-      undefined, // selectedBroachIds
-      undefined, // sharedBroachSelections
+      selectedBroachIds,
+      sharedBroachSelections,
       skillLevels,
       undefined, // rabbitNotes
     );

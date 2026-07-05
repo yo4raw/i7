@@ -1,0 +1,35 @@
+[
+  {
+    "label": "UR6枚#2(v1.0.7)",
+    "version": "1.0.7",
+    "deck": [1923, 1923, 1500, 1139, 1139, 1139],
+    "center": 2,
+    "friend": 5,
+    "trained": [true, true, true, true, true, true],
+    "skillLevels": [5, 5, 5, 5, 5, 5],
+    "broachs": [1500],
+    "sharedBroachs": [
+      [3, 3],
+      [25, 2],
+      [2],
+      [13, 15],
+      [14, 2],
+      [2, 2]
+    ],
+    "rabbitNotes": {},
+    "eventTiers": ["silver", "silver", "silver", "silver", "silver", "silver"],
+    "songId": 25,
+    "notes": 519,
+    "duration": 103,
+    "badgeRate": 16,
+    "assist": true,
+    "expected": {
+      "attr": 3390354,
+      "scoreUp": 330112,
+      "shrink": 1283726,
+      "liveEnd": 5004192,
+      "final": 5804862
+    },
+    "max": null
+  }
+]
