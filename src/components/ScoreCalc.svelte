@@ -12,7 +12,7 @@
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
   import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS } from '../lib/score/deckState';
   import { DEFAULT_SCOREUP_BADGE_RATE } from '../lib/score/constants';
-  import { broachViolations } from '../lib/score/broachInventory';
+  import { broachViolations, hasRegisteredBroachCounts } from '../lib/score/broachInventory';
   import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
   import { buildBroachRanking } from '../lib/score/songBroachRanking';
@@ -378,7 +378,7 @@
       {#if ownedBroachLimit && totalOwnedBroachs() === 0}
         <p class="mt-2 text-xs text-amber-600">共通ブローチが未登録です。<a class="underline" href={`${base}shared-broach/`}>共通ブローチ登録ページ</a>で所持数を登録してください。</p>
       {/if}
-      {#if ownedBroachLimit && violationNames.length > 0}
+      {#if hasRegisteredBroachCounts(broachCounts) && violationNames.length > 0}
         <p class="mt-2 text-xs text-red-600">⚠️ 所持数を超える共通ブローチが装備されています: {violationNames.join('、')}（装備はそのまま残ります。選び直すと所持数の範囲に制限されます）</p>
       {/if}
     </section>

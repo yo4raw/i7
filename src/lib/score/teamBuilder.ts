@@ -12,7 +12,6 @@ import {
 } from './types';
 import {
   CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
-  TRAIN_BONUS,
 } from './constants';
 import { EVENT_BONUS_MULTIPLIER, type EventBonusTier } from '../data/eventBonusTiers';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
@@ -129,6 +128,9 @@ export function computeTeam(
     if (a in attrCounts) attrCounts[a]++;
   }
 
+  // ラビットノート加算の重複防止: キャラ初出スロット(0-4)にのみ帰属させる
+  const rabbitSeen = new Set<string>();
+
   for (let i = 0; i < 6; i++) {
     const card = deck[i];
     if (!card) continue;
@@ -137,9 +139,10 @@ export function computeTeam(
     const bonusMult = EVENT_BONUS_MULTIPLIER[bonusTier];
     const trained = trainedFlags?.[i] ?? true;
 
-    // 未特訓は自属性のみ TRAIN_BONUS を引いた値、他属性と特訓済みは *_max をそのまま使う
+    // 未特訓は自属性のみカード別実データの sp_time×sp_value を引いた値、他属性と特訓済みは *_max をそのまま使う
+    // (spec v1.0.7 §6-3 AM20-21。レアリティ別固定値ではなくカードごとの sp_time/sp_value を使用)
     const cardAttr = normalizeAttribute(card.attribute);
-    const trainBonus = TRAIN_BONUS[card.rarity ?? ''] ?? 0;
+    const trainBonus = (card.sp_time || 0) * (card.sp_value || 0);
     const shoutMax = card.shout_max || 0;
     const beatMax = card.beat_max || 0;
     const melodyMax = card.melody_max || 0;
@@ -147,11 +150,17 @@ export function computeTeam(
     const baseBeat = beatMax - (trained || cardAttr !== 'Beat' ? 0 : trainBonus);
     const baseMelody = melodyMax - (trained || cardAttr !== 'Melody' ? 0 : trainBonus);
 
-    // ラビットノート加算（イベントボーナス倍率適用前）
-    const rn = rabbitNotes?.[card.name || ''];
-    const s = Math.round((baseShout + (rn?.shout || 0)) * bonusMult);
-    const b = Math.round((baseBeat + (rn?.beat || 0)) * bonusMult);
-    const m = Math.round((baseMelody + (rn?.melody || 0)) * bonusMult);
+    // ラビットノート加算: スロット0-4(フレンド除外)のキャラ初出スロットにのみ1回、
+    // 特効倍率を掛けないフラット加算 (spec §6-4 AN67→AN68 / §6-7 AU26)
+    let rnS = 0, rnB = 0, rnM = 0;
+    if (rabbitNotes && i < 5 && card.name && !rabbitSeen.has(card.name)) {
+      rabbitSeen.add(card.name);
+      const rn = rabbitNotes[card.name];
+      if (rn) { rnS = rn.shout || 0; rnB = rn.beat || 0; rnM = rn.melody || 0; }
+    }
+    const s = Math.round(baseShout * bonusMult) + rnS;
+    const b = Math.round(baseBeat * bonusMult) + rnB;
+    const m = Math.round(baseMelody * bonusMult) + rnM;
     rawShout += s;
     rawBeat += b;
     rawMelody += m;
@@ -213,8 +222,9 @@ export function computeTeam(
     });
   }
 
-  // センター/フレンドのセンタースキルボーナス（docs/score_calc_spec.md §3-5 / §3-6 準拠）
-  // センター分とフレンド分はそれぞれ独立に floor する（合算 floor ではない）
+  // センター/フレンドのセンタースキルボーナス: レアリティ別率(B3: 意図的にシートの一律10%とは異なる、ADR 0040)を
+  // 属性一致分だけ合算し、合算後に 1 回だけ floor する (spec §6-4 AN71 / B4)。
+  // base は整数なので floor(base×(1+c+f)) = base + floor(base×(c+f)) が成り立つ。
   const centerAttr = deck[0] ? normalizeAttribute(deck[0].attribute) : null;
   const friendAttr = deck[5] ? normalizeAttribute(deck[5].attribute) : null;
   const centerRate = deck[0] ? getCenterSkillRate(deck[0].rarity) : 0;
@@ -223,16 +233,24 @@ export function computeTeam(
   const baseShout = rawShout + broachShoutTotal;
   const baseBeat = rawBeat + broachBeatTotal;
   const baseMelody = rawMelody + broachMelodyTotal;
+
+  const bonusRate = (attr: 'Shout' | 'Beat' | 'Melody'): number =>
+    (centerAttr === attr ? centerRate : 0) + (friendAttr === attr ? friendRate : 0);
+  const combinedShout  = Math.floor(baseShout  * bonusRate('Shout')  / 100);
+  const combinedBeat   = Math.floor(baseBeat   * bonusRate('Beat')   / 100);
+  const combinedMelody = Math.floor(baseMelody * bonusRate('Melody') / 100);
+
+  // 表示用内訳: センター分は単独 floor、フレンド分は残差(合計が合算丸めと一致するように)
   const centerShout  = centerAttr === 'Shout'  ? Math.floor(baseShout  * centerRate / 100) : 0;
   const centerBeat   = centerAttr === 'Beat'   ? Math.floor(baseBeat   * centerRate / 100) : 0;
   const centerMelody = centerAttr === 'Melody' ? Math.floor(baseMelody * centerRate / 100) : 0;
-  const friendShout  = friendAttr === 'Shout'  ? Math.floor(baseShout  * friendRate / 100) : 0;
-  const friendBeat   = friendAttr === 'Beat'   ? Math.floor(baseBeat   * friendRate / 100) : 0;
-  const friendMelody = friendAttr === 'Melody' ? Math.floor(baseMelody * friendRate / 100) : 0;
+  const friendShout  = combinedShout  - centerShout;
+  const friendBeat   = combinedBeat   - centerBeat;
+  const friendMelody = combinedMelody - centerMelody;
 
-  const teamShout  = baseShout  + centerShout  + friendShout;
-  const teamBeat   = baseBeat   + centerBeat   + friendBeat;
-  const teamMelody = baseMelody + centerMelody + friendMelody;
+  const teamShout  = baseShout  + combinedShout;
+  const teamBeat   = baseBeat   + combinedBeat;
+  const teamMelody = baseMelody + combinedMelody;
 
   return {
     Shout: teamShout,

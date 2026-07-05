@@ -109,9 +109,9 @@ function checkBroachCondition(
 
 /**
  * デッキ全体のブローチを条件判定して返す。
- * デッキ内発動上限（種類5/6/7）も処理する。
- *  - 種類 6 / 7: broach_type 単位で limit 枚まで
- *  - 種類 5: broach.id 単位で limit 枚まで（同じブローチの重複装備を制限）
+ * デッキ内発動上限（spec §6-3 AM35-36）も処理する。
+ *  - limit を持つブローチは種類を問わず「同一カード ID」単位で limit 枚まで
+ *    （COUNTIF($AM$9:AM$9, AM9) <= limit と同じ判定。別カードのブローチとは競合しない）
  * @returns key = slotIndex (0-5), value = ResolvedBroach[]
  */
 export function resolveDeckBroachs(
@@ -126,8 +126,7 @@ export function resolveDeckBroachs(
 
   // Phase 1: 各カードのブローチを条件判定（上限以外）
   // デッキ内上限のカウンター:
-  //  - 種類 6 / 7: broach_type 単位 (同種全体で limit 枚まで)
-  //  - 種類 5 (IDOL_ATTR_COUNT): broach.id 単位 (同じブローチの重複装備で limit 枚まで)
+  //  - limit を持つブローチは種類を問わず「同一カード ID」単位 (card:${card_id}) で limit 枚まで
   const limitCounters = new Map<string, { limit: number; count: number }>();
 
   // 全スロットのブローチを先に収集（上限処理のため）
@@ -157,17 +156,12 @@ export function resolveDeckBroachs(
     }
   }
 
-  // Phase 2: デッキ内発動上限の処理（種類 5 / 6 / 7）
-  const getLimitKey = (p: PendingBroach): string | null => {
-    const type = p.broach.broach_type;
-    if (type === BROACH_TYPE.ATTRIBUTE_UP_LIMITED || type === BROACH_TYPE.ALL_ATTRIBUTES) {
-      return `type:${type}`;
-    }
-    if (type === BROACH_TYPE.IDOL_ATTR_COUNT && p.broach.id != null) {
-      return `id:${p.broach.id}`;
-    }
-    return null;
-  };
+  // Phase 2: デッキ内発動上限の処理 (spec §6-3 AM35-36 / B9・B10):
+  // limit を持つブローチは種類を問わず「同一カード ID」単位でカウントし、
+  // COUNTIF($AM$9:AM$9, AM9) <= limit と同じく limit 枚まで有効化する。
+  // 別カードのブローチとは競合しない。
+  const getLimitKey = (p: PendingBroach): string | null =>
+    p.broach.limit != null ? `card:${p.broach.card_id}` : null;
 
   for (const p of pending) {
     if (!p.conditionMet) continue;

@@ -64,22 +64,26 @@ describe('parseSkill: 縮小スキルで rate(縮小倍率) が無いレベル�
   });
 });
 
-describe('computeTeam: 未特訓 (trained=false) 時の自属性 TRAIN_BONUS 減算分岐 (line 135/137)', () => {
-  it('Shout 属性 UR を未特訓にすると Shout のみ TRAIN_BONUS(1800) 減算される', () => {
+describe('computeTeam: 未特訓 (trained=false) 時の自属性 sp_time×sp_value 減算分岐 (line 135/137, spec v1.0.7 §6-3 AM20-21)', () => {
+  it('Shout 属性 UR を未特訓にすると Shout のみ sp_time×sp_value(1500) 減算される', () => {
     const deck: (Card | null)[] = [urShout, null, null, null, null, null];
     const trained = [false, false, false, false, false, false];
     const team = computeTeam(deck, [], song, undefined, trained);
-    expect(team.rawShout).toBe((urShout.shout_max ?? 0) - 1800);
+    // urShout (cardID 406): sp_time=6 × sp_value=250 = 1500
+    expect(urShout.sp_time! * urShout.sp_value!).toBe(1500);
+    expect(team.rawShout).toBe((urShout.shout_max ?? 0) - 1500);
     // 他属性は減算なし
     expect(team.rawBeat).toBe(urShout.beat_max);
     expect(team.rawMelody).toBe(urShout.melody_max);
   });
 
-  it('Melody 属性 UR を未特訓にすると Melody のみ TRAIN_BONUS(1800) 減算される', () => {
+  it('Melody 属性 UR を未特訓にすると Melody のみ sp_time×sp_value(1500) 減算される', () => {
     const deck: (Card | null)[] = [urMelody, null, null, null, null, null];
     const trained = [false, false, false, false, false, false];
     const team = computeTeam(deck, [], song, undefined, trained);
-    expect(team.rawMelody).toBe((urMelody.melody_max ?? 0) - 1800);
+    // urMelody (cardID 408): sp_time=6 × sp_value=250 = 1500
+    expect(urMelody.sp_time! * urMelody.sp_value!).toBe(1500);
+    expect(team.rawMelody).toBe((urMelody.melody_max ?? 0) - 1500);
     expect(team.rawShout).toBe(urMelody.shout_max);
     expect(team.rawBeat).toBe(urMelody.beat_max);
   });
@@ -189,20 +193,20 @@ describe('computeTeam: falsy なカードフィールドのフォールバック
     expect(dc.rarity).toBe('');
   });
 
-  it('rarity が null (TRAIN_BONUS 非掲載) かつ未特訓でも自属性の減算は 0 (TRAIN_BONUS ?? 0)', () => {
+  it('sp_time/sp_value が未設定 (falsy) かつ未特訓でも自属性の減算は 0 ((sp_time||0)*(sp_value||0))', () => {
     const trained = [false, false, false, false, false, false];
     const team = computeTeam([blankCard, null, null, null, null, null], [], song, undefined, trained);
     expect(team.rawShout).toBe(0); // shoutMax 0 - 0 = 0
   });
 
-  it('card.name が空文字でもラビットノート参照は安全 (L140 || \'\')', () => {
+  it('card.name が空文字の場合はラビットノート参照をスキップし例外なく安全に0扱いする (B2: falsy name は加算対象外)', () => {
     const notes: RabbitNoteMap = { '': { shout: 50, beat: 0, melody: 0 } };
     const team = computeTeam(
       [blankCard, null, null, null, null, null], [], song,
       undefined, undefined, undefined, undefined, undefined, notes,
     );
-    // name='' をキーにしたエントリが拾われる
-    expect(team.rawShout).toBe(50);
+    // name='' (falsy) のカードは、空文字キーの偶発一致を避けるためラビット加算をスキップする
+    expect(team.rawShout).toBe(0);
   });
 });
 

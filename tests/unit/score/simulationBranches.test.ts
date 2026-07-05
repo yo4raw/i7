@@ -113,10 +113,25 @@ describe('simulation: ガード分岐（count<=0 / denom<=0 / 空ノート）', 
     expect(calcCardSkillMax(team, notes, 20, 0)).toBe(0);
   });
 
-  it('calcCardSkillMax: 縮小スキルで numActivations<=0 のとき 0 (L461 path)', () => {
-    const team = makeTeam([shrinkSkill({ count: 50 }), null, null, null, null, null]);
+  // B8: calcCardSkillMax の縮小分岐は shrinkCoverageSeconds(full=true) の閉形式になり、
+  // 「発動回数 floor(denom/count) が 0」でも sec = floor((denom/count)×value) は正になり得る
+  // (denom=20, count=50, value=4 → floor(0.4×4)=floor(1.6)=1 は 0 にならない)。
+  // sec<=0 のガードは denom/count 自体が十分小さい (value を乗せても 1 未満に floor される)
+  // ケースで検証する: denom=20, count=1000, value=1 → floor(0.02×1)=0
+  it('calcCardSkillMax: 縮小スキルで sec(=floor((denom/count)×value))<=0 のとき 0 (B8)', () => {
+    const team = makeTeam([shrinkSkill({ count: 1000, value: 1 }), null, null, null, null, null]);
     const notes = plainNotes(20);
     expect(calcCardSkillMax(team, notes, 20, 0)).toBe(0);
+  });
+
+  // 旧実装 (floor(denom/count) の発動回数ベース) では 0 だったが、B8 の閉形式では
+  // sec = floor((20/50)×4) = floor(1.6) = 1 (>0) となり、正の寄与を持つ。
+  // eligibleBaseScore = 20 notes × floor(1000×0.025) = 20×25 = 500、effectiveSeconds=104
+  // → floor(500 × min(1,104)/104 × (1.4−1)) = floor(500×(1/104)×0.4) = floor(1.923..) = 1
+  it('calcCardSkillMax: 発動回数ベースでは 0 だった縮小スキルも按分式では正の寄与を持つ (B8)', () => {
+    const team = makeTeam([shrinkSkill({ count: 50 }), null, null, null, null, null]);
+    const notes = plainNotes(20);
+    expect(calcCardSkillMax(team, notes, 20, 0)).toBe(1);
   });
 });
 
@@ -244,10 +259,13 @@ describe('simulation: タイマースキルの noteIndex<0 分岐 (songDuration<
     expect(calcMaxScore(team, notes)).toBe(calcMaxScore(none, notes));
   });
 
-  it('calcMaxScore: 非縮小タイマー × 空ノート列で calcNoteIndexAtTime が -1 (L172 / L231 else-if false)', () => {
-    // songDuration>0 で maxAct>=1 だが N=0 → noteIndex=-1 → どちらの分岐も成立せず
+  // B8: calcMaxBaseTotal は H38 の按分式 (閉形式) に置換されたため、タイマー型 scoreUp は
+  // 個々のノート位置 (calcNoteIndexAtTime) に依存せず songDuration/count のみで決まる。
+  // 空ノート列でも scoreUpMax = floor((104/5) × 9999) = 207979 は寄与する
+  // (baseScore は notes=[] のため 0)
+  it('calcMaxScore: 非縮小タイマーは空ノート列でも songDuration ベースで寄与する (H38 按分式 / B8)', () => {
     const team = makeTeam([skill({ isTimer: true, count: 5, value: 9999, per: 100 }), null, null, null, null, null], 104);
-    expect(calcMaxScore(team, [])).toBe(0);
+    expect(calcMaxScore(team, [])).toBe(207979);
   });
 
   it('runSimulation: 非縮小タイマー × 空ノート列で noteIndex=-1 (runOnce L530 else-if false)', async () => {

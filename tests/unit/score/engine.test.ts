@@ -14,8 +14,10 @@ import {
   getCenterSkillRate,
   runSimulation,
 } from '../../../src/lib/score/engine';
-import { CENTER_SKILL_RATES, MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE, TRAIN_BONUS } from '../../../src/lib/score/constants';
-import { allBroachs, findBroachsByCardId, findCardById, findSongById } from '../../fixtures';
+import { CENTER_SKILL_RATES, MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE } from '../../../src/lib/score/constants';
+import { normalizeAttribute } from '../../../src/lib/score/types';
+import type { EventBonusTier } from '../../../src/lib/data/eventBonusTiers';
+import { allBroachs, allCards, findBroachsByCardId, findCardById, findSongById } from '../../fixtures';
 
 /** 10th Anniversary 四葉環 (UR / Beat / BAD→Perfect スキル) */
 const tenthTamakiMainCard = findCardById(2484);
@@ -54,7 +56,7 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(team.rawMelody).toBe(tenthTamakiMainCard.melody_max);
     });
 
-    it('未特訓時は自属性(Beat)のみ TRAIN_BONUS 減算 (Shout 3898 / Beat 5891 / Melody 4611)', () => {
+    it('未特訓時は自属性(Beat)のみ sp_time×sp_value 減算 (Shout 3898 / Beat 5891 / Melody 4611)', () => {
       const untrainedTeam = computeTeam(
         centerDeck,
         [],
@@ -65,9 +67,11 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(untrainedTeam.rawShout).toBe(3898);
       expect(untrainedTeam.rawBeat).toBe(5891);
       expect(untrainedTeam.rawMelody).toBe(4611);
-      // UR の特訓ボーナスは Beat に対して +1800
-      expect(TRAIN_BONUS.UR).toBe(1800);
-      expect(untrainedTeam.rawBeat).toBe(tenthTamakiMainCard.beat_max! - TRAIN_BONUS.UR);
+      // 10th Anniversary 四葉環: sp_time=6 × sp_value=300 = 1800 (spec v1.0.7 §6-3 AM20-21)
+      expect(tenthTamakiMainCard.sp_time! * tenthTamakiMainCard.sp_value!).toBe(1800);
+      expect(untrainedTeam.rawBeat).toBe(
+        tenthTamakiMainCard.beat_max! - tenthTamakiMainCard.sp_time! * tenthTamakiMainCard.sp_value!,
+      );
     });
 
     it('boosts only the center attribute (Beat) by 10% — UR center skill rate', () => {
@@ -115,6 +119,47 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(empty.Beat).toBe(0);
       expect(empty.Melody).toBe(0);
       expect(empty.cards).toHaveLength(0);
+    });
+
+    it('ラビットノートはキャラ単位1回・フレンド除外・特効非乗算 (spec §6-4 AN67-69 / §6-7, B2)', () => {
+      // Beat 属性の UR を選ぶ → Shout 成分にはセンター/フレンドボーナスが乗らず差分が裸で見える
+      const card = allCards.find(c => c.rarity === 'UR' && c.name && normalizeAttribute(c.attribute) === 'Beat')!;
+      const rn = { [card.name!]: { shout: 100, beat: 0, melody: 0 } };
+      const tiers = ['gold', 'gold', 'none', 'none', 'none', 'gold'] as EventBonusTier[];
+
+      // (1) 同一キャラ2枚(スロット0,1)でも加算は1回だけ・(2) 特効(×2.4)が乗らない
+      const deck2 = [card, card, null, null, null, null];
+      const diff2 = computeTeam(deck2, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn).Shout
+                  - computeTeam(deck2, [], monsterGenerationSong, tiers).Shout;
+      expect(diff2).toBe(100); // 2枚×2.4=480 ではなく、フラットに 100
+
+      // (3) フレンド枠(スロット5)だけにいるキャラには加算されない
+      const other = allCards.find(c => c.rarity === 'UR' && c.name && c.name !== card.name)!;
+      const deckF = [other, null, null, null, null, card];
+      const diffF = computeTeam(deckF, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn).Shout
+                  - computeTeam(deckF, [], monsterGenerationSong, tiers).Shout;
+      expect(diffF).toBe(0);
+    });
+
+    it('ラビットあり編成でも raw 合計 = Σ per-card 値の不変条件が保たれる (B2 レビュー対応)', () => {
+      // ラビット加算はキャラ初出スロット(0-4)の per-card 値に帰属するため、
+      // rawShout/rawBeat/rawMelody は常に cards[].shout_max/beat_max/melody_max の総和と一致する
+      // (deckSkillDistribution.ts の effectiveAppeal / CardDetailTable の「単純属性値計」が依存する整合条件)
+      const card = allCards.find(c => c.rarity === 'UR' && c.name && normalizeAttribute(c.attribute) === 'Beat')!;
+      const other = allCards.find(c => c.rarity === 'UR' && c.name && c.name !== card.name)!;
+      const rn = {
+        [card.name!]: { shout: 100, beat: 30, melody: 7 },
+        [other.name!]: { shout: 11, beat: 0, melody: 5 },
+      };
+      const tiers = ['gold', 'gold', 'none', 'none', 'none', 'gold'] as EventBonusTier[];
+      // 同一キャラ重複(0,1) + 別キャラ(2) + フレンド(5) を含む編成
+      const deck = [card, card, other, null, null, other];
+      const team = computeTeam(deck, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn);
+      const sum = (k: 'shout_max' | 'beat_max' | 'melody_max') =>
+        team.cards.reduce((acc, c) => acc + c[k], 0);
+      expect(team.rawShout).toBe(sum('shout_max'));
+      expect(team.rawBeat).toBe(sum('beat_max'));
+      expect(team.rawMelody).toBe(sum('melody_max'));
     });
   });
 
@@ -286,7 +331,10 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
     it('calcMaxScore (縮小全発動時) は 427,948 と一致 (§5 の 2 段 floor 準拠)', () => {
       // 縮小区間がどのノーツを覆うかはノート順序 (flattenNotes の seed) に依存するため、
       // RNG 差し替え (ADR 0038) 時はこの固定値を再取得して更新する
-      expect(calcMaxScore(team, notes)).toBe(427948);
+      // B8: calcMaxBaseTotal が H40 の按分式 (閉形式) に置換され、旧キューイングシミュレーション
+      // 由来の値 427,948 から 432,834 に変化した (旧実装は秒→ノート離散化の丸め込みで理論値を
+      // やや過小評価していた)
+      expect(calcMaxScore(team, notes)).toBe(432834);
     });
 
     it('calcExpectedScore.finalScore (算術期待値、仕様 §5-3) は 348,051 と一致', () => {
@@ -344,7 +392,10 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
         { scoreUpAssist: false, maxShrinkCoverage: true },
       );
       const relDiff = Math.abs(result.mean - maxScore) / maxScore;
-      expect(relDiff).toBeLessThan(0.01);
+      // B8: calcMaxScore は H40 の按分式 (閉形式) に切り替わった一方、MC 側 (runOnce) は
+      // 引き続き秒→ノート離散化のキューイングシミュレーションのため、両者の乖離がわずかに
+      // 拡大した (0.9%→1.1%程度)。閉形式が理論値そのものであるため許容差を広げて対応する。
+      expect(relDiff).toBeLessThan(0.015);
     });
 
     it('maxShrinkCoverage: false の MC 平均は calcMaxScore より十分小さい (対照群)', async () => {
@@ -416,16 +467,18 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
 
     it('coveredSeconds は 100% キャップで effectiveSeconds (≈98.90秒) に一致', () => {
       expect(cov).not.toBeNull();
-      // 最大縮小時間合計 165 秒 > 98.90 秒 → min(165, 98.90) = 98.90
+      // 最大縮小時間合計 169 秒 > 98.90 秒 → min(169, 98.90) = 98.90
       expect(cov!.coveredSeconds).toBeCloseTo(effSeconds, 5);
     });
 
-    it('rawCoveredSeconds (生の単純合計) は 80 + 85 = 165 秒', () => {
-      expect(cov!.rawCoveredSeconds).toBe(165);
+    // H39 (spec §6-6 / B7): denom/count を小数のまま value と乗算しカード単位で 1 回だけ floor する。
+    // friend: floor(407/20 × 4) = floor(81.4) = 81 / member: floor(407/23 × 5) = floor(88.478…) = 88
+    it('rawCoveredSeconds (H39 準拠、カード別 floor 後の合計) は floor(407/20×4) + floor(407/23×5) = 81 + 88 = 169 秒', () => {
+      expect(cov!.rawCoveredSeconds).toBe(169);
     });
 
-    it('rawCoverageRate は 165/98.90 ≈ 166.84% で 100% を超過 (表示用: 100% 超過分は計算対象外)', () => {
-      expect(cov!.rawCoverageRate).toBeCloseTo(165 / effSeconds, 5);
+    it('rawCoverageRate は 169/98.90 ≈ 170.87% で 100% を超過 (表示用: 100% 超過分は計算対象外)', () => {
+      expect(cov!.rawCoverageRate).toBeCloseTo(169 / effSeconds, 5);
       expect(cov!.rawCoverageRate).toBeGreaterThan(1.0);
     });
 
@@ -433,12 +486,13 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
       expect(cov!.coverageRate).toBeCloseTo(1.0, 5);
     });
 
-    it('rawExpectedCoveredSeconds (生の単純加算) は 80×0.4 + 85×0.39 = 65.15 秒', () => {
-      expect(cov!.rawExpectedCoveredSeconds).toBeCloseTo(65.15, 5);
+    // friend: floor(407/20 × 0.40 × 4) = floor(32.56) = 32 / member: floor(407/23 × 0.39 × 5) = floor(34.506…) = 34
+    it('rawExpectedCoveredSeconds (H39 準拠、カード別 floor 後の合計) は floor(407/20×0.4×4) + floor(407/23×0.39×5) = 32 + 34 = 66 秒', () => {
+      expect(cov!.rawExpectedCoveredSeconds).toBe(66);
     });
 
-    it('expectedCoverageRate は単純加算の 65.15/98.90 ≈ 65.88% (100% 未満なのでキャップなし = raw と一致)', () => {
-      const naiveRate = (80 * 0.4 + 85 * 0.39) / effSeconds;
+    it('expectedCoverageRate は単純加算の 66/98.90 ≈ 66.73% (100% 未満なのでキャップなし = raw と一致)', () => {
+      const naiveRate = 66 / effSeconds;
       expect(cov!.expectedCoverageRate).toBeCloseTo(naiveRate, 5);
       expect(cov!.expectedCoverageRate).toBe(cov!.rawExpectedCoverageRate);
     });
@@ -538,17 +592,17 @@ describe('MONSTER GENERATiON で 縮小スキル 3 枚構成（キューイン�
     expect(shrinkCounts).toEqual([20, 22, 23]);
   });
 
-  it('calcShrinkCoverage: coverageRate は 100% キャップ / expectedCoverageRate も 100% (65.15 + 72×0.42 ≈ 95.4 秒 < 104 秒だが 3 枚合計で高カバー)', () => {
+  it('calcShrinkCoverage: coverageRate は 100% キャップ / expectedCoverageRate も 100% (97 秒 < 104 秒だが 3 枚合計で高カバー)', () => {
     const cov = calcShrinkCoverage(team, notesCount, 0, 21);
     expect(cov).not.toBeNull();
-    // 最大縮小時間合計 = 80 + 85 + 72 = 237 秒
-    expect(cov!.rawCoveredSeconds).toBe(80 + 85 + 72);
+    // H39 準拠 (カード別 floor 後の合計): floor(407/20×4)=81, floor(407/22×4)=74, floor(407/23×5)=88 → 243 秒
+    expect(cov!.rawCoveredSeconds).toBe(81 + 74 + 88);
     // 内部計算用は effectiveSeconds (= 104 × 407/428 ≈ 98.90) でキャップ
     const effSeconds = monsterGenerationSong.duration! * (1 - 21 / notesCount);
     expect(cov!.coveredSeconds).toBeCloseTo(effSeconds, 5);
     expect(cov!.coverageRate).toBeCloseTo(1.0, 5);
-    // 期待縮小時間合計 = 80×0.40 + 85×0.39 + 72×0.42 = 32 + 33.15 + 30.24 = 95.39 秒
-    expect(cov!.rawExpectedCoveredSeconds).toBeCloseTo(95.39, 2);
+    // H39 準拠: floor(407/20×0.40×4)=32, floor(407/22×0.42×4)=31, floor(407/23×0.39×5)=34 → 97 秒
+    expect(cov!.rawExpectedCoveredSeconds).toBe(32 + 31 + 34);
   });
 
   it('runSimulation (iter=2000, seed=42) の mean が calcExpectedScore.finalScore ±6% に収束 (3 枚でキューイング効果が顕在化)', async () => {
@@ -606,16 +660,22 @@ describe('MONSTER GENERATiON で ID861 (JokerFlag2 四葉環 / スコアアッ�
     expect(Math.floor(monsterGenerationSong.duration! / team.cards[0].skill!.count)).toBe(6);
   });
 
-  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = 6 × 7200 = 43,200 (docs/unit-test-case.md)', () => {
-    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(43200);
+  // B8: calcMaxBaseTotal のスコアアップ理論値は H38(B12=TRUE) の按分式
+  // floor((denom/count) × value) に統一 (旧: floor(denom/count) × value = 6 × 7200 = 43,200
+  // は count 側を先に floor する近似だった)。
+  // songDuration=104, count=16, value=7200 → floor(6.5 × 7200) = 46800
+  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = floor(104/16 × 7200) = 46,800 (H38 按分式 / B8)', () => {
+    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(46800);
   });
 
-  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = 6 × 7200 × 47% = 20,304 (docs/unit-test-case.md)', () => {
+  // H38 (spec §6-6 / B5): floor((songDuration/count) × per/100 × value)、maxActivations は先に floor しない。
+  // songDuration=104, count=16, per=47, value=7200 → floor(6.5 × 0.47 × 7200) = 21995
+  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = floor(104/16 × 47% × 7200) = 21,995 (H38 / B5)', () => {
     const expected = calcExpectedScore(team, notes, monsterGenerationSong.notes_count!);
-    expect(expected.scoreUpExpected).toBe(20304);
+    expect(expected.scoreUpExpected).toBe(21995);
     // 縮小スキル非所持なので shrinkExpected = 0
     expect(expected.shrinkExpected).toBe(0);
-    expect(expected.liveEndScore).toBe(expected.baseScore + 20304);
+    expect(expected.liveEndScore).toBe(expected.baseScore + 21995);
   });
 });
 
@@ -641,16 +701,19 @@ describe('MONSTER GENERATiON で ID204 (屋外フェス2 逢坂壮五 / スコ�
     expect(Math.floor(monsterGenerationSong.notes_count! / team.cards[0].skill!.count)).toBe(26);
   });
 
-  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = 26 × 6403 = 166,478 (docs/unit-test-case.md)', () => {
-    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(166478);
+  // B8: notesCount=428, count=16, value=6403 → floor((428/16) × 6403) = floor(26.75 × 6403) = 171280
+  // (旧: floor(428/16) × 6403 = 26 × 6403 = 166,478 は count 側を先に floor する近似だった)
+  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = floor(428/16 × 6403) = 171,280 (H38 按分式 / B8)', () => {
+    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(171280);
   });
 
-  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = floor(26 × 6403 × 46%) = 76,579 (docs/unit-test-case.md)', () => {
+  // H38 (spec §6-6 / B5): floor((notesCount/count) × per/100 × value)、maxActivations は先に floor しない。
+  // notesCount=428, count=16, per=46, value=6403 → floor(26.75 × 0.46 × 6403) = 78788
+  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = floor(428/16 × 46% × 6403) = 78,788 (H38 / B5)', () => {
     const expected = calcExpectedScore(team, notes, monsterGenerationSong.notes_count!);
-    // 26 × 6403 × 0.46 = 76,579.88 → floor → 76,579
-    expect(expected.scoreUpExpected).toBe(76579);
+    expect(expected.scoreUpExpected).toBe(78788);
     expect(expected.shrinkExpected).toBe(0);
-    expect(expected.liveEndScore).toBe(expected.baseScore + 76579);
+    expect(expected.liveEndScore).toBe(expected.baseScore + 78788);
   });
 });
 
@@ -672,8 +735,11 @@ describe('Lv5 が 0 のスキルデータは最大有効Lvへフォールバッ�
     expect(skill!.value).toBe(675);
   });
 
+  // B8: H38(B12=TRUE) の按分式 floor((notesCount/count) × value) を使う
+  // (旧: floor(notesCount/count) × value は count 側を先に floor する近似だった)
   it('フォールバック後の値でスコアアップ理論最大値を計算する', () => {
-    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(Math.floor(monsterGenerationSong.notes_count! / 17) * 675);
+    expect(calcMaxScore(team, notes) - calcMinScore(team, notes))
+      .toBe(Math.floor((monsterGenerationSong.notes_count! / 17) * 675));
   });
 });
 
@@ -703,11 +769,13 @@ describe('判定縮小（タイマー）は秒数ベースの縮小スキルと�
     expect(calcCardSkillMaxActivations(team, notesCount, 0)).toBe(4);
   });
 
-  it('縮小カバー率も秒数ベースの発動回数を使う', () => {
+  it('縮小カバー率も秒数ベースの発動回数を使う (H39 準拠: songDuration/count を小数のまま乗算)', () => {
     const coverage = calcShrinkCoverage(team, notesCount, 0, exclusion.totalExcluded);
     expect(coverage).not.toBeNull();
-    expect(coverage!.rawCoveredSeconds).toBe(4 * 4);
-    expect(coverage!.rawExpectedCoveredSeconds).toBeCloseTo(4 * 4 * 0.38, 5);
+    // floor(104/23 × 4) = floor(18.086…) = 18 (旧: floor(104/23)=4 回 × 4 = 16 から変更)
+    expect(coverage!.rawCoveredSeconds).toBe(18);
+    // floor(104/23 × 0.38 × 4) = floor(6.869…) = 6
+    expect(coverage!.rawExpectedCoveredSeconds).toBe(6);
   });
 
   it('縮小全発動モードの MC 発動回数も秒数ベースになる', async () => {
@@ -771,14 +839,19 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
     expect(team.broachMelody).toBe(0);
   });
 
-  it('センター (ID1500 UR/Beat) + フレンド (ID1139 UR/Beat) が両方 Beat / UR のため、Beat に +10% が 2 回 (独立 floor) 加算される', () => {
+  it('センター (ID1500 UR/Beat) + フレンド (ID1139 UR/Beat) が両方 Beat / UR のため、Beat ボーナスは合算後 1 回 floor される (spec §6-4 AN71, B4)', () => {
     // baseBeat = rawBeat + broachBeat = 100,129 + 800 = 100,929
-    // centerBeat = floor(100,929 × 0.10) = 10,092 (独立 floor)
-    // friendBeat = floor(100,929 × 0.10) = 10,092
-    // teamBeat = 100,929 + 10,092 + 10,092 = 121,113
+    // combinedBeat = floor(100,929 × (0.10+0.10)) = floor(20,185.8) = 20,185 (合算後 1 回 floor)
+    // teamBeat = 100,929 + 20,185 = 121,114
     expect(team.Shout).toBe(55356); // Shout 方向には倍率加算なし
-    expect(team.Beat).toBe(121113);
+    expect(team.Beat).toBe(121114);
     expect(team.Melody).toBe(61212); // Melody 方向にも倍率加算なし
+  });
+
+  it('内訳表示: centerBeat は単独 floor (10,092)、friendBeat は残差 (10,093) で合計が合算 floor と一致する', () => {
+    expect(team.centerBeat).toBe(10092);
+    expect(team.friendBeat).toBe(10093);
+    expect(team.centerBeat + team.friendBeat).toBe(20185);
   });
 
   describe('SCOREUPアシスト ON (+20%) 適用後の「デッキ合計」値', () => {
@@ -787,9 +860,10 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
     const deckBeat = Math.floor(team.Beat * (1 + SCOREUP_ASSIST_RATE));
     const deckMelody = Math.floor(team.Melody * (1 + SCOREUP_ASSIST_RATE));
 
-    it('アシスト後のデッキ合計は (S=66,427 / B=145,335 / M=73,454)', () => {
+    it('アシスト後のデッキ合計は (S=66,427 / B=145,336 / M=73,454)', () => {
+      // B4 変更で team.Beat が 121,113→121,114 になった分、floor(121,114×1.2)=145,336 (旧145,335)
       expect(deckShout).toBe(66427);
-      expect(deckBeat).toBe(145335);
+      expect(deckBeat).toBe(145336);
       expect(deckMelody).toBe(73454);
     });
 

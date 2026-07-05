@@ -8,6 +8,8 @@ const NOTE_RATE = { white: 0.025, color: 0.03 } as const;
  * スプレッドシート AM26 系 `if(自属性 && 未特訓, stat − (AM20×AM21), stat)` の減算分に相当。
  * UR のみ確定値。オラクル独立性のため engine の定数は import せずここで定義する。
  */
+// 注: シートの実式は sp_time×sp_value (B1/ADR 0041)。両 golden が全特訓のためこの定数は現状未使用経路。
+// 未特訓 golden を追加する際はここを sp_time×sp_value に追随させること
 const TRAIN_BONUS: Record<string, number> = { UR: 1800 };
 
 type AttrName = 'Shout' | 'Beat' | 'Melody';

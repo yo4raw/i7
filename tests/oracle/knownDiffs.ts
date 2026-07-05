@@ -16,47 +16,36 @@ export interface KnownDiff {
 
 export const KNOWN_DIFFS: KnownDiff[] = [
   {
-    component: 'scoreUp',
-    reason:
-      '活動回数: engine=floor(denom/count)を先取りしてから per/value を乗算 / スプレッドシート=小数のまま乗算し最後に1回 ROUNDDOWN。' +
-      'ADR 0036〜0039 とは無関係の旧来からの実装ギャップ（スプレッドシート基準では❌不一致だが、修正は別タスク）。' +
-      'docs/spreadsheet-score-calc-diff.md §3',
-  },
-  {
     component: 'shrink',
     reason:
-      '複数の要因が合成: ' +
-      '(a) 🔵意図的差異（ADR 0040）: 発動開始位置を「実際の衣装の最小発動回数」に合わせて先頭除外し、' +
-      'カバー率分母(effectiveSeconds)・基準スコアの対象範囲もこの除外に合わせて調整する（現行実装が正）。' +
-      '(b) ❌不一致（修正は別タスク）: 基準スコアにアシストが乗る（スプレッドシートはアシスト剥離 BN22=floor(BN21/1.2)）、' +
-      '発動回数を floor(eligibleCount/count) で先取りする（スプレッドシートは小数保持）、' +
-      '理論最大値はノート単位キューイングモデル（スプレッドシートは按分近似式）。' +
-      '(c) ⚠️ADR 0036 由来の意図的変更: 期待値を複数スキルの rate 加重平均で算出し、' +
-      '構造的到達可能秒数キャップ・期待値≤理論最大値クランプを追加（スプレッドシートに対応概念なし）。' +
-      'docs/shrink-skill-spec.md・docs/adr/0036-expected-score-rate-weighting.md・docs/adr/0040-*・docs/spreadsheet-score-calc-diff.md §4',
+      'B6(アシスト剥離)/B7(floor位置)/B8(理論最大値の按分式化) は ADR 0041 で修正済み。残差は意図的差異のみ: ' +
+      '(a) 発動開始位置の先頭除外とその帰結(カバー率分母/基準スコア範囲, ADR 0040) ' +
+      '(b) rate加重の構造的到達可能秒数キャップと expected≤max クランプ (ADR 0036)。' +
+      'docs/spreadsheet-score-calc-diff.md §4',
   },
-  // liveEnd/final は scoreUp/shrink 差分の波及で必然的にずれるため known-diff に含める
+  // liveEnd/final は shrink 差分の波及で必然的にずれるため known-diff に含める(scoreUp は bit-exact 化済み)
   {
     component: 'liveEnd',
-    reason: 'scoreUp/shrink の既知差分が合算(attr + scoreUp + shrink)に波及。docs/spreadsheet-score-calc-diff.md §8',
+    reason:
+      'shrink の残差(I1 + ADR 0036 由来)が合算(attr + scoreUp + shrink)に波及。' +
+      'docs/spreadsheet-score-calc-diff.md §8',
   },
   {
     component: 'final',
     reason:
-      'scoreUp/shrink の既知差分がバッジ適用後(floor(liveEnd × (1 + badgeRate/100)))に波及。' +
+      'shrink の残差(I1 + ADR 0036 由来)がバッジ適用後(floor(liveEnd × (1 + badgeRate/100)))に波及。' +
       'docs/spreadsheet-score-calc-diff.md §8',
   },
   // 注: attr は意図的に KNOWN_DIFFS に含めない。
   // 属性値は engine とスプレッドシートで一致するはず（センター/フレンド/特効/丸めの設計が同一）であり、
   // ここが unexpected になることは engine 側の回帰を意味する（回帰ガードの要）。
   //
-  // ただし v1.0.7 実装比較調査（docs/spreadsheet-score-calc-diff.md §0-2）で、golden fixture が
-  // 現状カバーしていない条件（未特訓カード・非UR センター/フレンド・ラビットノート登録済み・固有ブローチの
-  // 種類6/7が異なるカードに重複するデッキ等）では attr が実際にはスプレッドシートと不一致になる
-  // 実装バグ候補（特訓ペナルティのハードコード・ラビットノートの特効倍率混入等）が複数確認されている。
-  // これらは golden ケースの追加時に attr が unexpected 化する形で顕在化する想定であり、
-  // 発生した際は本コメントの通り「回帰」ではなく「既知のバグ候補が検出された」ことを意味する。
-  // 詳細は docs/spreadsheet-score-calc-diff.md §0-2 の❌一覧を参照。
+  // B1(特訓ペナルティ=sp_time×sp_value)/B2(ラビットノートのキャラ単位化・フレンド除外・特効非乗算)/
+  // B4(センター/フレンドボーナスの合算後1回丸め) は ADR 0041 で修正済み。
+  // これにより、未特訓カード・非UR センター/フレンド・ラビットノート登録済み等の条件で golden fixture を
+  // 追加しても attr は engine とスプレッドシートで一致するはずである。
+  // したがって golden ケースの追加時に attr が unexpected 化した場合は、既知のバグ候補ではなく
+  // engine 側の回帰を意味する。詳細は docs/spreadsheet-score-calc-diff.md §0-2 の B1〜B14 判定表を参照。
 ];
 
 export function classify(

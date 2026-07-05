@@ -69,23 +69,27 @@
 
 ```
 特訓済み → baseShout = shout_max,   baseBeat = beat_max,   baseMelody = melody_max
-未特訓   → base<自属性> = <自属性>_max - TRAIN_BONUS[rarity]
+未特訓   → base<自属性> = <自属性>_max - (card.sp_time × card.sp_value)
          → 他属性は *_max をそのまま使用
 ```
 
-特訓は「自属性のみ TRAIN_BONUS[rarity] 分増加」の仕様。TRAIN_BONUS は `constants.ts` で定義され、
-UR は `+1800`(他レアリティは未確定で 0 扱い)。
-例: 10th Anniversary 四葉環(UR / Beat) は `beat_max=7691` で、未特訓時は `7691 - 1800 = 5891`、
-Shout / Melody は特訓有無に関わらず `shout_max` / `melody_max` をそのまま使用する。
+未特訓ペナルティは **カード別実データ `sp_time × sp_value`**（spec v1.0.7 §6-3 AM20-21 準拠。B1）。
+レアリティ別の固定値ではなくカードごとに異なる（例: UR でも `sp_time×sp_value` が 1800 のカードと
+1500 のカードが混在する）。
+例: 10th Anniversary 四葉環(UR / Beat) は `beat_max=7691`、`sp_time=6 × sp_value=300 = 1800` のため
+未特訓時は `7691 - 1800 = 5891`、Shout / Melody は特訓有無に関わらず `shout_max` / `melody_max` を
+そのまま使用する。
 
 ### 3-2. ラビットノート加算 + 特効倍率
 
-ラビットノート（キャラ別の追加ボーナス）を先に加算し、特効倍率を掛けて **四捨五入**。
+ラビットノート（キャラ別の追加ボーナス）は **キャラ名の初出スロット（0〜4、フレンド枠 5 は対象外）に
+1 回だけ**、特効倍率を掛けない **フラット加算** として合算する（spec §6-4 AN67→AN68 / §6-7 AU26 準拠。B2）。
+特効倍率 (`bonusMult`) は base 属性値のみに乗算され、四捨五入は base 側にのみ適用される。
 
 ```
-s = round((baseShout  + rabbitNote.shout)  × bonusMult)
-b = round((baseBeat   + rabbitNote.beat)   × bonusMult)
-m = round((baseMelody + rabbitNote.melody) × bonusMult)
+s = round(baseShout  × bonusMult) + (キャラ初出スロット(0-4)なら rabbitNote.shout、それ以外は 0)
+b = round(baseBeat   × bonusMult) + (同上 rabbitNote.beat)
+m = round(baseMelody × bonusMult) + (同上 rabbitNote.melody)
 
 rawShout += s   // 6 枠合計
 rawBeat  += b
@@ -150,34 +154,35 @@ if (sharedBroach.targetAttribute) {
 
 ### 3-5. センター／フレンド ボーナス
 
-センター（スロット 0）とフレンド（スロット 5）のレアリティに応じて、各カードの属性に対応する属性値にボーナス率を加算する。**センター分とフレンド分はそれぞれ独立に floor し、その後合算する**（合算レートで 1 回 floor しない）。
+センター（スロット 0）とフレンド（スロット 5）のレアリティに応じて、各カードの属性に対応する属性値にボーナス率を加算する。**センター分・フレンド分は率を合算してから 1 回だけ floor する**（spec §6-4 AN71 準拠。B4。従来はセンター分・フレンド分を独立に floor してから加算していたが、シート同様に合算後 1 回 floor へ変更した）。
 
 ```
-centerRate = getCenterSkillRate(deck[0].rarity)   // UR=10, SSR=7, 他=6
+centerRate = getCenterSkillRate(deck[0].rarity)   // UR=10, SSR=7, 他=6 (B3: レアリティ別率を維持。ADR 0040)
 friendRate = getCenterSkillRate(deck[5].rarity)
 
 baseShout  = rawShout  + broachShoutTotal
 baseBeat   = rawBeat   + broachBeatTotal
 baseMelody = rawMelody + broachMelodyTotal
 
-centerShout  = centerAttr === 'Shout'  ? floor(baseShout  × centerRate / 100) : 0
-centerBeat   = centerAttr === 'Beat'   ? floor(baseBeat   × centerRate / 100) : 0
-centerMelody = centerAttr === 'Melody' ? floor(baseMelody × centerRate / 100) : 0
-friendShout  = friendAttr === 'Shout'  ? floor(baseShout  × friendRate / 100) : 0
-friendBeat   = friendAttr === 'Beat'   ? floor(baseBeat   × friendRate / 100) : 0
-friendMelody = friendAttr === 'Melody' ? floor(baseMelody × friendRate / 100) : 0
+bonusRate(attr) = (centerAttr === attr ? centerRate : 0) + (friendAttr === attr ? friendRate : 0)
+
+combinedShout  = floor(baseShout  × bonusRate('Shout')  / 100)
+combinedBeat   = floor(baseBeat   × bonusRate('Beat')   / 100)
+combinedMelody = floor(baseMelody × bonusRate('Melody') / 100)
 ```
 
-> **外部サイトとの差分**: 外部サイトは `ct_skill` テキスト内のキーワード（「かなり」「やや」「大きく」）で判定。実装はレアリティ判定（UR は必ず「かなり(10%)」、SSR は必ず「やや(7%)」という対応関係をコードにしたもの）。結果の数値は同じ。
+表示用の内訳（`centerShout` 等）はセンター分を単独 floor した値、フレンド分は `combined − center` の残差として算出し、合計が上記の合算丸めと一致するようにしている。
+
+> **外部サイトとの差分**: 外部サイトは `ct_skill` テキスト内のキーワード（「かなり」「やや」「大きく」）で判定。実装はレアリティ判定（UR は必ず「かなり(10%)」、SSR は必ず「やや(7%)」という対応関係をコードにしたもの）。結果の数値は同じ。またセンター/フレンドが同一属性のとき、レートの合算は外部サイト（一律 10%）とは異なる数値になりうるが、この点は意図的差異として現状維持する（ADR 0040 の B3）。
 
 ### 3-6. チーム属性値（最終）
 
-センター分とフレンド分を独立 floor した結果を base に加算する:
+センター分・フレンド分を合算後 1 回 floor した結果を base に加算する:
 
 ```
-teamShout  = baseShout  + centerShout  + friendShout
-teamBeat   = baseBeat   + centerBeat   + friendBeat
-teamMelody = baseMelody + centerMelody + friendMelody
+teamShout  = baseShout  + combinedShout
+teamBeat   = baseBeat   + combinedBeat
+teamMelody = baseMelody + combinedMelody
 ```
 
 `baseXxx = rawXxx + broachXxxTotal`。`broachXxxTotal` はスロット 0〜5（フレンド枠を含む全枠）の有効ブローチ値の合計（§3-3 / §3-4 の条件を満たすもの）。
@@ -341,23 +346,28 @@ baseScore = Σ calcNoteScore(getAppeal(team, attr, assist), note)
 
 ### 9-2. スコアアップ期待値
 
-通常スキル/タイマースキルそれぞれに適用:
+通常スキル/タイマースキルそれぞれに適用（spec §6-6 H38 準拠。B5）。**発動回数 `denom/skill.count` を
+先に floor せず小数のまま `per/100 × value` と乗算し、カード単位で 1 回だけ floor して合算する**
+（従来はカード横断で合計してから 1 回 floor する実装だったが、シートと同じ「カード単位で floor」に変更した）:
 
 ```
+scoreUpExpected = 0
 for 各 scoreUp/timerScoreUp スキル:
   denom = isTimer ? songDuration : notesCount
-  scoreUpExpected += floor(denom / skill.count) × (skill.per / 100) × skill.value
-scoreUpExpected = floor(scoreUpExpected)
+  scoreUpExpected += floor((denom / skill.count) × (skill.per / 100) × skill.value)
 ```
 
 ### 9-3. 判定縮小期待値（ADR 0036: rate 加重）
 
 ```
 coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount)
-shrinkExpected = floor(eligibleBaseScore × coverage.expectedWeightedCoverageRate)
+shrinkBase = assist ? floor(eligibleBaseScore / 1.2) : eligibleBaseScore
+shrinkExpected = floor(shrinkBase × coverage.expectedWeightedCoverageRate)
 ```
 
 - `eligibleBaseScore` は `note.excluded !== true` のノートのみを合算した assisted 素点。
+- `shrinkBase` は `eligibleBaseScore` からアシスト分（×1.2）を **剥離**した基準スコア（spec §6-5 BN22 準拠。B6。
+  従来はアシスト適用後の素点をそのまま基準スコアに使っていたが、シートと同じ「アシスト剥離後」の値に変更した）。
 - `expectedWeightedCoverageRate` はスキルごとの `期待カバー秒ᵢ × (rateᵢ − 1)` を加重合算し、
   構造的到達可能秒数 `capSeconds` で比例縮小キャップした値（§10-2）。
 - デッキ内の縮小スキルが単一 rate の場合、旧式 `(maxRate − 1.0) × expectedCoverageRate` と同値。
@@ -379,13 +389,18 @@ finalScore   = floor(liveEndScore × badgeMult) + broachScoreBonus
 
 ### 10-1. 単純加算
 
+各縮小カードの発動回数 `denom/skill.count` は先に floor せず、`value`（と `per/100`・`rate-1.0`）を
+乗算してからカード単位で 1 回だけ floor する（spec §6-6 H39 準拠。B7。従来は `floor(denom/count)` を
+先に取ってから乗算していたが、シートと同じ「小数のまま乗算し最後に floor」へ変更した）:
+
 ```
-eligibleCount = notesCount − excludeHeadCount
+denom = isShrinkTimer(skill) ? songDuration : max(0, notesCount − excludeHeadCount)
 for 各縮小カード:
-  numActivations = floor(eligibleCount / skill.count)
-  rawCoveredSeconds           += numActivations × skill.value
-  rawExpectedCoveredSeconds   += numActivations × skill.value × (skill.per / 100)
-  rawExpectedWeightedSeconds  += numActivations × skill.value × (skill.per / 100) × (skill.rate − 1.0)  // ADR 0036
+  coveredSecᵢ   = floor((denom / skill.count) × skill.value)
+  expectedSecᵢ  = floor((denom / skill.count) × (skill.per / 100) × skill.value)
+  rawCoveredSeconds           += coveredSecᵢ
+  rawExpectedCoveredSeconds   += expectedSecᵢ
+  rawExpectedWeightedSeconds  += expectedSecᵢ × (skill.rate − 1.0)  // ADR 0036
 ```
 
 ### 10-2. 100% キャップ
@@ -431,7 +446,7 @@ rawExpectedCoverageRate = rawExpectedCoveredSeconds / effectiveSeconds  // 100% 
 | 型 | 用途 |
 |----|------|
 | `FlatNote` | 1 ノーツ `{ attribute, type, group }` |
-| `CardSkill` | スキル情報 `{ cardIndex, skillType, originalType, count, per, value, rate, isTimer, isShrink, spTime }`。`rate` は判定縮小スキルの倍率（Lv 毎に 1.2〜1.6、非縮小スキルは 0）。`originalType` は表示用の元 `ap_skill_type`（正規化後）。`spTime` はカードの **特訓可能回数**（「特訓済み」は `spTime` 分の特訓完了状態を意味し、`TRAIN_BONUS` が属性値に加算されている） |
+| `CardSkill` | スキル情報 `{ cardIndex, skillType, originalType, count, per, value, rate, isTimer, isShrink, spTime }`。`rate` は判定縮小スキルの倍率（Lv 毎に 1.2〜1.6、非縮小スキルは 0）。`originalType` は表示用の元 `ap_skill_type`（正規化後）。`spTime` はカードの **特訓可能回数**（「特訓済み」は `card.sp_time × card.sp_value` 分の特訓完了状態を意味し、この値が自属性の属性値に加算されている。§3-1 / B1） |
 | `DeckCard` | デッキ内カード情報（属性値＋ブローチ＋スキル） |
 | `ComputedTeam` | チーム属性値（`Shout / ShoutAssisted` 等を含む） |
 | `SimulationResult` | MC 結果 |
@@ -499,9 +514,9 @@ interface ScoreOptions {
 
 | 関数 | 戻り値 | 概要 |
 |------|--------|------|
-| `calcCardSkillMaxActivations(team, notesCount, slotIndex)` | スキル最大発動回数 | タイマー: `floor(songDuration / count)` / それ以外: `floor(notesCount / count)`。先頭除外は考慮しない（`docs/shrink-skill-spec.md §2`） |
-| `calcCardSkillExpected(team, notes, notesCount, slotIndex, options)` | 単一カード期待値 | スコアアップ系: `floor(maxAct × per/100 × value)` / 縮小: 当該カードのみが縮小持つと仮定して `eligibleBaseScore × (rate − 1.0) × min(numAct × value × per/100, songDuration) / songDuration` を floor |
-| `calcCardSkillMax(team, notes, notesCount, slotIndex, options)` | 単一カード論理最高値 | スコアアップ系: `maxAct × value` / 縮小: 当該カードのみが縮小持つと仮定して `eligibleBaseScore × (rate − 1.0) × min(numAct × value, songDuration) / songDuration` を floor |
+| `calcCardSkillMaxActivations(team, notesCount, slotIndex, excludedCount?)` | スキル最大発動回数 | タイマー: `floor(songDuration / count)` / ノート型スコアアップ: `floor(notesCount / count)` / ノート型縮小: `floor((notesCount − excludedCount) / count)`（実シミュレーションの分母に合わせ excluded 分を控除。ADR 0036） |
+| `calcCardSkillExpected(team, notes, notesCount, slotIndex, options)` | 単一カード期待値 | スコアアップ系: `floor((denom/count) × per/100 × value)`（denom は notesCount またはタイマーなら songDuration。H38 準拠。B5） / 縮小: 当該カードのみが縮小持つと仮定して `shrinkBase(= assist時 floor(eligibleBaseScore/1.2)、BN22準拠。B6) × (rate − 1.0) × coverageRate` を floor |
+| `calcCardSkillMax(team, notes, notesCount, slotIndex, options)` | 単一カード論理最高値 | スコアアップ系: `floor((denom/count) × value)` / 縮小: 当該カードのみが縮小持つと仮定して `shrinkBase × (rate − 1.0) × ratio`（H40 按分式と同形、単一カードのため按分比=1。B8）を floor |
 
 **注意**: 縮小系のカード単独関数は「自分以外に縮小スキルが無い」前提で計算するため、デッキに複数縮小カードがある場合の合計とはキューイング・カバー率上限の影響で必ずしも一致しない。あくまで **カードごとの相対比較・寄与確認のための表示用近似値** である。
 

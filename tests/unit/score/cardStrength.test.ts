@@ -13,7 +13,8 @@ import {
   formatScore,
 } from '../../../src/lib/score/cardStrength';
 import { calcExpectedScore, computeTeam, flattenNotes } from '../../../src/lib/score/engine';
-import { findCardById, findSongById } from '../../fixtures';
+import { normalizeAttribute } from '../../../src/lib/score/types';
+import { allCards, findCardById, findSongById } from '../../fixtures';
 
 const EMPTY_GROUP = {
   shout_white: 0, shout_color: 0, beat_white: 0, beat_color: 0, melody_white: 0, melody_color: 0,
@@ -293,5 +294,26 @@ describe('broachPremiseNote', () => {
     expect(broachPremiseNote(makeBroach({ broach_type: 1 }))).toBeNull();
     expect(broachPremiseNote(makeBroach({ broach_type: 6 }))).toBeNull();
     expect(broachPremiseNote(null)).toBeNull();
+  });
+});
+
+describe('computeTeam: 未特訓ペナルティはカード別実データを使う (spec v1.0.7 §6-3 AM20-21)', () => {
+  it('未特訓ペナルティはカード別 sp_time×sp_value を使う (spec §6-3 AM20-21)', () => {
+    const song = makeSong();
+    // フィクスチャから sp_time*sp_value !== 1800 の UR カードを検索
+    const card = allCards.find(c =>
+      c.rarity === 'UR' && (c.sp_time || 0) * (c.sp_value || 0) > 0
+      && (c.sp_time || 0) * (c.sp_value || 0) !== 1800)!;
+    expect(card).toBeDefined();
+    const penalty = (card.sp_time || 0) * (card.sp_value || 0);
+    const deck: (Card | null)[] = [card, null, null, null, null, null];
+    const trained = computeTeam(deck, [], song, undefined, [true]);
+    const untrained = computeTeam(deck, [], song, undefined, [false]);
+    const attr = normalizeAttribute(card.attribute); // 自属性のみ減算
+    // deck[0] は常にセンター扱いになりセンタースキル倍率が team.Shout/Beat/Melody に
+    // 乗ってしまうため、倍率前の raw 値で比較して減算分をそのまま検証する
+    const rawKey = `raw${attr}` as 'rawShout' | 'rawBeat' | 'rawMelody';
+    // 特効なし(bonusMult=1)・センタースキル適用前(raw)なので差はそのまま penalty
+    expect(trained[rawKey] - untrained[rawKey]).toBe(penalty);
   });
 });

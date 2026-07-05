@@ -22,6 +22,11 @@ export function countUsedBroachs(
   return used;
 }
 
+/** 共通ブローチ所持数が 1 件でも登録されている (正の値がある) か */
+export function hasRegisteredBroachCounts(counts: Record<string, number>): boolean {
+  return Object.values(counts).some((n) => n > 0);
+}
+
 /** 所持数を超過して装備されている broachId のリスト (slot 0-4 のみ対象) */
 export function broachViolations(
   sharedBroachs: number[][],

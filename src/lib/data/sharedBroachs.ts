@@ -16,6 +16,7 @@ export const SHARED_BROACHS: SharedBroach[] = [
   { id: 3, name: 'ALL500', shout: 500, beat: 500, melody: 500 },
   { id: 4, name: 'ALL300', shout: 300, beat: 300, melody: 300 },
   { id: 5, name: 'ALL200', shout: 200, beat: 200, melody: 200 },
+  { id: 27, name: 'Shout1150', shout: 1150, beat: 0, melody: 0 },
   { id: 6, name: 'Shout1100', shout: 1100, beat: 0, melody: 0 },
   { id: 7, name: 'Shout1000', shout: 1000, beat: 0, melody: 0 },
   { id: 8, name: 'Shout900', shout: 900, beat: 0, melody: 0 },

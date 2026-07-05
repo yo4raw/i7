@@ -35,7 +35,10 @@ describe('runSimulation: タイマー型スコアアップ (MC 分岐)', () => {
     const r = await runSimulation(team, notes, 30, undefined, MC_SEED, {
       scoreUpAssist: false, maxScoreUpCoverage: true,
     });
-    expect(Math.abs(r.mean - max) / max).toBeLessThan(0.001);
+    // B8: calcMaxScore の scoreUp 理論値は H38 の按分式 (閉形式、count を先に floor しない)
+    // に置換された一方、MC 側 (runOnce) は引き続き離散発動回数 (floor(denom/count)) ベースの
+    // ため、両者の乖離がわずかに広がった (旧 0.1%→現状 2.4%程度)。許容差を広げて対応する。
+    expect(Math.abs(r.mean - max) / max).toBeLessThan(0.03);
     const stat = r.cardStats.find((s) => s.skillType.includes('スコアアップ'));
     expect(stat!.avgActivations).toBe(6);
   });
@@ -59,7 +62,9 @@ describe('runSimulation: 通常型スコアアップ (コンボ, Phase B 分岐)
     });
     const stat = r.cardStats.find((s) => s.skillType.includes('スコアアップ'));
     expect(stat!.avgActivations).toBe(26);
-    expect(Math.abs(r.mean - max) / max).toBeLessThan(0.001);
+    // B8: calcMaxScore が H38 按分式 (閉形式) に置換され、離散発動回数ベースの MC 平均との
+    // 乖離が広がった (旧 0.1%→現状 1.6%程度)
+    expect(Math.abs(r.mean - max) / max).toBeLessThan(0.03);
   });
 
   it('onProgress コールバックが進捗(0〜1)で呼ばれる', async () => {

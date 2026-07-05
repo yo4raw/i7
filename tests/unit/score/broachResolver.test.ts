@@ -16,9 +16,16 @@ const ichi5th = findCardById(1347);
 const mitsuki5th = findCardById(1349);
 /** 謹賀新年 IDOLiSH7 (UR、スコアUPブローチ song=MEMORiES MELODiES score=1000) */
 const kinga = findCardById(959);
+/** 5th Anniversary 四葉環 (UR/Shout、属性UP上限ありブローチ limit=2、ichi5th とは別カード) */
+const tamaki5th = findCardById(1350);
+/** 5th Anniversary 逢坂壮五 (UR/Shout、属性UP上限ありブローチ limit=2、ichi5th とは別カード) */
+const sougo5th = findCardById(1351);
+/** 謹賀新年2021 TRIGGER (UR、スコアUPブローチ song=DAYBREAK INTERLUDE score=1500 limit=1) */
+const kinga2021 = findCardById(1429);
 
 const monsterGeneration = findSongById(2);   // MONSTER GENERATiON
 const memoriesMelodies = findSongById(36);   // MEMORiES MELODiES (謹賀新年ブローチの対象曲)
+const daybreakInterlude = findSongById(84);  // DAYBREAK INTERLUDE (謹賀新年2021ブローチの対象曲)
 
 const shoutUr = allCards.find(
   (c) => c.rarity === 'UR' && c.groupname === 'IDOLiSH7' && normalizeAttribute(c.attribute) === 'Shout',
@@ -88,6 +95,29 @@ describe('resolveDeckBroachs (固定ブローチの条件解決)', () => {
 
     const partial = resolveDeckBroachs(deckOf(yamato5th), allBroachs, monsterGeneration);
     expect(broachOfType(partial, 0, 7).active).toBe(false);
+  });
+
+  it('上限判定は同一カードIDのみ対象: 別カードの種類6同士は競合しない (spec §6-3 AM36, B9)', () => {
+    // ichi5th(1347)/tamaki5th(1350)/sougo5th(1351) はいずれも属性UP上限あり(種類6)・limit=2 のブローチを
+    // 1件ずつ持つ「別々の」UR カード。現行の broach_type プール判定(種類6 全体で limit 枚まで)では
+    // 3枚目が pool の limit=2 を超えて inactive になってしまうが、
+    // 新仕様(同一カードID単位でカウント)では各カードが自分専用のカウンターを持つため全員 active になる。
+    const resolved = resolveDeckBroachs(deckOf(ichi5th, tamaki5th, sougo5th), allBroachs, monsterGeneration);
+    expect(broachOfType(resolved, 0, 6).active).toBe(true);
+    expect(broachOfType(resolved, 1, 6).active).toBe(true);
+    expect(broachOfType(resolved, 2, 6).active).toBe(true);
+  });
+
+  it('種類9(スコアUP)にも limit ゲートが効く (B10)', () => {
+    // kinga2021(1429) のブローチは broach_type=9・limit=1・song=DAYBREAK INTERLUDE・score=1500。
+    // 同一カードを2枚編成すると、新仕様(limit を持つブローチは種類を問わず同一カードID単位でカウント)
+    // では1枚目のみ active になり、calcBroachScoreBonus は1500(1回分)になる。
+    const resolved = resolveDeckBroachs(deckOf(kinga2021, kinga2021), allBroachs, daybreakInterlude);
+    const first = broachOfType(resolved, 0, 9);
+    const second = broachOfType(resolved, 1, 9);
+    expect(first.active).toBe(true);
+    expect(second.active).toBe(false);
+    expect(calcBroachScoreBonus(resolved)).toBe(1500);
   });
 
   it('selectedBroachIds 指定時: null のスロットはブローチなし、id 指定はそのブローチのみ', () => {
