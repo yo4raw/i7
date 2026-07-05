@@ -71,15 +71,24 @@ describe('resolveDeckBroachs: limit が null のとき Infinity 扱い (line 163
   });
 });
 
-describe('resolveDeckBroachs: 種類6 のデッキ内上限処理 (limit 超過で active=false)', () => {
-  it('limit=1 の type6 が同一デッキに 2 枚あると 2 枚目は active=false', () => {
+describe('resolveDeckBroachs: 種類6 のデッキ内上限処理 (limit は同一カードID単位、B9)', () => {
+  it('limit=1 の type6 ブローチを持つ同一カードが2枚デッキにあると2枚目は active=false', () => {
+    // 同じカード (urCard) を2枚編成した場合は同一カードIDなので limit=1 の上限が効く
+    const twoCopyDeck: (Card | null)[] = [urCard, urCard, null, null, null, null];
+    const b1 = makeBroach({ id: 101, card_id: urCard.cardID, broach_type: 6, beat: 500, limit: 1 });
+    const resolved = resolveDeckBroachs(twoCopyDeck, [b1], song);
+    const actives = [...resolved.values()].flat().filter(rb => rb.active);
+    expect(actives).toHaveLength(1);
+  });
+
+  it('limit=1 の type6 ブローチを持つ「別カード」2枚は競合せず両方 active になる (spec §6-3 AM36, B9)', () => {
     const urCard2 = findCardById(960); // 別の UR
     const twoCardDeck: (Card | null)[] = [urCard, urCard2, null, null, null, null];
     const b1 = makeBroach({ id: 101, card_id: urCard.cardID, broach_type: 6, beat: 500, limit: 1 });
     const b2 = makeBroach({ id: 102, card_id: urCard2.cardID, broach_type: 6, beat: 500, limit: 1 });
     const resolved = resolveDeckBroachs(twoCardDeck, [b1, b2], song);
     const actives = [...resolved.values()].flat().filter(rb => rb.active);
-    expect(actives).toHaveLength(1);
+    expect(actives).toHaveLength(2);
   });
 });
 
