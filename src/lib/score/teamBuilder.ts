@@ -12,7 +12,6 @@ import {
 } from './types';
 import {
   CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
-  TRAIN_BONUS,
 } from './constants';
 import { EVENT_BONUS_MULTIPLIER, type EventBonusTier } from '../data/eventBonusTiers';
 import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
@@ -137,9 +136,10 @@ export function computeTeam(
     const bonusMult = EVENT_BONUS_MULTIPLIER[bonusTier];
     const trained = trainedFlags?.[i] ?? true;
 
-    // 未特訓は自属性のみ TRAIN_BONUS を引いた値、他属性と特訓済みは *_max をそのまま使う
+    // 未特訓は自属性のみカード別実データの sp_time×sp_value を引いた値、他属性と特訓済みは *_max をそのまま使う
+    // (spec v1.0.7 §6-3 AM20-21。レアリティ別固定値ではなくカードごとの sp_time/sp_value を使用)
     const cardAttr = normalizeAttribute(card.attribute);
-    const trainBonus = TRAIN_BONUS[card.rarity ?? ''] ?? 0;
+    const trainBonus = (card.sp_time || 0) * (card.sp_value || 0);
     const shoutMax = card.shout_max || 0;
     const beatMax = card.beat_max || 0;
     const melodyMax = card.melody_max || 0;

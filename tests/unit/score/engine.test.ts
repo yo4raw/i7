@@ -14,7 +14,7 @@ import {
   getCenterSkillRate,
   runSimulation,
 } from '../../../src/lib/score/engine';
-import { CENTER_SKILL_RATES, MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE, TRAIN_BONUS } from '../../../src/lib/score/constants';
+import { CENTER_SKILL_RATES, MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER, SCOREUP_ASSIST_RATE } from '../../../src/lib/score/constants';
 import { allBroachs, findBroachsByCardId, findCardById, findSongById } from '../../fixtures';
 
 /** 10th Anniversary 四葉環 (UR / Beat / BAD→Perfect スキル) */
@@ -65,9 +65,11 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(untrainedTeam.rawShout).toBe(3898);
       expect(untrainedTeam.rawBeat).toBe(5891);
       expect(untrainedTeam.rawMelody).toBe(4611);
-      // UR の特訓ボーナスは Beat に対して +1800
-      expect(TRAIN_BONUS.UR).toBe(1800);
-      expect(untrainedTeam.rawBeat).toBe(tenthTamakiMainCard.beat_max! - TRAIN_BONUS.UR);
+      // 10th Anniversary 四葉環: sp_time=6 × sp_value=300 = 1800 (spec v1.0.7 §6-3 AM20-21)
+      expect(tenthTamakiMainCard.sp_time! * tenthTamakiMainCard.sp_value!).toBe(1800);
+      expect(untrainedTeam.rawBeat).toBe(
+        tenthTamakiMainCard.beat_max! - tenthTamakiMainCard.sp_time! * tenthTamakiMainCard.sp_value!,
+      );
     });
 
     it('boosts only the center attribute (Beat) by 10% — UR center skill rate', () => {

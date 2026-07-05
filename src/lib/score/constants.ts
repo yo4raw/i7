@@ -23,12 +23,3 @@ export const CENTER_SKILL_RATES: Record<string, number> = {
   'SSR': 7,
 };
 export const DEFAULT_CENTER_SKILL_RATE = 6;
-
-/**
- * 特訓によるカード自属性への固定加算値（レアリティ → 加算値）。
- * 特訓済み時は *_max、未特訓時は自属性のみ *_max - TRAIN_BONUS を使用する。
- * 他レアリティ(SSR 等)は仕様が未確定のため 0 として扱われる。
- */
-export const TRAIN_BONUS: Record<string, number> = {
-  UR: 1800,
-};
