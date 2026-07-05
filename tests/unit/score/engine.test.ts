@@ -331,7 +331,10 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
     it('calcMaxScore (縮小全発動時) は 427,948 と一致 (§5 の 2 段 floor 準拠)', () => {
       // 縮小区間がどのノーツを覆うかはノート順序 (flattenNotes の seed) に依存するため、
       // RNG 差し替え (ADR 0038) 時はこの固定値を再取得して更新する
-      expect(calcMaxScore(team, notes)).toBe(427948);
+      // B8: calcMaxBaseTotal が H40 の按分式 (閉形式) に置換され、旧キューイングシミュレーション
+      // 由来の値 427,948 から 432,834 に変化した (旧実装は秒→ノート離散化の丸め込みで理論値を
+      // やや過小評価していた)
+      expect(calcMaxScore(team, notes)).toBe(432834);
     });
 
     it('calcExpectedScore.finalScore (算術期待値、仕様 §5-3) は 348,051 と一致', () => {
@@ -389,7 +392,10 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
         { scoreUpAssist: false, maxShrinkCoverage: true },
       );
       const relDiff = Math.abs(result.mean - maxScore) / maxScore;
-      expect(relDiff).toBeLessThan(0.01);
+      // B8: calcMaxScore は H40 の按分式 (閉形式) に切り替わった一方、MC 側 (runOnce) は
+      // 引き続き秒→ノート離散化のキューイングシミュレーションのため、両者の乖離がわずかに
+      // 拡大した (0.9%→1.1%程度)。閉形式が理論値そのものであるため許容差を広げて対応する。
+      expect(relDiff).toBeLessThan(0.015);
     });
 
     it('maxShrinkCoverage: false の MC 平均は calcMaxScore より十分小さい (対照群)', async () => {
@@ -654,8 +660,12 @@ describe('MONSTER GENERATiON で ID861 (JokerFlag2 四葉環 / スコアアッ�
     expect(Math.floor(monsterGenerationSong.duration! / team.cards[0].skill!.count)).toBe(6);
   });
 
-  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = 6 × 7200 = 43,200 (docs/unit-test-case.md)', () => {
-    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(43200);
+  // B8: calcMaxBaseTotal のスコアアップ理論値は H38(B12=TRUE) の按分式
+  // floor((denom/count) × value) に統一 (旧: floor(denom/count) × value = 6 × 7200 = 43,200
+  // は count 側を先に floor する近似だった)。
+  // songDuration=104, count=16, value=7200 → floor(6.5 × 7200) = 46800
+  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = floor(104/16 × 7200) = 46,800 (H38 按分式 / B8)', () => {
+    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(46800);
   });
 
   // H38 (spec §6-6 / B5): floor((songDuration/count) × per/100 × value)、maxActivations は先に floor しない。
@@ -691,8 +701,10 @@ describe('MONSTER GENERATiON で ID204 (屋外フェス2 逢坂壮五 / スコ�
     expect(Math.floor(monsterGenerationSong.notes_count! / team.cards[0].skill!.count)).toBe(26);
   });
 
-  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = 26 × 6403 = 166,478 (docs/unit-test-case.md)', () => {
-    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(166478);
+  // B8: notesCount=428, count=16, value=6403 → floor((428/16) × 6403) = floor(26.75 × 6403) = 171280
+  // (旧: floor(428/16) × 6403 = 26 × 6403 = 166,478 は count 側を先に floor する近似だった)
+  it('スコアアップ理論最大値: calcMaxScore - calcMinScore = floor(428/16 × 6403) = 171,280 (H38 按分式 / B8)', () => {
+    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(171280);
   });
 
   // H38 (spec §6-6 / B5): floor((notesCount/count) × per/100 × value)、maxActivations は先に floor しない。
@@ -723,8 +735,11 @@ describe('Lv5 が 0 のスキルデータは最大有効Lvへフォールバッ�
     expect(skill!.value).toBe(675);
   });
 
+  // B8: H38(B12=TRUE) の按分式 floor((notesCount/count) × value) を使う
+  // (旧: floor(notesCount/count) × value は count 側を先に floor する近似だった)
   it('フォールバック後の値でスコアアップ理論最大値を計算する', () => {
-    expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(Math.floor(monsterGenerationSong.notes_count! / 17) * 675);
+    expect(calcMaxScore(team, notes) - calcMinScore(team, notes))
+      .toBe(Math.floor((monsterGenerationSong.notes_count! / 17) * 675));
   });
 });
 

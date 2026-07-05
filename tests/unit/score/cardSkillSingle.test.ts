@@ -62,14 +62,18 @@ describe('calcCardSkillExpected', () => {
 });
 
 describe('calcCardSkillMax', () => {
-  it('タイマー scoreUp: 6 × 7200 = 43200', () => {
+  // B8: H38(B12=TRUE) の按分式 floor((denom/count) × value) に統一
+  // (旧: floor(denom/count) × value = 6 × 7200 = 43200 は count 側を先に floor する近似だった)。
+  // songDuration=104, count=16, value=7200 → floor(6.5 × 7200) = 46800
+  it('タイマー scoreUp: floor((songDuration/count) × value) = 46800', () => {
     const team = computeTeam(deckOf(timerScoreUp), [], song);
-    expect(calcCardSkillMax(team, flattenNotes(song, SEED), notesCount, 0)).toBe(43200);
+    expect(calcCardSkillMax(team, flattenNotes(song, SEED), notesCount, 0)).toBe(46800);
   });
 
-  it('コンボ scoreUp: 26 × 6403 = 166478', () => {
+  // notesCount=428, count=16, value=6403 → floor(26.75 × 6403) = 171280
+  it('コンボ scoreUp: floor((notesCount/count) × value) = 171280', () => {
     const team = computeTeam(deckOf(comboScoreUp), [], song);
-    expect(calcCardSkillMax(team, flattenNotes(song, SEED), notesCount, 0)).toBe(166478);
+    expect(calcCardSkillMax(team, flattenNotes(song, SEED), notesCount, 0)).toBe(171280);
   });
 
   it('判定縮小カード: 正の最大値を返す', () => {

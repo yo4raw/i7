@@ -254,105 +254,57 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
   return applyFinalBonus(calcMaxBaseTotal(team, notes, options), team, options);
 }
 
-/** スキル全発動時のバッジ・ブローチ適用前の合計 (calcMaxScore の内部値。期待値のクランプにも使用) */
+/** スキル全発動時のバッジ・ブローチ適用前の合計 (spec §6-6 H38(B12=TRUE)/H40(B15=TRUE) の按分式移植。B8) */
 function calcMaxBaseTotal(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const N = notes.length;
   const assist = options?.scoreUpAssist ?? false;
+  const notesCount = N;
 
-  // タイマー型スコアアップ: 全タイミングで必ず発動、発動1回につき value 点を起点ノートに加算
-  const timerBonus = new Array<number>(N).fill(0);
-  const timerShrinkTriggers = Array.from(
-    { length: N },
-    (): { cardIndex: number; durationNotes: number; rate: number }[] => [],
-  );
-  for (const dc of team.cards) {
-    const skill = dc.skill;
-    if (!skill || !skill.isTimer || skill.count <= 0) continue;
-
-    const maxAct = Math.floor(team.songDuration / skill.count);
-    for (let a = 1; a <= maxAct; a++) {
-      const t = a * skill.count;
-      const noteIndex = calcNoteIndexAtTime(t, team.songDuration, N);
-      if (noteIndex >= 0 && skill.isShrink) {
-        timerShrinkTriggers[noteIndex].push({
-          cardIndex: dc.slotIndex,
-          durationNotes: shrinkDurationNotes(skill.value, team.songDuration, N),
-          rate: skill.rate,
-        });
-      } else if (noteIndex >= 0) {
-        timerBonus[noteIndex] += skill.value;
-      }
-    }
+  // 属性値素点(アシスト込み)と縮小対象素点(I1: excluded 除外)
+  let baseScore = 0;
+  let eligibleBaseScore = 0;
+  let excludedCount = 0;
+  for (const note of notes) {
+    const s = calcNoteScore(getAppeal(team, note.attribute, assist), note);
+    baseScore += s;
+    if (note.excluded) { excludedCount++; continue; }
+    eligibleBaseScore += s;
   }
 
-  // 通常スキル: 全タイミングで必ず発動、縮小スキルはキューイング（§1-1）
-  let total = 0;
-  const counters = team.cards.map(() => 0);
-  let activeShrink: ActiveShrink | null = null;
-  const shrinkQueue: ShrinkQueueItem[] = [];
+  // スコアアップ理論値: カード別 floor((denom/count) × value) (H38 の B12=TRUE 形)
+  let scoreUpMax = 0;
+  for (const dc of team.cards) {
+    const skill = dc.skill;
+    if (!skill || skill.isShrink || skill.count <= 0) continue;
+    const denom = skill.isTimer ? team.songDuration : notesCount;
+    if (denom <= 0) continue;
+    scoreUpMax += Math.floor((denom / skill.count) * skill.value);
+  }
 
-  for (let n = 0; n < N; n++) {
-    const note = notes[n];
-    let scoreUpSum = timerBonus[n];
-
-    // Phase A: 終了した active 区間を順次ドレインし、queue の次を繋げる
-    while (activeShrink && activeShrink.endNote <= n) {
-      const next = shrinkQueue.shift();
-      if (next) {
-        activeShrink = {
-          endNote: n + next.durationNotes,
-          rate: next.rate,
-          sourceCard: next.sourceCard,
-        };
-      } else {
-        activeShrink = null;
-      }
-    }
-
-    for (const trigger of timerShrinkTriggers[n]) {
-      activeShrink = enqueueShrink(
-        shrinkQueue,
-        activeShrink,
-        n,
-        trigger.durationNotes,
-        trigger.rate,
-        trigger.cardIndex,
-      );
-    }
-
-    // Phase B: 各カードのトリガー判定（全成功）
-    for (let c = 0; c < team.cards.length; c++) {
-      const skill = team.cards[c].skill;
-      if (!skill || skill.isTimer) continue;
-      if (skill.count <= 0) continue;
-
-      // 判定縮小スキルは先頭除外ノートでは発動判定対象外（§2）
-      if (skill.isShrink && note.excluded) continue;
-
-      counters[c]++;
-      if (counters[c] >= skill.count) {
-        counters[c] = 0;
-        if (skill.isShrink) {
-          const durationNotes = shrinkDurationNotes(skill.value, team.songDuration, N);
-          activeShrink = enqueueShrink(shrinkQueue, activeShrink, n, durationNotes, skill.rate, c);
-        } else {
-          scoreUpSum += skill.value;
+  // 縮小理論値: H40 の按分式 (B15=TRUE、BN22 基準、I1 の effectiveSeconds)
+  let shrinkMax = 0;
+  const shrinkCards = team.cards.filter(dc => dc.skill?.isShrink && dc.skill.count > 0);
+  if (shrinkCards.length > 0) {
+    const headSeconds = shrinkHeadSeconds(team.songDuration, notesCount, excludedCount);
+    const effectiveSeconds = team.songDuration - headSeconds;
+    if (effectiveSeconds > 0) {
+      const shrinkBase = assist ? Math.floor(eligibleBaseScore / 1.2) : eligibleBaseScore;
+      const secs = shrinkCards.map(dc =>
+        shrinkCoverageSeconds(dc.skill!, team, notesCount, excludedCount, true));
+      const totalSec = secs.reduce((a, b) => a + b, 0);
+      if (totalSec > 0) {
+        for (let i = 0; i < shrinkCards.length; i++) {
+          const rate = shrinkCards[i].skill!.rate;
+          const ratio = totalSec >= effectiveSeconds
+            ? secs[i] / totalSec                 // 飽和: 秒数比按分
+            : secs[i] / effectiveSeconds;        // 未飽和: 実効秒数比
+          shrinkMax += Math.floor(shrinkBase * ratio * (rate - 1.0));
         }
       }
     }
-
-    // Phase C: rate 適用（「いずれか発動中」判定・重ねがけなし、§1）
-    const activeRate = (activeShrink && activeShrink.endNote > n) ? activeShrink.rate : 0;
-
-    const noteScore = calcNoteScore(getAppeal(team, note.attribute, assist), note);
-    const shrinkExtra = (activeRate > 0 && !note.excluded)
-      ? Math.floor(noteScore * (activeRate - 1.0))
-      : 0;
-
-    total += noteScore + shrinkExtra + scoreUpSum;
   }
 
-  return total;
+  return baseScore + scoreUpMax + shrinkMax;
 }
 
 /**
@@ -493,7 +445,10 @@ export function calcCardSkillMaxActivations(
   return Math.floor(denom / skill.count);
 }
 
-/** 単一カードのスキル論理最高値（100% 発動・当該カードのみが縮小スキルを持つ想定）。 */
+/**
+ * 単一カードのスキル論理最高値（100% 発動・当該カードのみが縮小スキルを持つ想定）。
+ * H38(B12=TRUE)/H40(B15=TRUE) の按分式と同形（単一カードのため按分は不要。B8）。
+ */
 export function calcCardSkillMax(
   team: ComputedTeam,
   notes: FlatNote[],
@@ -509,24 +464,26 @@ export function calcCardSkillMax(
   if (!skill.isShrink) {
     const denom = skill.isTimer ? team.songDuration : notesCount;
     if (denom <= 0) return 0;
-    const maxAct = Math.floor(denom / skill.count);
-    return maxAct * skill.value;
+    return Math.floor((denom / skill.count) * skill.value);
   }
 
   const excludedCount = notes.filter(n => n.excluded).length;
   const effectiveSeconds = team.songDuration - shrinkHeadSeconds(team.songDuration, notesCount, excludedCount);
   if (effectiveSeconds <= 0) return 0;
-  const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludedCount);
-  if (numActivations <= 0) return 0;
-  const maxSec = Math.min(numActivations * skill.value, effectiveSeconds);
-  const coverageRate = maxSec / effectiveSeconds;
+  const sec = shrinkCoverageSeconds(skill, team, notesCount, excludedCount, true);
+  if (sec <= 0) return 0;
+  // 単一カードなので按分不要。飽和(sec >= effectiveSeconds)時は 100% キャップされる点は
+  // H40 の Σ secᵢ/totalSec 飽和式と一致 (secᵢ=totalSec のため ratio=1)
+  const ratio = Math.min(sec, effectiveSeconds) / effectiveSeconds;
 
   let eligibleBaseScore = 0;
   for (const n of notes) {
     if (n.excluded) continue;
     eligibleBaseScore += calcNoteScore(getAppeal(team, n.attribute, assist), n);
   }
-  return Math.floor(eligibleBaseScore * (skill.rate - 1.0) * coverageRate);
+  // 縮小基準スコアはアシスト剥離後を使う (spec §6-5 BN22 / B6)
+  const shrinkBase = assist ? Math.floor(eligibleBaseScore / 1.2) : eligibleBaseScore;
+  return Math.floor(shrinkBase * ratio * (skill.rate - 1.0));
 }
 
 interface RunOnceResult {
