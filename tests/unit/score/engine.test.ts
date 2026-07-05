@@ -461,16 +461,18 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
 
     it('coveredSeconds は 100% キャップで effectiveSeconds (≈98.90秒) に一致', () => {
       expect(cov).not.toBeNull();
-      // 最大縮小時間合計 165 秒 > 98.90 秒 → min(165, 98.90) = 98.90
+      // 最大縮小時間合計 169 秒 > 98.90 秒 → min(169, 98.90) = 98.90
       expect(cov!.coveredSeconds).toBeCloseTo(effSeconds, 5);
     });
 
-    it('rawCoveredSeconds (生の単純合計) は 80 + 85 = 165 秒', () => {
-      expect(cov!.rawCoveredSeconds).toBe(165);
+    // H39 (spec §6-6 / B7): denom/count を小数のまま value と乗算しカード単位で 1 回だけ floor する。
+    // friend: floor(407/20 × 4) = floor(81.4) = 81 / member: floor(407/23 × 5) = floor(88.478…) = 88
+    it('rawCoveredSeconds (H39 準拠、カード別 floor 後の合計) は floor(407/20×4) + floor(407/23×5) = 81 + 88 = 169 秒', () => {
+      expect(cov!.rawCoveredSeconds).toBe(169);
     });
 
-    it('rawCoverageRate は 165/98.90 ≈ 166.84% で 100% を超過 (表示用: 100% 超過分は計算対象外)', () => {
-      expect(cov!.rawCoverageRate).toBeCloseTo(165 / effSeconds, 5);
+    it('rawCoverageRate は 169/98.90 ≈ 170.87% で 100% を超過 (表示用: 100% 超過分は計算対象外)', () => {
+      expect(cov!.rawCoverageRate).toBeCloseTo(169 / effSeconds, 5);
       expect(cov!.rawCoverageRate).toBeGreaterThan(1.0);
     });
 
@@ -478,12 +480,13 @@ describe('MONSTER GENERATiON で 10th 環センター + 記念日2024 環フレ�
       expect(cov!.coverageRate).toBeCloseTo(1.0, 5);
     });
 
-    it('rawExpectedCoveredSeconds (生の単純加算) は 80×0.4 + 85×0.39 = 65.15 秒', () => {
-      expect(cov!.rawExpectedCoveredSeconds).toBeCloseTo(65.15, 5);
+    // friend: floor(407/20 × 0.40 × 4) = floor(32.56) = 32 / member: floor(407/23 × 0.39 × 5) = floor(34.506…) = 34
+    it('rawExpectedCoveredSeconds (H39 準拠、カード別 floor 後の合計) は floor(407/20×0.4×4) + floor(407/23×0.39×5) = 32 + 34 = 66 秒', () => {
+      expect(cov!.rawExpectedCoveredSeconds).toBe(66);
     });
 
-    it('expectedCoverageRate は単純加算の 65.15/98.90 ≈ 65.88% (100% 未満なのでキャップなし = raw と一致)', () => {
-      const naiveRate = (80 * 0.4 + 85 * 0.39) / effSeconds;
+    it('expectedCoverageRate は単純加算の 66/98.90 ≈ 66.73% (100% 未満なのでキャップなし = raw と一致)', () => {
+      const naiveRate = 66 / effSeconds;
       expect(cov!.expectedCoverageRate).toBeCloseTo(naiveRate, 5);
       expect(cov!.expectedCoverageRate).toBe(cov!.rawExpectedCoverageRate);
     });
@@ -583,17 +586,17 @@ describe('MONSTER GENERATiON で 縮小スキル 3 枚構成（キューイン�
     expect(shrinkCounts).toEqual([20, 22, 23]);
   });
 
-  it('calcShrinkCoverage: coverageRate は 100% キャップ / expectedCoverageRate も 100% (65.15 + 72×0.42 ≈ 95.4 秒 < 104 秒だが 3 枚合計で高カバー)', () => {
+  it('calcShrinkCoverage: coverageRate は 100% キャップ / expectedCoverageRate も 100% (97 秒 < 104 秒だが 3 枚合計で高カバー)', () => {
     const cov = calcShrinkCoverage(team, notesCount, 0, 21);
     expect(cov).not.toBeNull();
-    // 最大縮小時間合計 = 80 + 85 + 72 = 237 秒
-    expect(cov!.rawCoveredSeconds).toBe(80 + 85 + 72);
+    // H39 準拠 (カード別 floor 後の合計): floor(407/20×4)=81, floor(407/22×4)=74, floor(407/23×5)=88 → 243 秒
+    expect(cov!.rawCoveredSeconds).toBe(81 + 74 + 88);
     // 内部計算用は effectiveSeconds (= 104 × 407/428 ≈ 98.90) でキャップ
     const effSeconds = monsterGenerationSong.duration! * (1 - 21 / notesCount);
     expect(cov!.coveredSeconds).toBeCloseTo(effSeconds, 5);
     expect(cov!.coverageRate).toBeCloseTo(1.0, 5);
-    // 期待縮小時間合計 = 80×0.40 + 85×0.39 + 72×0.42 = 32 + 33.15 + 30.24 = 95.39 秒
-    expect(cov!.rawExpectedCoveredSeconds).toBeCloseTo(95.39, 2);
+    // H39 準拠: floor(407/20×0.40×4)=32, floor(407/22×0.42×4)=31, floor(407/23×0.39×5)=34 → 97 秒
+    expect(cov!.rawExpectedCoveredSeconds).toBe(32 + 31 + 34);
   });
 
   it('runSimulation (iter=2000, seed=42) の mean が calcExpectedScore.finalScore ±6% に収束 (3 枚でキューイング効果が顕在化)', async () => {
@@ -751,11 +754,13 @@ describe('判定縮小（タイマー）は秒数ベースの縮小スキルと�
     expect(calcCardSkillMaxActivations(team, notesCount, 0)).toBe(4);
   });
 
-  it('縮小カバー率も秒数ベースの発動回数を使う', () => {
+  it('縮小カバー率も秒数ベースの発動回数を使う (H39 準拠: songDuration/count を小数のまま乗算)', () => {
     const coverage = calcShrinkCoverage(team, notesCount, 0, exclusion.totalExcluded);
     expect(coverage).not.toBeNull();
-    expect(coverage!.rawCoveredSeconds).toBe(4 * 4);
-    expect(coverage!.rawExpectedCoveredSeconds).toBeCloseTo(4 * 4 * 0.38, 5);
+    // floor(104/23 × 4) = floor(18.086…) = 18 (旧: floor(104/23)=4 回 × 4 = 16 から変更)
+    expect(coverage!.rawCoveredSeconds).toBe(18);
+    // floor(104/23 × 0.38 × 4) = floor(6.869…) = 6
+    expect(coverage!.rawExpectedCoveredSeconds).toBe(6);
   });
 
   it('縮小全発動モードの MC 発動回数も秒数ベースになる', async () => {

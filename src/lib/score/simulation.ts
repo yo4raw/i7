@@ -59,8 +59,9 @@ function shrinkHeadSeconds(songDuration: number, notesCount: number, excludeHead
  * 縮小カバー率を計算する (docs/shrink-skill-spec.md §3, §4 準拠)。
  *
  * 仕様:
- *  - 各縮小スキルの「発動回数 × 持続秒」を単純加算 (rawCoveredSeconds)
- *  - 各縮小スキルの「発動回数 × 持続秒 × per/100」を単純加算 (rawExpectedCoveredSeconds)
+ *  - 各縮小スキルの「カバー秒 ({@link shrinkCoverageSeconds}: denom/count を小数のまま
+ *    value と乗算しカード単位で 1 回だけ floor、spec §6-6 H39 準拠)」を単純加算 (rawCoveredSeconds)
+ *  - 各縮小スキルの「カバー秒 × per/100 (同じくカード単位で 1 回だけ floor)」を単純加算 (rawExpectedCoveredSeconds)
  *  - 実効秒数 effectiveSeconds = songDuration − offsetSeconds − 先頭除外秒数
  *    (先頭除外区間では縮小が発動できないため分母から控除する)
  *  - 内部計算用カバー率は effectiveSeconds で必ず 100% キャップ
@@ -117,9 +118,8 @@ export function calcShrinkCoverage(
   let minNoteShrinkCount = Infinity;  // ノート型縮小の count 最小値 (構造キャップ用)
   for (const dc of shrinkCards) {
     const skill = dc.skill!;
-    const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludeHeadCount);
-    rawCoveredSeconds += numActivations * skill.value;
-    const expSec = numActivations * skill.value * (skill.per / 100);
+    rawCoveredSeconds += shrinkCoverageSeconds(skill, team, notesCount, excludeHeadCount, true);
+    const expSec = shrinkCoverageSeconds(skill, team, notesCount, excludeHeadCount, false);
     rawExpectedCoveredSeconds += expSec;
     rawExpectedWeightedSeconds += expSec * (skill.rate - 1.0);
     if (!isShrinkTimer(skill) && skill.count < minNoteShrinkCount) minNoteShrinkCount = skill.count;
@@ -210,6 +210,27 @@ function calcShrinkActivationCount(
   }
   const eligibleCount = Math.max(0, notesCount - excludeHeadCount);
   return Math.floor(eligibleCount / skill.count);
+}
+
+/**
+ * カード別の縮小カバー秒 (spec §6-6 H39 準拠)。
+ * denom/count を小数のまま per/100(full 時は 1)× value と乗算し、カード単位で 1 回だけ floor。
+ * ノート型は先頭除外後の対象ノーツ数、タイマー型は songDuration を分母にする (I1 維持)。
+ */
+function shrinkCoverageSeconds(
+  skill: CardSkill,
+  team: ComputedTeam,
+  notesCount: number,
+  excludeHeadCount: number,
+  full: boolean,
+): number {
+  if (skill.count <= 0) return 0;
+  const denom = isShrinkTimer(skill)
+    ? team.songDuration
+    : Math.max(0, notesCount - excludeHeadCount);
+  if (denom <= 0) return 0;
+  const perFactor = full ? 1 : skill.per / 100;
+  return Math.floor((denom / skill.count) * perFactor * skill.value);
 }
 
 function enqueueShrink(
@@ -338,7 +359,7 @@ function calcMaxBaseTotal(team: ComputedTeam, notes: FlatNote[], options?: Score
  * 算術期待値によるスコア計算 (docs/shrink-skill-spec.md §5-3 / ADR 0036 準拠)。
  * - 属性値による楽曲スコア: スキル全不発時の素点合計（アシスト適用後）
  * - スコアアップ期待値: Σ( (タイマーなら songDuration, 通常なら notesCount) / count × per/100 × value )
- * - 縮小期待値: eligibleBaseScore × Σ(期待カバー秒ᵢ × (rateᵢ−1)) / effectiveSeconds
+ * - 縮小期待値: shrinkBase(アシスト剥離後 BN22) × Σ(期待カバー秒ᵢ × (rateᵢ−1)) / effectiveSeconds
  *   （構造的到達可能秒数キャップ付き。単一 rate の編成では旧 maxRate 式と同値）
  */
 export function calcExpectedScore(
@@ -378,7 +399,9 @@ export function calcExpectedScore(
   let shrinkExpected = 0;
   const coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount);
   if (coverage && coverage.effectiveSeconds > 0) {
-    shrinkExpected = Math.floor(eligibleBaseScore * coverage.expectedWeightedCoverageRate);
+    // 縮小基準スコアはアシスト剥離後を使う (spec §6-5 BN22 / B6)。I1 の excluded 除外は維持
+    const shrinkBase = assist ? Math.floor(eligibleBaseScore / 1.2) : eligibleBaseScore;
+    shrinkExpected = Math.floor(shrinkBase * coverage.expectedWeightedCoverageRate);
   }
 
   let liveEndScore = baseScore + scoreUpExpected + shrinkExpected;
@@ -428,12 +451,11 @@ export function calcCardSkillExpected(
   const excludedCount = notes.filter(n => n.excluded).length;
   const effectiveSeconds = team.songDuration - shrinkHeadSeconds(team.songDuration, notesCount, excludedCount);
   if (effectiveSeconds <= 0) return 0;
-  const numActivations = calcShrinkActivationCount(skill, team, notesCount, excludedCount);
-  if (numActivations <= 0) return 0;
   const expectedSec = Math.min(
-    numActivations * skill.value * (skill.per / 100),
+    shrinkCoverageSeconds(skill, team, notesCount, excludedCount, false),
     effectiveSeconds,
   );
+  if (expectedSec <= 0) return 0;
   const coverageRate = expectedSec / effectiveSeconds;
 
   let eligibleBaseScore = 0;
@@ -441,7 +463,9 @@ export function calcCardSkillExpected(
     if (n.excluded) continue;
     eligibleBaseScore += calcNoteScore(getAppeal(team, n.attribute, assist), n);
   }
-  return Math.floor(eligibleBaseScore * (skill.rate - 1.0) * coverageRate);
+  // 縮小基準スコアはアシスト剥離後を使う (spec §6-5 BN22 / B6)
+  const shrinkBase = assist ? Math.floor(eligibleBaseScore / 1.2) : eligibleBaseScore;
+  return Math.floor(shrinkBase * (skill.rate - 1.0) * coverageRate);
 }
 
 /**
