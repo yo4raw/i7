@@ -23,28 +23,29 @@ export const KNOWN_DIFFS: KnownDiff[] = [
       '(b) rate加重の構造的到達可能秒数キャップと expected≤max クランプ (ADR 0036)。' +
       'docs/spreadsheet-score-calc-diff.md §4',
   },
-  // liveEnd/final は scoreUp/shrink 差分の波及で必然的にずれるため known-diff に含める
+  // liveEnd/final は shrink 差分の波及で必然的にずれるため known-diff に含める(scoreUp は bit-exact 化済み)
   {
     component: 'liveEnd',
-    reason: 'scoreUp/shrink の既知差分が合算(attr + scoreUp + shrink)に波及。docs/spreadsheet-score-calc-diff.md §8',
+    reason:
+      'shrink の残差(I1 + ADR 0036 由来)が合算(attr + scoreUp + shrink)に波及。' +
+      'docs/spreadsheet-score-calc-diff.md §8',
   },
   {
     component: 'final',
     reason:
-      'scoreUp/shrink の既知差分がバッジ適用後(floor(liveEnd × (1 + badgeRate/100)))に波及。' +
+      'shrink の残差(I1 + ADR 0036 由来)がバッジ適用後(floor(liveEnd × (1 + badgeRate/100)))に波及。' +
       'docs/spreadsheet-score-calc-diff.md §8',
   },
   // 注: attr は意図的に KNOWN_DIFFS に含めない。
   // 属性値は engine とスプレッドシートで一致するはず（センター/フレンド/特効/丸めの設計が同一）であり、
   // ここが unexpected になることは engine 側の回帰を意味する（回帰ガードの要）。
   //
-  // ただし v1.0.7 実装比較調査（docs/spreadsheet-score-calc-diff.md §0-2）で、golden fixture が
-  // 現状カバーしていない条件（未特訓カード・非UR センター/フレンド・ラビットノート登録済み・固有ブローチの
-  // 種類6/7が異なるカードに重複するデッキ等）では attr が実際にはスプレッドシートと不一致になる
-  // 実装バグ候補（特訓ペナルティのハードコード・ラビットノートの特効倍率混入等）が複数確認されている。
-  // これらは golden ケースの追加時に attr が unexpected 化する形で顕在化する想定であり、
-  // 発生した際は本コメントの通り「回帰」ではなく「既知のバグ候補が検出された」ことを意味する。
-  // 詳細は docs/spreadsheet-score-calc-diff.md §0-2 の❌一覧を参照。
+  // B1(特訓ペナルティ=sp_time×sp_value)/B2(ラビットノートのキャラ単位化・フレンド除外・特効非乗算)/
+  // B4(センター/フレンドボーナスの合算後1回丸め) は ADR 0041 で修正済み。
+  // これにより、未特訓カード・非UR センター/フレンド・ラビットノート登録済み等の条件で golden fixture を
+  // 追加しても attr は engine とスプレッドシートで一致するはずである。
+  // したがって golden ケースの追加時に attr が unexpected 化した場合は、既知のバグ候補ではなく
+  // engine 側の回帰を意味する。詳細は docs/spreadsheet-score-calc-diff.md §0-2 の B1〜B14 判定表を参照。
 ];
 
 export function classify(
