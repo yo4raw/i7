@@ -83,7 +83,7 @@ describe('broachAssignment (共通ブローチのグリーディ割当)', () => 
     const sel = assignBroachs(deck, {}, W, noFixed);
     expect(sel[5]).toHaveLength(2);
     expect(sel[5][0]).toBe(sel[5][1]); // 同種 2 個
-    expect(sel[5][0]).toBe(6); // Shout 偏重では Shout1100 (id=6) が最良
+    expect(sel[5][0]).toBe(27); // Shout 偏重では Shout1150 (id=27) が最良
   });
 
   it('assignBroachs: 固有ブローチ持ちフレンドは 1 個のみ', () => {
