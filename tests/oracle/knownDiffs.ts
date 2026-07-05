@@ -18,7 +18,7 @@ export const KNOWN_DIFFS: KnownDiff[] = [
   {
     component: 'shrink',
     reason:
-      'B6(アシスト剥離)/B7(floor位置) は修正済み。残差は意図的差異のみ: ' +
+      'B6(アシスト剥離)/B7(floor位置)/B8(理論最大値の按分式化) は ADR 0041 で修正済み。残差は意図的差異のみ: ' +
       '(a) 発動開始位置の先頭除外とその帰結(カバー率分母/基準スコア範囲, ADR 0040) ' +
       '(b) rate加重の構造的到達可能秒数キャップと expected≤max クランプ (ADR 0036)。' +
       'docs/spreadsheet-score-calc-diff.md §4',

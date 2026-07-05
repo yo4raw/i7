@@ -56,7 +56,7 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       expect(team.rawMelody).toBe(tenthTamakiMainCard.melody_max);
     });
 
-    it('未特訓時は自属性(Beat)のみ TRAIN_BONUS 減算 (Shout 3898 / Beat 5891 / Melody 4611)', () => {
+    it('未特訓時は自属性(Beat)のみ sp_time×sp_value 減算 (Shout 3898 / Beat 5891 / Melody 4611)', () => {
       const untrainedTeam = computeTeam(
         centerDeck,
         [],

@@ -376,7 +376,8 @@ export function calcExpectedScore(
 
 /**
  * 単一カードのスキル期待値（当該カードのみが縮小スキルを持つと仮定）。
- * - スコアアップ / タイマー: floor( maxActivations × per/100 × value )
+ * - スコアアップ / タイマー: floor( (denom/count) × per/100 × value )（H38 準拠、活動回数を
+ *   小数のまま保持し最後に1回だけ floor する。denom は notesCount またはタイマー系なら songDuration）
  * - 判定縮小: eligibleBaseScore × (rate - 1) × 期待カバー率 (当該カード単独で offset=0)
  *
  * 複数縮小スキルの max rate 合成は考慮しないため、デッキに複数の縮小スキルがある場合の
