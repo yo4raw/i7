@@ -16,13 +16,6 @@ export interface KnownDiff {
 
 export const KNOWN_DIFFS: KnownDiff[] = [
   {
-    component: 'scoreUp',
-    reason:
-      '活動回数: engine=floor(denom/count)を先取りしてから per/value を乗算 / スプレッドシート=小数のまま乗算し最後に1回 ROUNDDOWN。' +
-      'ADR 0036〜0039 とは無関係の旧来からの実装ギャップ（スプレッドシート基準では❌不一致だが、修正は別タスク）。' +
-      'docs/spreadsheet-score-calc-diff.md §3',
-  },
-  {
     component: 'shrink',
     reason:
       '複数の要因が合成: ' +

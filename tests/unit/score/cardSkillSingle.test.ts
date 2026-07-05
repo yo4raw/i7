@@ -22,16 +22,20 @@ const deckOf = (c: Card, slot = 0): (Card | null)[] => {
 };
 
 describe('calcCardSkillExpected', () => {
-  it('タイマー scoreUp: floor(maxAct × per/100 × value) = 20304', () => {
+  // H38 (spec §6-6 / B5): floor((songDuration/count) × per/100 × value)、count は floor しない。
+  // songDuration=104, count=16, per=47, value=7200 → floor(6.5 × 0.47 × 7200) = 21995
+  it('タイマー scoreUp: floor((songDuration/count) × per/100 × value) = 21995', () => {
     const team = computeTeam(deckOf(timerScoreUp), [], song);
     const notes = flattenNotes(song, SEED);
-    expect(calcCardSkillExpected(team, notes, notesCount, 0)).toBe(20304);
+    expect(calcCardSkillExpected(team, notes, notesCount, 0)).toBe(21995);
   });
 
-  it('コンボ scoreUp: floor(26 × 0.46 × 6403) = 76579', () => {
+  // H38 (spec §6-6 / B5): floor((notesCount/count) × per/100 × value)、count は floor しない。
+  // notesCount=428, count=16, per=46, value=6403 → floor(26.75 × 0.46 × 6403) = 78788
+  it('コンボ scoreUp: floor((notesCount/count) × per/100 × value) = 78788', () => {
     const team = computeTeam(deckOf(comboScoreUp), [], song);
     const notes = flattenNotes(song, SEED);
-    expect(calcCardSkillExpected(team, notes, notesCount, 0)).toBe(76579);
+    expect(calcCardSkillExpected(team, notes, notesCount, 0)).toBe(78788);
   });
 
   it('判定縮小カード: 正の期待値を返す', () => {

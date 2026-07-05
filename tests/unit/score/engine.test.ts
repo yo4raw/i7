@@ -655,12 +655,14 @@ describe('MONSTER GENERATiON で ID861 (JokerFlag2 四葉環 / スコアアッ�
     expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(43200);
   });
 
-  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = 6 × 7200 × 47% = 20,304 (docs/unit-test-case.md)', () => {
+  // H38 (spec §6-6 / B5): floor((songDuration/count) × per/100 × value)、maxActivations は先に floor しない。
+  // songDuration=104, count=16, per=47, value=7200 → floor(6.5 × 0.47 × 7200) = 21995
+  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = floor(104/16 × 47% × 7200) = 21,995 (H38 / B5)', () => {
     const expected = calcExpectedScore(team, notes, monsterGenerationSong.notes_count!);
-    expect(expected.scoreUpExpected).toBe(20304);
+    expect(expected.scoreUpExpected).toBe(21995);
     // 縮小スキル非所持なので shrinkExpected = 0
     expect(expected.shrinkExpected).toBe(0);
-    expect(expected.liveEndScore).toBe(expected.baseScore + 20304);
+    expect(expected.liveEndScore).toBe(expected.baseScore + 21995);
   });
 });
 
@@ -690,12 +692,13 @@ describe('MONSTER GENERATiON で ID204 (屋外フェス2 逢坂壮五 / スコ�
     expect(calcMaxScore(team, notes) - calcMinScore(team, notes)).toBe(166478);
   });
 
-  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = floor(26 × 6403 × 46%) = 76,579 (docs/unit-test-case.md)', () => {
+  // H38 (spec §6-6 / B5): floor((notesCount/count) × per/100 × value)、maxActivations は先に floor しない。
+  // notesCount=428, count=16, per=46, value=6403 → floor(26.75 × 0.46 × 6403) = 78788
+  it('スコアアップ期待値: calcExpectedScore.scoreUpExpected = floor(428/16 × 46% × 6403) = 78,788 (H38 / B5)', () => {
     const expected = calcExpectedScore(team, notes, monsterGenerationSong.notes_count!);
-    // 26 × 6403 × 0.46 = 76,579.88 → floor → 76,579
-    expect(expected.scoreUpExpected).toBe(76579);
+    expect(expected.scoreUpExpected).toBe(78788);
     expect(expected.shrinkExpected).toBe(0);
-    expect(expected.liveEndScore).toBe(expected.baseScore + 76579);
+    expect(expected.liveEndScore).toBe(expected.baseScore + 78788);
   });
 });
 

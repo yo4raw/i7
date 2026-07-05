@@ -355,7 +355,8 @@ export function calcExpectedScore(
     baseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
   }
 
-  // スコアアップスキル期待値: floor(対象量 / count) 回 × 発動確率 × value
+  // スコアアップスキル期待値: カード別に (denom/count 小数のまま) × per/100 × value を
+  // 計算し、カード単位で 1 回だけ floor して合算する (spec §6-6 H38 / B5)
   let scoreUpExpected = 0;
   for (const dc of team.cards) {
     const skill = dc.skill;
@@ -363,10 +364,8 @@ export function calcExpectedScore(
     if (skill.count <= 0) continue;
     const denom = skill.isTimer ? team.songDuration : notesCount;
     if (denom <= 0) continue;
-    const maxActivations = Math.floor(denom / skill.count);
-    scoreUpExpected += maxActivations * (skill.per / 100) * skill.value;
+    scoreUpExpected += Math.floor((denom / skill.count) * (skill.per / 100) * skill.value);
   }
-  scoreUpExpected = Math.floor(scoreUpExpected);
 
   // 縮小期待値: excluded ノートを除いた対象素点 × rate 加重期待カバー率 (ADR 0036)
   const excludedCount = notes.filter(n => n.excluded).length;
@@ -423,8 +422,7 @@ export function calcCardSkillExpected(
   if (!skill.isShrink) {
     const denom = skill.isTimer ? team.songDuration : notesCount;
     if (denom <= 0) return 0;
-    const maxAct = Math.floor(denom / skill.count);
-    return Math.floor(maxAct * (skill.per / 100) * skill.value);
+    return Math.floor((denom / skill.count) * (skill.per / 100) * skill.value);
   }
 
   const excludedCount = notes.filter(n => n.excluded).length;
