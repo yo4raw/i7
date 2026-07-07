@@ -248,6 +248,8 @@ describe('specDiagrams', () => {
       expect(svg).toContain('倍率 − 1.0');
       expect(svg).toContain('カバー率');
       expect(svg).toContain('eligibleBaseScore');
+      expect(svg).toContain('全発動時 = 100% でキャップ');
+      expect(svg).toContain('期待値 = 発動確率込みの期待カバー率');
     });
   });
 

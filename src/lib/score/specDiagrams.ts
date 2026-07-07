@@ -811,7 +811,7 @@ export function shrinkFormulaSvg(): string {
     { x: 270, y: 110, w: 220, h: 100, color: c.dark,
       title: '倍率 − 1.0', lines: ['縮小倍率から通常分 1.0 を', '引いた「追加分」の倍率', 'Lv1=0.2 / Lv5=0.6'] },
     { x: 510, y: 110, w: 220, h: 100, color: STAGE_COLORS.final.dark,
-      title: 'カバー率', lines: ['縮小が効いている時間の割合', '100% でキャップ', '（期待値計算では期待カバー率）'] },
+      title: 'カバー率', lines: ['縮小が効いている時間の割合', '全発動時 = 100% でキャップ', '期待値 = 発動確率込みの期待カバー率'] },
   ];
   const boxSvg = boxes.map((b) =>
     `<g>
