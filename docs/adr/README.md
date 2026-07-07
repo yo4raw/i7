@@ -54,3 +54,4 @@
 | [0040](0040-spreadsheet-v107-reference-policy.md) | スコア計算検証は ota-life v1.0.7 スプレッドシートを正とする(縮小開始位置を除く) | 承認 |
 | [0041](0041-spreadsheet-alignment-fixes.md) | スプレッドシート v1.0.7 準拠のスコア計算修正(B1〜B13) | 承認 |
 | [0043](0043-score-calc-spec-page-full-redesign.md) | スコア計算 仕様解説ページをパイプライン全体解説へ全面リデザイン | 承認 |
+| [0044](0044-spec-shrink-strategy-visual.md) | 仕様解説ページ §4 に期待カバー率の明示と縮小 vs スコアアップ戦略比較を追加 | 承認 |

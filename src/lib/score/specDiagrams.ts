@@ -666,12 +666,20 @@ export function excludeHeadSvg(p: ExcludeHeadParams): string {
 export interface CoverageDiagramParams {
   songDuration: number;
   segments: { label: string; seconds: number; color: string }[];
+  /** 発動確率 per を織り込んだ期待カバー（下段バー）。省略時は従来の 1 段表示 */
+  expected?: {
+    segments: { label: string; seconds: number; color: string }[];
+    /** エンジンの期待カバー率 (0-1、実効秒数ベース) */
+    coverageRate: number;
+    effectiveSeconds: number;
+  };
 }
 
-/** カバー率の合算と 100% キャップの図 */
+/** カバー率の合算と 100% キャップの図（expected 指定時は期待カバーの下段バー付き 2 段表示） */
 export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const c = STAGE_COLORS.shrink;
-  const W = 760, H = 220;
+  const hasExpected = p.expected != null;
+  const W = 760, H = hasExpected ? 250 : 220;
   const M = { top: 30, right: 20, bottom: 60, left: 20 };
   const innerW = W - M.left - M.right;
   const barH = 40;
@@ -679,39 +687,53 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const maxRange = Math.max(totalSec, p.songDuration) * 1.05;
   const xScale = (sec: number) => M.left + (sec / maxRange) * innerW;
 
-  const baseBar = `
-    <rect x="${M.left}" y="${M.top}" width="${xScale(p.songDuration) - M.left}" height="${barH}"
+  /** セグメント列を積み上げ描画（曲の長さ超過分は破線） */
+  const drawSegments = (
+    segments: { label: string; seconds: number; color: string }[],
+    yTop: number,
+  ): string => {
+    let cursor = 0;
+    return segments.map((s) => {
+      const x1 = xScale(cursor);
+      const x2Full = xScale(cursor + s.seconds);
+      const cappedEnd = Math.min(cursor + s.seconds, p.songDuration);
+      const x2Cap = xScale(cappedEnd);
+      cursor += s.seconds;
+
+      const inPart = x2Cap > x1
+        ? `<rect x="${x1}" y="${yTop}" width="${x2Cap - x1}" height="${barH}"
+                fill="${s.color}" opacity="0.9">
+             <title>${escapeXml(s.label)} (実効部 ${Math.min(s.seconds, p.songDuration - (cursor - s.seconds))}秒)</title>
+           </rect>`
+        : '';
+      const overPart = x2Full > x2Cap
+        ? `<rect x="${x2Cap}" y="${yTop}" width="${x2Full - x2Cap}" height="${barH}"
+                fill="${s.color}" opacity="0.3" stroke="${s.color}" stroke-dasharray="4 2" stroke-width="1.5">
+             <title>${escapeXml(s.label)} (超過部 = 切り捨て)</title>
+           </rect>`
+        : '';
+      return inPart + overPart;
+    }).join('\n');
+  };
+
+  /** 曲の長さ背景バー */
+  const baseBarAt = (yTop: number, label: string): string => `
+    <rect x="${M.left}" y="${yTop}" width="${xScale(p.songDuration) - M.left}" height="${barH}"
           fill="var(--chart-exclude-bg)" stroke="${GRID}" stroke-width="1"/>
-    <text x="${M.left}" y="${M.top - 6}"
-          fill="${MUTED}" font-size="10">曲の長さ = ${p.songDuration}秒 (100%)</text>
+    <text x="${M.left}" y="${yTop - 6}"
+          fill="${MUTED}" font-size="10">${escapeXml(label)}</text>
   `;
 
-  let cursor = 0;
-  const segmentsSvg = p.segments.map((s) => {
-    const x1 = xScale(cursor);
-    const x2Full = xScale(cursor + s.seconds);
-    const cappedEnd = Math.min(cursor + s.seconds, p.songDuration);
-    const x2Cap = xScale(cappedEnd);
-    cursor += s.seconds;
-
-    const inPart = x2Cap > x1
-      ? `<rect x="${x1}" y="${M.top}" width="${x2Cap - x1}" height="${barH}"
-              fill="${s.color}" opacity="0.9">
-           <title>${escapeXml(s.label)} (実効部 ${Math.min(s.seconds, p.songDuration - (cursor - s.seconds))}秒)</title>
-         </rect>`
-      : '';
-    const overPart = x2Full > x2Cap
-      ? `<rect x="${x2Cap}" y="${M.top}" width="${x2Full - x2Cap}" height="${barH}"
-              fill="${s.color}" opacity="0.3" stroke="${s.color}" stroke-dasharray="4 2" stroke-width="1.5">
-           <title>${escapeXml(s.label)} (超過部 = 切り捨て)</title>
-         </rect>`
-      : '';
-    return inPart + overPart;
-  }).join('\n');
+  const fullBarLabel = hasExpected
+    ? `全発動できた場合のカバー時間（曲の長さ = ${p.songDuration}秒 = 100%）`
+    : `曲の長さ = ${p.songDuration}秒 (100%)`;
+  const baseBar = baseBarAt(M.top, fullBarLabel);
+  const segmentsSvg = drawSegments(p.segments, M.top);
 
   const capLabelX = xScale(p.songDuration);
+  const capBottom = hasExpected ? M.top + 130 + barH + 6 : M.top + barH + 6;
   const capLine = `
-    <line x1="${capLabelX}" y1="${M.top - 4}" x2="${capLabelX}" y2="${M.top + barH + 6}"
+    <line x1="${capLabelX}" y1="${M.top - 4}" x2="${capLabelX}" y2="${capBottom}"
           stroke="${c.dark}" stroke-width="2"/>
     <text x="${capLabelX - 4}" y="${M.top - 6}" text-anchor="end"
           fill="${c.dark}" font-size="10" font-weight="bold">100%→</text>
@@ -741,6 +763,21 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
     </text>
   `;
 
+  // 下段: 発動確率 per を織り込んだ期待カバー（expected 指定時のみ）
+  let expectedBlock = '';
+  if (p.expected) {
+    const yE = M.top + 130;
+    const expTotal = p.expected.segments.reduce((a, s) => a + s.seconds, 0);
+    const ratePct = (p.expected.coverageRate * 100).toFixed(1);
+    expectedBlock = `
+      ${baseBarAt(yE, '発動確率 per を織り込んだ期待カバー')}
+      ${drawSegments(p.expected.segments, yE)}
+      <text x="${W - M.right}" y="${yE - 6}" text-anchor="end" fill="${c.dark}" font-size="11" font-weight="bold">
+        期待 ${expTotal}秒 → 期待カバー率 ${ratePct}%（実効 ${p.expected.effectiveSeconds.toFixed(1)}秒ベース）
+      </text>
+    `;
+  }
+
   return `${svgOpen(W, H, 'カバー率の合算と 100% キャップ')}
     ${baseBar}
     ${segmentsSvg}
@@ -748,6 +785,7 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
     ${secTicks.join('\n')}
     ${summary}
     ${legendItems}
+    ${expectedBlock}
   </svg>`;
 }
 
@@ -773,7 +811,7 @@ export function shrinkFormulaSvg(): string {
     { x: 270, y: 110, w: 220, h: 100, color: c.dark,
       title: '倍率 − 1.0', lines: ['縮小倍率から通常分 1.0 を', '引いた「追加分」の倍率', 'Lv1=0.2 / Lv5=0.6'] },
     { x: 510, y: 110, w: 220, h: 100, color: STAGE_COLORS.final.dark,
-      title: 'カバー率', lines: ['縮小が効いている時間の割合', '100% でキャップ', '（期待値計算では期待カバー率）'] },
+      title: 'カバー率', lines: ['縮小が効いている時間の割合', '全発動時 = 100% でキャップ', '期待値 = 発動確率込みの期待カバー率'] },
   ];
   const boxSvg = boxes.map((b) =>
     `<g>
@@ -800,6 +838,109 @@ export function shrinkFormulaSvg(): string {
     ${formula}
     ${underlines}
     ${boxSvg}
+  </svg>`;
+}
+
+/* ================================================================
+ * 4-5. 縮小 vs スコアアップの寄与比較（ADR 0044）
+ * ================================================================ */
+
+export interface SkillContributionSlot {
+  name: string;
+  isShrink: boolean;
+  expected: number;
+  max: number;
+}
+
+/** 1 枚あたりのスキル寄与（期待値 + 理論最大・単独想定）の横棒比較図 */
+export function skillContributionCompareSvg(slots: SkillContributionSlot[]): string {
+  const W = 760;
+  const rowH = 46;
+  const M = { top: 34, right: 200, bottom: 42, left: 96 };
+  const H = M.top + slots.length * rowH + M.bottom;
+  const innerW = W - M.left - M.right;
+  const maxVal = Math.max(1, ...slots.map(s => s.max));
+  const xScale = (v: number) => (v / maxVal) * innerW;
+
+  const rows = slots.map((s, i) => {
+    const c = s.isShrink ? STAGE_COLORS.shrink : STAGE_COLORS.scoreUp;
+    const y = M.top + i * rowH;
+    const barY = y + 8;
+    const maxW = xScale(s.max);
+    const expW = xScale(s.expected);
+    return `<g>
+      <text x="${M.left - 8}" y="${barY + 15}" text-anchor="end" fill="${TEXT}" font-size="11">${escapeXml(s.name)}</text>
+      <rect x="${M.left}" y="${barY}" width="${maxW}" height="20" rx="3" fill="${c.pale}" stroke="${c.main}" stroke-width="1">
+        <title>理論最大 +${fmt(s.max)}（単独想定）</title>
+      </rect>
+      <rect x="${M.left}" y="${barY}" width="${expW}" height="20" rx="3" fill="${c.main}">
+        <title>期待値 +${fmt(s.expected)}</title>
+      </rect>
+      <text x="${M.left + 4}" y="${barY + 15}" fill="white" font-size="10" font-weight="bold">${s.isShrink ? '縮小' : 'スコアアップ'}</text>
+      <text x="${M.left + maxW + 6}" y="${barY + 15}" fill="${MUTED}" font-size="10">期待 +${fmt(s.expected)} / 最大 +${fmt(s.max)}</text>
+    </g>`;
+  }).join('\n');
+
+  const legendY = M.top + slots.length * rowH + 10;
+  const legend = `
+    <g transform="translate(${M.left}, ${legendY})">
+      <rect width="14" height="10" fill="${STAGE_COLORS.shrink.main}"/>
+      <text x="18" y="9" fill="${TEXT}" font-size="10">濃色 = 期待値寄与</text>
+      <rect x="130" width="14" height="10" fill="${STAGE_COLORS.shrink.pale}" stroke="${STAGE_COLORS.shrink.main}"/>
+      <text x="148" y="9" fill="${TEXT}" font-size="10">淡色 = 理論最大寄与（各スキル単独想定）</text>
+    </g>`;
+
+  return `${svgOpen(W, H, 'スキル 1 枚あたりの得点寄与の比較')}
+    <text x="${M.left}" y="16" fill="${TEXT}" font-size="12" font-weight="bold">1 枚あたりのスキル得点寄与（デモ編成）</text>
+    ${rows}
+    ${legend}
+  </svg>`;
+}
+
+export interface ScalingChartPoint {
+  factor: number;
+  shrinkExpected: number;
+  scoreUpExpected: number;
+}
+
+/** チーム属性値の倍率に対するスキル期待値寄与の線グラフ（縮小=比例 / スコアアップ=固定） */
+export function skillScalingChartSvg(points: ScalingChartPoint[]): string {
+  const W = 760, H = 280;
+  const M = { top: 34, right: 190, bottom: 46, left: 70 };
+  const innerW = W - M.left - M.right;
+  const innerH = H - M.top - M.bottom;
+  if (points.length < 2) return `${svgOpen(W, H, '属性値スケーリング比較')}</svg>`;
+
+  const minF = points[0].factor;
+  const maxF = points[points.length - 1].factor;
+  const maxY = Math.max(...points.map(p => Math.max(p.shrinkExpected, p.scoreUpExpected))) * 1.08;
+  const x = (f: number) => M.left + ((f - minF) / (maxF - minF)) * innerW;
+  const y = (v: number) => M.top + innerH - (v / maxY) * innerH;
+
+  const line = (key: 'shrinkExpected' | 'scoreUpExpected', color: string) => {
+    const pts = points.map(p => `${x(p.factor)},${y(p[key])}`).join(' ');
+    const dots = points.map(p =>
+      `<circle cx="${x(p.factor)}" cy="${y(p[key])}" r="3.5" fill="${color}"/>`).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5"/>${dots}`;
+  };
+
+  const last = points[points.length - 1];
+  const xTicks = points.map(p => `
+    <line x1="${x(p.factor)}" y1="${M.top + innerH}" x2="${x(p.factor)}" y2="${M.top + innerH + 4}" stroke="${MUTED}"/>
+    <text x="${x(p.factor)}" y="${M.top + innerH + 16}" text-anchor="middle" fill="${MUTED}" font-size="10">×${p.factor.toFixed(1)}</text>`).join('');
+  const grid = [0.25, 0.5, 0.75, 1].map(r => `
+    <line x1="${M.left}" y1="${M.top + innerH * (1 - r)}" x2="${M.left + innerW}" y2="${M.top + innerH * (1 - r)}" stroke="${GRID}" stroke-width="1"/>`).join('');
+
+  return `${svgOpen(W, H, '属性値スケーリング比較')}
+    <text x="${M.left}" y="16" fill="${TEXT}" font-size="12" font-weight="bold">チーム属性値が伸びたときのスキル期待値寄与</text>
+    ${grid}
+    <line x1="${M.left}" y1="${M.top + innerH}" x2="${M.left + innerW}" y2="${M.top + innerH}" stroke="${MUTED}"/>
+    ${xTicks}
+    <text x="${M.left + innerW / 2}" y="${H - 8}" text-anchor="middle" fill="${MUTED}" font-size="10">チーム属性値の倍率（イベント特効などによる増加の目安）</text>
+    ${line('shrinkExpected', STAGE_COLORS.shrink.main)}
+    ${line('scoreUpExpected', STAGE_COLORS.scoreUp.main)}
+    <text x="${x(last.factor) + 10}" y="${y(last.shrinkExpected) + 4}" fill="${STAGE_COLORS.shrink.dark}" font-size="11" font-weight="bold">判定縮小 +${fmt(last.shrinkExpected)}</text>
+    <text x="${x(last.factor) + 10}" y="${y(last.scoreUpExpected) + 4}" fill="${STAGE_COLORS.scoreUp.dark}" font-size="11" font-weight="bold">スコアアップ +${fmt(last.scoreUpExpected)}</text>
   </svg>`;
 }
 

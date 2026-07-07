@@ -12,6 +12,8 @@ import {
   excludeHeadSvg,
   coverageDiagramSvg,
   shrinkFormulaSvg,
+  skillContributionCompareSvg,
+  skillScalingChartSvg,
   finalBonusSvg,
   scoreRangeSvg,
   mcHistogramSvg,
@@ -209,6 +211,35 @@ describe('specDiagrams', () => {
       expect(isValidSvg(svg)).toBe(true);
       expect(svg).toContain('超過部 = 切り捨て');
     });
+    it('expected を渡すと期待カバーの下段バーと期待カバー率を描画する', () => {
+      const svg = coverageDiagramSvg({
+        songDuration: 104,
+        segments: [
+          { label: 'A (20ノーツ毎 × 4秒)', seconds: 81, color: '#f97316' },
+          { label: 'B (23ノーツ毎 × 5秒)', seconds: 88, color: '#ea580c' },
+        ],
+        expected: {
+          segments: [
+            { label: 'A 期待', seconds: 32, color: '#f97316' },
+            { label: 'B 期待', seconds: 34, color: '#ea580c' },
+          ],
+          coverageRate: 0.6674,
+          effectiveSeconds: 98.9,
+        },
+      });
+      expect(isValidSvg(svg)).toBe(true);
+      expect(svg).toContain('発動確率');
+      expect(svg).toContain('期待カバー率 66.7%');
+      expect(svg).toContain('66秒'); // 32 + 34
+      expect(svg).toContain('実効 98.9秒');
+    });
+    it('expected 省略時は期待カバー率のラベルを含まない（従来表示）', () => {
+      const svg = coverageDiagramSvg({
+        songDuration: 104,
+        segments: [{ label: 'A', seconds: 50, color: '#f97316' }],
+      });
+      expect(svg).not.toContain('期待カバー率');
+    });
   });
 
   describe('shrinkFormulaSvg', () => {
@@ -219,6 +250,54 @@ describe('specDiagrams', () => {
       expect(svg).toContain('倍率 − 1.0');
       expect(svg).toContain('カバー率');
       expect(svg).toContain('eligibleBaseScore');
+      expect(svg).toContain('全発動時 = 100% でキャップ');
+      expect(svg).toContain('期待値 = 発動確率込みの期待カバー率');
+    });
+  });
+
+  describe('skillContributionCompareSvg', () => {
+    const slots = [
+      { name: '四葉環', isShrink: true, expected: 142804, max: 361474 },
+      { name: '和泉一織', isShrink: false, expected: 74498, max: 152038 },
+    ];
+    it('全スロットの名前と期待値・理論最大の実数値を描画する', () => {
+      const svg = skillContributionCompareSvg(slots);
+      expect(isValidSvg(svg)).toBe(true);
+      expect(svg).toContain('四葉環');
+      expect(svg).toContain('和泉一織');
+      expect(svg).toContain('142,804');
+      expect(svg).toContain('361,474');
+      expect(svg).toContain('単独想定');
+    });
+    it('縮小は orange、スコアアップは amber で塗り分ける', () => {
+      const svg = skillContributionCompareSvg(slots);
+      expect(svg).toContain(STAGE_COLORS.shrink.main);
+      expect(svg).toContain(STAGE_COLORS.scoreUp.main);
+    });
+    it('空配列でも有効な SVG を返す', () => {
+      expect(isValidSvg(skillContributionCompareSvg([]))).toBe(true);
+    });
+  });
+
+  describe('skillScalingChartSvg', () => {
+    const points = [
+      { factor: 1.0, shrinkExpected: 294534, scoreUpExpected: 286771 },
+      { factor: 2.0, shrinkExpected: 589068, scoreUpExpected: 286771 },
+      { factor: 3.0, shrinkExpected: 883602, scoreUpExpected: 286771 },
+    ];
+    it('2 本の系列と軸ラベル・実数値を描画する', () => {
+      const svg = skillScalingChartSvg(points);
+      expect(isValidSvg(svg)).toBe(true);
+      expect(svg).toContain('判定縮小');
+      expect(svg).toContain('スコアアップ');
+      expect(svg).toContain('チーム属性値の倍率');
+      expect(svg).toContain('×1.0');
+      expect(svg).toContain('×3.0');
+      expect(svg).toContain('883,602'); // 縮小の右端値
+      expect(svg).toContain('286,771'); // スコアアップの右端値
+    });
+    it('points が 2 点未満なら空 SVG を返す', () => {
+      expect(isValidSvg(skillScalingChartSvg([]))).toBe(true);
     });
   });
 

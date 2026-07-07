@@ -254,8 +254,20 @@ export function calcMaxScore(team: ComputedTeam, notes: FlatNote[], options?: Sc
   return applyFinalBonus(calcMaxBaseTotal(team, notes, options), team, options);
 }
 
-/** スキル全発動時のバッジ・ブローチ適用前の合計 (spec §6-6 H38(B12=TRUE)/H40(B15=TRUE) の按分式移植。B8) */
-function calcMaxBaseTotal(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
+/** 理論最大スコアの段階別内訳（バッジ・ブローチ適用前） */
+export interface MaxScoreBreakdown {
+  baseScore: number;
+  scoreUpMax: number;
+  shrinkMax: number;
+  total: number;
+}
+
+/** スキル全発動時のバッジ・ブローチ適用前の内訳 (spec §6-6 H38(B12=TRUE)/H40(B15=TRUE) の按分式移植。B8 / ADR 0044) */
+export function calcMaxScoreBreakdown(
+  team: ComputedTeam,
+  notes: FlatNote[],
+  options?: ScoreOptions,
+): MaxScoreBreakdown {
   const N = notes.length;
   const assist = options?.scoreUpAssist ?? false;
   const notesCount = N;
@@ -304,7 +316,12 @@ function calcMaxBaseTotal(team: ComputedTeam, notes: FlatNote[], options?: Score
     }
   }
 
-  return baseScore + scoreUpMax + shrinkMax;
+  return { baseScore, scoreUpMax, shrinkMax, total: baseScore + scoreUpMax + shrinkMax };
+}
+
+/** スキル全発動時のバッジ・ブローチ適用前の合計 */
+function calcMaxBaseTotal(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
+  return calcMaxScoreBreakdown(team, notes, options).total;
 }
 
 /**
