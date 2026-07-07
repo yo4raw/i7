@@ -61,6 +61,20 @@ test.describe('スコア計算 仕様解説ページ', () => {
     expect(after).not.toBe(before);
   });
 
+  test('§4 に期待カバー率と全発動/期待値の 2 段の数値例が表示される', async ({ page }) => {
+    const section = page.locator('#shrink');
+    await expect(section.getByText(/期待カバー率は \d+\.\d%/).first()).toBeVisible();
+    await expect(section.getByText(/理論最大/).first()).toBeVisible();
+  });
+
+  test('§4-5 スコアアタック戦略のコールアウトと比較図 2 枚が表示される', async ({ page }) => {
+    const section = page.locator('#shrink');
+    await expect(section.getByRole('heading', { name: /4-5\. スコアアタックでの位置づけ/ })).toBeVisible();
+    await expect(section.getByText('スコアアタックの基本戦略')).toBeVisible();
+    await expect(section.locator('svg[aria-label="スキル 1 枚あたりの得点寄与の比較"]')).toBeVisible();
+    await expect(section.locator('svg[aria-label="属性値スケーリング比較"]')).toBeVisible();
+  });
+
   test('「計算ページへ戻る」リンクで /score-calc/ に遷移できる', async ({ page }) => {
     await page.getByRole('link', { name: /計算ページへ戻る/ }).first().click();
     await expect(page).toHaveURL(new RegExp(`${BASE}/score-calc/$`));
