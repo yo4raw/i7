@@ -15,6 +15,7 @@ import { computeGroupSizes, computeShrinkExclusion, type ShrinkExclusion } from 
 import {
   calcMinScore, calcMaxScore, calcExpectedScore, calcShrinkCoverage,
   calcCardSkillExpected, calcCardSkillMax, calcCardSkillMaxActivations,
+  calcMaxScoreBreakdown,
   runSimulation,
 } from './simulation';
 import type {
@@ -31,6 +32,14 @@ export const DEMO_MC_SEED = 42;
 export const DEMO_MC_ITERATIONS = 1000;
 /** デモの計算条件: アシスト OFF / バッジ 16% (UI 既定値) */
 export const DEMO_OPTIONS: ScoreOptions = { scoreUpAssist: false, scoreUpBadgeRate: 16 };
+/** 属性値スケーリング図の倍率点（1.0=デモ編成の素の属性値、3.0=イベント特効相当の上限目安） */
+export const DEMO_SCALING_FACTORS = [1.0, 1.5, 2.0, 2.5, 3.0] as const;
+
+export interface ScalingPoint {
+  factor: number;
+  shrinkExpected: number;
+  scoreUpExpected: number;
+}
 
 export interface SpecDemoSlot {
   slotIndex: number;
@@ -69,6 +78,10 @@ export interface SpecDemo {
   coverage: NonNullable<ReturnType<typeof calcShrinkCoverage>>;
   mc: SimulationResult;
   options: ScoreOptions;
+  /** 全発動時の縮小上乗せ合計（§4-4 表示用、calcMaxScoreBreakdown 由来） */
+  shrinkMaxBonus: number;
+  /** チーム属性値を倍率スケールした際のスキル期待値寄与（§4-5 スケーリング図用） */
+  scalingPoints: ScalingPoint[];
 }
 
 function findDemoCard(id: number): Card {
@@ -102,6 +115,19 @@ export async function buildSpecDemo(): Promise<SpecDemo> {
 
   const mc = await runSimulation(team, notes, DEMO_MC_ITERATIONS, undefined, DEMO_MC_SEED, DEMO_OPTIONS);
 
+  const shrinkMaxBonus = calcMaxScoreBreakdown(team, notes, DEMO_OPTIONS).shrinkMax;
+  const scalingPoints: ScalingPoint[] = DEMO_SCALING_FACTORS.map((factor) => {
+    // 属性値のみ倍率スケールしたシャローコピー（「編成全体が factor 倍強くなったら」の近似）
+    const scaled: ComputedTeam = {
+      ...team,
+      Shout: Math.round(team.Shout * factor),
+      Beat: Math.round(team.Beat * factor),
+      Melody: Math.round(team.Melody * factor),
+    };
+    const e = calcExpectedScore(scaled, notes, notesCount, DEMO_OPTIONS);
+    return { factor, shrinkExpected: e.shrinkExpected, scoreUpExpected: e.scoreUpExpected };
+  });
+
   const slots: SpecDemoSlot[] = team.cards.map(dc => ({
     slotIndex: dc.slotIndex,
     ID: dc.cardId,
@@ -125,5 +151,6 @@ export async function buildSpecDemo(): Promise<SpecDemo> {
     song, notesCount, groupSizes, deck, slots, team, exclusion, notes,
     expected, minScore, maxScore, coverage, mc,
     options: DEMO_OPTIONS,
+    shrinkMaxBonus, scalingPoints,
   };
 }
