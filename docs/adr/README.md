@@ -53,3 +53,4 @@
 | [0039](0039-shared-broach-capacity-single-source.md) | 共有ブローチ容量ルールの単一ソース化と CardDetailTable の engine 出力化 | 承認 |
 | [0040](0040-spreadsheet-v107-reference-policy.md) | スコア計算検証は ota-life v1.0.7 スプレッドシートを正とする(縮小開始位置を除く) | 承認 |
 | [0041](0041-spreadsheet-alignment-fixes.md) | スプレッドシート v1.0.7 準拠のスコア計算修正(B1〜B13) | 承認 |
+| [0043](0043-score-calc-spec-page-full-redesign.md) | スコア計算 仕様解説ページをパイプライン全体解説へ全面リデザイン | 承認 |
