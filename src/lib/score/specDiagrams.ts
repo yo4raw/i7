@@ -679,7 +679,7 @@ export interface CoverageDiagramParams {
 export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const c = STAGE_COLORS.shrink;
   const hasExpected = p.expected != null;
-  const W = 760, H = hasExpected ? 320 : 220;
+  const W = 760, H = hasExpected ? 250 : 220;
   const M = { top: 30, right: 20, bottom: 60, left: 20 };
   const innerW = W - M.left - M.right;
   const barH = 40;
@@ -731,7 +731,7 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const segmentsSvg = drawSegments(p.segments, M.top);
 
   const capLabelX = xScale(p.songDuration);
-  const capBottom = hasExpected ? M.top + 160 + barH + 6 : M.top + barH + 6;
+  const capBottom = hasExpected ? M.top + 130 + barH + 6 : M.top + barH + 6;
   const capLine = `
     <line x1="${capLabelX}" y1="${M.top - 4}" x2="${capLabelX}" y2="${capBottom}"
           stroke="${c.dark}" stroke-width="2"/>
@@ -766,7 +766,7 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   // 下段: 発動確率 per を織り込んだ期待カバー（expected 指定時のみ）
   let expectedBlock = '';
   if (p.expected) {
-    const yE = M.top + 160;
+    const yE = M.top + 130;
     const expTotal = p.expected.segments.reduce((a, s) => a + s.seconds, 0);
     const ratePct = (p.expected.coverageRate * 100).toFixed(1);
     expectedBlock = `

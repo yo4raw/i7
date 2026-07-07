@@ -13,6 +13,8 @@ import {
   excludeHeadSvg,
   coverageDiagramSvg,
   shrinkFormulaSvg,
+  skillContributionCompareSvg,
+  skillScalingChartSvg,
   finalBonusSvg,
   scoreRangeSvg,
   mcHistogramSvg,
@@ -118,6 +120,8 @@ const excludeCaseB = excludeHeadSvg({
 
 const eligibleCount = notesCount - excludeHead;
 const shrinkCoverSeconds = shrinkSlots.map(s => Math.floor((eligibleCount / s.count) * s.value));
+const shrinkExpectedCoverSeconds = shrinkSlots.map(s =>
+  Math.floor((eligibleCount / s.count) * (s.per / 100) * s.value));
 const coverageSvg = coverageDiagramSvg({
   songDuration,
   segments: shrinkSlots.map((s, i) => ({
@@ -125,8 +129,25 @@ const coverageSvg = coverageDiagramSvg({
     seconds: shrinkCoverSeconds[i],
     color: CARD_COLORS[i],
   })),
+  expected: {
+    segments: shrinkSlots.map((s, i) => ({
+      label: `${s.name} 期待`,
+      seconds: shrinkExpectedCoverSeconds[i],
+      color: CARD_COLORS[i],
+    })),
+    coverageRate: demo.coverage.expectedCoverageRate,
+    effectiveSeconds: demo.coverage.effectiveSeconds,
+  },
 });
+const expectedCoverageRatePct = (demo.coverage.expectedCoverageRate * 100).toFixed(1);
 const formulaSvg = shrinkFormulaSvg();
+
+// §4-5: スキル持ちスロットの寄与比較とスケーリング図
+const contributionCompareSvg = skillContributionCompareSvg(
+  demo.slots
+    .filter(s => s.skillType != null)
+    .map(s => ({ name: s.name, isShrink: s.isShrink, expected: s.skillExpected, max: s.skillMax })));
+const scalingChartSvg = skillScalingChartSvg([...demo.scalingPoints]);
 
 // §5 最終補正
 const finalSvg = finalBonusSvg({
@@ -418,21 +439,49 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
       デモ編成は {shrinkSlots.map((s, i) => `${s.name} ${shrinkCoverSeconds[i]}秒`).join(' + ')} =
       {shrinkCoverSeconds.reduce((a, b) => a + b, 0)}秒 で曲の長さ {songDuration}秒 を大きく超えるため、
       <strong>100% でキャップ</strong>されます（超過分は無駄になる = 縮小の積みすぎは効率が落ちる、の根拠）。
+      さらに実際には発動確率 per（{shrinkSlots.map(s => `${s.per}%`).join(' / ')}）があるため、
+      発動ムラを織り込んだ<strong>期待カバー率は {expectedCoverageRatePct}%</strong> になります（下段バー）。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={coverageSvg} />
     </div>
 
     <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-4. スコアへの上乗せ式</h3>
-    <p class="text-sm text-gray-700 mb-4">
+    <p class="text-sm text-gray-700 mb-3">
       縮小の上乗せは「対象ノーツの素点合計 × 追加倍率 × カバー率」。倍率 1.6 のうち通常分 1.0 を除いた
-      <strong>0.6 倍ぶん</strong>が上乗せです。デモ編成の期待値では <strong>+{fmt(expected.shrinkExpected)}</strong> になります。
+      <strong>0.6 倍ぶん</strong>が上乗せです。ここで使うカバー率には 2 種類あります:
     </p>
+    <ul class="text-sm text-gray-700 mb-4 list-disc pl-6 space-y-1">
+      <li>すべての発動判定に成功した場合（カバー率 100%）: <strong>+{fmt(demo.shrinkMaxBonus)}</strong>（理論最大）</li>
+      <li>発動確率を織り込んだ場合（期待カバー率 {expectedCoverageRatePct}%）: <strong>+{fmt(expected.shrinkExpected)}</strong>（期待値）</li>
+    </ul>
     <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={formulaSvg} />
     </div>
     <div class="overflow-x-auto -mx-2 px-2">
       <Fragment set:html={accBar(3)} />
+    </div>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-5. スコアアタックでの位置づけ — 縮小 vs スコアアップ</h3>
+    <div class="mb-4 p-3 bg-orange-50 border border-orange-200 rounded text-xs text-orange-900">
+      <strong>スコアアタックの基本戦略</strong>: 判定縮小はスコアアップより 1 枚あたりの得点寄与が大きく、
+      チーム属性値が高いほど寄与が伸びます。まず縮小でカバー率 100% 以上を確保し
+      （発動ムラに備えて余裕を持たせる）、その上でスコアアップスキルが全発動（神発動）するのを狙うのが基本です。
+    </div>
+    <p class="text-sm text-gray-700 mb-3">
+      デモ編成で 1 枚あたりの寄与を比べると、縮小はスコアアップの約 2 倍。デッキ合計では
+      スコアアップ 4 枚 vs 縮小 2 枚でほぼ同じ額になりますが、枚数あたりの効率は縮小が上です。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={contributionCompareSvg} />
+    </div>
+    <p class="text-sm text-gray-700 mb-3">
+      さらにスコアアップは<strong>固定値加算</strong>のため属性値が伸びても寄与が変わらないのに対し、
+      縮小は<strong>素点の底上げ</strong>のため属性値に比例して伸びます。イベント特効などで
+      チーム属性値が跳ね上がるスコアアタック編成ほど、縮小の相対価値が上がります。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={scalingChartSvg} />
     </div>
 
     <details class="mt-4 group">
