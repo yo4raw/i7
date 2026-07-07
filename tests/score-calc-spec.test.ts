@@ -13,28 +13,48 @@ test.describe('スコア計算 仕様解説ページ', () => {
     await expect(page).toHaveTitle(new RegExp(`スコア計算 仕様解説.*${SITE_NAME}`));
   });
 
-  test('6 つの章の見出しがすべて表示される', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /1\. スコア計算の全体像/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /2\. 判定縮小スキルとは/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /3\. 先頭除外ロジック/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /4\. カバー率の合算と 100% キャップ/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /5\. 縮小スコア加算式/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /6\. モンテカルロ分布のイメージ/ })).toBeVisible();
+  test('全 7 章の見出しがすべて表示される', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: /0\. スコア計算の全体像とデモ編成/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /1\. チーム属性値/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /2\. 1ノーツの素点とライト倍率/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /3\. スコアアップスキル/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /4\. 判定縮小スキル/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /5\. 最終補正（バッジ・ブローチ）/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /6\. 理論値・期待値・シミュレーション/ })).toBeVisible();
   });
 
-  test('6 枚以上の SVG が描画される（A〜F + ヘッダーの Playground + ハンバーガーアイコン）', async ({ page }) => {
-    const count = await page.locator('svg').count();
-    expect(count).toBeGreaterThanOrEqual(6);
+  test('パイプライン俯瞰図が各章冒頭にも再掲される（現在地ハイライト）', async ({ page }) => {
+    const overviews = page.locator('svg[aria-label="スコア計算パイプラインの俯瞰図"]');
+    // 章0 の全体版 + 章1〜6 の現在地版 = 7 枚
+    await expect(overviews).toHaveCount(7);
   });
 
-  // FIXME: 「発動: n/m」の表示テキストが現行 UI と一致せずタイムアウトする既存問題
-  test.fixme('ShrinkPlayground のスライダー操作で発動情報が更新される', async ({ page }) => {
-    // ページ表示直後は count=20, per=40, value=4, seed=7 → 発動 9/20 回
-    const summary = page.locator('text=/発動: .*\\/.*/');
-    await expect(summary.first()).toBeVisible();
+  test('デモ編成テーブルに 6 枠が表示され衣装詳細へリンクする', async ({ page }) => {
+    const section = page.locator('#overview');
+    await expect(section.getByText('センター', { exact: true })).toBeVisible();
+    await expect(section.getByText('フレンド', { exact: true })).toBeVisible();
+    const cardLinks = section.locator('a[href*="/cards/"]');
+    await expect(cardLinks).toHaveCount(6);
+  });
 
-    // 「別の試行」ボタンで seed が変わる
+  test('多数の SVG 図が描画される', async ({ page }) => {
+    const count = await page.locator('section svg').count();
+    // 俯瞰図7 + 各章の図解 + 積み上げバー4 + playground で 20 枚以上
+    expect(count).toBeGreaterThanOrEqual(20);
+  });
+
+  test('各章の「実装詳細」details が開閉できる', async ({ page }) => {
+    const details = page.locator('details');
+    expect(await details.count()).toBeGreaterThanOrEqual(6);
+    const first = details.first();
+    const summary = first.locator('summary');
+    await summary.click();
+    await expect(first).toHaveJSProperty('open', true);
+  });
+
+  test('ShrinkPlayground の「別の試行」ボタンで seed が変わる', async ({ page }) => {
     const button = page.getByRole('button', { name: /別の試行/ });
+    await expect(button).toBeVisible();
     const before = await button.textContent();
     await button.click();
     const after = await button.textContent();

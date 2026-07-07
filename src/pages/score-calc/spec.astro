@@ -2,14 +2,25 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ShrinkPlayground from '../../components/score/ShrinkPlayground.svelte';
 import {
-  overviewFlowSvg,
+  pipelineOverviewSvg,
+  teamAttrStackSvg,
+  attrFormulaSvg,
+  lightMultiplierChartSvg,
+  noteScoreStepsSvg,
+  scoreUpTimelineSvg,
   shrinkTimelineSvg,
+  simulateActivationsMulti,
   excludeHeadSvg,
   coverageDiagramSvg,
-  formulaDiagramSvg,
-  mcDistributionSvg,
-  simulateActivationsDeterministic,
+  shrinkFormulaSvg,
+  finalBonusSvg,
+  scoreRangeSvg,
+  mcHistogramSvg,
+  accumulationBarSvg,
+  CARD_COLORS,
+  type AccumulationStage,
 } from '../../lib/score/specDiagrams.ts';
+import { buildSpecDemo, DEMO_NOTE_SEED } from '../../lib/score/specDemo.ts';
 import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
 
 const base = import.meta.env.BASE_URL;
@@ -19,39 +30,129 @@ const breadcrumbs = [
   { name: '仕様解説', url: `${base}score-calc/spec/` },
 ];
 
-// §2 静的タイムライン用のデモパラメータ（MONSTER GENERATiON + Card 1952 Lv5）
-const DEMO_NOTES = 428;
-const DEMO_DURATION = 104;
-const DEMO_EXCLUDE = 21;
-const demoActivations = simulateActivationsDeterministic({
-  count: 20, per: 40, value: 4,
-  notesCount: DEMO_NOTES, songDuration: DEMO_DURATION, excludeHead: DEMO_EXCLUDE,
-  seed: 7,
+// 全章共通のデモ数値 (fixtures スナップショット + 実エンジン計算。ADR 0043)
+const demo = await buildSpecDemo();
+const { team, expected, exclusion } = demo;
+const notesCount = demo.notesCount;
+const songName = demo.song.song_name ?? '';
+const songDuration = demo.song.duration ?? 0;
+const badgeRate = demo.options.scoreUpBadgeRate ?? 0;
+const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+
+// 章末の積み上げバー: 期待値経路で「素点 → +スコアアップ → +縮小 → 最終補正」
+const accumulationStages: AccumulationStage[] = [
+  { label: 'ノーツ素点', value: expected.baseScore, stage: 'note' },
+  { label: 'スコアアップ', value: expected.scoreUpExpected, stage: 'scoreUp' },
+  { label: '判定縮小', value: expected.shrinkExpected, stage: 'shrink' },
+  { label: '最終補正', value: expected.finalScore - expected.liveEndScore, stage: 'final' },
+];
+const accBar = (activeCount: number) => accumulationBarSvg({ stages: accumulationStages, activeCount });
+
+// §1 チーム属性値
+const attrStackSvg = teamAttrStackSvg(team);
+const attrStepsSvg = attrFormulaSvg();
+
+// §2 素点: サビ光の Melody 色ノーツを例に
+const noteStepsSvg = noteScoreStepsSvg({
+  appeal: team.Melody,
+  attr: 'Melody',
+  noteType: 'color',
+  noteRate: 0.03,
+  group: 'chorus_light_6',
+});
+const lightChartSvg = lightMultiplierChartSvg(demo.groupSizes);
+
+// §3 スコアアップ: デモ編成のノート型 (slot1) とタイマー型 (slot2)
+const scoreUpSlots = demo.slots.filter(s => s.skillType && !s.isShrink);
+const noteTypeSlot = demo.slots[1];
+const timerSlot = demo.slots[2];
+const scoreUpSvg = scoreUpTimelineSvg({
+  lanes: [
+    {
+      label: `ノート型: ${noteTypeSlot.name} (${noteTypeSlot.count}ノーツ毎 / ${noteTypeSlot.per}% / +${fmt(noteTypeSlot.value)})`,
+      count: noteTypeSlot.count, per: noteTypeSlot.per, value: noteTypeSlot.value, isTimer: false,
+    },
+    {
+      label: `タイマー型: ${timerSlot.name} (${timerSlot.count}秒毎 / ${timerSlot.per}% / +${fmt(timerSlot.value)})`,
+      count: timerSlot.count, per: timerSlot.per, value: timerSlot.value, isTimer: true,
+    },
+  ],
+  notesCount,
+  songDuration,
+  seed: DEMO_NOTE_SEED,
+});
+
+// §4 判定縮小: デモ編成の縮小 2 枚 (slot0 / slot3)
+const shrinkSlots = demo.slots.filter(s => s.isShrink);
+const shrinkCards = shrinkSlots.map(s => ({ count: s.count, per: s.per, value: s.value }));
+const excludeHead = exclusion.totalExcluded;
+const demoActivations = simulateActivationsMulti({
+  cards: shrinkCards,
+  notesCount,
+  songDuration,
+  excludeHead,
+  seed: DEMO_NOTE_SEED,
 });
 const timelineSvg = shrinkTimelineSvg({
-  count: 20, per: 40, value: 4,
-  notesCount: DEMO_NOTES, songDuration: DEMO_DURATION,
-  excludeHead: DEMO_EXCLUDE, activations: demoActivations,
+  count: shrinkCards[0].count, per: shrinkCards[0].per, value: shrinkCards[0].value,
+  cards: shrinkCards,
+  notesCount,
+  songDuration,
+  excludeHead,
+  activations: demoActivations,
 });
 
-// §3 先頭除外: 2ケース比較
-const excludeCaseA = excludeHeadSvg({ notes20: 21, minCount: 20, caseLabel: 'ケース A: notes_20 > minCount' });
-const excludeCaseB = excludeHeadSvg({ notes20: 20, minCount: 22, caseLabel: 'ケース B: notes_20 < minCount' });
+const notes20Size = demo.groupSizes.notes_20 ?? 0;
+const minShrinkCount = Math.min(...shrinkSlots.map(s => s.count));
+const excludeCaseA = excludeHeadSvg({
+  notes20: notes20Size,
+  minCount: minShrinkCount,
+  caseLabel: `ケース A: このデモ編成（序盤演出区間 ${notes20Size} の方が長い）`,
+});
+const soloShrink = shrinkSlots.reduce((a, b) => (a.count > b.count ? a : b));
+const excludeCaseB = excludeHeadSvg({
+  notes20: notes20Size,
+  minCount: soloShrink.count,
+  caseLabel: `ケース B: 縮小が ${soloShrink.name} のみの場合（最速発動位置 ${soloShrink.count} の方が遅い）`,
+});
 
-// §4 カバー率
+const eligibleCount = notesCount - excludeHead;
+const shrinkCoverSeconds = shrinkSlots.map(s => Math.floor((eligibleCount / s.count) * s.value));
 const coverageSvg = coverageDiagramSvg({
-  songDuration: 104,
-  segments: [
-    { label: 'Card 1952 (20ノート毎×4秒, 20回)', seconds: 80, color: '#f59e0b' },
-    { label: 'Card 3597 (23ノート毎×5秒, 17回)', seconds: 85, color: '#f97316' },
-  ],
+  songDuration,
+  segments: shrinkSlots.map((s, i) => ({
+    label: `${s.name} (${s.count}ノーツ毎 × ${s.value}秒)`,
+    seconds: shrinkCoverSeconds[i],
+    color: CARD_COLORS[i],
+  })),
+});
+const formulaSvg = shrinkFormulaSvg();
+
+// §5 最終補正
+const finalSvg = finalBonusSvg({
+  liveEndScore: expected.liveEndScore,
+  badgeRate,
+  broachScoreBonus: team.broachScoreBonus,
 });
 
-// §5 スコア加算式
-const formulaSvg = formulaDiagramSvg();
+// §6 統計
+const rangeSvg = scoreRangeSvg({
+  minScore: demo.minScore,
+  expectedScore: expected.finalScore,
+  maxScore: demo.maxScore,
+  mcMean: demo.mc.mean,
+  mcP90: demo.mc.p90,
+  mcMin: demo.mc.mcMin,
+  mcMax: demo.mc.mcMax,
+});
+const mcSvg = mcHistogramSvg(demo.mc.scores, demo.mc.mean);
 
-// §6 MC 分布デモ
-const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 });
+const SLOT_ROLES = ['センター', 'メンバー', 'メンバー', 'メンバー', 'メンバー', 'フレンド'];
+const skillSummary = (s: (typeof demo.slots)[number]): string => {
+  if (!s.skillType) return '—';
+  if (s.isShrink) return `${s.skillType} ${s.count}${s.isTimer ? '秒' : 'ノーツ'}毎 / ${s.per}% / ${s.value}秒 / ×${s.rate}`;
+  return `${s.skillType} ${s.count}${s.isTimer ? '秒' : 'ノーツ'}毎 / ${s.per}% / +${fmt(s.value)}`;
+};
 ---
 
 <BaseLayout title="スコア計算 仕様解説" description={PAGE_DESCRIPTIONS.scoreCalcSpec} breadcrumbs={breadcrumbs}>
@@ -60,177 +161,376 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
     <a href={`${base}score-calc/`} class="text-sm text-indigo-600 hover:underline">← 計算ページへ戻る</a>
   </div>
   <p class="text-xs text-gray-500 mb-6">
-    本ページはスコア計算、特に<strong class="text-gray-700">判定縮小スキル</strong>の内部ロジックを
-    図で解説するものです。数値例は楽曲「MONSTER GENERATiON」(428ノート / 104秒) を基に記述しています。
+    本ページは当サイトのスコア計算に実装されているロジック全体を、計算の流れ順に図で解説するものです。
+    数値例はすべて下記のデモ編成 × 楽曲「{songName}」({notesCount}ノーツ / {songDuration}秒) をビルド時に実際の計算エンジンへ通して生成しています。
     有志による計測・推定値を含むため、ゲーム内の挙動と完全に一致することを保証するものではありません。
   </p>
 
   <nav class="bg-white rounded-lg shadow p-4 mb-6 text-sm">
     <h2 class="text-sm font-bold text-indigo-700 mb-2">目次</h2>
-    <ol class="list-decimal pl-6 space-y-0.5 text-gray-700">
-      <li><a href="#overview" class="hover:underline text-indigo-600">スコア計算の全体像</a></li>
-      <li><a href="#shrink" class="hover:underline text-indigo-600">判定縮小スキルとは</a></li>
-      <li><a href="#exclude" class="hover:underline text-indigo-600">先頭除外ロジック</a></li>
-      <li><a href="#coverage" class="hover:underline text-indigo-600">カバー率の合算と 100% キャップ</a></li>
-      <li><a href="#formula" class="hover:underline text-indigo-600">縮小スコア加算式</a></li>
-      <li><a href="#montecarlo" class="hover:underline text-indigo-600">モンテカルロ分布のイメージ</a></li>
+    <ol class="list-decimal pl-6 space-y-0.5 text-gray-700" start="0">
+      <li><a href="#overview" class="hover:underline text-indigo-600">スコア計算の全体像とデモ編成</a></li>
+      <li><a href="#team" class="hover:underline text-indigo-600">チーム属性値</a></li>
+      <li><a href="#note" class="hover:underline text-indigo-600">1ノーツの素点とライト倍率</a></li>
+      <li><a href="#scoreup" class="hover:underline text-indigo-600">スコアアップスキル</a></li>
+      <li><a href="#shrink" class="hover:underline text-indigo-600">判定縮小スキル</a></li>
+      <li><a href="#final" class="hover:underline text-indigo-600">最終補正（バッジ・ブローチ）</a></li>
+      <li><a href="#stats" class="hover:underline text-indigo-600">理論値・期待値・シミュレーション</a></li>
     </ol>
   </nav>
 
+  <!-- ============================================================ -->
   <section id="overview" class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">1. スコア計算の全体像</h2>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">0. スコア計算の全体像とデモ編成</h2>
     <p class="text-sm text-gray-700 mb-4">
-      スコアは大きく分けて <strong>チーム属性値 → 1ノーツ素点 → ライト倍率 → 縮小加算 → バッジ</strong> の順に
-      計算されます。属性値段階でアシスト (×1.2) を適用し、per-note 単位で floor することでゲーム内挙動と揃えます。
-      縮小スキルは経路の一部として「発動中ノーツの追加スコア」を別途加算します。
+      リザルトのスコアは <strong>チーム属性値</strong> を土台に、ノーツ 1 個ずつの<strong>素点</strong>を積み、
+      そこへ<strong>スコアアップスキル</strong>と<strong>判定縮小スキル</strong>の上乗せ、最後に
+      <strong>バッジ・ブローチの最終補正</strong>が掛かって決まります。以下の 6 段階を章ごとに拡大して見ていきます。
     </p>
-    <div class="overflow-x-auto -mx-2 px-2">
-      <Fragment set:html={overviewFlowSvg()} />
+    <div class="overflow-x-auto -mx-2 px-2 mb-6">
+      <Fragment set:html={pipelineOverviewSvg()} />
     </div>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2">デモ編成（全章共通の数値例）</h3>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <table class="min-w-full text-xs text-left border-collapse">
+        <thead>
+          <tr class="border-b border-gray-200 text-gray-500">
+            <th class="py-1.5 pr-3">枠</th>
+            <th class="py-1.5 pr-3">衣装</th>
+            <th class="py-1.5 pr-3">属性</th>
+            <th class="py-1.5">スキル (Lv5)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {demo.slots.map((s) => (
+            <tr class="border-b border-gray-100">
+              <td class="py-1.5 pr-3 text-gray-500">{SLOT_ROLES[s.slotIndex]}</td>
+              <td class="py-1.5 pr-3">
+                <a href={`${base}cards/${s.ID}/`} class="text-indigo-600 hover:underline">{s.name}「{s.cardname}」</a>
+                <span class="text-gray-400 ml-1">{s.rarity}</span>
+              </td>
+              <td class="py-1.5 pr-3">{s.attribute}</td>
+              <td class="py-1.5">{skillSummary(s)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-xs text-gray-500">
+      条件: 全員特訓済み / スキル Lv5 / イベント特効なし / ラビットノート・共通ブローチなし /
+      スコアアップアシスト OFF / バッジ {badgeRate}%（スコア計算ページの既定値）。
+    </p>
   </section>
 
-  <section id="shrink" class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">2. 判定縮小スキルとは</h2>
+  <!-- ============================================================ -->
+  <section id="team" class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
+      <Fragment set:html={pipelineOverviewSvg({ highlight: 'attr' })} />
+    </div>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">1. チーム属性値</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      まず編成 6 枠それぞれの Shout / Beat / Melody を合算して<strong>チーム属性値</strong>を作ります。
+      衣装 1 枠ぶんの値は「基礎値 × イベント特効」にラビットノートとブローチを足したもの。
+      合算後、センターとフレンドの<strong>センタースキル</strong>（レアリティ別: UR +10% / SSR +7%）が
+      自属性と同じ属性へ上乗せされます。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={attrStepsSvg} />
+    </div>
+    <p class="text-sm text-gray-700 mb-3">
+      デモ編成の実数値がこちら。センター（四葉環）とフレンド（亥清悠）がどちらも Melody UR のため、
+      Melody にはセンタースキルが 2 回分（+{fmt(team.centerMelody)} と +{fmt(team.friendMelody)}）効いています。
+      スロット 1 / 4 の固有ブローチ +{fmt(team.broachMelody)} も Melody に乗っています。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={attrStackSvg} />
+    </div>
+
+    <details class="mt-4 group">
+      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
+        <p>実装: <code class="px-1 bg-white rounded">computeTeam()</code> (src/lib/score/teamBuilder.ts)</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>未特訓の衣装は<strong>自属性のみ</strong> <code class="px-1 bg-white rounded">sp_time × sp_value</code> を <code class="px-1 bg-white rounded">*_max</code> から減算（他属性・特訓済みは max のまま）</li>
+          <li>イベント特効は枠ごとに <code class="px-1 bg-white rounded">Math.round(基礎値 × 特効倍率)</code>（四捨五入）</li>
+          <li>ラビットノートは<strong>特効倍率を掛けないフラット加算</strong>。同キャラ複数積みでもキャラ初出スロット（0-4、フレンド除外）に 1 回だけ帰属</li>
+          <li>固有ブローチは UR のみ装着可。条件（グループ縛り・全属性編成・同一衣装上限など）は <code class="px-1 bg-white rounded">resolveDeckBroachs()</code> で判定。共通ブローチの装着数は容量ルール（非 UR=0 / 固有持ち UR=1 / それ以外 UR=2、ADR 0039）に従う</li>
+          <li>センタースキルはセンター分とフレンド分の増加率を<strong>合算してから 1 回だけ floor</strong>: <code class="px-1 bg-white rounded">floor(合算属性値 × (センター率 + フレンド率) / 100)</code>（ADR 0040 / 0041）</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="note" class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
+      <Fragment set:html={pipelineOverviewSvg({ highlight: 'note' })} />
+    </div>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">2. 1ノーツの素点とライト倍率</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      ノーツを 1 個叩くたびに「そのノーツの属性のチーム属性値」から素点が計算されます。
+      レートは<strong>白ノーツ 2.5% / 色ノーツ 3.0%</strong>。さらにライブが進んでライトが増えるほど
+      <strong>ライト倍率</strong>が掛かり、サビ光では最大 3.0 倍になります。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={lightChartSvg} />
+    </div>
+    <p class="text-sm text-gray-700 mb-3">
+      デモ編成でサビ光 (×3.0) 区間の Melody 色ノーツを 1 個叩いた場合の計算がこちら。
+      乗算のたびに小数点以下が切り捨てられる（⌊ ⌋）のがポイントです。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={noteStepsSvg} />
+    </div>
     <p class="text-sm text-gray-700 mb-2">
-      判定縮小スキルは <strong>ノーツ数</strong>（<code class="px-1 bg-gray-100 rounded">count</code>）ごとに
-      <strong>確率</strong>（<code class="px-1 bg-gray-100 rounded">per</code>）% で発動し、
-      <strong>秒数</strong>（<code class="px-1 bg-gray-100 rounded">value</code>）だけ持続する間、叩いたノーツを
-      <strong>倍率</strong>（<code class="px-1 bg-gray-100 rounded">rate</code>、Lv5 で 1.6）でスコア加算するスキルです。
+      これを全 {notesCount} ノーツぶん合算したものが、スキルが一切発動しなかった場合の素点合計
+      <strong>{fmt(expected.baseScore)}</strong> です。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={accBar(1)} />
+    </div>
+
+    <details class="mt-4 group">
+      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
+        <p>実装: <code class="px-1 bg-white rounded">calcNoteScore()</code> (src/lib/score/simulation.ts)</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><code class="px-1 bg-white rounded">perNoteBase = floor(appeal × NOTE_RATE)</code> → <code class="px-1 bg-white rounded">score = floor(perNoteBase × LIGHT_MULTIPLIER)</code> の 2 段階 floor</li>
+          <li><code class="px-1 bg-white rounded">NOTE_RATE = white 0.025 / color 0.030</code>、<code class="px-1 bg-white rounded">LIGHT_MULTIPLIER = 1.0〜3.0</code>（8 グループ）</li>
+          <li>スコアアップアシスト ON のときは<strong>属性値段階</strong>で <code class="px-1 bg-white rounded">appeal = floor(チーム属性値 × 1.2)</code> を適用（最終スコアへの乗算ではない）</li>
+          <li>ノーツの並びはグループ（序盤20 → ライト2〜6 → サビ光）の順を保ち、グループ内のみシャッフルして近似（<code class="px-1 bg-white rounded">flattenNotes()</code>）</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="scoreup" class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
+      <Fragment set:html={pipelineOverviewSvg({ highlight: 'scoreUp' })} />
+    </div>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">3. スコアアップスキル</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      スコアアップスキルは<strong>発動するたびに固定値をそのまま加算</strong>するスキルです。
+      発動タイミングの数え方で 2 種類あります:
+      <strong>ノート型</strong>（コンボ / Perfect）は「◯ノーツごと」、<strong>タイマー型</strong>は「◯秒ごと」に
+      発動判定が走り、確率（per）を引けば +value 点です。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={scoreUpSvg} />
+    </div>
+    <p class="text-sm text-gray-700 mb-3">
+      デモ編成にはスコアアップが 4 枚います。期待値ベースの寄与は次のとおりで、合計 <strong>+{fmt(expected.scoreUpExpected)}</strong> です。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <table class="min-w-full text-xs text-left border-collapse">
+        <thead>
+          <tr class="border-b border-gray-200 text-gray-500">
+            <th class="py-1.5 pr-3">衣装</th>
+            <th class="py-1.5 pr-3">タイプ</th>
+            <th class="py-1.5 pr-3 text-right">最大発動回数</th>
+            <th class="py-1.5 pr-3 text-right">期待値寄与</th>
+            <th class="py-1.5 text-right">理論最大寄与</th>
+          </tr>
+        </thead>
+        <tbody>
+          {scoreUpSlots.map((s) => (
+            <tr class="border-b border-gray-100">
+              <td class="py-1.5 pr-3">{s.name}</td>
+              <td class="py-1.5 pr-3">{s.isTimer ? `タイマー型 (${s.count}秒毎)` : `ノート型 (${s.count}ノーツ毎)`}</td>
+              <td class="py-1.5 pr-3 text-right">{s.maxActivations} 回</td>
+              <td class="py-1.5 pr-3 text-right text-amber-700 font-semibold">+{fmt(s.skillExpected)}</td>
+              <td class="py-1.5 text-right">+{fmt(s.skillMax)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={accBar(2)} />
+    </div>
+
+    <details class="mt-4 group">
+      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
+        <p>実装: <code class="px-1 bg-white rounded">calcExpectedScore()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>期待値: <code class="px-1 bg-white rounded">floor((denom / count) × per/100 × value)</code>。分母 denom はノート型が総ノーツ数、タイマー型が曲の秒数。<strong>衣装単位で 1 回だけ floor</strong>（spec §6-6 H38 準拠）</li>
+          <li>理論最大: <code class="px-1 bg-white rounded">floor((denom / count) × value)</code>（全発動）</li>
+          <li>MC シミュレーションでは判定ごとに乱数ロール（<code class="px-1 bg-white rounded">rng.next()×100 &lt; per</code>）で発動を決める</li>
+          <li>判定強化（BAD→Perfect など）・判定ガード・スコアダウンはスコアに影響しないため計算対象外（ADR 0037）</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="shrink" class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
+      <Fragment set:html={pipelineOverviewSvg({ highlight: 'shrink' })} />
+    </div>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">4. 判定縮小スキル</h2>
+    <p class="text-sm text-gray-700 mb-2">
+      判定縮小スキルは「◯ノーツごと（タイマー型は◯秒ごと）」に確率 per% で発動し、
+      <strong>持続◯秒のあいだに叩いたノーツの素点を倍率（Lv5 で 1.6 倍）に増幅</strong>するスキルです。
+      固定値加算のスコアアップと違い、<strong>素点そのものを底上げする</strong>ためチーム属性値が高いほど効きます。
     </p>
     <p class="text-sm text-gray-700 mb-4">
-      下図はパラメータ例 <code class="px-1 bg-gray-100 rounded">ノーツ数=20 / 確率=40% / 秒数=4秒 / 倍率=1.6</code>
-      の発動タイムラインです。縦点線ごとに発動判定が行われ、コインが<span class="text-green-600 font-semibold">緑</span>
-      なら発動（<span class="text-amber-600 font-semibold">橙の塗り</span>で秒数ぶんカバー）、
-      <span class="text-gray-500">灰</span>なら不発を表します。先頭の<span class="text-gray-500 font-semibold">灰色領域</span>は
-      §3 で説明する <strong>先頭除外</strong> です。
+      下図はデモ編成の縮小 2 枚（{shrinkSlots.map(s => s.name).join(' / ')}）の発動タイムラインです。
+      縦点線ごとに発動判定が行われ、コインが<span class="text-green-600 font-semibold">緑</span>なら発動
+      （<span class="text-orange-600 font-semibold">橙の塗り</span>で持続秒数ぶんカバー）、灰なら不発。
+      先頭の<span class="text-gray-500 font-semibold">灰色領域</span>は後述の<strong>先頭除外</strong>です。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={timelineSvg} />
     </div>
 
-    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">2-1. インタラクティブに試す</h3>
+    <div class="mb-4 p-3 bg-orange-50 border border-orange-200 rounded text-xs text-orange-900">
+      <strong>キューイング仕様</strong>: 複数の縮小スキルが同時刻に重複発動することはなく、
+      先行スキルが終わってから後続スキルが連続発動します。そのためカバー時間は時間軸上で
+      <strong>重ならず単純加算</strong>でき（曲全体を超えた分のみ切り捨て）、後述の 100% キャップの根拠になります。
+    </div>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-1. インタラクティブに試す</h3>
     <p class="text-sm text-gray-700 mb-3">
-      <strong>ノーツ数</strong> / <strong>確率</strong> / <strong>秒数</strong> のスライダー、
-      <strong>「＋衣装追加」</strong> ボタンで縮小スキル枚数の変更、
-      <strong>「別の試行」</strong> ボタンでシード変更ができます。
-      発動回数・カバー時間がデッキ構成でどう変わるか確認できます（実ゲームと同じ発動判定 + キューイング仕様を疑似的に再現、決定論シード付き）。
+      スライダーでノーツ数 / 確率 / 秒数を変え、「＋衣装追加」で縮小の枚数を増やし、
+      「別の試行」でシードを変えられます。発動回数・カバー時間がどう変わるか確認してみてください。
     </p>
     <ShrinkPlayground client:only="svelte" />
 
-    <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-      <strong>キューイング仕様</strong>：実ゲームでは複数の縮小スキルが同時刻に重複発動することはなく、先行スキルが終わってから後続スキルが連続発動します。そのためカバー時間は時間軸上で<strong>重ならず単純加算</strong>できます（曲全体を超えた分のみ切り捨て → §4 の 100% キャップの根拠）。
-    </div>
-  </section>
-
-  <section id="exclude" class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">3. 先頭除外ロジック</h2>
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-2. 先頭除外</h3>
     <p class="text-sm text-gray-700 mb-4">
-      判定縮小スキルは曲の最初のほうでは効果対象外になります。具体的には
-      <code class="px-1 bg-gray-100 rounded">excludeHead = max(notes_20 のノート数, デッキ内縮小スキルの count の最小値)</code>
-      までのノートが <strong>縮小倍率 rate の適用対象外</strong> です。ライト点灯前の演出区間
-      (<code class="px-1 bg-gray-100 rounded">notes_20</code>) と、最速で発動しうるタイミング
-      (<code class="px-1 bg-gray-100 rounded">minCount</code>) の<strong>大きい方</strong>が採用されます。
+      曲の最初のほうは縮小の効果対象外です。除外幅は「序盤演出区間（最初の約 20 ノーツ）」と
+      「編成内でいちばん早く発動できる縮小の発動位置」の<strong>大きい方</strong>。
+      デモ編成では max({notes20Size}, {minShrinkCount}) = <strong>{excludeHead} ノーツ</strong>が対象外です。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-3">
       <Fragment set:html={excludeCaseA} />
     </div>
-    <div class="overflow-x-auto -mx-2 px-2">
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={excludeCaseB} />
     </div>
-    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
-      <li>先頭除外は <strong>スコア寄与の計算</strong>（§5 の eligibleBaseScore）にのみ効き、UI 表示の「スキル最大発動回数」は <code class="px-1 bg-gray-100 rounded">notesCount</code> 全体（タイマー型は <code class="px-1 bg-gray-100 rounded">songDuration</code> 全体）で計算します。</li>
-      <li>縮小スキルが複数枚あるときは <code class="px-1 bg-gray-100 rounded">count</code> が最小の衣装が基準になります。</li>
-    </ul>
 
-    <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded text-xs text-sky-900 space-y-1">
-      <p><strong>実データでの典型値</strong>（フィクスチャ 145 曲 / 縮小スキル 135 枚で実測）:</p>
-      <ul class="list-disc pl-5 space-y-0.5">
-        <li><code class="px-1 bg-white rounded">notes_20</code> はほぼ全曲で <strong>20 または 21</strong>（21 超はゼロ）。</li>
-        <li>Lv5 運用時の <code class="px-1 bg-white rounded">count</code> は <strong>20-22</strong> が約 77%。Lv1 運用時は <strong>23-25</strong> が約 64%。</li>
-        <li>結果として <code class="px-1 bg-white rounded">excludeHead</code> は <strong>Lv5 で概ね 20-22 ノート、Lv1 で 23-25 ノート</strong> になる。</li>
-      </ul>
-      <p>つまり「多くの縮小スキルは発動条件が <strong>20 ノーツ以上</strong> なので、<strong>20 ノーツ前後の直後から最初の縮小発動判定が始まる</strong>」ケースが一般的。<code class="px-1 bg-white rounded">notes_20</code> による除外と <code class="px-1 bg-white rounded">minCount</code> による「物理的に発動できない区間」の除外がほぼ重なるため、実質的には「縮小スキルが動き出せる直前までを除外している」挙動になります。</p>
-    </div>
-  </section>
-
-  <section id="coverage" class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">4. カバー率の合算と 100% キャップ</h2>
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-3. カバー率と 100% キャップ</h3>
     <p class="text-sm text-gray-700 mb-4">
-      各縮小スキルの <strong>最大縮小時間</strong>
-      <code class="px-1 bg-gray-100 rounded">floor(eligibleCount / count) × value</code>
-      を単純加算し、曲尺 (<code class="px-1 bg-gray-100 rounded">songDuration</code>) で割ったものがカバー率です。
-      キューイング仕様より区間は重ならないため単純合算で等価になり、<strong>100% を超えた分は切り捨て</strong>られます。
+      各縮小スキルの「最大カバー秒数」を単純合算して曲の長さで割ったものがカバー率です。
+      デモ編成は {shrinkSlots.map((s, i) => `${s.name} ${shrinkCoverSeconds[i]}秒`).join(' + ')} =
+      {shrinkCoverSeconds.reduce((a, b) => a + b, 0)}秒 で曲の長さ {songDuration}秒 を大きく超えるため、
+      <strong>100% でキャップ</strong>されます（超過分は無駄になる = 縮小の積みすぎは効率が落ちる、の根拠）。
     </p>
-    <div class="overflow-x-auto -mx-2 px-2">
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={coverageSvg} />
     </div>
-    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
-      <li>表示用の raw カバー率は 100% 超の値をそのまま表示（超過分は「計算対象外」と注記）。</li>
-      <li>内部計算用は <code class="px-1 bg-gray-100 rounded">min(raw, 1.0)</code> で 100% キャップ。</li>
-      <li>期待カバー率は <code class="px-1 bg-gray-100 rounded">Σ (numActivations × value × per/100) / songDuration</code> の単純加算版。</li>
-    </ul>
-  </section>
 
-  <section id="formula" class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">5. 縮小スコア加算式</h2>
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-4. スコアへの上乗せ式</h3>
     <p class="text-sm text-gray-700 mb-4">
-      縮小スキルが曲全体に与える追加スコアは、以下の式で算出されます。
-      <code class="px-1 bg-gray-100 rounded">rate − 1.0</code> は「通常 1.0 倍を超える追加倍率」を意味し、
-      Lv5（rate=1.6）なら 0.6 倍分の加算となります。
+      縮小の上乗せは「対象ノーツの素点合計 × 追加倍率 × カバー率」。倍率 1.6 のうち通常分 1.0 を除いた
+      <strong>0.6 倍ぶん</strong>が上乗せです。デモ編成の期待値では <strong>+{fmt(expected.shrinkExpected)}</strong> になります。
     </p>
-    <div class="overflow-x-auto -mx-2 px-2">
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={formulaSvg} />
     </div>
-    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
-      <li><strong class="text-indigo-700">eligibleBaseScore</strong>: 先頭除外後のノートのアシスト適用済み素点合計（<code class="px-1 bg-gray-100 rounded">note.group ≠ notes_20</code> のみ対象）。</li>
-      <li><strong class="text-amber-700">rate − 1.0</strong>: Lv1 (1.2) なら 0.2、Lv5 (1.6) なら 0.6。</li>
-      <li><strong class="text-emerald-700">coverageRate</strong>: §4 の内部カバー率（100% キャップ後）。期待値計算では期待カバー率を使用。</li>
-      <li>複数縮小スキルが重なっても倍率は <code class="px-1 bg-gray-100 rounded">rate</code> のまま（重ねがけなし）。</li>
-    </ul>
+    <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={accBar(3)} />
+    </div>
+
+    <details class="mt-4 group">
+      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
+        <p>実装: <code class="px-1 bg-white rounded">calcShrinkCoverage()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)、<code class="px-1 bg-white rounded">computeShrinkExclusion()</code> (src/lib/score/shrinkExclusion.ts)</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>先頭除外 <code class="px-1 bg-white rounded">excludeHead = max(notes_20 サイズ, デッキ内縮小 count の最小値)</code>。タイマー型はノート換算 <code class="px-1 bg-white rounded">floor((count / songDuration) × notesCount)</code> で比較</li>
+          <li>カード別カバー秒 <code class="px-1 bg-white rounded">floor((対象ノーツ数 / count) × value)</code>（タイマー型は分母 songDuration）。<strong>衣装単位で 1 回だけ floor</strong>（spec §6-6 H39）</li>
+          <li>実効秒数 <code class="px-1 bg-white rounded">effectiveSeconds = songDuration − 先頭除外の秒換算</code>。内部カバー率は effectiveSeconds で 100% キャップ、表示用 raw は超過可</li>
+          <li>期待値スコアは <code class="px-1 bg-white rounded">(rateᵢ − 1)</code> をスキルごとに加重した期待カバー率を使用し、構造的到達可能秒数でキャップ（ADR 0036）</li>
+          <li>上乗せの基準スコア（eligibleBaseScore）は excluded ノーツを除いた素点合計。アシスト ON 時は <code class="px-1 bg-white rounded">floor(eligibleBaseScore / 1.2)</code> でアシスト分を剥離してから縮小倍率を掛ける（spec §6-5 BN22）</li>
+          <li>複数縮小の同時発動なし（キューイング）。発動中の倍率は「いずれか 1 つの rate」で重ねがけなし</li>
+          <li>UI の「スキル最大発動回数」表示はノーツ全体（タイマー型は曲全体）基準で、先頭除外はスコア寄与側にのみ効く</li>
+        </ul>
+      </div>
+    </details>
   </section>
 
-  <section id="montecarlo" class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">6. モンテカルロ分布のイメージ</h2>
+  <!-- ============================================================ -->
+  <section id="final" class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
+      <Fragment set:html={pipelineOverviewSvg({ highlight: 'final' })} />
+    </div>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">5. 最終補正（バッジ・ブローチ）</h2>
     <p class="text-sm text-gray-700 mb-4">
-      スコア計算ページでは上記の期待値だけでなく、縮小スキルの確率発動を考慮した
-      <strong>モンテカルロシミュレーション</strong>（既定 100 試行）も実行しています。
-      試行ごとに発動の当たり外れが変わるため、スコアには揺らぎが生じます。
-      以下は縮小スキル 1 枚構成を 1000 試行した疑似分布（シード固定）です。赤線は平均値、左右の広がりは確率発動による揺らぎを示します。
+      ライブ終了時スコア（素点 + スコアアップ + 縮小）に、最後の 2 つの補正が掛かります。
+      <strong>SCOREUP バッジ</strong>はスコア全体への倍率（例: {badgeRate}% なら ×1.{badgeRate}）、
+      <strong>ブローチのスコア直接加算</strong>（種類 9 の固有ブローチ）は倍率の外側でのフラット加算です。
+      このデモ編成に種類 9 のブローチはないため +0 ですが、持っている編成では最後に足されます。
     </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={finalSvg} />
+    </div>
     <div class="overflow-x-auto -mx-2 px-2">
+      <Fragment set:html={accBar(4)} />
+    </div>
+
+    <details class="mt-4 group">
+      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
+        <p>実装: <code class="px-1 bg-white rounded">applyFinalBonus()</code> (src/lib/score/simulation.ts)</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><code class="px-1 bg-white rounded">finalScore = floor(liveEndScore × (1 + badge% / 100)) + broachScoreBonus</code></li>
+          <li>スコアアップアシスト（+20%）は §2 のとおり<strong>属性値段階</strong>で適用済みのため、ここでは乗算しない</li>
+          <li>ブローチのスコア直接加算（種類 9）はバッジ倍率の<strong>外側</strong>（倍率が掛からない）</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="stats" class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
+      <Fragment set:html={pipelineOverviewSvg({ highlight: 'stats' })} />
+    </div>
+    <h2 class="text-lg font-bold text-indigo-700 mb-3">6. 理論値・期待値・シミュレーション</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      スキルは確率発動なので、同じ編成でもスコアは揺らぎます。スコア計算ページでは 3 種類の数値を出しています:
+      <strong>理論最低</strong>（全スキル不発）、<strong>理論最高</strong>（全スキル発動）、
+      <strong>期待値</strong>（発動確率で加重した平均的な見込み）。さらに
+      <strong>モンテカルロ（MC）シミュレーション</strong>で発動の当たり外れを乱数で再現し、分布として観測します。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
+      <Fragment set:html={rangeSvg} />
+    </div>
+    <p class="text-sm text-gray-700 mb-3">
+      デモ編成を 1000 試行した実際の分布がこちら。平均 {fmt(demo.mc.mean)} / 標準偏差 {fmt(demo.mc.stddev)} /
+      上位 10% ライン (p90) {fmt(demo.mc.p90)} でした。
+    </p>
+    <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={mcSvg} />
     </div>
-    <ul class="mt-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
-      <li>最小スコア = 縮小が一度も発動しないケース（§5 の coverageRate=0）。</li>
-      <li>最大スコア ≒ 全発動ケース（表示 raw カバー率が 100% 超なら内部は 100% キャップ）。</li>
-      <li>mean / stddev / p90 / mcMin / mcMax を本体ページでは表示しています。</li>
+
+    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">6-1. 全発動モード</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      スコア計算ページの<strong>「縮小全発動」「スコアアップ全発動」</strong>チェックを ON にすると、
+      MC 試行内で該当スキルの確率ロールを常に成功扱いにできます。確率の揺らぎがどれだけスコアに
+      効いているかを、OFF/ON の比較で分離して確認できます。
+    </p>
+    <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・衣装別寄与など）。理論最高/最低・期待値の表示は影響を受けません</li>
+      <li>「縮小全発動」でもキューイング仕様は維持されるため、カバー率は引き続き 100% でキャップされます</li>
+      <li>両方 ON にすると理論最高スコアに近い分布になります</li>
     </ul>
 
-    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">6-1. 縮小全発動モード（最大カバー率前提）</h3>
-    <p class="text-sm text-gray-700 mb-2">
-      スコア計算ページのシミュレーション回数入力欄の横にある <strong>「縮小全発動」</strong> チェックボックスを ON にすると、
-      MC 試行内で縮小スキルの確率ロール（<code class="px-1 bg-gray-100 rounded">per</code>% 判定）を
-      <strong>常に成功扱い</strong> にし、<strong>縮小カバー率が理論最大値となる前提のスコア分布</strong> を得られます。
-    </p>
-    <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-2">
-      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・衣装別寄与等）。</li>
-      <li>§4 の「理論最大カバー率」「期待カバー率」、および「理論最高/最低スコア」「期待値スコア」の表示は<strong>従来通り</strong>（本チェックの影響を受けない）。</li>
-      <li>キューイング仕様（§2 末尾）は維持されるため、カバー率は引き続き <code class="px-1 bg-gray-100 rounded">songDuration</code> で 100% キャップされます。</li>
-      <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>
-    </ul>
-
-    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">6-2. スコアアップ全発動モード（最大発動回数前提）</h3>
-    <p class="text-sm text-gray-700 mb-2">
-      シミュレーション回数入力欄の横にある <strong>「スコアアップ全発動」</strong> チェックボックスを ON にすると、
-      MC 試行内で <strong>スコアアップスキル（コンボ型・タイマー型を含む）</strong> の確率ロール（<code class="px-1 bg-gray-100 rounded">per</code>% 判定）を
-      <strong>常に成功扱い</strong> にし、<strong>スコアアップが理論最大発動回数となる前提のスコア分布</strong> を得られます。
-    </p>
-    <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-2">
-      <li>適用対象は <strong>MC シミュレーション結果のみ</strong>（平均・中央値・p90・ヒストグラム・衣装別寄与等）。</li>
-      <li>「理論最高/最低スコア」「期待値スコア」「期待発動回数」の表示は<strong>従来通り</strong>（本チェックの影響を受けない）。</li>
-      <li>判定縮小スキルには影響しない。縮小も全発動させたい場合は「縮小全発動」と併用する。</li>
-      <li>既定は OFF（従来の確率ベース MC）。OFF/ON を切り替えて比較することで、確率ロールの揺らぎ寄与量を定量的に分離できます。</li>
-    </ul>
+    <details class="mt-4 group">
+      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（MC の内部構造）</summary>
+      <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
+        <p>実装: <code class="px-1 bg-white rounded">runSimulation()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>乱数は sfc32（seed 指定で決定論化、ADR 0038）。既定 100 試行、このページのデモは seed 固定 1000 試行</li>
+          <li>1 試行 = タイマー型スキルの事前ロール → ノーツ順に「縮小キュー処理 → 発動判定 → 素点 + 縮小上乗せ + スコアアップ加算」→ 最終補正</li>
+          <li>期待値は理論最高を超えないよう同段階合計でクランプ（縮小の秒→ノート離散化誤差対策、ADR 0036）</li>
+          <li>統計値: mean / median / stddev / p90 / mcMin / mcMax と衣装別の平均発動回数・平均寄与</li>
+        </ul>
+      </div>
+    </details>
   </section>
 
   <section class="bg-white rounded-lg shadow p-6 mb-6">
@@ -238,6 +538,9 @@ const mcSvg = mcDistributionSvg({ baseScore: 293120, seed: 42, iterations: 1000 
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
       <li>
         <a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算ページに戻る</a>
+      </li>
+      <li>
+        <a href={`${base}score-calc/max-score-finder/`} class="text-indigo-600 hover:underline">編成組合計算（理論値最大編成の探索）</a>
       </li>
     </ul>
   </section>

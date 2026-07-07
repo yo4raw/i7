@@ -1,144 +1,420 @@
 /**
  * スコア計算仕様解説ページ (src/pages/score-calc/spec.astro) 用 SVG 生成ヘルパー。
  *
- * 既存の histogram.ts / donutChart.ts と同じく「インライン SVG 文字列を返す関数」
- * パターンで統一する。呼び出し側は `<Fragment set:html={...} />` または
- * `{@html ...}` で埋め込む。
+ * histogram.ts / donutChart.ts と同じく「インライン SVG 文字列を返す関数」パターン。
+ * 呼び出し側は `<Fragment set:html={...} />` または `{@html ...}` で埋め込む。
+ *
+ * ビジュアル言語 (ADR 0043):
+ *  - 計算段階別の配色: 属性値=indigo / 素点=sky / スコアアップ=amber / 縮小=orange /
+ *    最終補正=emerald / 統計=グレー+赤アクセント
+ *  - floor（切り捨て）の発生箇所は ⌊ ⌋ マーカーで明示する
+ *  - 俯瞰図 pipelineOverviewSvg は highlight 指定で「現在地」を示すミニマップとして再掲する
  */
 
 import { ATTR_HEX } from '../constants';
+import { LIGHT_MULTIPLIER } from './constants';
 import { renderHistogramSvg } from './histogram';
 import { Sfc32 } from './rng';
+import type { ComputedTeam } from './types';
 
-const COLOR = {
-  main: '#6366f1',      // indigo-500（メイン枠）
-  mainDark: '#4338ca',  // indigo-700（強調文字）
-  shrink: '#f59e0b',    // amber-500（縮小枝）
-  shrinkDark: '#b45309',// amber-700
-  emerald: '#10b981',   // emerald-500（カバー率）
-  exclude: 'var(--chart-exclude-border)',  // #d1d5db
-  grid: 'var(--chart-grid)',                // #e5e7eb
-  text: 'var(--chart-text)',                // #374151
-  muted: 'var(--chart-axis-label)',         // #6b7280
+/* ================================================================
+ * 共通: 配色・部品
+ * ================================================================ */
+
+/** 計算段階のキー（俯瞰図・章の現在地表示に使用） */
+export type StageKey = 'attr' | 'note' | 'scoreUp' | 'shrink' | 'final' | 'stats';
+
+/** 計算段階別の配色（ライトテーマ固定） */
+export const STAGE_COLORS: Record<StageKey, { main: string; dark: string; pale: string }> = {
+  attr:    { main: '#6366f1', dark: '#4338ca', pale: '#e0e7ff' }, // indigo
+  note:    { main: '#0ea5e9', dark: '#0369a1', pale: '#e0f2fe' }, // sky
+  scoreUp: { main: '#f59e0b', dark: '#b45309', pale: '#fef3c7' }, // amber
+  shrink:  { main: '#f97316', dark: '#c2410c', pale: '#ffedd5' }, // orange
+  final:   { main: '#10b981', dark: '#047857', pale: '#d1fae5' }, // emerald
+  stats:   { main: '#6b7280', dark: '#374151', pale: '#f3f4f6' }, // gray
 } as const;
+
+const GRID = 'var(--chart-grid)';
+const TEXT = 'var(--chart-text)';
+const MUTED = 'var(--chart-axis-label)';
+const EXCLUDE_BG = 'var(--chart-exclude-border)';
+const ACCENT_RED = '#ef4444';
+
+/** 縮小スキル複数枚表示用のカード別カラー（orange 系の濃度違い） */
+export const CARD_COLORS = ['#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12'] as const;
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** 矢印マーカーの共通定義 (1 SVG につき defs 1回で良い) */
-function arrowMarkerDef(id = 'arrow', color = COLOR.main): string {
-  return `<defs>
-    <marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}" />
-    </marker>
-  </defs>`;
+function fmt(n: number): string {
+  return Math.round(n).toLocaleString('en-US');
+}
+
+/** 矢印マーカー定義（1 SVG につき 1 回） */
+function arrowDef(id: string, color: string): string {
+  return `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="${color}" />
+  </marker>`;
+}
+
+/** floor 発生マーカー: ⌊ ⌋ バッジ */
+function floorBadge(x: number, y: number, color: string): string {
+  return `<g>
+    <rect x="${x - 13}" y="${y - 10}" width="26" height="16" rx="8" fill="white" stroke="${color}" stroke-width="1.2"/>
+    <text x="${x}" y="${y + 2.5}" text-anchor="middle" fill="${color}" font-size="10" font-weight="bold">⌊ ⌋</text>
+  </g>`;
+}
+
+function svgOpen(w: number, h: number, label: string): string {
+  return `<svg viewBox="0 0 ${w} ${h}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(label)}">`;
 }
 
 /* ================================================================
- * (A) スコア計算の全体フロー図
+ * 0. パイプライン俯瞰図（現在地ハイライト対応）
  * ================================================================ */
-export function overviewFlowSvg(): string {
-  const W = 760, H = 520;
-  // ボックス配置: 上3段 → 合計ノードに合流 → バッジ → 最終
-  const boxes = [
-    // Row 0 (y=20): 属性値 → アシスト → 素点 → ライト倍率
-    { x: 20,  y: 20, w: 170, h: 64, title: 'チーム属性値', sub: 'Shout / Beat / Melody\nの 6 枠合算', c: COLOR.main },
-    { x: 200, y: 20, w: 170, h: 64, title: 'アシスト適用', sub: 'floor(team × 1.2)', c: COLOR.main },
-    { x: 380, y: 20, w: 170, h: 64, title: '1ノーツ素点', sub: 'floor(appeal × NOTE_RATE)\n白=2.5% / 色=3.0%', c: COLOR.main },
-    { x: 560, y: 20, w: 180, h: 64, title: 'ライト倍率', sub: 'floor(素点 × LIGHT_MULTIPLIER)\n通常 1.0〜1.5 / サビ 3.0', c: COLOR.main },
-    // Row 1 (y=120): スコアアップ加算 / 縮小加算 / (ライト倍率の続き)
-    { x: 20,  y: 120, w: 170, h: 84, title: 'スコアアップ加算', sub: 'Σ scoreUpExpected\n(タイマー系含む)', c: COLOR.main },
-    { x: 380, y: 120, w: 170, h: 84, title: '縮小加算 (§5)', sub: 'floor(eligibleBaseScore\n × (rate − 1.0)\n × coverageRate)', c: COLOR.shrink },
-    // Row 2 (y=240): 合計 total
-    { x: 120, y: 240, w: 520, h: 70, title: '合計 total', sub: 'Σ (noteScore + shrinkExtra + scoreUpSum)', c: COLOR.mainDark },
-    // Row 3 (y=340): バッジ倍率
-    { x: 240, y: 340, w: 280, h: 64, title: 'バッジ倍率適用', sub: 'floor(total × (1 + badge% / 100))', c: COLOR.main },
-    // Row 4 (y=430): 最終スコア
-    { x: 240, y: 430, w: 280, h: 64, title: '最終スコア', sub: '+ broachScoreBonus (種類9)', c: COLOR.mainDark },
-  ];
 
-  const boxSvg = boxes.map((b) => {
-    const lines = b.sub.split('\n');
-    const subText = lines.map((l, i) =>
-      `<tspan x="${b.x + b.w / 2}" dy="${i === 0 ? 16 : 12}">${escapeXml(l)}</tspan>`
-    ).join('');
-    return `<g>
-      <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="8" ry="8"
-            fill="white" stroke="${b.c}" stroke-width="2"/>
-      <text x="${b.x + b.w / 2}" y="${b.y + 20}" text-anchor="middle"
-            fill="${b.c}" font-size="13" font-weight="bold">${escapeXml(b.title)}</text>
-      <text x="${b.x + b.w / 2}" y="${b.y + 34}" text-anchor="middle"
-            fill="${COLOR.muted}" font-size="10">${subText}</text>
-    </g>`;
-  }).join('\n');
+const PIPELINE_STAGES: { key: StageKey; title: string; sub: string }[] = [
+  { key: 'attr',    title: 'チーム属性値', sub: '衣装6枠 + ブローチ\n+ センタースキル' },
+  { key: 'note',    title: '1ノーツ素点', sub: '属性値 × ノートレート\n× ライト倍率' },
+  { key: 'scoreUp', title: 'スコアアップ加算', sub: '発動ごとに\n固定値を加算' },
+  { key: 'shrink',  title: '判定縮小加算', sub: '発動中のノーツを\n1.6倍などに増幅' },
+  { key: 'final',   title: '最終補正', sub: 'バッジ倍率\n+ ブローチ直接加算' },
+  { key: 'stats',   title: 'リザルト分布', sub: '理論値・期待値\nMC シミュレーション' },
+];
 
-  const arrow = (x1: number, y1: number, x2: number, y2: number, color = COLOR.main, dashed = false) =>
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2"
-           marker-end="url(#arrow)"${dashed ? ' stroke-dasharray="4 3"' : ''}/>`;
-  const arrowShrink = (x1: number, y1: number, x2: number, y2: number, dashed = false) =>
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${COLOR.shrink}" stroke-width="2"
-           marker-end="url(#arrow-shrink)"${dashed ? ' stroke-dasharray="4 3"' : ''}/>`;
+/**
+ * スコア計算パイプラインの俯瞰図。
+ * highlight を指定すると該当段階のみ塗りつぶし、他を淡色化した「現在地」版になる。
+ */
+export function pipelineOverviewSvg(opts?: { highlight?: StageKey }): string {
+  const highlight = opts?.highlight;
+  const boxW = 128, boxH = 64, gap = 22;
+  const W = PIPELINE_STAGES.length * boxW + (PIPELINE_STAGES.length - 1) * gap + 24;
+  const H = 96;
+  const y = 14;
 
-  // 合計ノードの上辺中央
-  const totalTopY = 240;
-  const totalLeftX = 180;   // スコアアップ加算の真下付近
-  const totalCenterX = 380; // 縮小加算の真下
-  const totalRightX = 580;  // ライト倍率の真下付近
+  const parts: string[] = [];
+  PIPELINE_STAGES.forEach((s, i) => {
+    const x = 12 + i * (boxW + gap);
+    const c = STAGE_COLORS[s.key];
+    const active = highlight == null || highlight === s.key;
+    const fill = highlight === s.key ? c.pale : 'white';
+    const opacity = active ? 1 : 0.35;
+    const subLines = s.sub.split('\n').map((l, li) =>
+      `<tspan x="${x + boxW / 2}" dy="${li === 0 ? 14 : 11}">${escapeXml(l)}</tspan>`).join('');
+    parts.push(`<g opacity="${opacity}">
+      <rect x="${x}" y="${y}" width="${boxW}" height="${boxH}" rx="8"
+            fill="${fill}" stroke="${c.main}" stroke-width="${highlight === s.key ? 3 : 2}"/>
+      <text x="${x + boxW / 2}" y="${y + 20}" text-anchor="middle" fill="${c.dark}" font-size="12" font-weight="bold">${escapeXml(s.title)}</text>
+      <text x="${x + boxW / 2}" y="${y + 30}" text-anchor="middle" fill="${MUTED}" font-size="9">${subLines}</text>
+    </g>`);
+    if (i < PIPELINE_STAGES.length - 1) {
+      const nextActive = highlight == null || highlight === PIPELINE_STAGES[i + 1].key || highlight === s.key;
+      parts.push(`<line x1="${x + boxW + 2}" y1="${y + boxH / 2}" x2="${x + boxW + gap - 3}" y2="${y + boxH / 2}"
+        stroke="${MUTED}" stroke-width="2" marker-end="url(#pipe-arrow)" opacity="${nextActive ? 1 : 0.35}"/>`);
+    }
+  });
 
-  const arrows = [
-    // Row 0: 横方向の直列
-    arrow(190, 52, 200, 52),   // 属性値 → アシスト
-    arrow(370, 52, 380, 52),   // アシスト → 素点
-    arrow(550, 52, 560, 52),   // 素点 → ライト倍率
-    // ライト倍率（per-note 素点） → 縮小加算（縮小発動中のノートだけ (rate−1)×素点 を追加）
-    arrowShrink(590, 84, 485, 120),
-    // 縮小加算 → 合計
-    arrow(465, 204, totalCenterX, totalTopY),
-    // スコアアップ加算 → 合計 (左端、斜め↘)
-    arrow(105, 204, totalLeftX, totalTopY),
-    // ライト倍率 → 合計 (右端、斜め↙。ノーツ本体スコアの総計)
-    arrow(680, 84, totalRightX, totalTopY),
-    // 合計 → バッジ
-    arrow(380, 310, 380, 340),
-    // バッジ → 最終
-    arrow(380, 404, 380, 430),
-  ].join('\n');
-
-  // 補助ラベル
-  const auxLabels = `
-    <text x="650" y="115" text-anchor="middle" fill="${COLOR.muted}" font-size="9">
-      (各ノーツスコアを合算)
-    </text>
-    <text x="540" y="108" text-anchor="end" fill="${COLOR.shrinkDark}" font-size="9">
-      橙経路 = 縮小発動中のノートだけ (rate−1)×素点 を追加
-    </text>
-  `;
-
-  return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="スコア計算の全体フロー">
-    ${arrowMarkerDef('arrow', COLOR.main)}
-    <defs>
-      <marker id="arrow-shrink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="${COLOR.shrink}" />
-      </marker>
-    </defs>
-    ${boxSvg}
-    ${arrows}
-    ${auxLabels}
-    <text x="${W / 2}" y="${H - 6}" text-anchor="middle" fill="${COLOR.muted}" font-size="10">
-      バッジ倍率は 合計 total（ノーツ本体 + 縮小加算 + スコアアップ加算）に対して適用される
-    </text>
+  return `${svgOpen(W, H, 'スコア計算パイプラインの俯瞰図')}
+    <defs>${arrowDef('pipe-arrow', '#9ca3af')}</defs>
+    ${parts.join('\n')}
   </svg>`;
 }
 
 /* ================================================================
- * (B) 縮小スキルのタイムライン図
+ * 1. チーム属性値
  * ================================================================ */
+
+/** チーム属性値の内訳（素値/ブローチ/センター/フレンド）積み上げバー */
+export function teamAttrStackSvg(team: ComputedTeam): string {
+  const c = STAGE_COLORS.attr;
+  const SEGMENTS = [
+    { key: 'raw', label: '衣装素値 (特効込み)', color: c.main },
+    { key: 'broach', label: 'ブローチ', color: '#a5b4fc' },
+    { key: 'center', label: 'センタースキル', color: c.dark },
+    { key: 'friend', label: 'フレンドスキル', color: '#818cf8' },
+  ] as const;
+  const rows = (['Shout', 'Beat', 'Melody'] as const).map(attr => ({
+    attr,
+    raw: team[`raw${attr}`],
+    broach: team[`broach${attr}`],
+    center: team[`center${attr}`],
+    friend: team[`friend${attr}`],
+    total: team[attr],
+  }));
+
+  const W = 760, rowH = 34, barH = 20;
+  const M = { top: 34, left: 74, right: 88, bottom: 10 };
+  const H = M.top + rows.length * rowH + M.bottom;
+  const innerW = W - M.left - M.right;
+  const maxTotal = Math.max(...rows.map(r => r.total));
+  const xw = (v: number) => (v / maxTotal) * innerW;
+
+  const legend = SEGMENTS.map((s, i) =>
+    `<g transform="translate(${M.left + i * 170}, 8)">
+      <rect width="12" height="10" rx="2" fill="${s.color}"/>
+      <text x="16" y="9" fill="${TEXT}" font-size="10">${escapeXml(s.label)}</text>
+    </g>`).join('');
+
+  const bars = rows.map((r, ri) => {
+    const y = M.top + ri * rowH + (rowH - barH) / 2;
+    let x = M.left;
+    const segs = SEGMENTS.map(s => {
+      const v = r[s.key];
+      if (v <= 0) return '';
+      const w = xw(v);
+      const rect = `<rect x="${x}" y="${y}" width="${w}" height="${barH}" fill="${s.color}">
+        <title>${r.attr} ${escapeXml(s.label)}: ${fmt(v)}</title></rect>`;
+      x += w;
+      return rect;
+    }).join('');
+    return `<g>
+      <circle cx="${M.left - 62}" cy="${y + barH / 2}" r="5" fill="${ATTR_HEX[r.attr]}"/>
+      <text x="${M.left - 52}" y="${y + barH / 2 + 4}" fill="${TEXT}" font-size="11" font-weight="bold">${r.attr}</text>
+      ${segs}
+      <text x="${M.left + xw(r.total) + 6}" y="${y + barH / 2 + 4}" fill="${c.dark}" font-size="11" font-weight="bold">${fmt(r.total)}</text>
+    </g>`;
+  }).join('\n');
+
+  return `${svgOpen(W, H, 'チーム属性値の内訳（積み上げバー）')}
+    ${legend}
+    ${bars}
+  </svg>`;
+}
+
+/** チーム属性値の計算手順チェーン図（静的、floor/round の位置を明示） */
+export function attrFormulaSvg(): string {
+  const c = STAGE_COLORS.attr;
+  const W = 860, H = 190;
+  const steps = [
+    { x: 12,  w: 150, title: '衣装の基礎値', sub: ['特訓済み: *_max', '未特訓: 自属性のみ', 'sp_time×sp_value を減算'] },
+    { x: 182, w: 140, title: '× イベント特効', sub: ['特効倍率を乗算', 'round (四捨五入)'] },
+    { x: 342, w: 150, title: '+ 加算アイテム', sub: ['ラビットノート', '(キャラ初出スロット)', 'ブローチ (UR のみ)'] },
+    { x: 512, w: 130, title: '6 枠を合算', sub: ['センター/メンバー', '/フレンド'] },
+    { x: 662, w: 186, title: '+ センタースキル', sub: ['合算値 × 増加率', '(UR 10% / SSR 7%)', 'センター+フレンド合算後に floor'] },
+  ];
+  const y = 40, h = 92;
+  const boxes = steps.map(s => {
+    const subLines = s.sub.map((l, i) =>
+      `<tspan x="${s.x + s.w / 2}" dy="${i === 0 ? 16 : 13}">${escapeXml(l)}</tspan>`).join('');
+    return `<g>
+      <rect x="${s.x}" y="${y}" width="${s.w}" height="${h}" rx="8" fill="white" stroke="${c.main}" stroke-width="2"/>
+      <text x="${s.x + s.w / 2}" y="${y + 20}" text-anchor="middle" fill="${c.dark}" font-size="12" font-weight="bold">${escapeXml(s.title)}</text>
+      <text x="${s.x + s.w / 2}" y="${y + 32}" text-anchor="middle" fill="${MUTED}" font-size="9.5">${subLines}</text>
+    </g>`;
+  }).join('\n');
+  const arrows = steps.slice(0, -1).map((s, i) => {
+    const x1 = s.x + s.w, x2 = steps[i + 1].x;
+    return `<line x1="${x1 + 2}" y1="${y + h / 2}" x2="${x2 - 3}" y2="${y + h / 2}" stroke="${c.main}" stroke-width="2" marker-end="url(#attr-arrow)"/>`;
+  }).join('\n');
+
+  return `${svgOpen(W, H, 'チーム属性値の計算手順')}
+    <defs>${arrowDef('attr-arrow', c.main)}</defs>
+    ${boxes}
+    ${arrows}
+    ${floorBadge(28, y + h + 18, c.dark)}
+    <text x="46" y="${y + h + 22}" fill="${MUTED}" font-size="10">= 小数点以下切り捨てが起きる場所</text>
+    <text x="12" y="24" fill="${MUTED}" font-size="10">衣装 1 枠ごとに左から順に計算し、最後にチーム全体へセンタースキルを適用します</text>
+  </svg>`;
+}
+
+/* ================================================================
+ * 2. 1ノーツの素点
+ * ================================================================ */
+
+const GROUP_LABELS: Record<string, string> = {
+  notes_20: '序盤20',
+  light_2: 'ライト2',
+  light_3: 'ライト3',
+  light_4: 'ライト4',
+  light_5: 'ライト5',
+  light_6: 'ライト6',
+  chorus_light_5: 'サビ光5',
+  chorus_light_6: 'サビ光6',
+};
+
+/** ライト倍率の段階チャート（デモ楽曲のノーツ数を添える） */
+export function lightMultiplierChartSvg(groupSizes?: Record<string, number>): string {
+  const c = STAGE_COLORS.note;
+  const groups = Object.keys(LIGHT_MULTIPLIER);
+  const W = 760, H = 240;
+  const M = { top: 26, left: 46, right: 16, bottom: 56 };
+  const innerW = W - M.left - M.right;
+  const innerH = H - M.top - M.bottom;
+  const maxMult = 3.0;
+  const bw = innerW / groups.length;
+
+  const yAxis = [1.0, 1.5, 2.0, 2.6, 3.0].map(v => {
+    const y = M.top + innerH - (v / maxMult) * innerH;
+    return `<line x1="${M.left}" y1="${y}" x2="${M.left + innerW}" y2="${y}" stroke="${GRID}" stroke-width="1"/>
+      <text x="${M.left - 6}" y="${y + 3}" text-anchor="end" fill="${MUTED}" font-size="9">×${v.toFixed(1)}</text>`;
+  }).join('');
+
+  const bars = groups.map((g, i) => {
+    const mult = LIGHT_MULTIPLIER[g];
+    const isChorus = g.startsWith('chorus');
+    const barW = bw * 0.62;
+    const x = M.left + i * bw + (bw - barW) / 2;
+    const h = (mult / maxMult) * innerH;
+    const y = M.top + innerH - h;
+    const n = groupSizes?.[g];
+    const countLabel = n != null
+      ? `<text x="${x + barW / 2}" y="${M.top + innerH + 30}" text-anchor="middle" fill="${MUTED}" font-size="9">${n}ノーツ</text>`
+      : '';
+    return `<g>
+      <rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="${isChorus ? c.dark : c.main}">
+        <title>${GROUP_LABELS[g] ?? g}: ×${mult}</title></rect>
+      <text x="${x + barW / 2}" y="${y - 5}" text-anchor="middle" fill="${c.dark}" font-size="11" font-weight="bold">×${mult}</text>
+      <text x="${x + barW / 2}" y="${M.top + innerH + 16}" text-anchor="middle" fill="${TEXT}" font-size="10">${escapeXml(GROUP_LABELS[g] ?? g)}</text>
+      ${countLabel}
+    </g>`;
+  }).join('\n');
+
+  return `${svgOpen(W, H, 'ライト段階ごとのスコア倍率')}
+    ${yAxis}
+    ${bars}
+    <text x="${M.left}" y="14" fill="${MUTED}" font-size="10">ライブが進む（ライトが増える）ほど 1 ノーツの価値が上がり、サビ光では最大 3.0 倍になります</text>
+  </svg>`;
+}
+
+export interface NoteScoreStepsParams {
+  /** チーム属性値（アシスト適用後） */
+  appeal: number;
+  /** 属性名（表示用） */
+  attr: 'Shout' | 'Beat' | 'Melody';
+  /** ノーツ種別 */
+  noteType: 'white' | 'color';
+  /** ノートレート (0.025 / 0.030) */
+  noteRate: number;
+  /** グループキー (LIGHT_MULTIPLIER のキー) */
+  group: string;
+}
+
+/** 1 ノーツの素点計算ステップ図（実数値入り） */
+export function noteScoreStepsSvg(p: NoteScoreStepsParams): string {
+  const c = STAGE_COLORS.note;
+  const mult = LIGHT_MULTIPLIER[p.group] ?? 1.0;
+  const perNoteBase = Math.floor(p.appeal * p.noteRate);
+  const score = Math.floor(perNoteBase * mult);
+  const typeLabel = p.noteType === 'color' ? '色ノーツ' : '白ノーツ';
+  const ratePct = `${(p.noteRate * 100).toFixed(1)}%`;
+
+  const W = 820, H = 150;
+  const y = 42, h = 64;
+  const boxes = [
+    { x: 12,  w: 170, title: `チーム属性値 (${p.attr})`, value: fmt(p.appeal), color: STAGE_COLORS.attr },
+    { x: 236, w: 160, title: `× ノートレート ${ratePct}`, value: fmt(perNoteBase), color: c, floorBefore: true },
+    { x: 452, w: 170, title: `× ライト倍率 ${mult.toFixed(1)}`, value: fmt(score), color: c, floorBefore: true },
+    { x: 668, w: 140, title: 'このノーツの素点', value: fmt(score), color: c, strong: true },
+  ];
+
+  const parts = boxes.map(b => {
+    const fill = b.strong ? b.color.pale : 'white';
+    return `<g>
+      <rect x="${b.x}" y="${y}" width="${b.w}" height="${h}" rx="8" fill="${fill}" stroke="${b.color.main}" stroke-width="2"/>
+      <text x="${b.x + b.w / 2}" y="${y + 22}" text-anchor="middle" fill="${b.color.dark}" font-size="11" font-weight="bold">${escapeXml(b.title)}</text>
+      <text x="${b.x + b.w / 2}" y="${y + 46}" text-anchor="middle" fill="${TEXT}" font-size="16" font-weight="bold">${b.value}</text>
+    </g>`;
+  }).join('\n');
+
+  const arrows = boxes.slice(0, -1).map((b, i) => {
+    const x1 = b.x + b.w, x2 = boxes[i + 1].x;
+    const midX = (x1 + x2) / 2;
+    const floorMark = boxes[i + 1].floorBefore ? floorBadge(midX, y - 6, c.dark) : '';
+    return `<line x1="${x1 + 2}" y1="${y + h / 2}" x2="${x2 - 3}" y2="${y + h / 2}" stroke="${c.main}" stroke-width="2" marker-end="url(#note-arrow)"/>
+      ${floorMark}`;
+  }).join('\n');
+
+  return `${svgOpen(W, H, '1ノーツの素点計算ステップ')}
+    <defs>${arrowDef('note-arrow', c.main)}</defs>
+    <text x="12" y="24" fill="${MUTED}" font-size="10">例: ${escapeXml(GROUP_LABELS[p.group] ?? p.group)} 区間の ${p.attr} ${typeLabel} 1 個のスコア（⌊ ⌋ = 直前の乗算結果を切り捨て）</text>
+    ${parts}
+    ${arrows}
+  </svg>`;
+}
+
+/* ================================================================
+ * 3. スコアアップスキル
+ * ================================================================ */
+
+export interface ScoreUpLane {
+  label: string;
+  /** ノート型なら「何ノーツごと」、タイマー型なら「何秒ごと」 */
+  count: number;
+  per: number;
+  value: number;
+  isTimer: boolean;
+}
+
+export interface ScoreUpTimelineParams {
+  lanes: ScoreUpLane[];
+  notesCount: number;
+  songDuration: number;
+  seed: number;
+}
+
+/** スコアアップスキルの発動タイムライン（ノート型・タイマー型を並べる） */
+export function scoreUpTimelineSvg(p: ScoreUpTimelineParams): string {
+  const c = STAGE_COLORS.scoreUp;
+  const laneH = 56;
+  const W = 820;
+  const M = { top: 14, left: 20, right: 20, bottom: 34 };
+  const innerW = W - M.left - M.right;
+  const H = M.top + p.lanes.length * laneH + M.bottom;
+  const rng = new Sfc32(p.seed);
+
+  const lanes = p.lanes.map((lane, li) => {
+    const yBase = M.top + li * laneH + laneH - 14;
+    const maxAct = lane.isTimer
+      ? Math.floor(p.songDuration / lane.count)
+      : Math.floor(p.notesCount / lane.count);
+    const marks: string[] = [];
+    let fired = 0;
+    for (let k = 1; k <= maxAct; k++) {
+      const t = lane.isTimer ? (k * lane.count) / p.songDuration : (k * lane.count) / p.notesCount;
+      const x = M.left + t * innerW;
+      const hit = rng.next() * 100 < lane.per;
+      if (hit) {
+        fired++;
+        marks.push(`<line x1="${x}" y1="${yBase}" x2="${x}" y2="${yBase - 22}" stroke="${c.main}" stroke-width="2"/>
+          <circle cx="${x}" cy="${yBase - 26}" r="4.5" fill="${c.main}"><title>発動 +${fmt(lane.value)}</title></circle>`);
+      } else {
+        marks.push(`<circle cx="${x}" cy="${yBase}" r="3.5" fill="var(--chart-mute-fill)" stroke="white" stroke-width="1"><title>不発</title></circle>`);
+      }
+    }
+    const gained = fired * lane.value;
+    return `<g>
+      <line x1="${M.left}" y1="${yBase}" x2="${M.left + innerW}" y2="${yBase}" stroke="${GRID}" stroke-width="1.5"/>
+      ${marks.join('\n')}
+      <text x="${M.left}" y="${yBase - 34}" fill="${c.dark}" font-size="11" font-weight="bold">${escapeXml(lane.label)}</text>
+      <text x="${M.left + innerW}" y="${yBase - 34}" text-anchor="end" fill="${TEXT}" font-size="10">発動 ${fired}/${maxAct} 回 → +${fmt(gained)}</text>
+    </g>`;
+  }).join('\n');
+
+  const ticks: string[] = [];
+  for (let s = 0; s <= p.songDuration; s += 20) {
+    const x = M.left + (s / p.songDuration) * innerW;
+    ticks.push(`<line x1="${x}" y1="${H - M.bottom + 4}" x2="${x}" y2="${H - M.bottom + 8}" stroke="${MUTED}"/>
+      <text x="${x}" y="${H - M.bottom + 20}" text-anchor="middle" fill="${MUTED}" font-size="9">${s}s</text>`);
+  }
+
+  return `${svgOpen(W, H, 'スコアアップスキルの発動タイムライン')}
+    ${lanes}
+    ${ticks.join('\n')}
+    <text x="${M.left}" y="${H - 4}" fill="${MUTED}" font-size="9.5">●=発動（value を即座に加算） / 灰=不発。ノート型はノーツ数、タイマー型は経過秒数で判定タイミングが決まります</text>
+  </svg>`;
+}
+
+/* ================================================================
+ * 4. 判定縮小スキル（タイムライン・先頭除外・カバー率・加算式）
+ * ================================================================ */
+
 export interface Activation {
   start: number;    // ノート index (inclusive)
   end: number;      // ノート index (exclusive)
   fired: boolean;   // true=発動, false=不発
-  cardIndex?: number; // どのカードのトリガーか（マルチカード時に使用）
+  cardIndex?: number;
 }
 
 export interface ShrinkCardParam {
@@ -195,10 +471,9 @@ export function simulateActivationsMulti(p: {
 }): Activation[] {
   if (p.cards.length === 0) return [];
 
-  // Phase 1: 各カードのトリガーを生成（発動位置・発動可否・value_in_notes）
   type Trigger = {
     cardIndex: number;
-    noteIndex: number;   // トリガーが発火するノート位置
+    noteIndex: number;
     fired: boolean;
     valueInNotes: number;
   };
@@ -216,24 +491,17 @@ export function simulateActivationsMulti(p: {
     }
   }
 
-  // Phase 2: トリガーを時系列（noteIndex 昇順 → 同時なら cardIndex 昇順）に並べる
   triggers.sort((a, b) => a.noteIndex - b.noteIndex || a.cardIndex - b.cardIndex);
 
-  // Phase 3: キューイングで発動区間を決定
   const acts: Activation[] = [];
-  let currentEnd = 0; // 現在発動中スキルの end（ノート index）
+  let currentEnd = 0;
   for (const t of triggers) {
     if (!t.fired) {
-      // 不発はタイムライン表示のため情報を残す（fired=false）
       acts.push({ start: t.noteIndex, end: t.noteIndex, fired: false, cardIndex: t.cardIndex });
       continue;
     }
-    // 発動中なら、その終了時刻まで待機してから開始（キューイング）
     const start = Math.max(t.noteIndex, currentEnd);
-    if (start >= p.notesCount) {
-      // キューから溢れて曲が終了した → 切り捨て
-      continue;
-    }
+    if (start >= p.notesCount) continue;
     const end = Math.min(start + t.valueInNotes, p.notesCount);
     acts.push({ start, end, fired: true, cardIndex: t.cardIndex });
     currentEnd = end;
@@ -241,14 +509,11 @@ export function simulateActivationsMulti(p: {
   return acts;
 }
 
-/** カード別の塗り色（1 枚目は既存の shrink 色、以降は濃度違いのオレンジ系） */
-export const CARD_COLORS = ['#f59e0b', '#f97316', '#ea580c', '#c2410c', '#9a3412'] as const;
-
+/** 縮小スキルの発動タイムライン図（マルチカード対応） */
 export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
   const cards: ShrinkCardParam[] = p.cards ?? [{ count: p.count, per: p.per, value: p.value }];
   const numCards = cards.length;
 
-  // カード数が増えるとタイムラインの縦幅も増やす（コインレーン + サマリー行）
   const coinLaneH = 18;
   const barH = 26;
   const W = 820;
@@ -261,30 +526,25 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
 
   const xScale = (noteIdx: number) => M.left + (noteIdx / p.notesCount) * innerW;
 
-  // 先頭除外領域
   const excludeX1 = xScale(0);
   const excludeX2 = xScale(excludeHead);
   const excludeRect = excludeHead > 0
     ? `<rect x="${excludeX1}" y="${M.top}" width="${excludeX2 - excludeX1}" height="${innerH}"
-              fill="${COLOR.exclude}" opacity="0.6"/>
+              fill="${EXCLUDE_BG}" opacity="0.6"/>
        <text x="${(excludeX1 + excludeX2) / 2}" y="${M.top + 12}" text-anchor="middle"
-             fill="${COLOR.muted}" font-size="10">先頭除外 ${excludeHead}ノート</text>`
+             fill="${MUTED}" font-size="10">先頭除外 ${excludeHead}ノート</text>`
     : '';
 
-  // 発動判定コイン（カードごとに別レーンに配置）
   const coins: string[] = [];
   const gridLines: string[] = [];
   for (const a of activations) {
     const ci = a.cardIndex ?? 0;
     const x = xScale(a.start);
     const cy = M.top + 10 + ci * coinLaneH;
-    if (a.fired || !a.fired) {
-      // 判定位置を示す縦点線はカード 1 枚目のトリガー位置にのみ引く（視覚的に煩雑にならないよう）
-      if (ci === 0) {
-        gridLines.push(
-          `<line x1="${x}" y1="${M.top}" x2="${x}" y2="${M.top + innerH}" stroke="${COLOR.grid}" stroke-width="1" stroke-dasharray="3 2"/>`
-        );
-      }
+    if (ci === 0) {
+      gridLines.push(
+        `<line x1="${x}" y1="${M.top}" x2="${x}" y2="${M.top + innerH}" stroke="${GRID}" stroke-width="1" stroke-dasharray="3 2"/>`
+      );
     }
     coins.push(
       `<circle cx="${x}" cy="${cy}" r="5"
@@ -294,13 +554,11 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
     );
   }
 
-  // カードレーンのラベル（左端に 1 / 2 / 3 など）
   const laneLabels = cards.map((_, i) =>
     `<text x="${M.left - 4}" y="${M.top + 14 + i * coinLaneH}" text-anchor="end"
            fill="${CARD_COLORS[i]}" font-size="10" font-weight="bold">${i + 1}</text>`
   ).join('\n');
 
-  // 発動区間（カードごとの色で下段バーに塗る）
   const barY = M.top + coinLaneH * numCards + 4;
   const fillBars = activations.filter((a) => a.fired).map((a) => {
     const ci = a.cardIndex ?? 0;
@@ -312,19 +570,16 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
             </rect>`;
   }).join('\n');
 
-  // 時間目盛 (10秒ごと)
   const secondsTicks: string[] = [];
-  const tickInterval = 10;
-  for (let s = 0; s <= p.songDuration; s += tickInterval) {
+  for (let s = 0; s <= p.songDuration; s += 10) {
     const noteIdx = (s / p.songDuration) * p.notesCount;
     const x = xScale(noteIdx);
     secondsTicks.push(
-      `<line x1="${x}" y1="${M.top + innerH}" x2="${x}" y2="${M.top + innerH + 4}" stroke="${COLOR.muted}" stroke-width="1"/>
-       <text x="${x}" y="${M.top + innerH + 16}" text-anchor="middle" fill="${COLOR.muted}" font-size="9">${s}s</text>`
+      `<line x1="${x}" y1="${M.top + innerH}" x2="${x}" y2="${M.top + innerH + 4}" stroke="${MUTED}" stroke-width="1"/>
+       <text x="${x}" y="${M.top + innerH + 16}" text-anchor="middle" fill="${MUTED}" font-size="9">${s}s</text>`
     );
   }
 
-  // 発動サマリー: カードごとに発動/機会 + カバー時間
   const firedPerCard = cards.map((_, i) => activations.filter((a) => a.fired && a.cardIndex === i).length);
   const triggersPerCard = cards.map((_, i) => activations.filter((a) => a.cardIndex === i).length);
   const coverPerCard = cards.map((c, i) => firedPerCard[i] * c.value);
@@ -335,33 +590,31 @@ export function shrinkTimelineSvg(p: ShrinkTimelineParams): string {
     `衣装${i + 1} (${c.count}ノーツ/${c.per}%/${c.value}秒): ${firedPerCard[i]}/${triggersPerCard[i]}回 (${coverPerCard[i]}秒)`
   ).join(' ／ ');
 
-  return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="縮小スキルのタイムライン">
-    <!-- 軸 -->
-    <line x1="${M.left}" y1="${M.top + innerH}" x2="${M.left + innerW}" y2="${M.top + innerH}" stroke="${COLOR.muted}" stroke-width="1"/>
+  return `${svgOpen(W, H, '縮小スキルのタイムライン')}
+    <line x1="${M.left}" y1="${M.top + innerH}" x2="${M.left + innerW}" y2="${M.top + innerH}" stroke="${MUTED}" stroke-width="1"/>
     ${excludeRect}
     ${gridLines.join('\n')}
     ${laneLabels}
     ${fillBars}
     ${coins.join('\n')}
     ${secondsTicks.join('\n')}
-    <text x="${M.left}" y="${H - 6}" fill="${COLOR.text}" font-size="10">
+    <text x="${M.left}" y="${H - 6}" fill="${TEXT}" font-size="10">
       ${escapeXml(summary)} ／ 合計カバー ${totalCoverCapped}秒 (${coverPct}%)
     </text>
   </svg>`;
 }
 
-/* ================================================================
- * (C) 先頭除外ロジックの図
- * ================================================================ */
 export interface ExcludeHeadParams {
   notes20: number;
   minCount: number;
   caseLabel?: string;
 }
 
+/** 先頭除外 excludeHead = max(notes_20, minCount) の比較図 */
 export function excludeHeadSvg(p: ExcludeHeadParams): string {
+  const c = STAGE_COLORS.shrink;
   const W = 640, H = 180;
-  const M = { top: 30, right: 20, bottom: 30, left: 60 };
+  const M = { top: 30, right: 20, bottom: 30, left: 74 };
   const innerW = W - M.left - M.right;
   const maxRange = Math.max(p.notes20, p.minCount) * 1.4 + 5;
   const xScale = (n: number) => M.left + (n / maxRange) * innerW;
@@ -372,37 +625,36 @@ export function excludeHeadSvg(p: ExcludeHeadParams): string {
   const resultX = xScale(result);
 
   const lineNotes20 = `
-    <line x1="${M.left}" y1="60" x2="${notes20X}" y2="60" stroke="${ATTR_HEX.Melody}" stroke-width="10" stroke-linecap="round"/>
-    <text x="${M.left - 8}" y="64" text-anchor="end" fill="${COLOR.text}" font-size="11" font-weight="bold">notes_20</text>
-    <text x="${notes20X + 6}" y="64" fill="${ATTR_HEX.Melody}" font-size="11" font-weight="bold">${p.notes20}</text>
+    <line x1="${M.left}" y1="60" x2="${notes20X}" y2="60" stroke="${STAGE_COLORS.note.main}" stroke-width="10" stroke-linecap="round"/>
+    <text x="${M.left - 8}" y="64" text-anchor="end" fill="${TEXT}" font-size="11" font-weight="bold">序盤演出区間</text>
+    <text x="${notes20X + 6}" y="64" fill="${STAGE_COLORS.note.dark}" font-size="11" font-weight="bold">${p.notes20}</text>
   `;
   const lineMinCount = `
-    <line x1="${M.left}" y1="95" x2="${minCountX}" y2="95" stroke="${COLOR.shrink}" stroke-width="10" stroke-linecap="round"/>
-    <text x="${M.left - 8}" y="99" text-anchor="end" fill="${COLOR.text}" font-size="11" font-weight="bold">minCount</text>
-    <text x="${minCountX + 6}" y="99" fill="${COLOR.shrink}" font-size="11" font-weight="bold">${p.minCount}</text>
+    <line x1="${M.left}" y1="95" x2="${minCountX}" y2="95" stroke="${c.main}" stroke-width="10" stroke-linecap="round"/>
+    <text x="${M.left - 8}" y="99" text-anchor="end" fill="${TEXT}" font-size="11" font-weight="bold">最速発動位置</text>
+    <text x="${minCountX + 6}" y="99" fill="${c.dark}" font-size="11" font-weight="bold">${p.minCount}</text>
   `;
   const resultLine = `
-    <line x1="${resultX}" y1="40" x2="${resultX}" y2="135" stroke="${COLOR.mainDark}" stroke-width="2" stroke-dasharray="3 3"/>
-    <text x="${resultX + 6}" y="130" fill="${COLOR.mainDark}" font-size="11" font-weight="bold">
-      excludeHead = max(${p.notes20}, ${p.minCount}) = ${result}
+    <line x1="${resultX}" y1="40" x2="${resultX}" y2="135" stroke="${c.dark}" stroke-width="2" stroke-dasharray="3 3"/>
+    <text x="${resultX + 6}" y="130" fill="${c.dark}" font-size="11" font-weight="bold">
+      先頭除外 = max(${p.notes20}, ${p.minCount}) = ${result}
     </text>
   `;
   const caseTitle = p.caseLabel
-    ? `<text x="${M.left - 10}" y="20" fill="${COLOR.text}" font-size="12" font-weight="bold">${escapeXml(p.caseLabel)}</text>`
+    ? `<text x="${M.left - 10}" y="20" fill="${TEXT}" font-size="12" font-weight="bold">${escapeXml(p.caseLabel)}</text>`
     : '';
 
-  // スケール目盛
   const axis = `
-    <line x1="${M.left}" y1="150" x2="${M.left + innerW}" y2="150" stroke="${COLOR.muted}" stroke-width="1"/>
+    <line x1="${M.left}" y1="150" x2="${M.left + innerW}" y2="150" stroke="${MUTED}" stroke-width="1"/>
     ${Array.from({ length: 6 }, (_, i) => {
       const n = Math.round((maxRange * i) / 5);
       const x = xScale(n);
-      return `<line x1="${x}" y1="150" x2="${x}" y2="154" stroke="${COLOR.muted}"/>
-              <text x="${x}" y="166" text-anchor="middle" fill="${COLOR.muted}" font-size="9">${n}</text>`;
+      return `<line x1="${x}" y1="150" x2="${x}" y2="154" stroke="${MUTED}"/>
+              <text x="${x}" y="166" text-anchor="middle" fill="${MUTED}" font-size="9">${n}</text>`;
     }).join('')}
   `;
 
-  return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="先頭除外の計算">
+  return `${svgOpen(W, H, '先頭除外の計算')}
     ${caseTitle}
     ${axis}
     ${lineNotes20}
@@ -411,15 +663,14 @@ export function excludeHeadSvg(p: ExcludeHeadParams): string {
   </svg>`;
 }
 
-/* ================================================================
- * (D) カバー率の合算と 100% キャップ図
- * ================================================================ */
 export interface CoverageDiagramParams {
   songDuration: number;
   segments: { label: string; seconds: number; color: string }[];
 }
 
+/** カバー率の合算と 100% キャップの図 */
 export function coverageDiagramSvg(p: CoverageDiagramParams): string {
+  const c = STAGE_COLORS.shrink;
   const W = 760, H = 220;
   const M = { top: 30, right: 20, bottom: 60, left: 20 };
   const innerW = W - M.left - M.right;
@@ -428,15 +679,13 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const maxRange = Math.max(totalSec, p.songDuration) * 1.05;
   const xScale = (sec: number) => M.left + (sec / maxRange) * innerW;
 
-  // ベースバー (songDuration = 100% の尺)
   const baseBar = `
     <rect x="${M.left}" y="${M.top}" width="${xScale(p.songDuration) - M.left}" height="${barH}"
-          fill="var(--chart-exclude-bg)" stroke="${COLOR.grid}" stroke-width="1"/>
-    <text x="${M.left + 6}" y="${M.top + barH / 2 + 4}"
-          fill="${COLOR.muted}" font-size="10">songDuration = ${p.songDuration}秒 (100%)</text>
+          fill="var(--chart-exclude-bg)" stroke="${GRID}" stroke-width="1"/>
+    <text x="${M.left}" y="${M.top - 6}"
+          fill="${MUTED}" font-size="10">曲の長さ = ${p.songDuration}秒 (100%)</text>
   `;
 
-  // キューイング: セグメントを連結（横方向にシフト）
   let cursor = 0;
   const segmentsSvg = p.segments.map((s) => {
     const x1 = xScale(cursor);
@@ -445,14 +694,12 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
     const x2Cap = xScale(cappedEnd);
     cursor += s.seconds;
 
-    // 100% 内の塗り（実効）
     const inPart = x2Cap > x1
       ? `<rect x="${x1}" y="${M.top}" width="${x2Cap - x1}" height="${barH}"
               fill="${s.color}" opacity="0.9">
            <title>${escapeXml(s.label)} (実効部 ${Math.min(s.seconds, p.songDuration - (cursor - s.seconds))}秒)</title>
          </rect>`
       : '';
-    // 超過分（100% を越えた部分）
     const overPart = x2Full > x2Cap
       ? `<rect x="${x2Cap}" y="${M.top}" width="${x2Full - x2Cap}" height="${barH}"
               fill="${s.color}" opacity="0.3" stroke="${s.color}" stroke-dasharray="4 2" stroke-width="1.5">
@@ -462,42 +709,39 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
     return inPart + overPart;
   }).join('\n');
 
-  // 100% キャップの縦線（ラベルは summary で明示するため、SVG 内は短い注記のみ）
   const capLabelX = xScale(p.songDuration);
   const capLine = `
     <line x1="${capLabelX}" y1="${M.top - 4}" x2="${capLabelX}" y2="${M.top + barH + 6}"
-          stroke="${COLOR.mainDark}" stroke-width="2"/>
+          stroke="${c.dark}" stroke-width="2"/>
     <text x="${capLabelX - 4}" y="${M.top - 6}" text-anchor="end"
-          fill="${COLOR.mainDark}" font-size="10" font-weight="bold">100%→</text>
+          fill="${c.dark}" font-size="10" font-weight="bold">100%→</text>
   `;
 
-  // 目盛
   const secTicks: string[] = [];
   for (let s = 0; s <= maxRange; s += 20) {
     const x = xScale(s);
     secTicks.push(
-      `<line x1="${x}" y1="${M.top + barH}" x2="${x}" y2="${M.top + barH + 4}" stroke="${COLOR.muted}"/>
-       <text x="${x}" y="${M.top + barH + 16}" text-anchor="middle" fill="${COLOR.muted}" font-size="9">${s}s</text>`
+      `<line x1="${x}" y1="${M.top + barH}" x2="${x}" y2="${M.top + barH + 4}" stroke="${MUTED}"/>
+       <text x="${x}" y="${M.top + barH + 16}" text-anchor="middle" fill="${MUTED}" font-size="9">${s}s</text>`
     );
   }
 
-  // 凡例
   const legendItems = p.segments.map((s, i) =>
     `<g transform="translate(${M.left + i * 320}, ${M.top + barH + 32})">
        <rect width="14" height="10" fill="${s.color}" opacity="0.9"/>
-       <text x="18" y="9" fill="${COLOR.text}" font-size="10">${escapeXml(s.label)} = ${s.seconds}秒</text>
+       <text x="18" y="9" fill="${TEXT}" font-size="10">${escapeXml(s.label)} = ${s.seconds}秒</text>
      </g>`
   ).join('\n');
 
   const rawPct = ((totalSec / p.songDuration) * 100).toFixed(1);
   const cappedPct = Math.min(100, Number(rawPct)).toFixed(1);
   const summary = `
-    <text x="${W - M.right}" y="18" text-anchor="end" fill="${COLOR.text}" font-size="11">
-      Σ / songDuration = ${totalSec} / ${p.songDuration} = ${rawPct}% → min(_, 100%) = ${cappedPct}%
+    <text x="${W - M.right}" y="18" text-anchor="end" fill="${TEXT}" font-size="11">
+      合算 ${totalSec}秒 / ${p.songDuration}秒 = ${rawPct}% → min(_, 100%) = ${cappedPct}%
     </text>
   `;
 
-  return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="カバー率の合算と 100% キャップ">
+  return `${svgOpen(W, H, 'カバー率の合算と 100% キャップ')}
     ${baseBar}
     ${segmentsSvg}
     ${capLine}
@@ -507,55 +751,51 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   </svg>`;
 }
 
-/* ================================================================
- * (E) 縮小スコア加算式の図解
- * ================================================================ */
-export function formulaDiagramSvg(): string {
+/** 縮小スコア加算式の分解図 */
+export function shrinkFormulaSvg(): string {
+  const c = STAGE_COLORS.shrink;
   const W = 760, H = 240;
-  // 中央大文字の式
   const formula = `
-    <text x="${W / 2}" y="70" text-anchor="middle" fill="${COLOR.text}"
-          font-size="22" font-family="serif">
-      floor(
-      <tspan fill="${COLOR.main}" font-weight="bold">eligibleBaseScore</tspan>
+    <text x="${W / 2}" y="70" text-anchor="middle" fill="${TEXT}"
+          font-size="21" font-family="serif">
+      ⌊
+      <tspan fill="${STAGE_COLORS.note.dark}" font-weight="bold">対象素点合計</tspan>
        × (
-      <tspan fill="${COLOR.shrinkDark}" font-weight="bold">rate − 1.0</tspan>
+      <tspan fill="${c.dark}" font-weight="bold">倍率 − 1.0</tspan>
       ) ×
-      <tspan fill="${COLOR.emerald}" font-weight="bold">coverageRate</tspan>
-      )
+      <tspan fill="${STAGE_COLORS.final.dark}" font-weight="bold">カバー率</tspan>
+      ⌋
     </text>
   `;
-  // 各項の説明ボックス
   const boxes = [
-    { x: 30, y: 110, w: 220, h: 100, color: COLOR.main,
-      title: 'eligibleBaseScore', lines: ['先頭除外後のノートの', 'アシスト適用済み素点合計', '(note.group ≠ notes_20 のみ)'] },
-    { x: 270, y: 110, w: 220, h: 100, color: COLOR.shrinkDark,
-      title: 'rate − 1.0', lines: ['縮小倍率 rate から通常分', '1.0 を引いた追加倍率', 'Lv1=0.2 / Lv5=0.6'] },
-    { x: 510, y: 110, w: 220, h: 100, color: COLOR.emerald,
-      title: 'coverageRate', lines: ['min(raw / songDuration, 1.0)', '期待値計算では期待カバー率', '(§4 参照)'] },
+    { x: 30, y: 110, w: 220, h: 100, color: STAGE_COLORS.note.dark,
+      title: '対象素点合計', lines: ['先頭除外の後にある', 'ノーツの素点をすべて合算', '（実装名: eligibleBaseScore）'] },
+    { x: 270, y: 110, w: 220, h: 100, color: c.dark,
+      title: '倍率 − 1.0', lines: ['縮小倍率から通常分 1.0 を', '引いた「追加分」の倍率', 'Lv1=0.2 / Lv5=0.6'] },
+    { x: 510, y: 110, w: 220, h: 100, color: STAGE_COLORS.final.dark,
+      title: 'カバー率', lines: ['縮小が効いている時間の割合', '100% でキャップ', '（期待値計算では期待カバー率）'] },
   ];
   const boxSvg = boxes.map((b) =>
     `<g>
       <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="6" ry="6"
             fill="white" stroke="${b.color}" stroke-width="2"/>
       <text x="${b.x + b.w / 2}" y="${b.y + 24}" text-anchor="middle"
-            fill="${b.color}" font-size="14" font-weight="bold">${b.title}</text>
+            fill="${b.color}" font-size="14" font-weight="bold">${escapeXml(b.title)}</text>
       ${b.lines.map((l, i) =>
         `<text x="${b.x + b.w / 2}" y="${b.y + 46 + i * 16}" text-anchor="middle"
-               fill="${COLOR.text}" font-size="11">${escapeXml(l)}</text>`
+               fill="${TEXT}" font-size="11">${escapeXml(l)}</text>`
       ).join('')}
     </g>`
   ).join('\n');
 
-  // 下線カラー
   const underlines = boxes.map((b, i) => {
     const cx = 30 + 240 * i + b.w / 2;
     return `<line x1="${cx - 60}" y1="86" x2="${cx + 60}" y2="86" stroke="${b.color}" stroke-width="3"/>`;
   }).join('\n');
 
-  return `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="縮小スコア加算式">
-    <text x="${W / 2}" y="28" text-anchor="middle" fill="${COLOR.muted}" font-size="11">
-      縮小スキルによるスコア追加分（§5）
+  return `${svgOpen(W, H, '縮小スコア加算式')}
+    <text x="${W / 2}" y="28" text-anchor="middle" fill="${MUTED}" font-size="11">
+      縮小スキルが曲全体に上乗せするスコア（⌊ ⌋ = 最後に 1 回だけ切り捨て）
     </text>
     ${formula}
     ${underlines}
@@ -564,56 +804,166 @@ export function formulaDiagramSvg(): string {
 }
 
 /* ================================================================
- * (F) モンテカルロ分布のイメージ
+ * 5. 最終補正
  * ================================================================ */
-export interface McDistributionParams {
-  baseScore: number;
-  seed: number;
-  iterations: number;
+
+export interface FinalBonusParams {
+  liveEndScore: number;
+  badgeRate: number;
+  broachScoreBonus: number;
 }
 
-/**
- * 縮小スキル 1 枚構成の疑似スコア分布を生成する。
- * 発動回数が二項分布 Binomial(maxActivations, per) に従うと仮定し、
- * 1 回発動あたりの加算量を固定値として単純加算する。
- * デモ用途のため、実エンジンの MC とは別の簡易モデル。
- */
-export function generateDemoScores(params: {
-  baseScore: number;
-  maxActivations: number;
-  per: number;
-  addPerActivation: number;
-  seed: number;
-  n: number;
-}): number[] {
-  const rng = new Sfc32(params.seed);
-  const scores: number[] = [];
-  const p = params.per / 100;
-  for (let t = 0; t < params.n; t++) {
-    let fired = 0;
-    for (let k = 0; k < params.maxActivations; k++) {
-      if (rng.next() < p) fired++;
-    }
-    scores.push(params.baseScore + fired * params.addPerActivation);
-  }
-  return scores;
+/** 最終補正（バッジ倍率 + ブローチ直接加算）のステップ図（実数値入り） */
+export function finalBonusSvg(p: FinalBonusParams): string {
+  const c = STAGE_COLORS.final;
+  const afterBadge = Math.floor(p.liveEndScore * (1 + p.badgeRate / 100));
+  const final = afterBadge + p.broachScoreBonus;
+
+  const W = 820, H = 150;
+  const y = 42, h = 64;
+  const boxes = [
+    { x: 12,  w: 190, title: 'ライブ終了時スコア', value: fmt(p.liveEndScore), pale: false },
+    { x: 256, w: 180, title: `× バッジ倍率 (1 + ${p.badgeRate}%)`, value: fmt(afterBadge), pale: false, floorBefore: true },
+    { x: 490, w: 170, title: `+ ブローチ直接加算`, value: `+${fmt(p.broachScoreBonus)}`, pale: false },
+    { x: 668, w: 140, title: '最終リザルト', value: fmt(final), pale: true },
+  ];
+  const parts = boxes.map(b => `<g>
+      <rect x="${b.x}" y="${y}" width="${b.w}" height="${h}" rx="8" fill="${b.pale ? c.pale : 'white'}" stroke="${c.main}" stroke-width="2"/>
+      <text x="${b.x + b.w / 2}" y="${y + 22}" text-anchor="middle" fill="${c.dark}" font-size="11" font-weight="bold">${escapeXml(b.title)}</text>
+      <text x="${b.x + b.w / 2}" y="${y + 46}" text-anchor="middle" fill="${TEXT}" font-size="16" font-weight="bold">${b.value}</text>
+    </g>`).join('\n');
+  const arrows = boxes.slice(0, -1).map((b, i) => {
+    const x1 = b.x + b.w, x2 = boxes[i + 1].x;
+    const midX = (x1 + x2) / 2;
+    const floorMark = boxes[i + 1].floorBefore ? floorBadge(midX, y - 6, c.dark) : '';
+    return `<line x1="${x1 + 2}" y1="${y + h / 2}" x2="${x2 - 3}" y2="${y + h / 2}" stroke="${c.main}" stroke-width="2" marker-end="url(#final-arrow)"/>
+      ${floorMark}`;
+  }).join('\n');
+
+  return `${svgOpen(W, H, '最終補正のステップ')}
+    <defs>${arrowDef('final-arrow', c.main)}</defs>
+    <text x="12" y="24" fill="${MUTED}" font-size="10">デモ編成の期待値経路での実数値（バッジ ${p.badgeRate}% / ブローチ直接加算はこの編成では ${fmt(p.broachScoreBonus)}）</text>
+    ${parts}
+    ${arrows}
+  </svg>`;
 }
 
-export function mcDistributionSvg(p: McDistributionParams): string {
-  // 典型例: Card 1952 (count=20, per=40%, value=4, rate=1.6) × MONSTER GENERATiON
-  const scores = generateDemoScores({
-    baseScore: p.baseScore,
-    maxActivations: 20,
-    per: 40,
-    addPerActivation: 3500, // 1 回発動あたりの平均加算量 (1 秒あたり縮小加算 × value秒)
-    seed: p.seed,
-    n: p.iterations,
-  });
+/* ================================================================
+ * 6. 理論値・期待値・MC
+ * ================================================================ */
+
+export interface ScoreRangeParams {
+  minScore: number;
+  expectedScore: number;
+  maxScore: number;
+  mcMean: number;
+  mcP90: number;
+  mcMin: number;
+  mcMax: number;
+}
+
+/** 理論最低〜最高の数直線上に期待値と MC 統計を配置した図 */
+export function scoreRangeSvg(p: ScoreRangeParams): string {
+  const W = 820, H = 170;
+  const M = { left: 50, right: 50 };
+  const innerW = W - M.left - M.right;
+  const lineY = 92;
+  const span = p.maxScore - p.minScore;
+  const x = (v: number) => M.left + ((v - p.minScore) / span) * innerW;
+
+  // MC 分布の帯（mcMin〜mcMax）
+  const mcBand = `<rect x="${x(p.mcMin)}" y="${lineY - 12}" width="${x(p.mcMax) - x(p.mcMin)}" height="24"
+    fill="${STAGE_COLORS.stats.pale}" stroke="${STAGE_COLORS.stats.main}" stroke-width="1" stroke-dasharray="3 2" rx="4">
+    <title>MC 分布の範囲 (${fmt(p.mcMin)} 〜 ${fmt(p.mcMax)})</title></rect>`;
+
+  const markers = [
+    { v: p.minScore, label: '理論最低', sub: '全スキル不発', color: STAGE_COLORS.stats.dark, above: true },
+    { v: p.expectedScore, label: '期待値', sub: '確率で加重', color: STAGE_COLORS.final.dark, above: true },
+    { v: p.mcMean, label: 'MC 平均', sub: `p90=${fmt(p.mcP90)}`, color: ACCENT_RED, above: false },
+    { v: p.maxScore, label: '理論最高', sub: '全スキル発動', color: STAGE_COLORS.shrink.dark, above: true },
+  ];
+
+  // ラベル・補足・数値は各マーカーの側（above/below）にまとめて縦に積む
+  // （期待値と MC 平均のように x が近接しても反対側の要素と交差しない）
+  const marks = markers.map(m => {
+    const mx = x(m.v);
+    const ys = m.above
+      ? { sub: lineY - 48, label: lineY - 35, value: lineY - 21 }
+      : { value: lineY + 26, label: lineY + 39, sub: lineY + 52 };
+    return `<g>
+      <line x1="${mx}" y1="${lineY - 16}" x2="${mx}" y2="${lineY + 16}" stroke="${m.color}" stroke-width="2.5"/>
+      <text x="${mx}" y="${ys.label}" text-anchor="middle" fill="${m.color}" font-size="11" font-weight="bold">${escapeXml(m.label)}</text>
+      <text x="${mx}" y="${ys.sub}" text-anchor="middle" fill="${MUTED}" font-size="9">${escapeXml(m.sub)}</text>
+      <text x="${mx}" y="${ys.value}" text-anchor="middle" fill="${TEXT}" font-size="9.5">${fmt(m.v)}</text>
+    </g>`;
+  }).join('\n');
+
+  return `${svgOpen(W, H, '理論最低・期待値・理論最高スコアの位置関係')}
+    <line x1="${M.left}" y1="${lineY}" x2="${M.left + innerW}" y2="${lineY}" stroke="${MUTED}" stroke-width="1.5"/>
+    ${mcBand}
+    ${marks}
+    <text x="${M.left}" y="${H - 4}" fill="${MUTED}" font-size="9.5">グレーの帯（点線）= MC シミュレーションで実際に観測されたスコアの範囲</text>
+  </svg>`;
+}
+
+/** MC スコア分布のヒストグラム（実データ） */
+export function mcHistogramSvg(scores: number[], mean: number): string {
   const min = Math.min(...scores);
   const max = Math.max(...scores);
-  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
   return renderHistogramSvg(scores, min, max, mean, {
-    xAxisLabel: 'スコア (デモ分布)',
-    barColor: COLOR.shrink,
+    xAxisLabel: 'スコア (MC 1000 試行)',
+    barColor: STAGE_COLORS.stats.main,
   });
+}
+
+/* ================================================================
+ * 章末: 積み上げスコアバー
+ * ================================================================ */
+
+export interface AccumulationStage {
+  label: string;
+  value: number;
+  stage: StageKey;
+}
+
+export interface AccumulationBarParams {
+  stages: AccumulationStage[];
+  /** 何段目まで「確定」表示するか (1-based)。それ以降は薄く表示 */
+  activeCount: number;
+}
+
+/** 章末に置く「ここまでの積み上げスコア」バー */
+export function accumulationBarSvg(p: AccumulationBarParams): string {
+  const W = 760, H = 96;
+  const M = { top: 30, left: 16, right: 16 };
+  const barH = 26;
+  const innerW = W - M.left - M.right;
+  const total = p.stages.reduce((a, s) => a + s.value, 0);
+  const activeTotal = p.stages.slice(0, p.activeCount).reduce((a, s) => a + s.value, 0);
+
+  let x = M.left;
+  const segs = p.stages.map((s, i) => {
+    const w = (s.value / total) * innerW;
+    const active = i < p.activeCount;
+    const color = STAGE_COLORS[s.stage].main;
+    const rect = `<g opacity="${active ? 1 : 0.18}">
+      <rect x="${x}" y="${M.top}" width="${w}" height="${barH}" fill="${color}">
+        <title>${escapeXml(s.label)}: +${fmt(s.value)}</title></rect>
+      ${w > 60 ? `<text x="${x + w / 2}" y="${M.top + barH / 2 + 3.5}" text-anchor="middle" fill="white" font-size="9.5" font-weight="bold">${escapeXml(s.label)}</text>` : ''}
+    </g>`;
+    const below = `<text x="${Math.min(Math.max(x + w / 2, M.left + 30), W - M.right - 30)}" y="${M.top + barH + 16}" text-anchor="middle" fill="${active ? TEXT : MUTED}" font-size="9" opacity="${active ? 1 : 0.5}">+${fmt(s.value)}</text>`;
+    x += w;
+    return rect + below;
+  }).join('\n');
+
+  const cursorX = M.left + (activeTotal / total) * innerW;
+  const cursor = p.activeCount < p.stages.length
+    ? `<line x1="${cursorX}" y1="${M.top - 8}" x2="${cursorX}" y2="${M.top + barH + 6}" stroke="${TEXT}" stroke-width="2"/>
+       <text x="${Math.min(cursorX, W - 120)}" y="${M.top - 12}" text-anchor="middle" fill="${TEXT}" font-size="11" font-weight="bold">ここまで ${fmt(activeTotal)}</text>`
+    : `<text x="${W - M.right}" y="${M.top - 12}" text-anchor="end" fill="${STAGE_COLORS.final.dark}" font-size="12" font-weight="bold">最終 ${fmt(total)}</text>`;
+
+  return `${svgOpen(W, H, 'ここまでの積み上げスコア')}
+    ${segs}
+    ${cursor}
+  </svg>`;
 }
