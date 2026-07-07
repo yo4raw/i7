@@ -13,6 +13,7 @@ import {
   coverageDiagramSvg,
   shrinkFormulaSvg,
   skillContributionCompareSvg,
+  skillScalingChartSvg,
   finalBonusSvg,
   scoreRangeSvg,
   mcHistogramSvg,
@@ -275,6 +276,28 @@ describe('specDiagrams', () => {
     });
     it('空配列でも有効な SVG を返す', () => {
       expect(isValidSvg(skillContributionCompareSvg([]))).toBe(true);
+    });
+  });
+
+  describe('skillScalingChartSvg', () => {
+    const points = [
+      { factor: 1.0, shrinkExpected: 294534, scoreUpExpected: 286771 },
+      { factor: 2.0, shrinkExpected: 589068, scoreUpExpected: 286771 },
+      { factor: 3.0, shrinkExpected: 883602, scoreUpExpected: 286771 },
+    ];
+    it('2 本の系列と軸ラベル・実数値を描画する', () => {
+      const svg = skillScalingChartSvg(points);
+      expect(isValidSvg(svg)).toBe(true);
+      expect(svg).toContain('判定縮小');
+      expect(svg).toContain('スコアアップ');
+      expect(svg).toContain('チーム属性値の倍率');
+      expect(svg).toContain('×1.0');
+      expect(svg).toContain('×3.0');
+      expect(svg).toContain('883,602'); // 縮小の右端値
+      expect(svg).toContain('286,771'); // スコアアップの右端値
+    });
+    it('points が 2 点未満なら空 SVG を返す', () => {
+      expect(isValidSvg(skillScalingChartSvg([]))).toBe(true);
     });
   });
 

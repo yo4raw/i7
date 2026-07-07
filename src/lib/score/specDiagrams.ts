@@ -897,6 +897,53 @@ export function skillContributionCompareSvg(slots: SkillContributionSlot[]): str
   </svg>`;
 }
 
+export interface ScalingChartPoint {
+  factor: number;
+  shrinkExpected: number;
+  scoreUpExpected: number;
+}
+
+/** チーム属性値の倍率に対するスキル期待値寄与の線グラフ（縮小=比例 / スコアアップ=固定） */
+export function skillScalingChartSvg(points: ScalingChartPoint[]): string {
+  const W = 760, H = 280;
+  const M = { top: 34, right: 190, bottom: 46, left: 70 };
+  const innerW = W - M.left - M.right;
+  const innerH = H - M.top - M.bottom;
+  if (points.length < 2) return `${svgOpen(W, H, '属性値スケーリング比較')}</svg>`;
+
+  const minF = points[0].factor;
+  const maxF = points[points.length - 1].factor;
+  const maxY = Math.max(...points.map(p => Math.max(p.shrinkExpected, p.scoreUpExpected))) * 1.08;
+  const x = (f: number) => M.left + ((f - minF) / (maxF - minF)) * innerW;
+  const y = (v: number) => M.top + innerH - (v / maxY) * innerH;
+
+  const line = (key: 'shrinkExpected' | 'scoreUpExpected', color: string) => {
+    const pts = points.map(p => `${x(p.factor)},${y(p[key])}`).join(' ');
+    const dots = points.map(p =>
+      `<circle cx="${x(p.factor)}" cy="${y(p[key])}" r="3.5" fill="${color}"/>`).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5"/>${dots}`;
+  };
+
+  const last = points[points.length - 1];
+  const xTicks = points.map(p => `
+    <line x1="${x(p.factor)}" y1="${M.top + innerH}" x2="${x(p.factor)}" y2="${M.top + innerH + 4}" stroke="${MUTED}"/>
+    <text x="${x(p.factor)}" y="${M.top + innerH + 16}" text-anchor="middle" fill="${MUTED}" font-size="10">×${p.factor.toFixed(1)}</text>`).join('');
+  const grid = [0.25, 0.5, 0.75, 1].map(r => `
+    <line x1="${M.left}" y1="${M.top + innerH * (1 - r)}" x2="${M.left + innerW}" y2="${M.top + innerH * (1 - r)}" stroke="${GRID}" stroke-width="1"/>`).join('');
+
+  return `${svgOpen(W, H, '属性値スケーリング比較')}
+    <text x="${M.left}" y="16" fill="${TEXT}" font-size="12" font-weight="bold">チーム属性値が伸びたときのスキル期待値寄与</text>
+    ${grid}
+    <line x1="${M.left}" y1="${M.top + innerH}" x2="${M.left + innerW}" y2="${M.top + innerH}" stroke="${MUTED}"/>
+    ${xTicks}
+    <text x="${M.left + innerW / 2}" y="${H - 8}" text-anchor="middle" fill="${MUTED}" font-size="10">チーム属性値の倍率（イベント特効などによる増加の目安）</text>
+    ${line('shrinkExpected', STAGE_COLORS.shrink.main)}
+    ${line('scoreUpExpected', STAGE_COLORS.scoreUp.main)}
+    <text x="${x(last.factor) + 10}" y="${y(last.shrinkExpected) + 4}" fill="${STAGE_COLORS.shrink.dark}" font-size="11" font-weight="bold">判定縮小 +${fmt(last.shrinkExpected)}</text>
+    <text x="${x(last.factor) + 10}" y="${y(last.scoreUpExpected) + 4}" fill="${STAGE_COLORS.scoreUp.dark}" font-size="11" font-weight="bold">スコアアップ +${fmt(last.scoreUpExpected)}</text>
+  </svg>`;
+}
+
 /* ================================================================
  * 5. 最終補正
  * ================================================================ */
