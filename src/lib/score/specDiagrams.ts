@@ -842,6 +842,62 @@ export function shrinkFormulaSvg(): string {
 }
 
 /* ================================================================
+ * 4-5. 縮小 vs スコアアップの寄与比較（ADR 0044）
+ * ================================================================ */
+
+export interface SkillContributionSlot {
+  name: string;
+  isShrink: boolean;
+  expected: number;
+  max: number;
+}
+
+/** 1 枚あたりのスキル寄与（期待値 + 理論最大・単独想定）の横棒比較図 */
+export function skillContributionCompareSvg(slots: SkillContributionSlot[]): string {
+  const W = 760;
+  const rowH = 46;
+  const M = { top: 34, right: 200, bottom: 42, left: 96 };
+  const H = M.top + slots.length * rowH + M.bottom;
+  const innerW = W - M.left - M.right;
+  const maxVal = Math.max(1, ...slots.map(s => s.max));
+  const xScale = (v: number) => (v / maxVal) * innerW;
+
+  const rows = slots.map((s, i) => {
+    const c = s.isShrink ? STAGE_COLORS.shrink : STAGE_COLORS.scoreUp;
+    const y = M.top + i * rowH;
+    const barY = y + 8;
+    const maxW = xScale(s.max);
+    const expW = xScale(s.expected);
+    return `<g>
+      <text x="${M.left - 8}" y="${barY + 15}" text-anchor="end" fill="${TEXT}" font-size="11">${escapeXml(s.name)}</text>
+      <rect x="${M.left}" y="${barY}" width="${maxW}" height="20" rx="3" fill="${c.pale}" stroke="${c.main}" stroke-width="1">
+        <title>理論最大 +${fmt(s.max)}（単独想定）</title>
+      </rect>
+      <rect x="${M.left}" y="${barY}" width="${expW}" height="20" rx="3" fill="${c.main}">
+        <title>期待値 +${fmt(s.expected)}</title>
+      </rect>
+      <text x="${M.left + 4}" y="${barY + 15}" fill="white" font-size="10" font-weight="bold">${s.isShrink ? '縮小' : 'スコアアップ'}</text>
+      <text x="${M.left + maxW + 6}" y="${barY + 15}" fill="${MUTED}" font-size="10">期待 +${fmt(s.expected)} / 最大 +${fmt(s.max)}</text>
+    </g>`;
+  }).join('\n');
+
+  const legendY = M.top + slots.length * rowH + 10;
+  const legend = `
+    <g transform="translate(${M.left}, ${legendY})">
+      <rect width="14" height="10" fill="${STAGE_COLORS.shrink.main}"/>
+      <text x="18" y="9" fill="${TEXT}" font-size="10">濃色 = 期待値寄与</text>
+      <rect x="130" width="14" height="10" fill="${STAGE_COLORS.shrink.pale}" stroke="${STAGE_COLORS.shrink.main}"/>
+      <text x="148" y="9" fill="${TEXT}" font-size="10">淡色 = 理論最大寄与（各スキル単独想定）</text>
+    </g>`;
+
+  return `${svgOpen(W, H, 'スキル 1 枚あたりの得点寄与の比較')}
+    <text x="${M.left}" y="16" fill="${TEXT}" font-size="12" font-weight="bold">1 枚あたりのスキル得点寄与（デモ編成）</text>
+    ${rows}
+    ${legend}
+  </svg>`;
+}
+
+/* ================================================================
  * 5. 最終補正
  * ================================================================ */
 

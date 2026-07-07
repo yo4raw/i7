@@ -12,6 +12,7 @@ import {
   excludeHeadSvg,
   coverageDiagramSvg,
   shrinkFormulaSvg,
+  skillContributionCompareSvg,
   finalBonusSvg,
   scoreRangeSvg,
   mcHistogramSvg,
@@ -250,6 +251,30 @@ describe('specDiagrams', () => {
       expect(svg).toContain('eligibleBaseScore');
       expect(svg).toContain('全発動時 = 100% でキャップ');
       expect(svg).toContain('期待値 = 発動確率込みの期待カバー率');
+    });
+  });
+
+  describe('skillContributionCompareSvg', () => {
+    const slots = [
+      { name: '四葉環', isShrink: true, expected: 142804, max: 361474 },
+      { name: '和泉一織', isShrink: false, expected: 74498, max: 152038 },
+    ];
+    it('全スロットの名前と期待値・理論最大の実数値を描画する', () => {
+      const svg = skillContributionCompareSvg(slots);
+      expect(isValidSvg(svg)).toBe(true);
+      expect(svg).toContain('四葉環');
+      expect(svg).toContain('和泉一織');
+      expect(svg).toContain('142,804');
+      expect(svg).toContain('361,474');
+      expect(svg).toContain('単独想定');
+    });
+    it('縮小は orange、スコアアップは amber で塗り分ける', () => {
+      const svg = skillContributionCompareSvg(slots);
+      expect(svg).toContain(STAGE_COLORS.shrink.main);
+      expect(svg).toContain(STAGE_COLORS.scoreUp.main);
+    });
+    it('空配列でも有効な SVG を返す', () => {
+      expect(isValidSvg(skillContributionCompareSvg([]))).toBe(true);
     });
   });
 
