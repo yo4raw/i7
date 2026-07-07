@@ -666,12 +666,20 @@ export function excludeHeadSvg(p: ExcludeHeadParams): string {
 export interface CoverageDiagramParams {
   songDuration: number;
   segments: { label: string; seconds: number; color: string }[];
+  /** 発動確率 per を織り込んだ期待カバー（下段バー）。省略時は従来の 1 段表示 */
+  expected?: {
+    segments: { label: string; seconds: number; color: string }[];
+    /** エンジンの期待カバー率 (0-1、実効秒数ベース) */
+    coverageRate: number;
+    effectiveSeconds: number;
+  };
 }
 
-/** カバー率の合算と 100% キャップの図 */
+/** カバー率の合算と 100% キャップの図（expected 指定時は期待カバーの下段バー付き 2 段表示） */
 export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const c = STAGE_COLORS.shrink;
-  const W = 760, H = 220;
+  const hasExpected = p.expected != null;
+  const W = 760, H = hasExpected ? 320 : 220;
   const M = { top: 30, right: 20, bottom: 60, left: 20 };
   const innerW = W - M.left - M.right;
   const barH = 40;
@@ -679,39 +687,53 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const maxRange = Math.max(totalSec, p.songDuration) * 1.05;
   const xScale = (sec: number) => M.left + (sec / maxRange) * innerW;
 
-  const baseBar = `
-    <rect x="${M.left}" y="${M.top}" width="${xScale(p.songDuration) - M.left}" height="${barH}"
+  /** セグメント列を積み上げ描画（曲の長さ超過分は破線） */
+  const drawSegments = (
+    segments: { label: string; seconds: number; color: string }[],
+    yTop: number,
+  ): string => {
+    let cursor = 0;
+    return segments.map((s) => {
+      const x1 = xScale(cursor);
+      const x2Full = xScale(cursor + s.seconds);
+      const cappedEnd = Math.min(cursor + s.seconds, p.songDuration);
+      const x2Cap = xScale(cappedEnd);
+      cursor += s.seconds;
+
+      const inPart = x2Cap > x1
+        ? `<rect x="${x1}" y="${yTop}" width="${x2Cap - x1}" height="${barH}"
+                fill="${s.color}" opacity="0.9">
+             <title>${escapeXml(s.label)} (実効部 ${Math.min(s.seconds, p.songDuration - (cursor - s.seconds))}秒)</title>
+           </rect>`
+        : '';
+      const overPart = x2Full > x2Cap
+        ? `<rect x="${x2Cap}" y="${yTop}" width="${x2Full - x2Cap}" height="${barH}"
+                fill="${s.color}" opacity="0.3" stroke="${s.color}" stroke-dasharray="4 2" stroke-width="1.5">
+             <title>${escapeXml(s.label)} (超過部 = 切り捨て)</title>
+           </rect>`
+        : '';
+      return inPart + overPart;
+    }).join('\n');
+  };
+
+  /** 曲の長さ背景バー */
+  const baseBarAt = (yTop: number, label: string): string => `
+    <rect x="${M.left}" y="${yTop}" width="${xScale(p.songDuration) - M.left}" height="${barH}"
           fill="var(--chart-exclude-bg)" stroke="${GRID}" stroke-width="1"/>
-    <text x="${M.left}" y="${M.top - 6}"
-          fill="${MUTED}" font-size="10">曲の長さ = ${p.songDuration}秒 (100%)</text>
+    <text x="${M.left}" y="${yTop - 6}"
+          fill="${MUTED}" font-size="10">${escapeXml(label)}</text>
   `;
 
-  let cursor = 0;
-  const segmentsSvg = p.segments.map((s) => {
-    const x1 = xScale(cursor);
-    const x2Full = xScale(cursor + s.seconds);
-    const cappedEnd = Math.min(cursor + s.seconds, p.songDuration);
-    const x2Cap = xScale(cappedEnd);
-    cursor += s.seconds;
-
-    const inPart = x2Cap > x1
-      ? `<rect x="${x1}" y="${M.top}" width="${x2Cap - x1}" height="${barH}"
-              fill="${s.color}" opacity="0.9">
-           <title>${escapeXml(s.label)} (実効部 ${Math.min(s.seconds, p.songDuration - (cursor - s.seconds))}秒)</title>
-         </rect>`
-      : '';
-    const overPart = x2Full > x2Cap
-      ? `<rect x="${x2Cap}" y="${M.top}" width="${x2Full - x2Cap}" height="${barH}"
-              fill="${s.color}" opacity="0.3" stroke="${s.color}" stroke-dasharray="4 2" stroke-width="1.5">
-           <title>${escapeXml(s.label)} (超過部 = 切り捨て)</title>
-         </rect>`
-      : '';
-    return inPart + overPart;
-  }).join('\n');
+  const fullBarLabel = hasExpected
+    ? `全発動できた場合のカバー時間（曲の長さ = ${p.songDuration}秒 = 100%）`
+    : `曲の長さ = ${p.songDuration}秒 (100%)`;
+  const baseBar = baseBarAt(M.top, fullBarLabel);
+  const segmentsSvg = drawSegments(p.segments, M.top);
 
   const capLabelX = xScale(p.songDuration);
+  const capBottom = hasExpected ? M.top + 160 + barH + 6 : M.top + barH + 6;
   const capLine = `
-    <line x1="${capLabelX}" y1="${M.top - 4}" x2="${capLabelX}" y2="${M.top + barH + 6}"
+    <line x1="${capLabelX}" y1="${M.top - 4}" x2="${capLabelX}" y2="${capBottom}"
           stroke="${c.dark}" stroke-width="2"/>
     <text x="${capLabelX - 4}" y="${M.top - 6}" text-anchor="end"
           fill="${c.dark}" font-size="10" font-weight="bold">100%→</text>
@@ -741,6 +763,21 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
     </text>
   `;
 
+  // 下段: 発動確率 per を織り込んだ期待カバー（expected 指定時のみ）
+  let expectedBlock = '';
+  if (p.expected) {
+    const yE = M.top + 160;
+    const expTotal = p.expected.segments.reduce((a, s) => a + s.seconds, 0);
+    const ratePct = (p.expected.coverageRate * 100).toFixed(1);
+    expectedBlock = `
+      ${baseBarAt(yE, '発動確率 per を織り込んだ期待カバー')}
+      ${drawSegments(p.expected.segments, yE)}
+      <text x="${W - M.right}" y="${yE - 6}" text-anchor="end" fill="${c.dark}" font-size="11" font-weight="bold">
+        期待 ${expTotal}秒 → 期待カバー率 ${ratePct}%（実効 ${p.expected.effectiveSeconds.toFixed(1)}秒ベース）
+      </text>
+    `;
+  }
+
   return `${svgOpen(W, H, 'カバー率の合算と 100% キャップ')}
     ${baseBar}
     ${segmentsSvg}
@@ -748,6 +785,7 @@ export function coverageDiagramSvg(p: CoverageDiagramParams): string {
     ${secTicks.join('\n')}
     ${summary}
     ${legendItems}
+    ${expectedBlock}
   </svg>`;
 }
 

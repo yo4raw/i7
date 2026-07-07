@@ -209,6 +209,35 @@ describe('specDiagrams', () => {
       expect(isValidSvg(svg)).toBe(true);
       expect(svg).toContain('超過部 = 切り捨て');
     });
+    it('expected を渡すと期待カバーの下段バーと期待カバー率を描画する', () => {
+      const svg = coverageDiagramSvg({
+        songDuration: 104,
+        segments: [
+          { label: 'A (20ノーツ毎 × 4秒)', seconds: 81, color: '#f97316' },
+          { label: 'B (23ノーツ毎 × 5秒)', seconds: 88, color: '#ea580c' },
+        ],
+        expected: {
+          segments: [
+            { label: 'A 期待', seconds: 32, color: '#f97316' },
+            { label: 'B 期待', seconds: 34, color: '#ea580c' },
+          ],
+          coverageRate: 0.6674,
+          effectiveSeconds: 98.9,
+        },
+      });
+      expect(isValidSvg(svg)).toBe(true);
+      expect(svg).toContain('発動確率');
+      expect(svg).toContain('期待カバー率 66.7%');
+      expect(svg).toContain('66秒'); // 32 + 34
+      expect(svg).toContain('実効 98.9秒');
+    });
+    it('expected 省略時は期待カバー率のラベルを含まない（従来表示）', () => {
+      const svg = coverageDiagramSvg({
+        songDuration: 104,
+        segments: [{ label: 'A', seconds: 50, color: '#f97316' }],
+      });
+      expect(svg).not.toContain('期待カバー率');
+    });
   });
 
   describe('shrinkFormulaSvg', () => {
