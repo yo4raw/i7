@@ -20,13 +20,13 @@ class MockWorker {
 
   addEventListener(type: 'message', listener: (e: { data: unknown }) => void): void;
   addEventListener(type: 'error', listener: (e: { message: string }) => void): void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- overload 実装シグネチャ。呼び出し側は上記の型付きシグネチャのみ見える
+  // overload 実装シグネチャ。呼び出し側は上記の型付きシグネチャのみ見える（any は oxlint の有効ルール対象外）
   addEventListener(type: 'message' | 'error', listener: (e: any) => void): void {
     if (type === 'message') this.messageListeners.push(listener);
     else this.errorListeners.push(listener);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- removeEventListener は本テストでは未使用のため簡易型で十分
+  // removeEventListener は本テストでは未使用のため簡易型で十分（any は oxlint の有効ルール対象外）
   removeEventListener(type: 'message' | 'error', listener: (e: any) => void): void {
     if (type === 'message') this.messageListeners = this.messageListeners.filter((l) => l !== listener);
     else this.errorListeners = this.errorListeners.filter((l) => l !== listener);
