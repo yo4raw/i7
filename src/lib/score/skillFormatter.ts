@@ -18,7 +18,7 @@ export function formatSkillEffect(
     return `${c}秒毎に${p}％の確率でスコア${v}UP`;
   }
   if (skillType === SKILL_TYPE.SHRINK || skillType.startsWith(SKILL_TYPE.SHRINK_PREFIX)) {
-    if (sl.rate == null) return '-';
+    if (sl.rate === null) return '-';
     const mult = sl.rate >= 10 ? sl.rate / 100 : sl.rate;
     if (skillType === SKILL_TYPE.SHRINK_TIMER) {
       return `${c}秒毎に${p}％の確率で${v}秒間判定領域を縮小してスコアを${mult}倍に`;
@@ -64,7 +64,7 @@ export function getMaxApSkillLevel(card: Card): 1 | 2 | 3 | 4 | 5 | null {
  */
 export function formatSkillEffectMax(card: Card): { level: 1 | 2 | 3 | 4 | 5; text: string } | null {
   const level = getMaxApSkillLevel(card);
-  if (level == null) return null;
+  if (level === null) return null;
   const text = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, getApSkillLevel(card, level));
   if (text === '-') return null;
   return { level, text };

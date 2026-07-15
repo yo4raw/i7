@@ -103,9 +103,9 @@
 
   // ドラッグ中のみ window レベルでポインターイベントを受け取る
   $effect(() => {
-    if (dragIndex == null) return;
+    if (dragIndex === null || dragIndex === undefined) return;
     function moveDrag(ev: PointerEvent) {
-      if (dragIndex == null) return;
+      if (dragIndex === null || dragIndex === undefined) return;
       const value = pxToValue(clientXToSvg(ev.clientX));
       thresholds[dragIndex] = valueToThreshold(series[dragIndex].entry, value);
       thresholds = [...thresholds];

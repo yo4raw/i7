@@ -58,7 +58,7 @@ const infoRows = [
   { label: 'ノーツ数', value: song.notes_count?.toLocaleString() },
   { label: '秒数', value: song.duration ? `${song.duration}秒` : null },
   { label: '更新日', value: song.updated_at },
-].filter(r => r.value != null && r.value !== '');
+].filter(r => r.value !== null && r.value !== undefined && r.value !== '');
 
 // ノーツ内訳（ステージ別・属性別。始点終点合算）
 const noteBreakdown = buildNoteBreakdown(song);

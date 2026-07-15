@@ -14,8 +14,7 @@
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 import { fetchCardsJson } from '../src/lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../src/lib/data/fetchSongsJson.ts';

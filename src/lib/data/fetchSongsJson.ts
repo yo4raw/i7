@@ -151,7 +151,7 @@ export function getEventSongIds(): number[] {
  * 該当が無ければ null。
  */
 export function firstEventSongId(songs: Song[]): number | null {
-  const ids = new Set(songs.map((s) => s.id).filter((id): id is number => id != null));
+  const ids = new Set(songs.map((s) => s.id).filter((id): id is number => id !== null));
   for (const id of getEventSongIds()) {
     if (ids.has(id)) return id;
   }
@@ -166,5 +166,5 @@ export async function fetchSongsJson(): Promise<Song[]> {
 
   return table.rows
     .map((row) => convertRow(row.c || []))
-    .filter((row) => row.song_name != null);
+    .filter((row) => row.song_name !== null);
 }

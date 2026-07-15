@@ -49,7 +49,7 @@ export function countMultisetsWithLimits(limits: number[], k: number): number {
   let poly: number[] = [1];
   for (const lim of limits) {
     const newLen = Math.min(poly.length + lim, k + 1);
-    const next = new Array<number>(newLen).fill(0);
+    const next = Array.from({ length: newLen }, () => 0);
     for (let d = 0; d < poly.length; d++) {
       if (poly[d] === 0) continue;
       const jMax = Math.min(lim, k - d);
@@ -67,7 +67,7 @@ export function countMultisetsWithLimits(limits: number[], k: number): number {
  */
 export function* multisetIndices(N: number, k: number): Generator<number[]> {
   if (N <= 0 || k <= 0) return;
-  const idx = new Array(k).fill(0);
+  const idx = Array.from({ length: k }, () => 0);
   while (true) {
     yield idx;
     let i = k - 1;
@@ -144,7 +144,7 @@ export function createSearchContext(input: SearchInput): SearchContext {
     groupSizes: computeGroupSizes(input.song),
     notesCount: input.song.notes_count || notes.length,
     attrWeights: calcAttrWeights(notes),
-    hasFixedBroach: (c) => c.cardID != null && fixedIds.has(c.cardID),
+    hasFixedBroach: (c) => c.cardID !== null && fixedIds.has(c.cardID),
   };
 }
 
@@ -251,7 +251,7 @@ export function* generateChunks(ctx: SearchContext): Generator<ChunkDescriptor> 
  * deck の並びは [center, member1..4, friend]。
  */
 export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor): Generator<Card[]> {
-  const deck: Card[] = new Array(6);
+  const deck: Card[] = Array.from({ length: 6 });
 
   if (chunk.kind === 'pair') {
     // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称
@@ -396,7 +396,7 @@ const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
 export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRecord {
   const { input } = ctx;
   const tiers: EventBonusTier[] = deck.map((c) =>
-    c && c.ID != null ? input.tierByCardId[String(c.ID)] ?? 'none' : 'none'
+    c && c.ID !== null ? input.tierByCardId[String(c.ID)] ?? 'none' : 'none'
   );
   let shared: number[][] = SEARCH_EMPTY_SHARED;
   if (input.useOwnedBroachs) {

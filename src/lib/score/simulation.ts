@@ -242,7 +242,7 @@ function enqueueShrink(
   sourceCard: number,
 ): ActiveShrink | null {
   if (durationNotes <= 0) return activeShrink;
-  if (activeShrink == null) {
+  if (activeShrink === null) {
     return { endNote: startNote + durationNotes, rate, sourceCard };
   }
   queue.push({ durationNotes, rate, sourceCard });
@@ -517,16 +517,15 @@ interface RunOnceResult {
 function runOnce(team: ComputedTeam, notes: FlatNote[], rng: Sfc32, options?: ScoreOptions): RunOnceResult {
   const N = notes.length;
   const cardCount = team.cards.length;
-  const activations = new Array<number>(cardCount).fill(0);
-  const contributions = new Array<number>(cardCount).fill(0);
+  const activations = Array.from({ length: cardCount }, () => 0);
+  const contributions = Array.from({ length: cardCount }, () => 0);
   let shrinkScore = 0;
   let scoreUpScore = 0;
   const assist = options?.scoreUpAssist ?? false;
 
   // 期待縮小時間 (§2-2 按分用): 試行間で変わらない固定係数
   const excludedCount = notes.reduce((acc, n) => acc + (n.excluded ? 1 : 0), 0);
-  const eligibleCount = Math.max(0, N - excludedCount);
-  const expectedShrinkTimes = new Array<number>(cardCount).fill(0);
+  const expectedShrinkTimes = Array.from({ length: cardCount }, () => 0);
   let totalExpectedShrinkTime = 0;
   for (let c = 0; c < cardCount; c++) {
     const s = team.cards[c].skill;
@@ -538,7 +537,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: Sfc32, options?: Sc
   }
 
   // Phase 1: タイマー型スキル
-  const timerBonus = new Array<number>(N).fill(0);
+  const timerBonus = Array.from({ length: N }, () => 0);
   const timerShrinkTriggers = Array.from(
     { length: N },
     (): { cardIndex: number; durationNotes: number; rate: number }[] => [],
@@ -573,7 +572,7 @@ function runOnce(team: ComputedTeam, notes: FlatNote[], rng: Sfc32, options?: Sc
 
   // Phase 2: ノート順処理（縮小はキューイング、§1-1）
   let totalScore = 0;
-  const counters = new Array<number>(cardCount).fill(0);
+  const counters = Array.from({ length: cardCount }, () => 0);
   let activeShrink: ActiveShrink | null = null;
   const shrinkQueue: ShrinkQueueItem[] = [];
 
@@ -676,8 +675,8 @@ export async function runSimulation(
   const shrinkScores: number[] = [];
   const scoreUpScores: number[] = [];
   const cardCount = team.cards.length;
-  const totalActivations = new Array<number>(cardCount).fill(0);
-  const totalContributions = new Array<number>(cardCount).fill(0);
+  const totalActivations = Array.from({ length: cardCount }, () => 0);
+  const totalContributions = Array.from({ length: cardCount }, () => 0);
 
   for (let i = 0; i < iterations; i += MC_CHUNK_SIZE) {
     const end = Math.min(i + MC_CHUNK_SIZE, iterations);
@@ -692,11 +691,11 @@ export async function runSimulation(
       }
     }
     onProgress?.(end / iterations);
-    await new Promise<void>(r => setTimeout(r, 0));
+    await new Promise<void>(r => { setTimeout(r, 0); });
   }
 
   // 統計計算
-  const sorted = [...scores].sort((a, b) => a - b);
+  const sorted = scores.toSorted((a, b) => a - b);
   const sum = scores.reduce((a, b) => a + b, 0);
   const mean = sum / scores.length;
   const median = sorted.length % 2 === 0
@@ -734,7 +733,7 @@ export async function runSimulation(
     stddev: Math.round(stddev),
     p90: Math.round(p90),
     mcMin: sorted[0],
-    mcMax: sorted[sorted.length - 1],
+    mcMax: sorted.at(-1)!,
     cardStats,
     shrinkScores,
     scoreUpScores,

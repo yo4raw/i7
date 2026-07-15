@@ -92,7 +92,7 @@ describe('isShrinkCard', () => {
 });
 
 /** テスト用候補: 縮小持ち UR 3 枚 + 非縮小 UR 4 枚 */
-const urPool = allCards.filter((c) => c.rarity === 'UR' && c.ID != null && c.ap_skill_type);
+const urPool = allCards.filter((c) => c.rarity === 'UR' && c.ID !== null && c.ap_skill_type);
 const shrinkUr = urPool.filter((c) => isShrinkCard(c)).slice(0, 3);
 const nonShrinkUr = urPool.filter((c) => !isShrinkCard(c)).slice(0, 4);
 const testCandidates = [...shrinkUr, ...nonShrinkUr];
@@ -315,7 +315,7 @@ describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
 
   it('evaluateDeck: expected モードでは内訳フィールドが埋まる', () => {
     const ctx = createSearchContext(smallInput);
-    const deck = new Array(6).fill(ctx.candidates[0]);
+    const deck = Array.from({ length: 6 }, () => ctx.candidates[0]);
     const rec = evaluateDeck(ctx, deck);
     expect(rec.cardIds).toEqual(deck.map((c) => c.ID));
     expect(rec.score).toBe(rec.finalScore);
@@ -330,7 +330,7 @@ describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
       useOwnedBroachs: true,
       sharedBroachCounts: { '1': 2 }, // ALL750 × 2
     });
-    const deck = new Array(6).fill(withoutCtx.candidates[0]);
+    const deck = Array.from({ length: 6 }, () => withoutCtx.candidates[0]);
     const recWithout = evaluateDeck(withoutCtx, deck);
     const recWith = evaluateDeck(withCtx, deck);
 

@@ -79,7 +79,7 @@ async function fetchWithRetry(url, opts = {}, retries = 1) {
     } catch (e) {
       if (i === retries) throw e;
     }
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => { setTimeout(r, 1000); });
   }
 }
 
@@ -162,7 +162,7 @@ async function fetchAllWikitext(pageNames) {
     const batchResult = await fetchWikitextBatch(batch);
     for (const [k, v] of batchResult) allData.set(k, v);
     // レート制限対策
-    if (i < batches.length - 1) await new Promise((r) => setTimeout(r, 500));
+    if (i < batches.length - 1) await new Promise((r) => { setTimeout(r, 500); });
   }
   console.log(`\n  → ${allData.size} ページのwikitext取得完了`);
   return allData; // Map<pageName, {japanese, translation, image}>
@@ -182,7 +182,7 @@ async function fetchGSheetSongs() {
   for (const row of data.table.rows) {
     const id = row.c?.[0]?.v;
     const name = row.c?.[1]?.v;
-    if (id != null && name != null) {
+    if (id !== null && id !== undefined && name !== null && name !== undefined) {
       songs.push({ id: Math.round(id), name });
     }
   }
@@ -192,7 +192,7 @@ async function fetchGSheetSongs() {
 
 // ---------- Step 4: 名前マッピング構築 ----------
 
-function buildMapping(gsheetSongs, wikiData, wikiPages) {
+function buildMapping(gsheetSongs, wikiData, _wikiPages) {
   console.log('[4/6] マッピングを構築中...');
 
   // Wiki側: japanese/display_title/translation → pageName のインデックス
@@ -322,7 +322,7 @@ async function fetchImageUrls(imageFilenames) {
         }
       }
     }
-    if (i < batches.length - 1) await new Promise((r) => setTimeout(r, 500));
+    if (i < batches.length - 1) await new Promise((r) => { setTimeout(r, 500); });
   }
 
   console.log(`\n  → ${urlMap.size} 画像URLエントリ`);

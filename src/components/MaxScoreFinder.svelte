@@ -102,7 +102,7 @@
   // 選択中イベントを localStorage から復元（保存値が現存するハイスコアイベントのときのみ採用）
   onMount(() => {
     const saved = loadJson<number | null>(STORAGE_KEYS.MAX_FINDER_EVENT_ID, null);
-    if (saved != null && highScoreEvents.some((ev) => ev.id === saved)) {
+    if (saved !== null && saved !== undefined && highScoreEvents.some((ev) => ev.id === saved)) {
       selectedEventId = saved;
     }
     mounted = true;
@@ -114,11 +114,11 @@
     saveJson(STORAGE_KEYS.MAX_FINDER_EVENT_ID, selectedEventId);
   });
 
-  const selectedSong = $derived(selectedSongId != null ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
+  const selectedSong = $derived(selectedSongId !== null && selectedSongId !== undefined ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
 
   // 初期選択曲: イベント対象楽曲の先頭。無ければ未選択のまま
   $effect(() => {
-    if (selectedSongId != null || allSongs.length === 0) return;
+    if ((selectedSongId !== null && selectedSongId !== undefined) || allSongs.length === 0) return;
     selectedSongId = firstEventSongId(allSongs);
   });
 
@@ -129,7 +129,7 @@
   const currentCandidates = $derived.by(() => {
     if (!selectedEvent) return [] as Card[];
     const goldSilverIds = new Set<number>([...selectedEvent.gold, ...selectedEvent.silver]);
-    return allCards.filter((c) => c.rarity === 'UR' && c.ID != null && goldSilverIds.has(c.ID));
+    return allCards.filter((c) => c.rarity === 'UR' && c.ID !== null && c.ID !== undefined && goldSilverIds.has(c.ID));
   });
 
   const goldCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'gold'));
@@ -138,7 +138,7 @@
   const shrinkCandidates = $derived(currentCandidates.filter((c) => isShrinkCard(c)));
 
   const cardCounts = $derived(allCounts());
-  const ownedCountOf = (card: Card): number => (card.ID == null ? 0 : cardCounts[String(card.ID)] ?? 0);
+  const ownedCountOf = (card: Card): number => (card.ID === null || card.ID === undefined ? 0 : cardCounts[String(card.ID)] ?? 0);
   const ownedCandidates = $derived(currentCandidates.filter((c) => ownedCountOf(c) >= 1));
   const ownedGoldCount = $derived(goldCandidates.filter((c) => ownedCountOf(c) >= 1).length);
   const ownedSilverCount = $derived(silverCandidates.filter((c) => ownedCountOf(c) >= 1).length);
@@ -152,11 +152,11 @@
     if (!selectedSong) return null;
     const tierByCardId: Record<string, EventBonusTier> = {};
     for (const c of currentCandidates) {
-      if (c.ID != null) tierByCardId[String(c.ID)] = currentTierMap.get(c.ID) ?? 'none';
+      if (c.ID !== null && c.ID !== undefined) tierByCardId[String(c.ID)] = currentTierMap.get(c.ID) ?? 'none';
     }
     const ownedCounts: Record<string, number> = {};
     for (const c of ownedCandidates) {
-      if (c.ID != null) ownedCounts[String(c.ID)] = ownedCountOf(c);
+      if (c.ID !== null && c.ID !== undefined) ownedCounts[String(c.ID)] = ownedCountOf(c);
     }
     return $state.snapshot({
       evalMode,
@@ -228,7 +228,7 @@
       progressPct = pct;
       const speed = evaluated / ((performance.now() - t0) / 1000);
       const etaSec = Math.max(0, (totalEvals - evaluated) / Math.max(1, speed));
-      progressText = `探索中… ${pct}%（${workerCount}並列, ${evaluated.toLocaleString()} / ${totalEvals.toLocaleString()}, 残り約 ${formatElapsed(etaSec * 1000)}, 暫定 1位: ${provisionalBest != null ? provisionalBest.toLocaleString() : '-'}）`;
+      progressText = `探索中… ${pct}%（${workerCount}並列, ${evaluated.toLocaleString()} / ${totalEvals.toLocaleString()}, 残り約 ${formatElapsed(etaSec * 1000)}, 暫定 1位: ${provisionalBest !== null && provisionalBest !== undefined ? provisionalBest.toLocaleString() : '-'}）`;
     };
 
     try {

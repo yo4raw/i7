@@ -145,7 +145,7 @@ const formulaSvg = shrinkFormulaSvg();
 // §4-5: スキル持ちスロットの寄与比較とスケーリング図
 const contributionCompareSvg = skillContributionCompareSvg(
   demo.slots
-    .filter(s => s.skillType != null)
+    .filter(s => s.skillType !== null)
     .map(s => ({ name: s.name, isShrink: s.isShrink, expected: s.skillExpected, max: s.skillMax })));
 const scalingChartSvg = skillScalingChartSvg([...demo.scalingPoints]);
 

@@ -23,7 +23,7 @@
       a.download = `${filename}.png`;
       document.body.append(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
     } catch (e) {
       console.error(e);
       alert('画像の生成に失敗しました。時間をおいて再度お試しください。');

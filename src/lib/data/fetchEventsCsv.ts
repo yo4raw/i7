@@ -46,22 +46,20 @@ function parseCsv(text: string): string[][] {
       } else {
         cur += c;
       }
+    } else if (c === '"') {
+      inQuote = true;
+    } else if (c === ',') {
+      row.push(cur);
+      cur = '';
+    } else if (c === '\n') {
+      row.push(cur);
+      rows.push(row);
+      row = [];
+      cur = '';
+    } else if (c === '\r') {
+      // handled by \n
     } else {
-      if (c === '"') {
-        inQuote = true;
-      } else if (c === ',') {
-        row.push(cur);
-        cur = '';
-      } else if (c === '\n') {
-        row.push(cur);
-        rows.push(row);
-        row = [];
-        cur = '';
-      } else if (c === '\r') {
-        // handled by \n
-      } else {
-        cur += c;
-      }
+      cur += c;
     }
   }
   if (cur !== '' || row.length > 0) {
@@ -76,7 +74,7 @@ function parseIdList(s: string): number[] {
     .split(',')
     .map(x => x.trim())
     .filter(Boolean)
-    .map(x => Number(x))
+    .map(Number)
     .filter(n => Number.isFinite(n) && n > 0);
 }
 

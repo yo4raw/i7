@@ -16,7 +16,7 @@ test.describe('編成組合計算ページ', () => {
     // のと同じ events.csv / カードデータから「終了済み（= 特効が GViz 登録済み）かつ
     // UR 特効候補が最少（2〜16 枚）」の終了済みハイスコアイベントを対象に選ぶ。
     const [events, cards] = await Promise.all([fetchEventsCsv(), fetchCardsJson()]);
-    const urIds = new Set(cards.filter((c) => c.rarity === 'UR' && c.ID != null).map((c) => c.ID));
+    const urIds = new Set(cards.filter((c) => c.rarity === 'UR' && c.ID !== null).map((c) => c.ID));
     const urCandidateCount = (e: (typeof events)[number]) => {
       const ids = new Set<number>([...e.gold.cardIds, ...e.silver.cardIds]);
       let n = 0;

@@ -60,7 +60,7 @@
     ownedOnly = hasOwned;
 
     const savedEventId = loadJson<number | null>(STORAGE_KEYS.COMPARE_EVENT_ID, null);
-    if (savedEventId != null && highScoreEvents.some((e) => e.id === savedEventId)) {
+    if (savedEventId !== null && savedEventId !== undefined && highScoreEvents.some((e) => e.id === savedEventId)) {
       selectedEventId = savedEventId;
     }
     mounted = true;
@@ -78,7 +78,7 @@
 
   // 初期選択曲: イベント対象楽曲の先頭。無ければ先頭の曲
   $effect(() => {
-    if (selectedSongId != null || allSongsState.length === 0) return;
+    if ((selectedSongId !== null && selectedSongId !== undefined) || allSongsState.length === 0) return;
     selectedSongId = firstEventSongId(allSongsState) ?? allSongsState[0]?.id ?? null;
   });
 
@@ -93,14 +93,14 @@
   });
 
   const selectedEvent = $derived(
-    selectedEventId == null ? null : highScoreEvents.find((e) => e.id === selectedEventId) ?? null,
+    selectedEventId === null || selectedEventId === undefined ? null : highScoreEvents.find((e) => e.id === selectedEventId) ?? null,
   );
   const tierMap = $derived(
     selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>(),
   );
 
   function tierFor(card: Card): EventBonusTier {
-    if (!selectedEvent || card.ID == null) return 'none';
+    if (!selectedEvent || card.ID === null || card.ID === undefined) return 'none';
     return tierMap.get(card.ID) ?? 'none';
   }
 
@@ -127,7 +127,7 @@
 
   function toggleSelect(entry: CardStrengthEntry) {
     const id = entry.card.ID;
-    if (id == null) return;
+    if (id === null || id === undefined) return;
     if (selectedIds.includes(id)) {
       selectedIds = selectedIds.filter((x) => x !== id);
     } else if (selectedIds.length < 4) {

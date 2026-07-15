@@ -16,8 +16,6 @@ const tenthTamaki = findCardById(2484);
 const urShout = findCardById(406);
 /** UR / Melody (和泉三月) — center 倍率を Melody 方向に効かせる */
 const urMelody = findCardById(408);
-/** SR / Melody (百) — CENTER_SKILL_RATES 非掲載レアリティ */
-const srCard = findCardById(1622);
 /** type9 ブローチ (MEMORiES MELODiES, score 1000) を持つ UR/Beat カード IDOLiSH7 */
 const type9Card = findCardById(959);
 

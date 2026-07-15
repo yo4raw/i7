@@ -71,7 +71,7 @@ describe('buildDeckSkillDistribution', () => {
     const sum = e.points.reduce((s, pt) => s + pt.prob, 0);
     expect(sum).toBeCloseTo(1, 6);
     expect(e.points[0].x).toBe(0);
-    expect(e.points[e.points.length - 1].x).toBe(10 * 1000);
+    expect(e.points.at(-1)!.x).toBe(10 * 1000);
   });
 
   it('貢献比率の総和は 1', () => {

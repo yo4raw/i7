@@ -46,7 +46,7 @@ export function createWorkerHandler(post: WorkerPost): (msg: FinderWorkerRequest
           post({ type: 'progress', evaluatedDelta, localBestScore: localBest?.score ?? null });
           // マクロタスクで yield してメッセージループに制御を返し、
           // キュー済みの abort メッセージを処理させる (Promise.resolve() では不可)
-          await new Promise((r) => setTimeout(r, 0));
+          await new Promise((r) => { setTimeout(r, 0); });
           return aborted;
         },
       });
@@ -63,8 +63,8 @@ declare const self: DedicatedWorkerGlobalScope;
 // node 単体テストで import しても落ちないよう Worker グローバル存在時のみ結線する
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
   const handle = createWorkerHandler((msg) => self.postMessage(msg));
-  self.onmessage = (e: MessageEvent<FinderWorkerRequest>) => {
+  self.addEventListener('message', (e: MessageEvent<FinderWorkerRequest>) => {
     void handle(e.data);
-  };
+  });
 }
 /* v8 ignore stop */

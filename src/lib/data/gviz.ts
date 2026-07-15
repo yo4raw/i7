@@ -65,7 +65,7 @@ export async function fetchSheetRaw(spreadsheetId: string, gid: number, maxRetri
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      await new Promise(r => setTimeout(r, 1000 * attempt));
+      await new Promise(r => { setTimeout(r, 1000 * attempt); });
     }
     try {
       const response = await fetch(url);

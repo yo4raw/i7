@@ -29,17 +29,17 @@
 
   // イベント対象楽曲（config 配列順を維持）
   const eventSongs = $derived.by(() => {
-    const byId = new Map(songs.filter((s) => s.id != null).map((s) => [s.id as number, s]));
+    const byId = new Map(songs.filter((s) => s.id !== null && s.id !== undefined).map((s) => [s.id as number, s]));
     return getEventSongIds()
       .map((eid) => byId.get(eid))
-      .filter((s): s is Song => s != null);
+      .filter((s): s is Song => s !== null && s !== undefined);
   });
 
   // 選択中の曲（i7_selected_songs・秒数順）
   const pickedSongs = $derived.by(() => {
     const picked = new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
     return songs
-      .filter((s) => s.id != null && picked.has(s.id))
+      .filter((s) => s.id !== null && s.id !== undefined && picked.has(s.id))
       .toSorted((a, b) => (a.duration || 0) - (b.duration || 0));
   });
 

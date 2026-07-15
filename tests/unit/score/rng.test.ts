@@ -3,7 +3,7 @@ import { Sfc32 } from '../../../src/lib/score/rng';
 
 /** 16 bin の χ² 統計量 (df=15, 5% 臨界値 25.0) */
 function chiSquared16(rng: Sfc32, samples: number): number {
-  const bins = new Array<number>(16).fill(0);
+  const bins = Array.from({ length: 16 }, () => 0);
   for (let i = 0; i < samples; i++) bins[Math.floor(rng.next() * 16)]++;
   const exp = samples / 16;
   return bins.reduce((acc, o) => acc + ((o - exp) ** 2) / exp, 0);

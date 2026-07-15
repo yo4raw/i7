@@ -7,7 +7,7 @@ import {
 
 /** 指定セル値を持つ GViz 行を作る（cells[index] = { v }） */
 function makeRowCells(values: Record<number, string | number | null>): { c: ({ v: string | number | boolean | null } | null)[] } {
-  const c: ({ v: string | number | boolean | null } | null)[] = new Array(67).fill(null);
+  const c: ({ v: string | number | boolean | null } | null)[] = Array.from({ length: 67 }, () => null);
   for (const [idx, v] of Object.entries(values)) {
     c[Number(idx)] = { v };
   }
@@ -18,7 +18,7 @@ function stubGvizFetch(rows: ReturnType<typeof makeRowCells>[]): void {
   const payload = {
     version: '1',
     status: 'ok',
-    table: { cols: new Array(67).fill({ id: '', label: '', type: '' }), rows },
+    table: { cols: Array.from({ length: 67 }, () => ({ id: '', label: '', type: '' })), rows },
   };
   vi.stubGlobal(
     'fetch',

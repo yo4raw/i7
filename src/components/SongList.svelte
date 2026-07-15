@@ -84,7 +84,7 @@
     saveSelected();
   }
 
-  const visibleIds = $derived(filtered.map((s) => s.id).filter((id): id is number => id != null));
+  const visibleIds = $derived(filtered.map((s) => s.id).filter((id): id is number => id !== null && id !== undefined));
   const checkedCount = $derived(visibleIds.filter((id) => selectedSongIds.has(id)).length);
   const selectAllChecked = $derived(visibleIds.length > 0 && checkedCount === visibleIds.length);
   const selectAllIndeterminate = $derived(checkedCount > 0 && checkedCount < visibleIds.length);
@@ -92,7 +92,7 @@
   function toggleAll(checked: boolean) {
     const next = new Set(selectedSongIds);
     for (const s of filtered) {
-      if (s.id != null) {
+      if (s.id !== null && s.id !== undefined) {
         if (checked) next.add(s.id); else next.delete(s.id);
       }
     }
@@ -153,7 +153,7 @@
   }
 
   function go(id: number | undefined) {
-    if (id != null) window.location.href = `${base}songs/${id}/`;
+    if (id !== null && id !== undefined) window.location.href = `${base}songs/${id}/`;
   }
 </script>
 

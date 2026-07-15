@@ -48,7 +48,7 @@
 
   const defaultTierMap = buildLiveTierMap(initialEvents);
   function defaultTierFor(card: Card | null): EventBonusTier {
-    return card?.ID != null ? (defaultTierMap.get(card.ID) ?? 'none') : 'none';
+    return card?.ID !== null && card?.ID !== undefined ? (defaultTierMap.get(card.ID) ?? 'none') : 'none';
   }
 
   // 楽曲サマリー表示用の派生値
@@ -79,7 +79,7 @@
   let imageBusy = $state(false);
 
   function handleSongChange(id: number | null) {
-    selectedSong = id != null ? allSongsState.find(s => s.id === id) || null : null;
+    selectedSong = id !== null && id !== undefined ? allSongsState.find(s => s.id === id) || null : null;
     saveState();
   }
   function handlePick(slot: number, card: Card) { setCard(deckState, slot, card, defaultTierFor(card), allBroachsState); saveState(); }
@@ -102,7 +102,7 @@
   }
 
   function applyState(state: any) {
-    if (state.songId != null) {
+    if (state.songId !== null && state.songId !== undefined) {
       const song = allSongsState.find(s => s.id === state.songId);
       if (song) selectedSong = song;
     } else {
@@ -121,7 +121,7 @@
     if (Array.isArray(state.deckIds)) {
       for (let i = 0; i < 6; i++) {
         const id = state.deckIds[i];
-        if (id != null) deckState.cards[i] = allCardsState.find(c => c.ID === id) || null;
+        if (id !== null && id !== undefined) deckState.cards[i] = allCardsState.find(c => c.ID === id) || null;
       }
     }
     for (let i = 0; i < 6; i++) clampSharedBroachs(deckState, i, allBroachsState);
@@ -185,7 +185,7 @@
       a.download = `i7-score-${selectedSong?.song_name ?? 'deck'}.png`;
       document.body.append(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
     } catch (e) {
       console.error(e);
       alert('画像の生成に失敗しました。時間をおいて再度お試しください。');
@@ -224,7 +224,7 @@
       id: d.id,
       name: d.name,
       dateLabel: new Date(d.updatedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      cardCount: (d.state.deckIds || []).filter((id: number | null) => id != null).length,
+      cardCount: (d.state.deckIds || []).filter((id: number | null) => id !== null && id !== undefined).length,
     }));
   }
 
@@ -244,7 +244,7 @@
     // 復元結果に楽曲が無ければイベント対象楽曲の先頭を既定に
     if (!selectedSong) {
       const eid = firstEventSongId(allSongsState);
-      selectedSong = eid != null ? allSongsState.find(s => s.id === eid) || null : null;
+      selectedSong = eid !== null && eid !== undefined ? allSongsState.find(s => s.id === eid) || null : null;
     }
 
     refreshData('cards', fetchCardsJson, (fresh) => {

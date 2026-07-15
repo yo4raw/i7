@@ -70,7 +70,7 @@ export function computeShrink(input: OracleInput, mode: OracleMode, attrScore: n
     if (!card) return;
     if (seconds[i] <= 0) return;
     const rate = getShrinkRate(card, input.skillLevels[i]);
-    if (rate == null) return;
+    if (rate === null) return;
     if (coverage >= 1) {
       // カバー率 ≥ 100%: share（ΣH39 比）で正規化（B16=FALSE → BN22）
       total += Math.floor(bn22 * (seconds[i] / sumSeconds) * (rate - 1));
@@ -101,7 +101,7 @@ function computeCardSeconds(
   const count = skill.count;
   const per = skill.per;
   const value = skill.value;
-  if (!count || per == null || value == null) return 0;
+  if (!count || per === null || value === null) return 0;
 
   // H33 による活動基数の選択: Perfect/コンボ → ノーツ数(D8), タイマー → 曲秒数(D9)
   let denom: number;

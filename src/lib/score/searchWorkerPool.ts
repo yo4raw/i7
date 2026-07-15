@@ -69,7 +69,7 @@ export function startWorkerSearch(
             }
             if (msg.type === 'progress') {
               evaluated += msg.evaluatedDelta;
-              if (msg.localBestScore != null && (provisionalBest == null || msg.localBestScore > provisionalBest)) {
+              if (msg.localBestScore !== null && (provisionalBest === null || msg.localBestScore > provisionalBest)) {
                 provisionalBest = msg.localBestScore;
               }
               onProgress(evaluated, provisionalBest);
