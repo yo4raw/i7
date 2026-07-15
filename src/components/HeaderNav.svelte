@@ -56,8 +56,11 @@
     mobileDropdownOpen[label] = !mobileDropdownOpen[label];
   }
 
+  function contextHandler(e: Event) {
+    e.preventDefault();
+  }
+
   $effect(() => {
-    const contextHandler = (e: Event) => e.preventDefault();
     document.addEventListener('contextmenu', contextHandler);
 
     const clickHandler = (e: MouseEvent) => {

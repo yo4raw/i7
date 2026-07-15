@@ -21,6 +21,8 @@ function note(attribute: FlatNote['attribute'], type: FlatNote['type'], group: s
   return { attribute, type, group, excluded: false };
 }
 
+const noFixed = () => false;
+
 describe('calcAttrWeights', () => {
   it('既知グループのノーツは NOTE_RATE × LIGHT_MULTIPLIER で重み付けされる', () => {
     const w = calcAttrWeights([note('Shout', 'color', 'light_4')]);
@@ -85,7 +87,6 @@ describe('broachCapacity', () => {
 });
 
 describe('assignBroachs', () => {
-  const noFixed = () => false;
   const weights: AttrWeights = { Shout: 1, Beat: 1, Melody: 1 };
 
   it('所持ブローチを寄与値降順で slot0-4 に貪欲割当し、フレンド枠 (slot5) に最良ブローチを容量分割当てる', () => {

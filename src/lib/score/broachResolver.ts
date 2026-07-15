@@ -107,6 +107,20 @@ function checkBroachCondition(
   }
 }
 
+interface PendingBroach {
+  slotIndex: number;
+  broach: FixedBroach;
+  conditionMet: boolean;
+}
+
+/**
+ * デッキ内発動上限（spec §6-3 AM35-36）のカウント対象キーを算出する。
+ * limit を持たないブローチは null（上限管理の対象外）。
+ */
+function getLimitKey(p: PendingBroach): string | null {
+  return p.broach.limit !== null ? `card:${p.broach.card_id}` : null;
+}
+
 /**
  * デッキ全体のブローチを条件判定して返す。
  * デッキ内発動上限（spec §6-3 AM35-36）も処理する。
@@ -130,11 +144,6 @@ export function resolveDeckBroachs(
   const limitCounters = new Map<string, { limit: number; count: number }>();
 
   // 全スロットのブローチを先に収集（上限処理のため）
-  interface PendingBroach {
-    slotIndex: number;
-    broach: FixedBroach;
-    conditionMet: boolean;
-  }
   const pending: PendingBroach[] = [];
 
   for (let i = 0; i < 6; i++) {
@@ -160,9 +169,6 @@ export function resolveDeckBroachs(
   // limit を持つブローチは種類を問わず「同一カード ID」単位でカウントし、
   // COUNTIF($AM$9:AM$9, AM9) <= limit と同じく limit 枚まで有効化する。
   // 別カードのブローチとは競合しない。
-  const getLimitKey = (p: PendingBroach): string | null =>
-    p.broach.limit !== null ? `card:${p.broach.card_id}` : null;
-
   for (const p of pending) {
     if (!p.conditionMet) continue;
     const key = getLimitKey(p);

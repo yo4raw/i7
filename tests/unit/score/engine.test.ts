@@ -32,6 +32,11 @@ const MC_SEED = 42;
 const emptyDeck: (Card | null)[] = [null, null, null, null, null, null];
 const centerDeck: (Card | null)[] = [tenthTamakiMainCard, null, null, null, null, null];
 
+/** ステージ倍率適用後の 1 ノーツ値 (2 段 floor: 属性値×NOTE_RATE → ×ステージ倍率) */
+function perNote(deckAttr: number, type: 'white' | 'color', stage: number): number {
+  return Math.floor(Math.floor(deckAttr * NOTE_RATE[type]) * stage);
+}
+
 describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配置した場合', () => {
   describe('getCenterSkillRate (センタースキル倍率)', () => {
     it('returns 10% for UR rarity (matches CENTER_SKILL_RATES table)', () => {
@@ -889,9 +894,6 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
         [LIGHT_MULTIPLIER.chorus_light_6,  4980, 5976,10899, 13080, 5508, 6609], // 3.0
       ];
 
-      const perNote = (deckAttr: number, type: 'white' | 'color', stage: number) =>
-        Math.floor(Math.floor(deckAttr * NOTE_RATE[type]) * stage);
-
       for (const [stage, sw, sc, bw, bc, mw, mc] of expected) {
         expect(perNote(deckShout,  'white', stage)).toBe(sw);
         expect(perNote(deckShout,  'color', stage)).toBe(sc);
@@ -962,8 +964,6 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
       const deckShout  = Math.floor(team.Shout  * (1 + SCOREUP_ASSIST_RATE));
       const deckBeat   = Math.floor(team.Beat   * (1 + SCOREUP_ASSIST_RATE));
       const deckMelody = Math.floor(team.Melody * (1 + SCOREUP_ASSIST_RATE));
-      const perNote = (deckAttr: number, type: 'white' | 'color', stage: number) =>
-        Math.floor(Math.floor(deckAttr * NOTE_RATE[type]) * stage);
 
       // 列順: [groupKey, Sw, Sc, Bw, Bc, Mw, Mc] (空白セルは 0)
       const expected: Array<[string, number, number, number, number, number, number]> = [

@@ -71,6 +71,9 @@ describe('組合せ数学ユーティリティ', () => {
   });
 });
 
+/** isShrinkCard 判定用の最小限フェイクカード */
+const fake = (t: string | null) => ({ ap_skill_type: t }) as unknown as Card;
+
 describe('isShrinkCard', () => {
   it('フィクスチャに判定縮小持ちと非縮小の UR が両方存在する', () => {
     const ur = allCards.filter((c) => c.rarity === 'UR' && c.ap_skill_type);
@@ -83,7 +86,6 @@ describe('isShrinkCard', () => {
   });
 
   it('スキルタイプ文字列で判定する', () => {
-    const fake = (t: string | null) => ({ ap_skill_type: t }) as unknown as Card;
     expect(isShrinkCard(fake('判定縮小スコアアップ'))).toBe(true);
     expect(isShrinkCard(fake('判定縮小（タイマー）'))).toBe(true);
     expect(isShrinkCard(fake('スコアアップ'))).toBe(false);
@@ -277,25 +279,25 @@ describe('generateChunks + enumerateChunkDecks', () => {
   });
 });
 
+async function runAllChunks(input: SearchInput, shuffle: boolean): Promise<{ top: DeckRecord[]; evaluated: number }> {
+  const ctx = createSearchContext(input);
+  const chunks = [...generateChunks(ctx)];
+  if (shuffle) chunks.reverse(); // 順序を変えても結果が同じことの検証
+  const tops: DeckRecord[][] = [];
+  let evaluated = 0;
+  for (const chunk of chunks) {
+    const r = await evaluateChunk(ctx, chunk);
+    tops.push(r.topK);
+    evaluated += r.evaluated;
+  }
+  return { top: mergeTopK(tops, TOP_K), evaluated };
+}
+
 describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
   // 評価コストを抑えるため候補 5 枚 (縮小 2 + 非縮小 3)
   const smallInput = buildInput({
     candidates: [...shrinkUr.slice(0, 2), ...nonShrinkUr.slice(0, 3)],
   });
-
-  async function runAllChunks(input: SearchInput, shuffle: boolean): Promise<{ top: DeckRecord[]; evaluated: number }> {
-    const ctx = createSearchContext(input);
-    const chunks = [...generateChunks(ctx)];
-    if (shuffle) chunks.reverse(); // 順序を変えても結果が同じことの検証
-    const tops: DeckRecord[][] = [];
-    let evaluated = 0;
-    for (const chunk of chunks) {
-      const r = await evaluateChunk(ctx, chunk);
-      tops.push(r.topK);
-      evaluated += r.evaluated;
-    }
-    return { top: mergeTopK(tops, TOP_K), evaluated };
-  }
 
   it('順次実行とチャンク順入れ替え実行で Top-K が一致する (分割の完全性)', async () => {
     const a = await runAllChunks(smallInput, false);
@@ -371,25 +373,28 @@ describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
   });
 });
 
-describe('mergeTopK', () => {
-  const rec = (score: number): DeckRecord => ({ cardIds: [1, 2, 3, 4, 5, 6], score });
+/** mergeTopK テスト用の最小限デッキレコード */
+function mkRec(score: number): DeckRecord {
+  return { cardIds: [1, 2, 3, 4, 5, 6], score };
+}
 
+describe('mergeTopK', () => {
   it('空リスト・空配列を許容する', () => {
     expect(mergeTopK([], 10)).toEqual([]);
     expect(mergeTopK([[], []], 10)).toEqual([]);
   });
 
   it('スコア降順にマージして k 件に切り詰める', () => {
-    const merged = mergeTopK([[rec(5), rec(1)], [rec(3)], [rec(9), rec(2)]], 3);
+    const merged = mergeTopK([[mkRec(5), mkRec(1)], [mkRec(3)], [mkRec(9), mkRec(2)]], 3);
     expect(merged.map((r) => r.score)).toEqual([9, 5, 3]);
   });
 
   it('k 件未満ならあるだけ返す', () => {
-    expect(mergeTopK([[rec(1)]], 10).length).toBe(1);
+    expect(mergeTopK([[mkRec(1)]], 10).length).toBe(1);
   });
 
   it('同点は件数を失わない', () => {
-    expect(mergeTopK([[rec(5), rec(5)], [rec(5)]], 2).map((r) => r.score)).toEqual([5, 5]);
+    expect(mergeTopK([[mkRec(5), mkRec(5)], [mkRec(5)]], 2).map((r) => r.score)).toEqual([5, 5]);
   });
 });
 
