@@ -45,7 +45,9 @@ async function main(): Promise<void> {
   console.log(`  ${broachs.length} 件の固定ブローチ`);
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error('[extract-fixtures] 失敗:', err);
   process.exit(1);
-});
+}

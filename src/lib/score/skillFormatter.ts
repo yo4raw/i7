@@ -76,7 +76,7 @@ export function formatSkillEffectMax(card: Card): { level: 1 | 2 | 3 | 4 | 5; te
  * 固定幅カラムでレイアウトが崩れるため、括弧部分を除いた表記を返す。
  * それ以外の種別（タイマー区別を含む）はそのまま返す。
  */
-export function skillTypeShortLabel(skillType: string | null | undefined): string {
+export function skillTypeShortLabel(skillType?: string | null): string {
   if (!skillType) return 'スキルなし';
   if (skillType === SKILL_TYPE.BAD_TO_PERFECT) return '判定強化';
   if (skillType === SKILL_TYPE.MISS_TO_PERFECT) return '判定ガード';

@@ -143,6 +143,7 @@ describe('スプレッドシートオラクル(golden 各版) — ②engine差�
     const exclusion = computeShrinkExclusion(team, computeGroupSizes(song));
     // seed は固定。属性値・期待値・最大値はノート順序に依存しないので任意 seed で可
     const notes = flattenNotes(song, 42, exclusion);
+    // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると notesCount が boolean になり壊れる
     const notesCount = song.notes_count || notes.length;
 
     if (gc.expected) {

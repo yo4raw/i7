@@ -13,13 +13,16 @@ export class Sfc32 {
 
   constructor(seed: number) {
     // splitmix32 でシードから 4 状態を生成
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit 符号なし変換のビット演算。Math.trunc は符号付き丸めで意味が異なり PRNG が壊れる
     let s = seed >>> 0;
     const split = (): number => {
+      // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit ラップアラウンド演算 (| 0)。Math.trunc に変えると PRNG が壊れる
       s = (s + 0x9e3779b9) | 0;
       let t = s ^ (s >>> 16);
       t = Math.imul(t, 0x21f0aaad);
       t ^= t >>> 15;
       t = Math.imul(t, 0x735a2d97);
+      // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit 符号なし変換のビット演算。Math.trunc に変えると PRNG が壊れる
       return (t ^ (t >>> 15)) >>> 0;
     };
     this.a = split();
@@ -32,12 +35,18 @@ export class Sfc32 {
 
   /** 0.0 以上 1.0 未満の浮動小数点数を返す */
   next(): number {
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- sfc32 の 32bit ラップアラウンド演算 (| 0)。Math.trunc に変えると PRNG が壊れる
     const t = (((this.a + this.b) | 0) + this.d) | 0;
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit ラップアラウンド演算 (| 0)。Math.trunc に変えると PRNG が壊れる
     this.d = (this.d + 1) | 0;
     this.a = this.b ^ (this.b >>> 9);
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit ラップアラウンド演算 (| 0)。Math.trunc に変えると PRNG が壊れる
     this.b = (this.c + (this.c << 3)) | 0;
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit ラップアラウンド演算 (| 0)。Math.trunc に変えると PRNG が壊れる
     this.c = ((this.c << 21) | (this.c >>> 11)) | 0;
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit ラップアラウンド演算 (| 0)。Math.trunc に変えると PRNG が壊れる
     this.c = (this.c + t) | 0;
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit 符号なし変換のビット演算。Math.trunc に変えると PRNG が壊れる
     return (t >>> 0) / 4294967296;
   }
 }

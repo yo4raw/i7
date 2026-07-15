@@ -417,7 +417,9 @@ async function main() {
   console.log('\n=== 完了 ===');
 }
 
-main().catch((e) => {
+try {
+  await main();
+} catch (e) {
   console.error('致命的エラー:', e);
   process.exit(1);
-});
+}

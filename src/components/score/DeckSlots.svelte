@@ -179,7 +179,7 @@
 
   function onImgError(e: Event) {
     const img = e.currentTarget as HTMLImageElement;
-    img.onerror = null;
+    if (img.src === IMG_FALLBACK_SRC) return; // フォールバック画像自体の読込失敗で無限ループしないよう防止
     img.src = IMG_FALLBACK_SRC;
   }
 

@@ -98,13 +98,13 @@ function shrinkSkill(count: number, originalType: string = SKILL_TYPE.SHRINK): C
     isTimer: false, isShrink: true, spTime: 0,
   };
 }
-function makeCard(skill: CardSkill | null, slotIndex: number): DeckCard {
+function makeCard(cardSkill: CardSkill | null, slotIndex: number): DeckCard {
   return {
     cardId: 0, cardID: 0, cardname: '', name: '',
     rarity: 'UR', attribute: 'Shout',
     shout_max: 0, beat_max: 0, melody_max: 0,
     broachShout: 0, broachBeat: 0, broachMelody: 0,
-    slotIndex, bonusMultiplier: 1, skill,
+    slotIndex, bonusMultiplier: 1, skill: cardSkill,
   };
 }
 

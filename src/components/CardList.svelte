@@ -125,7 +125,7 @@
     bonusSet = new Set(params.get('bonus')?.split(',').filter(Boolean) ?? []);
     sortBy = params.get('sort') || 'id-desc';
     const pageParam = params.get('page');
-    const target = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : 1;
+    const target = pageParam ? Math.max(1, Math.trunc(Number(pageParam)) || 1) : 1;
     visiblePages = target;
     currentVisiblePage = target;
 

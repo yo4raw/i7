@@ -51,7 +51,38 @@ export function startWorkerSearch(
             return;
           }
           active++;
+          // oxlint-disable-next-line unicorn/require-post-message-target-origin -- 専用 Worker#postMessage に targetOrigin 引数は存在しない (Window#postMessage 専用の引数)
           w.postMessage({ type: 'chunk', descriptor: chunks[nextChunk++] });
+        };
+
+        // Worker 生成ループの外で定義し、ループ内では参照のみ渡す (no-loop-func 対策)。
+        // handleWorkerMessage は w ごとに専用クロージャを返すファクトリ。
+        const handleWorkerError = (e: ErrorEvent) => {
+          reject(new Error(`探索 Worker でエラーが発生しました: ${e.message}`));
+        };
+        const handleWorkerMessage = (w: Worker) => (e: MessageEvent<FinderWorkerResponse>) => {
+          const msg = e.data;
+          if (msg.type === 'ready') {
+            dispatch(w);
+            return;
+          }
+          if (msg.type === 'progress') {
+            evaluated += msg.evaluatedDelta;
+            if (msg.localBestScore !== null && (provisionalBest === null || msg.localBestScore > provisionalBest)) {
+              provisionalBest = msg.localBestScore;
+            }
+            onProgress(evaluated, provisionalBest);
+            return;
+          }
+          if (msg.type === 'error') {
+            reject(new Error(`探索 Worker でエラーが発生しました: ${msg.message}`));
+            return;
+          }
+          // msg.type === 'result'
+          localTops.push(msg.topK);
+          if (msg.aborted) anyAborted = true;
+          active--;
+          dispatch(w);
         };
 
         for (let i = 0; i < workerCount; i++) {
@@ -60,31 +91,9 @@ export function startWorkerSearch(
             { type: 'module' },
           );
           workers.push(w);
-          w.onerror = (e) => reject(new Error(`探索 Worker でエラーが発生しました: ${e.message}`));
-          w.onmessage = (e: MessageEvent<FinderWorkerResponse>) => {
-            const msg = e.data;
-            if (msg.type === 'ready') {
-              dispatch(w);
-              return;
-            }
-            if (msg.type === 'progress') {
-              evaluated += msg.evaluatedDelta;
-              if (msg.localBestScore !== null && (provisionalBest === null || msg.localBestScore > provisionalBest)) {
-                provisionalBest = msg.localBestScore;
-              }
-              onProgress(evaluated, provisionalBest);
-              return;
-            }
-            if (msg.type === 'error') {
-              reject(new Error(`探索 Worker でエラーが発生しました: ${msg.message}`));
-              return;
-            }
-            // msg.type === 'result'
-            localTops.push(msg.topK);
-            if (msg.aborted) anyAborted = true;
-            active--;
-            dispatch(w);
-          };
+          w.addEventListener('error', handleWorkerError);
+          w.addEventListener('message', handleWorkerMessage(w));
+          // oxlint-disable-next-line unicorn/require-post-message-target-origin -- 専用 Worker#postMessage に targetOrigin 引数は存在しない (Window#postMessage 専用の引数)
           w.postMessage({ type: 'init', input });
         }
       });
@@ -99,7 +108,10 @@ export function startWorkerSearch(
     promise,
     abort: () => {
       abortRequested = true;
-      for (const w of workers) w.postMessage({ type: 'abort' });
+      for (const w of workers) {
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- 専用 Worker#postMessage に targetOrigin 引数は存在しない (Window#postMessage 専用の引数)
+        w.postMessage({ type: 'abort' });
+      }
     },
     terminate: () => {
       for (const w of workers) w.terminate();

@@ -37,7 +37,7 @@ export function formatElapsed(ms: number): string {
 }
 
 /** 星 n 個 + 空星 (5-n) 個を文字列で返す。n が falsy なら空文字 */
-export function starsText(n: number | null | undefined): string {
+export function starsText(n?: number | null): string {
   if (!n) return '';
   const filled = Math.max(0, Math.min(5, n));
   return '★'.repeat(filled) + '☆'.repeat(5 - filled);

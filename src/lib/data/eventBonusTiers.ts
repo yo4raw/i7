@@ -69,7 +69,7 @@ export function buildLiveTierMap(events: EventForBonus[], now: number = Date.now
   return map;
 }
 
-export function bonusBadgeHtml(tier: EventBonusTier | undefined | null): string {
+export function bonusBadgeHtml(tier?: EventBonusTier | null): string {
   if (!tier || tier === 'none') return '';
   const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
   if (!def) return '';
@@ -77,6 +77,6 @@ export function bonusBadgeHtml(tier: EventBonusTier | undefined | null): string 
 }
 
 /** イベント種別がハイスコア系か判定する（表記揺れに備え includes 判定）。 */
-export function isHighScoreEvent(eventtype: string | null | undefined): boolean {
+export function isHighScoreEvent(eventtype?: string | null): boolean {
   return !!eventtype && eventtype.includes('ハイスコア');
 }

@@ -35,7 +35,7 @@
 
   function onInput(e: Event, id: number) {
     const input = e.currentTarget as HTMLInputElement;
-    const v = parseInt(input.value, 10) || 0;
+    const v = Math.trunc(Number(input.value)) || 0;
     setBroachCount(id, v);
     input.value = String(getBroachCount(id));
   }

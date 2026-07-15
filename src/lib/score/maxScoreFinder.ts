@@ -142,6 +142,7 @@ export function createSearchContext(input: SearchInput): SearchContext {
     nonShrink: input.candidates.filter((c) => !isShrinkCard(c)),
     ownedLimit,
     groupSizes: computeGroupSizes(input.song),
+    // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると notesCount が boolean になり壊れる
     notesCount: input.song.notes_count || notes.length,
     attrWeights: calcAttrWeights(notes),
     hasFixedBroach: (c) => c.cardID !== null && fixedIds.has(c.cardID),

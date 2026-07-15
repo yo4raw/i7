@@ -1,17 +1,44 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { startWorkerSearch } from '../../../src/lib/score/searchWorkerPool';
 
-/** 設定可能なモック Worker。init→ready、chunk→progress+result を駆動する。 */
+/**
+ * 設定可能なモック Worker。init→ready、chunk→progress+result を駆動する。
+ * 実装側 (searchWorkerPool.ts) が addEventListener('message'|'error', ...) で購読するのに合わせ、
+ * onmessage/onerror プロパティではなくリスナー配列で通知する。
+ */
 class MockWorker {
   static instances: MockWorker[] = [];
   static mode: 'ok' | 'error' | 'silent' = 'ok';
-  onmessage: ((e: { data: unknown }) => void) | null = null;
-  onerror: ((e: { message: string }) => void) | null = null;
+  private messageListeners: ((e: { data: unknown }) => void)[] = [];
+  private errorListeners: ((e: { message: string }) => void)[] = [];
   posted: { type: string; [k: string]: unknown }[] = [];
   terminated = false;
 
   constructor() {
     MockWorker.instances.push(this);
+  }
+
+  addEventListener(type: 'message', listener: (e: { data: unknown }) => void): void;
+  addEventListener(type: 'error', listener: (e: { message: string }) => void): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- overload 実装シグネチャ。呼び出し側は上記の型付きシグネチャのみ見える
+  addEventListener(type: 'message' | 'error', listener: (e: any) => void): void {
+    if (type === 'message') this.messageListeners.push(listener);
+    else this.errorListeners.push(listener);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- removeEventListener は本テストでは未使用のため簡易型で十分
+  removeEventListener(type: 'message' | 'error', listener: (e: any) => void): void {
+    if (type === 'message') this.messageListeners = this.messageListeners.filter((l) => l !== listener);
+    else this.errorListeners = this.errorListeners.filter((l) => l !== listener);
+  }
+
+  /** テストから直接 error イベントを発火させるヘルパー（実 Worker の onerror 発火を模す） */
+  fireError(e: { message: string }): void {
+    for (const l of this.errorListeners) l(e);
+  }
+
+  private emitMessage(data: unknown): void {
+    for (const l of this.messageListeners) l({ data });
   }
 
   postMessage(msg: { type: string; descriptor?: unknown }): void {
@@ -20,16 +47,14 @@ class MockWorker {
     queueMicrotask(() => {
       if (this.terminated) return;
       if (msg.type === 'init') {
-        this.onmessage?.({ data: { type: 'ready' } });
+        this.emitMessage({ type: 'ready' });
       } else if (msg.type === 'chunk') {
         if (MockWorker.mode === 'error') {
-          this.onmessage?.({ data: { type: 'error', message: 'worker boom' } });
+          this.emitMessage({ type: 'error', message: 'worker boom' });
           return;
         }
-        this.onmessage?.({ data: { type: 'progress', evaluatedDelta: 10, localBestScore: 50 } });
-        this.onmessage?.({
-          data: { type: 'result', topK: [{ d: msg.descriptor }], evaluated: 10, aborted: false },
-        });
+        this.emitMessage({ type: 'progress', evaluatedDelta: 10, localBestScore: 50 });
+        this.emitMessage({ type: 'result', topK: [{ d: msg.descriptor }], evaluated: 10, aborted: false });
       }
     });
   }
@@ -78,8 +103,8 @@ describe('startWorkerSearch', () => {
   it('onerror でも reject する', async () => {
     MockWorker.mode = 'silent'; // 自動応答させない
     const run = startWorkerSearch(input, chunks, 1, vi.fn());
-    // 生成された Worker の onerror を発火
-    MockWorker.instances[0].onerror?.({ message: 'crash' });
+    // 生成された Worker の error イベントを発火
+    MockWorker.instances[0].fireError({ message: 'crash' });
     await expect(run.promise).rejects.toThrow(/エラー/);
   });
 

@@ -5,7 +5,7 @@ import { SKILL_TYPE } from '../../../src/lib/data/fetchCardsJson';
 describe('skillTypeShortLabel', () => {
   it('null / undefined / 空文字は「スキルなし」', () => {
     expect(skillTypeShortLabel(null)).toBe('スキルなし');
-    expect(skillTypeShortLabel(undefined)).toBe('スキルなし');
+    expect(skillTypeShortLabel()).toBe('スキルなし');
     expect(skillTypeShortLabel('')).toBe('スキルなし');
   });
 
