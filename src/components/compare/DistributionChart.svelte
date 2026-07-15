@@ -88,6 +88,7 @@
     return Math.round((thresholds[i] ?? 0.8) * 100).toString();
   }
 
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={svgEl} 代入 (テンプレート側) を静的解析できず誤検知
   let svgEl: SVGSVGElement;
   let dragIndex = $state<number | null>(null);
 

@@ -33,6 +33,7 @@
     broachCounts?: Record<string, number>;
   } = $props();
 
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={gridEl} 代入 (l.341) を静的解析できず誤検知
   let gridEl: HTMLDivElement;
   const slotEls: (HTMLElement | undefined)[] = [];
 

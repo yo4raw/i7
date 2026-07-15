@@ -44,6 +44,7 @@
       .map((id) => SHARED_BROACHS.find((sb) => sb.id === id)?.name ?? `#${id}`)
   );
 
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={picker} 代入 (l.394) を静的解析できず誤検知
   let picker: CardPickerModal | undefined;
 
   const defaultTierMap = buildLiveTierMap(initialEvents);
