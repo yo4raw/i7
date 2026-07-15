@@ -25,7 +25,7 @@
   const liveHits = $derived(
     relatedEvents
       .filter((r) => isEventLive(r.start_date, r.end_date, now))
-      .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier])
+      .toSorted((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier])
   );
 
   function defFor(tier: EventBonusTier) {

@@ -15,6 +15,6 @@ describe('isHighScoreEvent', () => {
   it('空・null・undefined は false', () => {
     expect(isHighScoreEvent('')).toBe(false);
     expect(isHighScoreEvent(null)).toBe(false);
-    expect(isHighScoreEvent(undefined)).toBe(false);
+    expect(isHighScoreEvent()).toBe(false);
   });
 });

@@ -47,7 +47,7 @@ export function encodeDeckToParams(state: DeckShareState): URLSearchParams {
   const params = new URLSearchParams();
   params.set('dv', String(VERSION));
 
-  if (state.songId != null) params.set('song', String(state.songId));
+  if (state.songId !== null) params.set('song', String(state.songId));
 
   params.set(
     'cards',
@@ -86,7 +86,7 @@ export function decodeParamsToDeck(params: URLSearchParams): Partial<DeckShareSt
   const result: Partial<DeckShareState> = {};
 
   const song = params.get('song');
-  if (song != null && song !== '') {
+  if (song !== null && song !== '') {
     const n = Number(song);
     if (Number.isFinite(n) && n > 0) result.songId = n;
   } else if (params.has('song')) {
@@ -94,7 +94,7 @@ export function decodeParamsToDeck(params: URLSearchParams): Partial<DeckShareSt
   }
 
   const cards = params.get('cards');
-  if (cards != null) {
+  if (cards !== null) {
     const parts = cards.split('.');
     if (parts.length === SLOTS) {
       result.deckIds = parts.map(s => {
@@ -105,7 +105,7 @@ export function decodeParamsToDeck(params: URLSearchParams): Partial<DeckShareSt
   }
 
   const tiers = params.get('tiers');
-  if (tiers != null) {
+  if (tiers !== null) {
     const parts = tiers.split('.');
     if (parts.length === SLOTS) {
       result.bonusTiers = parts.map(c => CHAR_TO_TIER[c] ?? 'none');
@@ -113,24 +113,24 @@ export function decodeParamsToDeck(params: URLSearchParams): Partial<DeckShareSt
   }
 
   const tr = params.get('tr');
-  if (tr != null && tr.length === SLOTS && /^[01]+$/.test(tr)) {
+  if (tr !== null && tr.length === SLOTS && /^[01]+$/.test(tr)) {
     result.trained = tr.split('').map(c => c === '1');
   }
 
   const lv = params.get('lv');
-  if (lv != null && lv.length === SLOTS && /^[1-5]+$/.test(lv)) {
-    result.skillLevels = lv.split('').map(c => Number(c));
+  if (lv !== null && lv.length === SLOTS && /^[1-5]+$/.test(lv)) {
+    result.skillLevels = lv.split('').map(Number);
   }
 
   const sb = params.get('sb');
-  if (sb != null) {
+  if (sb !== null) {
     const slots = sb.split('_');
     if (slots.length === SLOTS) {
       result.sharedBroachs = slots.map(slot => {
         if (slot === '') return [];
         return slot
           .split(',')
-          .map(s => Number(s))
+          .map(Number)
           .filter(n => Number.isFinite(n) && n > 0);
       });
     }
@@ -145,6 +145,6 @@ export function buildShareUrl(state: DeckShareState, scoreCalcPageUrl: string): 
 }
 
 export function isDeckEmpty(state: DeckShareState): boolean {
-  if (state.songId != null) return false;
-  return state.deckIds.every(id => id == null);
+  if (state.songId !== null) return false;
+  return state.deckIds.every(id => id === null);
 }

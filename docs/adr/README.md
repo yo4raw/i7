@@ -55,3 +55,4 @@
 | [0041](0041-spreadsheet-alignment-fixes.md) | スプレッドシート v1.0.7 準拠のスコア計算修正(B1〜B13) | 承認 |
 | [0043](0043-score-calc-spec-page-full-redesign.md) | スコア計算 仕様解説ページをパイプライン全体解説へ全面リデザイン | 承認 |
 | [0044](0044-spec-shrink-strategy-visual.md) | 仕様解説ページ §4 に期待カバー率の明示と縮小 vs スコアアップ戦略比較を追加 | 承認 |
+| [0045](0045-introduce-oxlint.md) | oxlint を唯一のリンターとして導入(pedantic の主観ルールは off・CI/プレコミットで強制) | 承認 |

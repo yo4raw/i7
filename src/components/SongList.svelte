@@ -49,25 +49,25 @@
     });
     switch (sortBy) {
       case 'name-asc':
-        result = [...result].sort((a, b) => (a.song_name || '').localeCompare(b.song_name || ''));
+        result = [...result].toSorted((a, b) => (a.song_name || '').localeCompare(b.song_name || ''));
         break;
       case 'notes-desc':
-        result = [...result].sort((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
+        result = [...result].toSorted((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
         break;
       case 'notes-asc':
-        result = [...result].sort((a, b) => (a.notes_count || 0) - (b.notes_count || 0));
+        result = [...result].toSorted((a, b) => (a.notes_count || 0) - (b.notes_count || 0));
         break;
       case 'stars-desc':
-        result = [...result].sort((a, b) => (b.stars || 0) - (a.stars || 0));
+        result = [...result].toSorted((a, b) => (b.stars || 0) - (a.stars || 0));
         break;
       case 'stars-asc':
-        result = [...result].sort((a, b) => (a.stars || 0) - (b.stars || 0));
+        result = [...result].toSorted((a, b) => (a.stars || 0) - (b.stars || 0));
         break;
       case 'duration-desc':
-        result = [...result].sort((a, b) => (b.duration || 0) - (a.duration || 0));
+        result = [...result].toSorted((a, b) => (b.duration || 0) - (a.duration || 0));
         break;
       case 'duration-asc':
-        result = [...result].sort((a, b) => (a.duration || 0) - (b.duration || 0));
+        result = [...result].toSorted((a, b) => (a.duration || 0) - (b.duration || 0));
         break;
     }
     return result;
@@ -84,7 +84,7 @@
     saveSelected();
   }
 
-  const visibleIds = $derived(filtered.map((s) => s.id).filter((id): id is number => id != null));
+  const visibleIds = $derived(filtered.map((s) => s.id).filter((id): id is number => id !== null && id !== undefined));
   const checkedCount = $derived(visibleIds.filter((id) => selectedSongIds.has(id)).length);
   const selectAllChecked = $derived(visibleIds.length > 0 && checkedCount === visibleIds.length);
   const selectAllIndeterminate = $derived(checkedCount > 0 && checkedCount < visibleIds.length);
@@ -92,7 +92,7 @@
   function toggleAll(checked: boolean) {
     const next = new Set(selectedSongIds);
     for (const s of filtered) {
-      if (s.id != null) {
+      if (s.id !== null && s.id !== undefined) {
         if (checked) next.add(s.id); else next.delete(s.id);
       }
     }
@@ -153,7 +153,7 @@
   }
 
   function go(id: number | undefined) {
-    if (id != null) window.location.href = `${base}songs/${id}/`;
+    if (id !== null && id !== undefined) window.location.href = `${base}songs/${id}/`;
   }
 </script>
 

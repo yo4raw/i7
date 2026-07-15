@@ -4,7 +4,6 @@ import {
   countMultisetsWithLimits,
   createSearchContext,
   countCombos,
-  evaluateDeck,
   evaluateChunk,
   evaluateFriendSwap,
   enumerateChunkDecks,
@@ -13,11 +12,10 @@ import {
   type SearchInput,
 } from '../../../src/lib/score/maxScoreFinder';
 import type { Song } from '../../../src/lib/data/fetchSongsJson';
-import type { Card } from '../../../src/lib/data/fetchCardsJson';
 import type { EventBonusTier } from '../../../src/lib/data/eventBonusTiers';
 import { allCards, allBroachs, findSongById } from '../../fixtures';
 
-const urPool = allCards.filter((c) => c.rarity === 'UR' && c.ID != null && c.ap_skill_type);
+const urPool = allCards.filter((c) => c.rarity === 'UR' && c.ID !== null && c.ap_skill_type);
 const shrinkUr = urPool.filter((c) => isShrinkCard(c)).slice(0, 3);
 const nonShrinkUr = urPool.filter((c) => !isShrinkCard(c)).slice(0, 4);
 const testCandidates = [...shrinkUr, ...nonShrinkUr];

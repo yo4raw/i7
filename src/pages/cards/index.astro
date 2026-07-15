@@ -10,9 +10,9 @@ const [allCards, allEvents] = await Promise.all([
   fetchCardsJson() as Promise<any[]>,
   fetchEventsCsv(),
 ]);
-const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].sort() as string[];
+const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].toSorted() as string[];
 
-const eventsForBonus = allEvents.map(toEventForBonus);
+const eventsForBonus = allEvents.map((e) => toEventForBonus(e));
 
 const base = import.meta.env.BASE_URL;
 const pageUrl = new URL(`${base}cards/`, Astro.site).toString();

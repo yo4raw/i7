@@ -11,6 +11,11 @@ beforeEach(() => vi.mocked(readFile).mockReset());
 const HEADER =
   'ID,eventname,eventtype,start_date,end_date,special3_member,comment,special1_rID,special1_effect,special1_param_up';
 
+const baseTier = (): EventSpecialTier => ({
+  cardIds: [], costumeIds: [], effect: [],
+  param_up: 0, item_up: 0, bpt_up: 0, ept_up: 0, gpt_up: 0, score_up: 0,
+});
+
 describe('fetchEventsCsv: CR・単一列フィルタ・非数値・短い行', () => {
   it('CRLF 改行 (\\r) を読み飛ばして正常にパースする (L60)', () => {
     const csv =
@@ -61,11 +66,6 @@ describe('fetchEventsCsv: CR・単一列フィルタ・非数値・短い行', (
 });
 
 describe('formatEffectSummary', () => {
-  const baseTier = (): EventSpecialTier => ({
-    cardIds: [], costumeIds: [], effect: [],
-    param_up: 0, item_up: 0, bpt_up: 0, ept_up: 0, gpt_up: 0, score_up: 0,
-  });
-
   it('effect に含まれ値 > 0 の項目だけを日本語ラベルで連結する', () => {
     const tier = { ...baseTier(), effect: ['param', 'score'], param_up: 50, score_up: 30, item_up: 10 };
     // item は effect に無いので除外、param/score のみ

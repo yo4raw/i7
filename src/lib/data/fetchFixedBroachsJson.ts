@@ -44,5 +44,5 @@ export async function fetchFixedBroachsJson(): Promise<FixedBroach[]> {
     17: 'broach_type',    // ブローチの種類
     18: 'condition',      // 条件
   });
-  return (rows as unknown as FixedBroach[]).filter((row) => row.card_name != null);
+  return (rows as unknown as FixedBroach[]).filter((row) => row.card_name !== null);
 }

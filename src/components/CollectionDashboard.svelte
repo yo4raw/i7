@@ -8,12 +8,12 @@
   let { cards }: Props = $props();
 
   const ownedIds = $derived(new Set(Object.entries(allCounts()).filter(([, n]) => n > 0).map(([k]) => k)));
-  const isOwned = (c: Card) => c.ID != null && ownedIds.has(String(c.ID));
+  const isOwned = (c: Card) => c.ID !== null && c.ID !== undefined && ownedIds.has(String(c.ID));
 
   /** owned / total と達成率% を算出 */
   function rate(pool: Card[]) {
     const total = pool.length;
-    const owned = pool.filter(isOwned).length;
+    const owned = pool.filter((c) => isOwned(c)).length;
     const pct = total > 0 ? Math.round((owned / total) * 100) : 0;
     return { owned, total, pct };
   }

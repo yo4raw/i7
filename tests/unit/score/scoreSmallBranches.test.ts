@@ -69,7 +69,7 @@ function fullSong(groups: Partial<Record<string, Record<string, number | null>>>
   };
   const keys = ['notes_20', 'light_2', 'light_3', 'light_4', 'light_5', 'light_6', 'chorus_light_5', 'chorus_light_6'];
   const song: Record<string, unknown> = { id: 1, song_name: 'TEST', notes_count: null };
-  for (const k of keys) song[k] = { ...empty, ...(groups[k] ?? {}) };
+  for (const k of keys) song[k] = { ...empty, ...groups[k] };
   return song as unknown as Song;
 }
 
@@ -91,23 +91,24 @@ describe('computeGroupSizes: グループ欠落・非数値分岐', () => {
   });
 });
 
+function shrinkSkill(count: number, originalType: string = SKILL_TYPE.SHRINK): CardSkill {
+  return {
+    cardIndex: 0, skillType: 'shrink', originalType,
+    count, per: 40, value: 4, rate: 1.4,
+    isTimer: false, isShrink: true, spTime: 0,
+  };
+}
+function makeCard(cardSkill: CardSkill | null, slotIndex: number): DeckCard {
+  return {
+    cardId: 0, cardID: 0, cardname: '', name: '',
+    rarity: 'UR', attribute: 'Shout',
+    shout_max: 0, beat_max: 0, melody_max: 0,
+    broachShout: 0, broachBeat: 0, broachMelody: 0,
+    slotIndex, bonusMultiplier: 1, skill: cardSkill,
+  };
+}
+
 describe('computeShrinkExclusion: groupSizes 欠落キー / サイズ0グループ / 縮小タイマー songDuration<=0', () => {
-  function shrinkSkill(count: number, originalType: string = SKILL_TYPE.SHRINK): CardSkill {
-    return {
-      cardIndex: 0, skillType: 'shrink', originalType,
-      count, per: 40, value: 4, rate: 1.4,
-      isTimer: false, isShrink: true, spTime: 0,
-    };
-  }
-  function makeCard(skill: CardSkill | null, slotIndex: number): DeckCard {
-    return {
-      cardId: 0, cardID: 0, cardname: '', name: '',
-      rarity: 'UR', attribute: 'Shout',
-      shout_max: 0, beat_max: 0, melody_max: 0,
-      broachShout: 0, broachBeat: 0, broachMelody: 0,
-      slotIndex, bonusMultiplier: 1, skill,
-    };
-  }
   function makeTeam(skills: (CardSkill | null)[], songDuration = 104): ComputedTeam {
     return {
       Shout: 0, Beat: 0, Melody: 0,
@@ -216,30 +217,30 @@ describe('buildBroachRanking: グループ欠落・count 欠落分岐', () => {
 // ===========================================================================
 // cardDistribution.ts: kMin>n / 縮小スパイク / 縮小 base 分岐
 // ===========================================================================
-describe('cardDistribution: 縮小・範囲外分岐', () => {
-  function skill(partial: Partial<CardSkill>): CardSkill {
-    return {
-      cardIndex: 0, skillType: 'scoreUp', originalType: 'スコアアップ',
-      count: 10, per: 50, value: 1000, rate: 0,
-      isTimer: false, isShrink: false, spTime: 0,
-      ...partial,
-    };
-  }
-  function entry(partial: Partial<CardStrengthEntry>): CardStrengthEntry {
-    return {
-      card: findCardById(2484),
-      attribute: 'Shout',
-      appeal: { Shout: 0, Beat: 0, Melody: 0 },
-      appealTotal: 0,
-      baseScore: 100000,
-      skillExpected: 0, skillMax: 0,
-      totalScore: 100000, maxTotalScore: 100000,
-      maxActivations: 0, maxCoverSec: 0, expectedCoverSec: 0,
-      skill: null, broachScoreBonus: 0, appliedBroach: null,
-      ...partial,
-    };
-  }
+function skill(partial: Partial<CardSkill>): CardSkill {
+  return {
+    cardIndex: 0, skillType: 'scoreUp', originalType: 'スコアアップ',
+    count: 10, per: 50, value: 1000, rate: 0,
+    isTimer: false, isShrink: false, spTime: 0,
+    ...partial,
+  };
+}
+function entry(partial: Partial<CardStrengthEntry>): CardStrengthEntry {
+  return {
+    card: findCardById(2484),
+    attribute: 'Shout',
+    appeal: { Shout: 0, Beat: 0, Melody: 0 },
+    appealTotal: 0,
+    baseScore: 100000,
+    skillExpected: 0, skillMax: 0,
+    totalScore: 100000, maxTotalScore: 100000,
+    maxActivations: 0, maxCoverSec: 0, expectedCoverSec: 0,
+    skill: null, broachScoreBonus: 0, appliedBroach: null,
+    ...partial,
+  };
+}
 
+describe('cardDistribution: 縮小・範囲外分岐', () => {
   it('reachProbability: t>1 で kMin>n のとき 0 (L35 path)', () => {
     const e = entry({ maxActivations: 4, skill: skill({ per: 50 }) });
     expect(reachProbability(e, 1.5)).toBe(0);

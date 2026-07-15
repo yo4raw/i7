@@ -35,11 +35,11 @@
   const modeLabel = $derived(result.evalMode === 'expected' ? '算術期待値（最終リザルト）' : '理論最大値（全スキル発動）');
 
   function buildTiersFromDeck(deck: (Card | null)[]): EventBonusTier[] {
-    return deck.map((c) => (c && c.ID != null ? currentTierMap.get(c.ID) ?? 'none' : 'none'));
+    return deck.map((c) => (c && c.ID !== null && c.ID !== undefined ? currentTierMap.get(c.ID) ?? 'none' : 'none'));
   }
 
   function getCardById(id: number | null): Card | null {
-    if (id == null) return null;
+    if (id === null || id === undefined) return null;
     return allCards.find((c) => c.ID === id) || null;
   }
 
@@ -70,7 +70,7 @@
     const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     const trained: boolean[] = [true, true, true, true, true, true];
     const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, result.best.sharedBroachIds ?? [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
-    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong, undefined);
+    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong);
     return { team, deck, resolvedBroachs };
   });
   const bestTeam = $derived(bestContext?.team ?? null);

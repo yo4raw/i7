@@ -65,7 +65,7 @@ const infoRows = [
   { label: 'グループ', value: card.groupname },
   { label: '入手方法', value: card.get_type },
   { label: 'ストーリー', value: card.story },
-].filter(r => r.value != null && r.value !== '');
+].filter(r => r.value !== null && r.value !== '');
 
 const trainCount = Number(card.sp_time) || 0;
 const trainStep = Number(card.sp_value) || 0;
@@ -98,7 +98,7 @@ if (card.ap_skill_name) {
 const otherSkills = [
   { label: 'センタースキル', value: card.ct_skill },
   { label: 'コメント', value: card.comment },
-].filter(r => r.value != null && r.value !== '');
+].filter(r => r.value !== null && r.value !== '');
 ---
 
 <BaseLayout

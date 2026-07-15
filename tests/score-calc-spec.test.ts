@@ -8,7 +8,7 @@ test.describe('スコア計算 仕様解説ページ', () => {
     await page.goto(`${BASE}/score-calc/spec/`);
   });
 
-  // FIXME: SITE_NAME に正規表現メタ文字 (β) が含まれるため未エスケープではマッチしない既存バグ
+  // 既知の問題: SITE_NAME に正規表現メタ文字 (β) が含まれるため未エスケープではマッチしない既存バグ
   test.fixme('タイトルが正しい', async ({ page }) => {
     await expect(page).toHaveTitle(new RegExp(`スコア計算 仕様解説.*${SITE_NAME}`));
   });

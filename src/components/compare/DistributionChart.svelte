@@ -70,7 +70,7 @@
     const mx = Math.max(...s.points.map((p) => p.prob)) || 1;
     const pts = s.points.map((p) => `${sx(p.x).toFixed(1)},${(PAD_T + innerH - (p.prob / mx) * innerH).toFixed(1)}`);
     const first = sx(s.points[0].x).toFixed(1);
-    const last = sx(s.points[s.points.length - 1].x).toFixed(1);
+    const last = sx(s.points.at(-1).x).toFixed(1);
     return `${first},${PAD_T + innerH} ${pts.join(' ')} ${last},${PAD_T + innerH}`;
   }
 
@@ -88,6 +88,7 @@
     return Math.round((thresholds[i] ?? 0.8) * 100).toString();
   }
 
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={svgEl} 代入 (テンプレート側) を静的解析できず誤検知
   let svgEl: SVGSVGElement;
   let dragIndex = $state<number | null>(null);
 
@@ -103,9 +104,9 @@
 
   // ドラッグ中のみ window レベルでポインターイベントを受け取る
   $effect(() => {
-    if (dragIndex == null) return;
+    if (dragIndex === null || dragIndex === undefined) return;
     function moveDrag(ev: PointerEvent) {
-      if (dragIndex == null) return;
+      if (dragIndex === null || dragIndex === undefined) return;
       const value = pxToValue(clientXToSvg(ev.clientX));
       thresholds[dragIndex] = valueToThreshold(series[dragIndex].entry, value);
       thresholds = [...thresholds];

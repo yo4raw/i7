@@ -115,7 +115,7 @@ export function calcCardStrengthAppeal(
   const deck: (Card | null)[] = [card, null, null, null, null, null];
   const cardBroachs = allBroachs.filter((br) => br.card_id === card.cardID);
   for (const br of cardBroachs) {
-    if (br.id == null) continue;
+    if (br.id === null) continue;
     // 比較はベストケース前提のため、種類7（全属性編成）は常に発動扱いにする
     const resolved = resolveDeckBroachs(
       deck, cardBroachs, song, [br.id, null, null, null, null, null], { assumeAllAttributes: true },

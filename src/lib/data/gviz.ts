@@ -30,7 +30,7 @@ export const SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
 /**
  * GVizセルから値を抽出する
  */
-export function extractCellValue(cell: GVizCell | null | undefined): string | number | boolean | null {
+export function extractCellValue(cell?: GVizCell | null): string | number | boolean | null {
   if (!cell || cell.v === null || cell.v === undefined) {
     return null;
   }
@@ -65,7 +65,7 @@ export async function fetchSheetRaw(spreadsheetId: string, gid: number, maxRetri
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      await new Promise(r => setTimeout(r, 1000 * attempt));
+      await new Promise(r => { setTimeout(r, 1000 * attempt); });
     }
     try {
       const response = await fetch(url);
@@ -85,7 +85,10 @@ export async function fetchSheetRaw(spreadsheetId: string, gid: number, maxRetri
       }
     }
   }
-  throw lastError!;
+  // lastError は maxRetries>=0 なら必ず1回は catch を通り設定されるが、
+  // 型上 Error | null のため Error 型に確定させてから throw する（no-throw-literal 対応）
+  const finalError: Error = lastError ?? new Error(`スプレッドシートの取得に失敗しました (gid=${gid})`);
+  throw finalError;
 }
 
 /**

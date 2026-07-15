@@ -8,11 +8,11 @@ const urWithBroach = findCardById(2484);
 describe('deckState (デッキ編成状態の操作)', () => {
   it('createEmptyDeckState: 6 スロットすべて初期値', () => {
     const s = createEmptyDeckState();
-    expect(s.cards).toEqual(Array(DECK_SIZE).fill(null));
-    expect(s.bonusTiers).toEqual(Array(DECK_SIZE).fill('none'));
-    expect(s.trained).toEqual(Array(DECK_SIZE).fill(true));
+    expect(s.cards).toEqual(Array.from({ length: DECK_SIZE }, () => null));
+    expect(s.bonusTiers).toEqual(Array.from({ length: DECK_SIZE }, () => 'none'));
+    expect(s.trained).toEqual(Array.from({ length: DECK_SIZE }, () => true));
     expect(s.sharedBroachs).toEqual([[], [], [], [], [], []]);
-    expect(s.skillLevels).toEqual(Array(DECK_SIZE).fill(5));
+    expect(s.skillLevels).toEqual(Array.from({ length: DECK_SIZE }, () => 5));
   });
 
   it('setCard: カード配置 + デフォルト特効 + 共有ブローチ検証', () => {

@@ -93,8 +93,7 @@ function reorderForEngine(gc: GoldenCase): {
   sharedBroachSelections: number[][];
 } {
   const n = gc.deck.length;
-  const order: number[] = [];
-  order.push(gc.center); // index0 = センター
+  const order: number[] = [gc.center]; // index0 = センター
   for (let i = 0; i < n; i++) {
     if (i === gc.center || i === gc.friend) continue;
     order.push(i); // 中間枠は元順序を保持
@@ -108,7 +107,7 @@ function reorderForEngine(gc: GoldenCase): {
   // （buildOracleInput.ts の sumFixedBroachs）は id ごとの単純合算（1回加算）のため、
   // その時点でここが乖離要因になる — 要修正。
   const selectedBroachIds = deck.map((card) => {
-    const match = allBroachs.find((b) => b.id != null && gc.broachs.includes(b.id) && b.card_id === card.cardID);
+    const match = allBroachs.find((b) => b.id !== null && gc.broachs.includes(b.id) && b.card_id === card.cardID);
     return match ? match.id : null;
   });
   return {
@@ -139,12 +138,12 @@ describe('スプレッドシートオラクル(golden 各版) — ②engine差�
       trained,
       selectedBroachIds,
       sharedBroachSelections,
-      skillLevels,
-      undefined, // rabbitNotes
+      skillLevels, // rabbitNotes
     );
     const exclusion = computeShrinkExclusion(team, computeGroupSizes(song));
     // seed は固定。属性値・期待値・最大値はノート順序に依存しないので任意 seed で可
     const notes = flattenNotes(song, 42, exclusion);
+    // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると notesCount が boolean になり壊れる
     const notesCount = song.notes_count || notes.length;
 
     if (gc.expected) {

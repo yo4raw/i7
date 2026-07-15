@@ -12,7 +12,10 @@
     "test:unit:watch": "vitest",
     "coverage": "vitest run --coverage",
     "typecheck": "astro check --minimumSeverity warning",
-    "extract-fixtures": "tsx scripts/extract-test-fixtures.ts"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "extract-fixtures": "tsx scripts/extract-test-fixtures.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
@@ -29,7 +32,10 @@
     "@playform/compress": "0.2.3",
     "@playwright/test": "^1.61.1",
     "@vitest/coverage-v8": "^4.1.9",
+    "husky": "9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "17.0.8",
+    "oxlint": "1.74.0",
     "serve": "^14.2.6",
     "sharp": "^0.35.3",
     "tsx": "^4.23.0",
@@ -37,5 +43,8 @@
   },
   "overrides": {
     "vite": "^8"
+  },
+  "lint-staged": {
+    "*.{ts,js,mjs,cjs,astro,svelte}": "oxlint"
   }
 }

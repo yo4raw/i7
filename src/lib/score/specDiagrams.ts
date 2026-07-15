@@ -44,7 +44,7 @@ const ACCENT_RED = '#ef4444';
 export const CARD_COLORS = ['#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12'] as const;
 
 function escapeXml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 function fmt(n: number): string {
@@ -98,7 +98,7 @@ export function pipelineOverviewSvg(opts?: { highlight?: StageKey }): string {
   PIPELINE_STAGES.forEach((s, i) => {
     const x = 12 + i * (boxW + gap);
     const c = STAGE_COLORS[s.key];
-    const active = highlight == null || highlight === s.key;
+    const active = highlight === undefined || highlight === s.key;
     const fill = highlight === s.key ? c.pale : 'white';
     const opacity = active ? 1 : 0.35;
     const subLines = s.sub.split('\n').map((l, li) =>
@@ -110,7 +110,7 @@ export function pipelineOverviewSvg(opts?: { highlight?: StageKey }): string {
       <text x="${x + boxW / 2}" y="${y + 30}" text-anchor="middle" fill="${MUTED}" font-size="9">${subLines}</text>
     </g>`);
     if (i < PIPELINE_STAGES.length - 1) {
-      const nextActive = highlight == null || highlight === PIPELINE_STAGES[i + 1].key || highlight === s.key;
+      const nextActive = highlight === undefined || highlight === PIPELINE_STAGES[i + 1].key || highlight === s.key;
       parts.push(`<line x1="${x + boxW + 2}" y1="${y + boxH / 2}" x2="${x + boxW + gap - 3}" y2="${y + boxH / 2}"
         stroke="${MUTED}" stroke-width="2" marker-end="url(#pipe-arrow)" opacity="${nextActive ? 1 : 0.35}"/>`);
     }
@@ -259,7 +259,7 @@ export function lightMultiplierChartSvg(groupSizes?: Record<string, number>): st
     const h = (mult / maxMult) * innerH;
     const y = M.top + innerH - h;
     const n = groupSizes?.[g];
-    const countLabel = n != null
+    const countLabel = n !== undefined
       ? `<text x="${x + barW / 2}" y="${M.top + innerH + 30}" text-anchor="middle" fill="${MUTED}" font-size="9">${n}ノーツ</text>`
       : '';
     return `<g>
@@ -678,7 +678,7 @@ export interface CoverageDiagramParams {
 /** カバー率の合算と 100% キャップの図（expected 指定時は期待カバーの下段バー付き 2 段表示） */
 export function coverageDiagramSvg(p: CoverageDiagramParams): string {
   const c = STAGE_COLORS.shrink;
-  const hasExpected = p.expected != null;
+  const hasExpected = p.expected !== undefined;
   const W = 760, H = hasExpected ? 250 : 220;
   const M = { top: 30, right: 20, bottom: 60, left: 20 };
   const innerW = W - M.left - M.right;
@@ -912,7 +912,7 @@ export function skillScalingChartSvg(points: ScalingChartPoint[]): string {
   if (points.length < 2) return `${svgOpen(W, H, '属性値スケーリング比較')}</svg>`;
 
   const minF = points[0].factor;
-  const maxF = points[points.length - 1].factor;
+  const maxF = points.at(-1)!.factor;
   const maxY = Math.max(...points.map(p => Math.max(p.shrinkExpected, p.scoreUpExpected))) * 1.08;
   const x = (f: number) => M.left + ((f - minF) / (maxF - minF)) * innerW;
   const y = (v: number) => M.top + innerH - (v / maxY) * innerH;
@@ -924,7 +924,7 @@ export function skillScalingChartSvg(points: ScalingChartPoint[]): string {
     return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5"/>${dots}`;
   };
 
-  const last = points[points.length - 1];
+  const last = points.at(-1)!;
   const xTicks = points.map(p => `
     <line x1="${x(p.factor)}" y1="${M.top + innerH}" x2="${x(p.factor)}" y2="${M.top + innerH + 4}" stroke="${MUTED}"/>
     <text x="${x(p.factor)}" y="${M.top + innerH + 16}" text-anchor="middle" fill="${MUTED}" font-size="10">×${p.factor.toFixed(1)}</text>`).join('');

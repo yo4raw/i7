@@ -239,6 +239,7 @@
 
     simulationResult = result;
     mcIterationsUsed = iterations;
+    // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると引数が boolean になり壊れる
     expectedScore = calcExpectedScore(snapshot.team, snapshot.notes, song.notes_count || snapshot.notes.length, scoreOptions);
 
     hasRunOnce = true;

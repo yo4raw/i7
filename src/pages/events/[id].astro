@@ -14,7 +14,7 @@ export async function getStaticPaths() {
   ]);
   const cardMap = new Map<number, Card>();
   for (const c of cards as Card[]) {
-    if (c.ID != null) cardMap.set(c.ID, c);
+    if (c.ID !== null) cardMap.set(c.ID, c);
   }
   const pick = (ids: number[]): Card[] =>
     [...new Set(ids)].map(id => cardMap.get(id)).filter((c): c is Card => !!c);
@@ -51,7 +51,7 @@ const base = import.meta.env.BASE_URL;
 const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
 const ogDescription = `${event.eventname}（${event.eventtype}）の特効衣装・期間・ボーナス情報。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
 const ogImageCard = goldCards[0] || silverCards[0] || bronzeCards[0];
-const ogImage = ogImageCard?.ID != null ? cardThumbUrl(ogImageCard.ID) : undefined;
+const ogImage = ogImageCard?.ID !== null && ogImageCard?.ID !== undefined ? cardThumbUrl(ogImageCard.ID) : undefined;
 
 const breadcrumbs = [
   { name: 'ホーム', url: base },

@@ -134,9 +134,9 @@ describe('buildDeckSkillDistribution: n=0 / value=0 で単一スパイク (#15)'
     ]);
     // notesCount=0 → calcCardSkillMaxActivations は 0 → points は初期 [{x:0,prob:1}] のまま
     const entries = buildDeckSkillDistribution(team, 0, NO_OPT);
-    const e = entries.find((e) => e.slotIndex === 1)!;
-    expect(e.skillGroup).toBe('scoreUp');
-    expect(e.points).toEqual([{ x: 0, prob: 1 }]);
+    const entry = entries.find((e) => e.slotIndex === 1)!;
+    expect(entry.skillGroup).toBe('scoreUp');
+    expect(entry.points).toEqual([{ x: 0, prob: 1 }]);
   });
 
   it('value=0 のスキル持ちも単一スパイク', () => {
@@ -144,7 +144,7 @@ describe('buildDeckSkillDistribution: n=0 / value=0 で単一スパイク (#15)'
       card({ slotIndex: 1, attribute: 'Shout', shout_max: 1000, skill: skill({ count: 10, value: 0 }) }),
     ]);
     const entries = buildDeckSkillDistribution(team, 100, NO_OPT);
-    const e = entries.find((e) => e.slotIndex === 1)!;
-    expect(e.points).toEqual([{ x: 0, prob: 1 }]);
+    const entry = entries.find((e) => e.slotIndex === 1)!;
+    expect(entry.points).toEqual([{ x: 0, prob: 1 }]);
   });
 });

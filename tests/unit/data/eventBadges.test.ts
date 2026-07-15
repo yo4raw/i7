@@ -17,7 +17,7 @@ describe('bonusBadgeHtml', () => {
   it('none / null / undefined は空文字', () => {
     expect(bonusBadgeHtml('none')).toBe('');
     expect(bonusBadgeHtml(null)).toBe('');
-    expect(bonusBadgeHtml(undefined)).toBe('');
+    expect(bonusBadgeHtml()).toBe('');
   });
 
   it('定義に無い tier は空文字（防御）', () => {

@@ -93,7 +93,7 @@ async function cacheFirst(req, cacheName) {
     const res = await fetch(req);
     if (res && res.ok) cache.put(req, res.clone());
     return res;
-  } catch (err) {
+  } catch {
     return hit ?? Response.error();
   }
 }
@@ -116,7 +116,7 @@ async function navigationHandler(req) {
     const res = await fetch(req);
     if (res && res.ok) cache.put(req, res.clone());
     return res;
-  } catch (err) {
+  } catch {
     const hit = await cache.match(req);
     if (hit) return hit;
     const root = await cache.match('/');

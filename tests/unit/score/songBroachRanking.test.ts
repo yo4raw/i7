@@ -21,7 +21,7 @@ function makeSong(groups: Partial<Record<string, Partial<Record<string, number>>
     total_melody_white: null, total_melody_color: null,
     updated_at: null,
   };
-  for (const k of allKeys) song[k] = { ...empty, ...(groups[k] ?? {}) };
+  for (const k of allKeys) song[k] = { ...empty, ...groups[k] };
   return song as unknown as Song;
 }
 

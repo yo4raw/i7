@@ -11,13 +11,13 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('fetchSongsJson: row.c が無い行のフォールバック (L167 || [])', () => {
   it('c を持たない行は空セル配列として変換され song_name 無しで除外される', () => {
-    const cols = new Array(67).fill({ id: '', label: '', type: '' });
-    const withName = { c: (() => { const a = new Array(67).fill(null); a[0] = { v: 1 }; a[3] = { v: '曲A' }; return a; })() };
+    const cols = Array.from({ length: 67 }, () => ({ id: '', label: '', type: '' }));
+    const withName = { c: (() => { const a: ({ v: string | number } | null)[] = Array.from({ length: 67 }, () => null); a[0] = { v: 1 }; a[3] = { v: '曲A' }; return a; })() };
     const noC = {}; // row.c なし → convertRow(row.c || []) の || [] を通す
     const payload = { version: '1', status: 'ok', table: { cols, rows: [withName, noC] } };
-    vi.stubGlobal('fetch', vi.fn(async () => ({
+    vi.stubGlobal('fetch', vi.fn(() => ({
       ok: true, status: 200, statusText: 'OK',
-      text: async () => `google.visualization.Query.setResponse(${JSON.stringify(payload)});`,
+      text: () => Promise.resolve(`google.visualization.Query.setResponse(${JSON.stringify(payload)});`),
     })));
     return fetchSongsJson().then((songs) => {
       // c なし行は song_name=null → filter で除外され、有効な 1 曲のみ

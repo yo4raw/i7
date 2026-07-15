@@ -97,7 +97,7 @@ export async function buildSpecDemo(): Promise<SpecDemo> {
   /* v8 ignore next -- fixtures 欠落時にビルドを失敗させるガード（通常到達しない） */
   if (!song) throw new Error(`spec デモ楽曲 id=${DEMO_SONG_ID} が tests/fixtures/songs.json に存在しません`);
 
-  const deck: (Card | null)[] = DEMO_DECK_IDS.map(findDemoCard);
+  const deck: (Card | null)[] = DEMO_DECK_IDS.map((id) => findDemoCard(id));
   const team = computeTeam(deck, allBroachs, song);
 
   const groupSizes = computeGroupSizes(song);

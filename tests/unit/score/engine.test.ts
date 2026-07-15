@@ -32,6 +32,11 @@ const MC_SEED = 42;
 const emptyDeck: (Card | null)[] = [null, null, null, null, null, null];
 const centerDeck: (Card | null)[] = [tenthTamakiMainCard, null, null, null, null, null];
 
+/** ステージ倍率適用後の 1 ノーツ値 (2 段 floor: 属性値×NOTE_RATE → ×ステージ倍率) */
+function perNote(deckAttr: number, type: 'white' | 'color', stage: number): number {
+  return Math.floor(Math.floor(deckAttr * NOTE_RATE[type]) * stage);
+}
+
 describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配置した場合', () => {
   describe('getCenterSkillRate (センタースキル倍率)', () => {
     it('returns 10% for UR rarity (matches CENTER_SKILL_RATES table)', () => {
@@ -154,12 +159,12 @@ describe('MONSTER GENERATiON で 10th Anniversary 四葉環 をセンター配�
       const tiers = ['gold', 'gold', 'none', 'none', 'none', 'gold'] as EventBonusTier[];
       // 同一キャラ重複(0,1) + 別キャラ(2) + フレンド(5) を含む編成
       const deck = [card, card, other, null, null, other];
-      const team = computeTeam(deck, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn);
+      const rabbitTeam = computeTeam(deck, [], monsterGenerationSong, tiers, undefined, undefined, undefined, undefined, rn);
       const sum = (k: 'shout_max' | 'beat_max' | 'melody_max') =>
-        team.cards.reduce((acc, c) => acc + c[k], 0);
-      expect(team.rawShout).toBe(sum('shout_max'));
-      expect(team.rawBeat).toBe(sum('beat_max'));
-      expect(team.rawMelody).toBe(sum('melody_max'));
+        rabbitTeam.cards.reduce((acc, c) => acc + c[k], 0);
+      expect(rabbitTeam.rawShout).toBe(sum('shout_max'));
+      expect(rabbitTeam.rawBeat).toBe(sum('beat_max'));
+      expect(rabbitTeam.rawMelody).toBe(sum('melody_max'));
     });
   });
 
@@ -588,7 +593,7 @@ describe('MONSTER GENERATiON で 縮小スキル 3 枚構成（キューイン�
     const shrinkCounts = team.cards
       .filter((dc) => dc.skill?.isShrink)
       .map((dc) => dc.skill!.count)
-      .sort((a, b) => a - b);
+      .toSorted((a, b) => a - b);
     expect(shrinkCounts).toEqual([20, 22, 23]);
   });
 
@@ -889,9 +894,6 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
         [LIGHT_MULTIPLIER.chorus_light_6,  4980, 5976,10899, 13080, 5508, 6609], // 3.0
       ];
 
-      const perNote = (deckAttr: number, type: 'white' | 'color', stage: number) =>
-        Math.floor(Math.floor(deckAttr * NOTE_RATE[type]) * stage);
-
       for (const [stage, sw, sc, bw, bc, mw, mc] of expected) {
         expect(perNote(deckShout,  'white', stage)).toBe(sw);
         expect(perNote(deckShout,  'color', stage)).toBe(sc);
@@ -939,7 +941,7 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
   });
 
   describe('Binary Vampire × 上記デッキ × SCOREUPアシスト ON 時の「ステージ×属性×白/色」スコア小計と合計', () => {
-    const team = computeTeam(revale6Deck, allBroachs, binaryVampireSong, [...silverTiers]);
+    // team は外側 describe (revale6Deck × silverTiers) のものを再利用（重複宣言による no-shadow 回避）
     const notes = flattenNotes(binaryVampireSong, 42);
 
     it('calcMinScore (アシスト ON) は全セル合計 1,876,289 と一致', () => {
@@ -962,8 +964,6 @@ describe('Binary Vampire (ID60) × Re:vale六枚デッキ (センター=ID1500 /
       const deckShout  = Math.floor(team.Shout  * (1 + SCOREUP_ASSIST_RATE));
       const deckBeat   = Math.floor(team.Beat   * (1 + SCOREUP_ASSIST_RATE));
       const deckMelody = Math.floor(team.Melody * (1 + SCOREUP_ASSIST_RATE));
-      const perNote = (deckAttr: number, type: 'white' | 'color', stage: number) =>
-        Math.floor(Math.floor(deckAttr * NOTE_RATE[type]) * stage);
 
       // 列順: [groupKey, Sw, Sc, Bw, Bc, Mw, Mc] (空白セルは 0)
       const expected: Array<[string, number, number, number, number, number, number]> = [
@@ -1063,7 +1063,7 @@ describe('calcCardSkillMaxActivations (単一カードのスキル最大発動�
   describe('判定縮小（タイマー）は秒数発動なので songDuration を分母とする', () => {
     // 判定縮小（タイマー）の count は秒数。スコアアップ（タイマー）と同じ扱いで
     // floor(songDuration / count) を返さなければならない。
-    const shrinkTimerCard = findCardById(976); // 音に想いをのせて 和泉一織 / 判定縮小（タイマー） / Lv5 count=23 秒
+    // shrinkTimerCard は module 冒頭 (findCardById(976)) のものを再利用（重複宣言による no-shadow 回避）
     const deck = [shrinkTimerCard, null, null, null, null, null];
     const team = computeTeam(deck, [], binaryVampireSong);
     const bvNotesCount = binaryVampireSong.notes_count!;

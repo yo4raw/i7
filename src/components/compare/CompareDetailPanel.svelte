@@ -49,7 +49,10 @@
   const skillExpMax = $derived(maxIndexes(entries.map((e) => e.skillExpected)));
   const skillMaxMax = $derived(maxIndexes(entries.map((e) => e.skillMax)));
   const hasScoreUpSkill = $derived(entries.some((e) => e.skillMax > 0));
-  const hasBroachNote = $derived(entries.some((e) => broachPremiseNote(e.appliedBroach) != null));
+  const hasBroachNote = $derived(entries.some((e) => {
+    const note = broachPremiseNote(e.appliedBroach);
+    return note !== null && note !== undefined;
+  }));
   const hasShrink = $derived(entries.some((e) => e.skill?.isShrink));
   const maxCoverMax = $derived(maxIndexes(entries.map((e) => e.maxCoverSec)));
   const expCoverMax = $derived(maxIndexes(entries.map((e) => e.expectedCoverSec)));

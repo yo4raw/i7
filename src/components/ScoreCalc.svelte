@@ -44,11 +44,12 @@
       .map((id) => SHARED_BROACHS.find((sb) => sb.id === id)?.name ?? `#${id}`)
   );
 
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={picker} 代入 (l.394) を静的解析できず誤検知
   let picker: CardPickerModal | undefined;
 
   const defaultTierMap = buildLiveTierMap(initialEvents);
   function defaultTierFor(card: Card | null): EventBonusTier {
-    return card?.ID != null ? (defaultTierMap.get(card.ID) ?? 'none') : 'none';
+    return card?.ID !== null && card?.ID !== undefined ? (defaultTierMap.get(card.ID) ?? 'none') : 'none';
   }
 
   // 楽曲サマリー表示用の派生値
@@ -79,7 +80,7 @@
   let imageBusy = $state(false);
 
   function handleSongChange(id: number | null) {
-    selectedSong = id != null ? allSongsState.find(s => s.id === id) || null : null;
+    selectedSong = id !== null && id !== undefined ? allSongsState.find(s => s.id === id) || null : null;
     saveState();
   }
   function handlePick(slot: number, card: Card) { setCard(deckState, slot, card, defaultTierFor(card), allBroachsState); saveState(); }
@@ -102,7 +103,7 @@
   }
 
   function applyState(state: any) {
-    if (state.songId != null) {
+    if (state.songId !== null && state.songId !== undefined) {
       const song = allSongsState.find(s => s.id === state.songId);
       if (song) selectedSong = song;
     } else {
@@ -121,7 +122,7 @@
     if (Array.isArray(state.deckIds)) {
       for (let i = 0; i < 6; i++) {
         const id = state.deckIds[i];
-        if (id != null) deckState.cards[i] = allCardsState.find(c => c.ID === id) || null;
+        if (id !== null && id !== undefined) deckState.cards[i] = allCardsState.find(c => c.ID === id) || null;
       }
     }
     for (let i = 0; i < 6; i++) clampSharedBroachs(deckState, i, allBroachsState);
@@ -170,7 +171,7 @@
   async function shareDeckImage() {
     if (imageBusy) return;
     if (isDeckEmpty(buildStateObject())) { alert('編成が空です。楽曲や衣装を選んでから画像化してください。'); return; }
-    const node = document.getElementById('score-share-target');
+    const node = document.querySelector('#score-share-target');
     if (!node) return;
     imageBusy = true;
     try {
@@ -178,14 +179,14 @@
       const dataUrl = await domToPng(node, {
         scale: 2,
         backgroundColor: '#ffffff',
-        filter: (n: Node) => !(n instanceof HTMLElement && n.hasAttribute('data-noshot')),
+        filter: (n: Node) => !(n instanceof HTMLElement && Object.hasOwn(n.dataset, "noshot")),
       });
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = `i7-score-${selectedSong?.song_name ?? 'deck'}.png`;
-      document.body.appendChild(a);
+      document.body.append(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
     } catch (e) {
       console.error(e);
       alert('画像の生成に失敗しました。時間をおいて再度お試しください。');
@@ -220,11 +221,11 @@
   function showLoadDropdown() {
     if (loadDeckItems !== null) { hideLoadDropdown(); return; }
     const decks = loadSavedDecks();
-    loadDeckItems = decks.slice().reverse().map(d => ({
+    loadDeckItems = decks.slice().toReversed().map(d => ({
       id: d.id,
       name: d.name,
       dateLabel: new Date(d.updatedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      cardCount: (d.state.deckIds || []).filter((id: number | null) => id != null).length,
+      cardCount: (d.state.deckIds || []).filter((id: number | null) => id !== null && id !== undefined).length,
     }));
   }
 
@@ -244,7 +245,7 @@
     // 復元結果に楽曲が無ければイベント対象楽曲の先頭を既定に
     if (!selectedSong) {
       const eid = firstEventSongId(allSongsState);
-      selectedSong = eid != null ? allSongsState.find(s => s.id === eid) || null : null;
+      selectedSong = eid !== null && eid !== undefined ? allSongsState.find(s => s.id === eid) || null : null;
     }
 
     refreshData('cards', fetchCardsJson, (fresh) => {

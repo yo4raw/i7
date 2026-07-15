@@ -26,6 +26,7 @@
   let attribute = $state('');
   let ownedOnly = $state(true);
 
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={searchInputEl} 代入 (l.97) を静的解析できず誤検知
   let searchInputEl: HTMLInputElement | undefined;
   let debounceTimer: ReturnType<typeof setTimeout>;
 

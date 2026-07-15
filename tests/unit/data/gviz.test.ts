@@ -4,7 +4,7 @@ import { extractCellValue, parseGvizResponse } from '../../../src/lib/data/gviz'
 describe('extractCellValue', () => {
   it('null セル / null 値 / undefined は null', () => {
     expect(extractCellValue(null)).toBeNull();
-    expect(extractCellValue(undefined)).toBeNull();
+    expect(extractCellValue()).toBeNull();
     expect(extractCellValue({ v: null })).toBeNull();
   });
 

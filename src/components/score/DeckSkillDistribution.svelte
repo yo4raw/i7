@@ -41,11 +41,11 @@
     const sh = entries.filter(e => e.skillGroup === 'shrink');
     const nn = entries.filter(e => e.skillGroup === 'none');
     const out: Panel[] = [];
-    if (sc.length) out.push({ metric: 'score', curves: sc, legendOnly: [] });
-    if (sh.length) out.push({ metric: 'cover', curves: sh, legendOnly: [] });
-    if (out.length) {
+    if (sc.length > 0) out.push({ metric: 'score', curves: sc, legendOnly: [] });
+    if (sh.length > 0) out.push({ metric: 'cover', curves: sh, legendOnly: [] });
+    if (out.length > 0) {
       out[0].legendOnly = nn; // none は最初のパネル凡例にだけ載せる（曲線なし）
-    } else if (nn.length) {
+    } else if (nn.length > 0) {
       out.push({ metric: 'score', curves: [], legendOnly: nn });
     }
     return out;
@@ -62,7 +62,7 @@
   function domainMax(curves: DeckSkillDistEntry[]): number {
     let hi = 0;
     for (const e of curves) {
-      const last = e.points[e.points.length - 1];
+      const last = e.points.at(-1);
       if (last && last.x > hi) hi = last.x;
     }
     return hi > 0 ? hi : 1;

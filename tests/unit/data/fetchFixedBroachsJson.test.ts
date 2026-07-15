@@ -3,7 +3,7 @@ import { fetchFixedBroachsJson } from '../../../src/lib/data/fetchFixedBroachsJs
 
 /** col 19 列分の GViz 行を作る（index → 値） */
 function row(values: Record<number, string | number | null>): { c: ({ v: string | number | null } | null)[] } {
-  const c: ({ v: string | number | null } | null)[] = new Array(19).fill(null);
+  const c: ({ v: string | number | null } | null)[] = Array.from({ length: 19 }, () => null);
   for (const [i, v] of Object.entries(values)) c[Number(i)] = { v };
   return { c };
 }
@@ -13,15 +13,15 @@ function stubFetch(rows: ReturnType<typeof row>[]): void {
     version: '1',
     status: 'ok',
     // ラベルは空（column_ 扱い）。headerOverrides 側のマッピングを検証する
-    table: { cols: new Array(19).fill({ id: '', label: '', type: '' }), rows },
+    table: { cols: Array.from({ length: 19 }, () => ({ id: '', label: '', type: '' })), rows },
   };
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({
+    vi.fn(() => ({
       ok: true,
       status: 200,
       statusText: 'OK',
-      text: async () => `google.visualization.Query.setResponse(${JSON.stringify(payload)});`,
+      text: () => Promise.resolve(`google.visualization.Query.setResponse(${JSON.stringify(payload)});`),
     })),
   );
 }

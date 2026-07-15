@@ -71,9 +71,8 @@ describe('broachAssignment (共通ブローチのグリーディ割当)', () => 
   });
 
   it('assignBroachs: UR 以外と固有ブローチ持ちの容量を守る', () => {
-    const hasFixed = (c: Card) => c.cardID === 1;
     const deck = [ur('Shout', 1), sr('Shout', 2), null, null, null, null];
-    const sel = assignBroachs(deck, { '1': 5 }, W, hasFixed);
+    const sel = assignBroachs(deck, { '1': 5 }, W, (c) => c.cardID === 1);
     expect(sel[0]).toEqual([1]); // 固有ブローチ持ち → 1 個
     expect(sel[1]).toEqual([]); // SR → 0 個
   });

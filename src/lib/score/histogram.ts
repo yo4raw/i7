@@ -26,7 +26,7 @@ export function renderHistogramSvg(
 
   const range = maxScore - minScore;
   const binWidth = range / BIN_COUNT;
-  const bins = new Array<number>(BIN_COUNT).fill(0);
+  const bins = Array.from({ length: BIN_COUNT }, () => 0);
 
   for (const s of scores) {
     let idx = Math.floor((s - minScore) / binWidth);

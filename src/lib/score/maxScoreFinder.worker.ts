@@ -46,7 +46,7 @@ export function createWorkerHandler(post: WorkerPost): (msg: FinderWorkerRequest
           post({ type: 'progress', evaluatedDelta, localBestScore: localBest?.score ?? null });
           // マクロタスクで yield してメッセージループに制御を返し、
           // キュー済みの abort メッセージを処理させる (Promise.resolve() では不可)
-          await new Promise((r) => setTimeout(r, 0));
+          await new Promise((r) => { setTimeout(r, 0); });
           return aborted;
         },
       });
@@ -61,10 +61,14 @@ export function createWorkerHandler(post: WorkerPost): (msg: FinderWorkerRequest
 /* v8 ignore start -- Worker ブートストラップ（実 Worker 環境専用、node 単体テスト不可） */
 declare const self: DedicatedWorkerGlobalScope;
 // node 単体テストで import しても落ちないよう Worker グローバル存在時のみ結線する
+// oxlint-disable-next-line unicorn/no-typeof-undefined -- self はブラウザ/Worker専用グローバルで node には存在せず未宣言。`self !== undefined` は ReferenceError になるため typeof ガードが必須
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
-  const handle = createWorkerHandler((msg) => self.postMessage(msg));
-  self.onmessage = (e: MessageEvent<FinderWorkerRequest>) => {
+  const handle = createWorkerHandler((msg) => {
+    // oxlint-disable-next-line unicorn/require-post-message-target-origin -- 専用 Worker (DedicatedWorkerGlobalScope) の self.postMessage に targetOrigin 引数は存在しない
+    self.postMessage(msg);
+  });
+  self.addEventListener('message', (e: MessageEvent<FinderWorkerRequest>) => {
     void handle(e.data);
-  };
+  });
 }
 /* v8 ignore stop */

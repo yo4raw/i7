@@ -34,7 +34,7 @@ export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 
 
   const isShrink = type === SKILL_TYPE.SHRINK || type.startsWith(SKILL_TYPE.SHRINK_PREFIX);
   const resolvedSkillLevel = resolveEffectiveSkillLevel(card, skillLevel, isShrink);
-  if (resolvedSkillLevel == null) return null;
+  if (resolvedSkillLevel === null) return null;
 
   const sl = getApSkillLevel(card, resolvedSkillLevel);
   const count = sl.count;
@@ -43,7 +43,7 @@ export function parseSkill(card: Card, slotIndex: number, skillLevel: 1 | 2 | 3 
   const rate = sl.rate;
 
   /* v8 ignore next -- resolveEffectiveSkillLevel が count/per truthy のレベルのみ返すため null 到達不能 */
-  if (count == null || per == null) return null;
+  if (count === null || per === null) return null;
 
   const isTimer = type === SKILL_TYPE.SCOREUP_TIMER || type === SKILL_TYPE.SHRINK_TIMER;
 
@@ -183,7 +183,7 @@ export function computeTeam(
       const capacity = broachCapacity(card, c => allBroachs.some(br => br.card_id === c.cardID));
       for (const sbId of sharedBroachSelections[i].slice(0, capacity)) {
         if (!sbId) continue;
-        const sb = SHARED_BROACHS.find(s => s.id === sbId);
+        const sb = SHARED_BROACHS.find(broach => broach.id === sbId);
         if (!sb) continue;
         if (sb.targetAttribute) {
           // 条件付き: 対象属性のカード枚数 × ブローチ値を装着カードに加算

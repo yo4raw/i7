@@ -72,7 +72,7 @@ describe('starsText', () => {
   it('falsy (0 / null / undefined) は空文字', () => {
     expect(starsText(0)).toBe('');
     expect(starsText(null)).toBe('');
-    expect(starsText(undefined)).toBe('');
+    expect(starsText()).toBe('');
   });
 
   it('負数はクランプされ★なし', () => {

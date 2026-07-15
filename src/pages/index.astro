@@ -23,7 +23,7 @@ const rarityEntries = RARITIES
   .filter(([, n]) => n > 0);
 
 const now = new Date();
-const sortedEvents = [...events].sort((a, b) => b.id - a.id);
+const sortedEvents = [...events].toSorted((a, b) => b.id - a.id);
 const liveEvents = sortedEvents.filter((ev) => {
   const start = new Date(`${ev.start_date}T17:00:00+09:00`);
   const end = new Date(`${ev.end_date}T17:00:00+09:00`);
@@ -31,7 +31,7 @@ const liveEvents = sortedEvents.filter((ev) => {
 });
 const upcomingEvents = sortedEvents
   .filter((ev) => new Date(`${ev.start_date}T17:00:00+09:00`) > now)
-  .sort((a, b) => a.start_date.localeCompare(b.start_date))
+  .toSorted((a, b) => a.start_date.localeCompare(b.start_date))
   .slice(0, 1);
 
 const base = import.meta.env.BASE_URL;

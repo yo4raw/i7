@@ -27,11 +27,10 @@
 
 import { readdir, stat, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = join(__dirname, '..');
+const scriptDir = import.meta.dirname;
+const PROJECT_ROOT = join(scriptDir, '..');
 
 const SOURCE_URLS = {
   th: 'https://i7.step-on-dream.net/img/cards/th/',
@@ -87,7 +86,7 @@ async function listLocalIds(dir) {
   return entries
     .filter((n) => /^\d+\.webp$/.test(n))
     .map((n) => n.replace(/\.webp$/, ''))
-    .sort((a, b) => Number(a) - Number(b));
+    .toSorted((a, b) => Number(a) - Number(b));
 }
 
 async function headRemote(url, retries = 2) {
@@ -102,7 +101,7 @@ async function headRemote(url, retries = 2) {
       };
     } catch (err) {
       if (attempt === retries) return { status: 0, error: err.message };
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); });
     }
   }
 }
@@ -130,13 +129,13 @@ async function getRemote(url, retries = 2) {
       };
     } catch (err) {
       if (attempt === retries) return { status: 0, error: err.message };
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); });
     }
   }
 }
 
 async function runPool(items, concurrency, worker) {
-  const results = new Array(items.length);
+  const results = Array.from({ length: items.length });
   let cursor = 0;
   const runners = Array.from({ length: concurrency }, async () => {
     while (true) {
@@ -225,7 +224,9 @@ async function main() {
   if (mismatches.length > 0) process.exit(2);
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error(err);
   process.exit(1);
-});
+}

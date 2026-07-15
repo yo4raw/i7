@@ -49,7 +49,7 @@ export function countMultisetsWithLimits(limits: number[], k: number): number {
   let poly: number[] = [1];
   for (const lim of limits) {
     const newLen = Math.min(poly.length + lim, k + 1);
-    const next = new Array<number>(newLen).fill(0);
+    const next = Array.from({ length: newLen }, () => 0);
     for (let d = 0; d < poly.length; d++) {
       if (poly[d] === 0) continue;
       const jMax = Math.min(lim, k - d);
@@ -67,7 +67,7 @@ export function countMultisetsWithLimits(limits: number[], k: number): number {
  */
 export function* multisetIndices(N: number, k: number): Generator<number[]> {
   if (N <= 0 || k <= 0) return;
-  const idx = new Array(k).fill(0);
+  const idx = Array.from({ length: k }, () => 0);
   while (true) {
     yield idx;
     let i = k - 1;
@@ -142,9 +142,10 @@ export function createSearchContext(input: SearchInput): SearchContext {
     nonShrink: input.candidates.filter((c) => !isShrinkCard(c)),
     ownedLimit,
     groupSizes: computeGroupSizes(input.song),
+    // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると notesCount が boolean になり壊れる
     notesCount: input.song.notes_count || notes.length,
     attrWeights: calcAttrWeights(notes),
-    hasFixedBroach: (c) => c.cardID != null && fixedIds.has(c.cardID),
+    hasFixedBroach: (c) => c.cardID !== null && fixedIds.has(c.cardID),
   };
 }
 
@@ -159,7 +160,7 @@ export function createSearchContext(input: SearchInput): SearchContext {
 export function countCombos(ctx: SearchContext): number {
   const { input } = ctx;
   if (input.ownedOnly) {
-    if (ctx.owned.length < 1 || ctx.candidates.length < 1) return 0;
+    if (ctx.owned.length === 0 || ctx.candidates.length === 0) return 0;
     if (!input.shrinkPairOnly) {
       const limits = ctx.owned.map((c) => ctx.ownedLimit.get(c.ID!) ?? 0);
       let centerSum = 0;
@@ -194,7 +195,7 @@ export function countCombos(ctx: SearchContext): number {
     }
     return total;
   }
-  if (ctx.candidates.length < 1) return 0;
+  if (ctx.candidates.length === 0) return 0;
   if (!input.shrinkPairOnly) {
     return multichoose(ctx.candidates.length, 2) * multichoose(ctx.candidates.length, 4);
   }
@@ -251,7 +252,7 @@ export function* generateChunks(ctx: SearchContext): Generator<ChunkDescriptor> 
  * deck の並びは [center, member1..4, friend]。
  */
 export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor): Generator<Card[]> {
-  const deck: Card[] = new Array(6);
+  const deck: Card[] = Array.from({ length: 6 });
 
   if (chunk.kind === 'pair') {
     // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称
@@ -396,7 +397,7 @@ const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
 export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRecord {
   const { input } = ctx;
   const tiers: EventBonusTier[] = deck.map((c) =>
-    c && c.ID != null ? input.tierByCardId[String(c.ID)] ?? 'none' : 'none'
+    c && c.ID !== null ? input.tierByCardId[String(c.ID)] ?? 'none' : 'none'
   );
   let shared: number[][] = SEARCH_EMPTY_SHARED;
   if (input.useOwnedBroachs) {
@@ -472,7 +473,7 @@ export async function evaluateChunk(
 
 /** 各 Worker のローカル Top-K をスコア降順にマージして上位 k 件を返す */
 export function mergeTopK(lists: DeckRecord[][], k: number = TOP_K): DeckRecord[] {
-  return lists.flat().sort((a, b) => b.score - a.score).slice(0, k);
+  return lists.flat().toSorted((a, b) => b.score - a.score).slice(0, k);
 }
 
 /**

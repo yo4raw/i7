@@ -14,14 +14,13 @@
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 import { fetchCardsJson } from '../src/lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../src/lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../src/lib/data/fetchFixedBroachsJson.ts';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(import.meta.dirname, '..');
 const FIXTURES_DIR = resolve(ROOT, 'tests/fixtures');
 
 function writeJson(path: string, data: unknown): void {
@@ -46,7 +45,9 @@ async function main(): Promise<void> {
   console.log(`  ${broachs.length} 件の固定ブローチ`);
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error('[extract-fixtures] 失敗:', err);
   process.exit(1);
-});
+}

@@ -56,7 +56,7 @@ function computeCardScoreUp(
   const count = skill.count;
   const per = skill.per;
   const value = skill.value;
-  if (!count || per == null || value == null) return 0;
+  if (!count || per === null || value === null) return 0;
 
   // H33 による活動基数の選択: Perfect/コンボ → ノーツ数(D8), タイマー → 曲秒数(D9)
   let denom: number;
