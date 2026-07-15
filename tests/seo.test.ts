@@ -4,7 +4,7 @@ import { fetchCardsJson } from '../src/lib/data/fetchCardsJson';
 const BASE = '';
 
 /** ページ内の全 JSON-LD を @type 配列で取得する */
-async function jsonLdTypes(page: import('@playwright/test').Page): Promise<string[]> {
+function jsonLdTypes(page: import('@playwright/test').Page): Promise<string[]> {
   return page.$$eval('script[type="application/ld+json"]', (nodes) =>
     nodes.flatMap((n) => {
       try {

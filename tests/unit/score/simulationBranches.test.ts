@@ -296,7 +296,7 @@ describe('simulation: タイマースキルの noteIndex<0 分岐 (songDuration<
     expect(calcCardSkillMaxActivations(team, 100, 0)).toBe(0);
   });
 
-  it('calcCardSkillMax: 縮小スキル count<=0 は早期 0 (dc.skill.count<=0 ガード)', async () => {
+  it('calcCardSkillMax: 縮小スキル count<=0 は早期 0 (dc.skill.count<=0 ガード)', () => {
     // 注: これは calcCardSkillMax 側の count<=0 ガード (L446 相当) で 0 を返す。
     // calcShrinkActivationCount 内部 L182 の count<=0 ガードには到達しない
     // (全呼出元が count>0 で事前フィルタするため。報告参照)。

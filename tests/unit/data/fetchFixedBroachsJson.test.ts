@@ -17,11 +17,11 @@ function stubFetch(rows: ReturnType<typeof row>[]): void {
   };
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({
+    vi.fn(() => ({
       ok: true,
       status: 200,
       statusText: 'OK',
-      text: async () => `google.visualization.Query.setResponse(${JSON.stringify(payload)});`,
+      text: () => Promise.resolve(`google.visualization.Query.setResponse(${JSON.stringify(payload)});`),
     })),
   );
 }

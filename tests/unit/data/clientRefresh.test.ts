@@ -22,7 +22,7 @@ describe('refreshData', () => {
       CACHE_PREFIX + 'cards',
       JSON.stringify({ data: [{ id: 1 }], ts: Date.now() }),
     );
-    const fetchFn = vi.fn(async () => [{ id: 999 }]);
+    const fetchFn = vi.fn(() => Promise.resolve([{ id: 999 }]));
     const onUpdate = vi.fn();
     await refreshData('cards', fetchFn, onUpdate);
     expect(fetchFn).not.toHaveBeenCalled();
@@ -32,7 +32,7 @@ describe('refreshData', () => {
   it('キャッシュなしならフェッチして onUpdate・キャッシュ書込・インジケータ表示', async () => {
     const fresh = [{ id: 2 }];
     const onUpdate = vi.fn();
-    await refreshData('songs', async () => fresh, onUpdate);
+    await refreshData('songs', () => Promise.resolve(fresh), onUpdate);
     expect(onUpdate).toHaveBeenCalledWith(fresh);
     // sessionStorage に書き込まれている
     const cached = JSON.parse(sessionStorage.getItem(CACHE_PREFIX + 'songs')!);
@@ -50,14 +50,14 @@ describe('refreshData', () => {
       CACHE_PREFIX + 'broachs',
       JSON.stringify({ data: [{ id: 1 }], ts: Date.now() - 10 * 60 * 1000 }),
     );
-    const fetchFn = vi.fn(async () => [{ id: 2 }]);
+    const fetchFn = vi.fn(() => Promise.resolve([{ id: 2 }]));
     await refreshData('broachs', fetchFn, vi.fn(), { maxAgeMs: 5 * 60 * 1000 });
     expect(fetchFn).toHaveBeenCalled();
   });
 
   it('壊れたキャッシュ JSON はミス扱い', async () => {
     sessionStorage.setItem(CACHE_PREFIX + 'cards', '{broken');
-    const fetchFn = vi.fn(async () => [{ id: 3 }]);
+    const fetchFn = vi.fn(() => Promise.resolve([{ id: 3 }]));
     await refreshData('cards', fetchFn, vi.fn());
     expect(fetchFn).toHaveBeenCalled();
   });
@@ -65,7 +65,7 @@ describe('refreshData', () => {
   it('フェッチ失敗時は onUpdate を呼ばず握りつぶす', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const onUpdate = vi.fn();
-    await refreshData('cards', async () => { throw new Error('network'); }, onUpdate);
+    await refreshData('cards', () => { throw new Error('network'); }, onUpdate);
     expect(onUpdate).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalled();
   });

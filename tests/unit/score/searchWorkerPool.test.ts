@@ -83,7 +83,7 @@ describe('startWorkerSearch', () => {
     await expect(run.promise).rejects.toThrow(/エラー/);
   });
 
-  it('abort() は全 Worker に abort を送る', async () => {
+  it('abort() は全 Worker に abort を送る', () => {
     MockWorker.mode = 'silent';
     const run = startWorkerSearch(input, chunks, 2, vi.fn());
     run.abort();
@@ -92,7 +92,7 @@ describe('startWorkerSearch', () => {
     run.terminate(); // ハングしている promise の後始末
   });
 
-  it('terminate() は全 Worker を terminate する', async () => {
+  it('terminate() は全 Worker を terminate する', () => {
     MockWorker.mode = 'silent';
     const run = startWorkerSearch(input, chunks, 2, vi.fn());
     run.terminate();

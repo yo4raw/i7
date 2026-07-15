@@ -17,9 +17,9 @@ describe('fetchSheetAsJson: row.c が無い行のフォールバック (L107)', 
       version: '1', status: 'ok',
       table: { cols, rows: [{ c: [{ v: 'あり' }] }, {}] }, // 2 行目は c なし → row.c ? ... : null
     };
-    vi.stubGlobal('fetch', vi.fn(async () => ({
+    vi.stubGlobal('fetch', vi.fn(() => ({
       ok: true, status: 200, statusText: 'OK',
-      text: async () => `google.visualization.Query.setResponse(${JSON.stringify(payload)});`,
+      text: () => Promise.resolve(`google.visualization.Query.setResponse(${JSON.stringify(payload)});`),
     })));
     return fetchSheetAsJson('sid', 1).then((rows) => {
       expect(rows[0]).toEqual({ name: 'あり' });
