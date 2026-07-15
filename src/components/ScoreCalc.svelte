@@ -170,7 +170,7 @@
   async function shareDeckImage() {
     if (imageBusy) return;
     if (isDeckEmpty(buildStateObject())) { alert('編成が空です。楽曲や衣装を選んでから画像化してください。'); return; }
-    const node = document.getElementById('score-share-target');
+    const node = document.querySelector('#score-share-target');
     if (!node) return;
     imageBusy = true;
     try {
@@ -178,12 +178,12 @@
       const dataUrl = await domToPng(node, {
         scale: 2,
         backgroundColor: '#ffffff',
-        filter: (n: Node) => !(n instanceof HTMLElement && n.hasAttribute('data-noshot')),
+        filter: (n: Node) => !(n instanceof HTMLElement && Object.hasOwn(n.dataset, "noshot")),
       });
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = `i7-score-${selectedSong?.song_name ?? 'deck'}.png`;
-      document.body.appendChild(a);
+      document.body.append(a);
       a.click();
       document.body.removeChild(a);
     } catch (e) {
@@ -220,7 +220,7 @@
   function showLoadDropdown() {
     if (loadDeckItems !== null) { hideLoadDropdown(); return; }
     const decks = loadSavedDecks();
-    loadDeckItems = decks.slice().reverse().map(d => ({
+    loadDeckItems = decks.slice().toReversed().map(d => ({
       id: d.id,
       name: d.name,
       dateLabel: new Date(d.updatedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),

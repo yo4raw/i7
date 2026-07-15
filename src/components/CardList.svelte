@@ -44,11 +44,11 @@
     const t = text.toLowerCase();
     let result = allCards.filter((card) => {
       if (!cardTextMatches(card, t)) return false;
-      if (raritySet.size && !raritySet.has(card.rarity)) return false;
-      if (attributeSet.size && !attributeSet.has(card.attribute)) return false;
-      if (characterSet.size && !characterSet.has(card.name)) return false;
-      if (skillSet.size && !skillSet.has(card.ap_skill_type || '')) return false;
-      if (bonusSet.size) {
+      if (raritySet.size > 0 && !raritySet.has(card.rarity)) return false;
+      if (attributeSet.size > 0 && !attributeSet.has(card.attribute)) return false;
+      if (characterSet.size > 0 && !characterSet.has(card.name)) return false;
+      if (skillSet.size > 0 && !skillSet.has(card.ap_skill_type || '')) return false;
+      if (bonusSet.size > 0) {
         const tier = tierMap.get(card.ID);
         if (!tier || !bonusSet.has(tier)) return false;
       }
@@ -56,16 +56,16 @@
     });
     switch (sortBy) {
       case 'id-asc':
-        result = result.sort((a, b) => a.ID - b.ID);
+        result = result.toSorted((a, b) => a.ID - b.ID);
         break;
       case 'stats-desc':
-        result = result.sort((a, b) => ((b.shout_max || 0) + (b.beat_max || 0) + (b.melody_max || 0)) - ((a.shout_max || 0) + (a.beat_max || 0) + (a.melody_max || 0)));
+        result = result.toSorted((a, b) => ((b.shout_max || 0) + (b.beat_max || 0) + (b.melody_max || 0)) - ((a.shout_max || 0) + (a.beat_max || 0) + (a.melody_max || 0)));
         break;
       case 'stats-asc':
-        result = result.sort((a, b) => ((a.shout_max || 0) + (a.beat_max || 0) + (a.melody_max || 0)) - ((b.shout_max || 0) + (b.beat_max || 0) + (b.melody_max || 0)));
+        result = result.toSorted((a, b) => ((a.shout_max || 0) + (a.beat_max || 0) + (a.melody_max || 0)) - ((b.shout_max || 0) + (b.beat_max || 0) + (b.melody_max || 0)));
         break;
       default:
-        result = result.sort((a, b) => b.ID - a.ID);
+        result = result.toSorted((a, b) => b.ID - a.ID);
     }
     return result;
   });
@@ -102,11 +102,11 @@
   function updateUrlParams() {
     const params = new URLSearchParams();
     if (text) params.set('q', text);
-    if (raritySet.size) params.set('rarity', [...raritySet].join(','));
-    if (attributeSet.size) params.set('attr', [...attributeSet].join(','));
-    if (characterSet.size) params.set('char', [...characterSet].join(','));
-    if (skillSet.size) params.set('skill', [...skillSet].join(','));
-    if (hasAnyLive && bonusSet.size) params.set('bonus', [...bonusSet].join(','));
+    if (raritySet.size > 0) params.set('rarity', [...raritySet].join(','));
+    if (attributeSet.size > 0) params.set('attr', [...attributeSet].join(','));
+    if (characterSet.size > 0) params.set('char', [...characterSet].join(','));
+    if (skillSet.size > 0) params.set('skill', [...skillSet].join(','));
+    if (hasAnyLive && bonusSet.size > 0) params.set('bonus', [...bonusSet].join(','));
     if (sortBy !== 'id-desc') params.set('sort', sortBy);
     if (currentVisiblePage > 1) params.set('page', String(currentVisiblePage));
     if (viewMode !== 'list') params.set('view', viewMode);

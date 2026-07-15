@@ -394,7 +394,7 @@ describe('specDiagrams', () => {
       const acts = simulateActivationsMulti({
         cards, notesCount: 400, songDuration: 100, excludeHead: 0, seed: 1,
       });
-      const fired = acts.filter((a) => a.fired).sort((a, b) => a.start - b.start);
+      const fired = acts.filter((a) => a.fired).toSorted((a, b) => a.start - b.start);
       for (let i = 1; i < fired.length; i++) {
         expect(fired[i - 1].end).toBeLessThanOrEqual(fired[i].start);
       }

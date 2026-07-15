@@ -52,7 +52,7 @@
   // ハイスコアライブイベントを新しい順に。開催中があれば既定選択。
   const highScoreEvents = [...allEventsData]
     .filter((ev) => isHighScoreEvent(ev.eventtype))
-    .sort((a, b) => b.start_date.localeCompare(a.start_date));
+    .toSorted((a, b) => b.start_date.localeCompare(a.start_date));
   const defaultEventId =
     highScoreEvents.find((ev) => isEventLive(ev.start_date, ev.end_date))?.id
     ?? highScoreEvents[0]?.id
@@ -181,14 +181,14 @@
   });
 
   const searchDisabled = $derived(
-    !selectedSong || currentCandidates.length < 1 || searching
-      || (ownedOnly && ownedCandidates.length < 1)
+    !selectedSong || currentCandidates.length === 0 || searching
+      || (ownedOnly && ownedCandidates.length === 0)
       || comboCount === 0
   );
   const searchDisabledReason = $derived(
     !selectedSong ? '楽曲を選択してください'
-      : currentCandidates.length < 1 ? '選択中イベントに金/銀特効 UR 衣装がありません'
-      : ownedOnly && ownedCandidates.length < 1 ? '所持している金/銀特効 UR 衣装がありません'
+      : currentCandidates.length === 0 ? '選択中イベントに金/銀特効 UR 衣装がありません'
+      : ownedOnly && ownedCandidates.length === 0 ? '所持している金/銀特効 UR 衣装がありません'
       : ownedOnly && comboCount === 0 && !shrinkPairOnly ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
       : shrinkPairOnly && comboCount === 0 ? '判定縮小2枚以上編成の条件を満たす組合せが作れません（縮小持ち特効候補の不足など）'
       : ownedOnly && comboCount === 0 ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
@@ -197,7 +197,7 @@
 
   async function runSearch() {
     const input = buildSearchInput();
-    if (!input || input.candidates.length < 1) return;
+    if (!input || input.candidates.length === 0) return;
 
     const ctx = createSearchContext(input);
     const totalEvals = countCombos(ctx);

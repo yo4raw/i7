@@ -4,6 +4,6 @@ interface Props {
 }
 
 const { data } = Astro.props;
-const json = JSON.stringify(data).replace(/</g, '\\u003c');
+const json = JSON.stringify(data).replaceAll(/</g, '\\u003c');
 ---
 <script type="application/ld+json" set:html={json} is:inline></script>

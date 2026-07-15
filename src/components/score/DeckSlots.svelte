@@ -56,7 +56,7 @@
       const sl = getApSkillLevel(c, deckState.skillLevels[si]);
       return (sl.rate ?? 0) * (sl.per ?? 0);
     });
-    const sortedDesc = [...shrinkStrengths].sort((a, b) => b - a);
+    const sortedDesc = [...shrinkStrengths].toSorted((a, b) => b - a);
     const hasAnyShrink = shrinkStrengths.some(v => v > 0);
     const misplaced = new Set<number>();
     if (hasAnyShrink) {
@@ -136,13 +136,13 @@
           title: label,
           text: `🔮 ${label}`,
         };
-      } else {
+      }
         return {
           cls: 'mt-1 w-full text-[8px] bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-gray-400 truncate text-center',
           title: `${label}（条件未達）`,
           text: `🔮 ${label}`,
         };
-      }
+      
     });
   }
 
@@ -261,7 +261,7 @@
     ghost.style.transform = `translate3d(${x - rect.width / 2}px, ${y - rect.height / 2}px, 0)`;
     ghost.style.transition = 'none';
     ghost.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.25)';
-    document.body.appendChild(ghost);
+    document.body.append(ghost);
     activeDragGhost = ghost;
     activeDragGhostSize = { w: rect.width, h: rect.height };
     return ghost;

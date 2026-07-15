@@ -10,7 +10,7 @@ const [allCards, allEvents] = await Promise.all([
   fetchCardsJson() as Promise<any[]>,
   fetchEventsCsv(),
 ]);
-const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].sort() as string[];
+const skillTypes = [...new Set(allCards.map((c: any) => c.ap_skill_type).filter(Boolean))].toSorted() as string[];
 
 const eventsForBonus = allEvents.map(toEventForBonus);
 

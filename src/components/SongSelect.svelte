@@ -40,7 +40,7 @@
     const picked = new Set(loadJson<number[]>(STORAGE_KEYS.SELECTED_SONGS, []));
     return songs
       .filter((s) => s.id != null && picked.has(s.id))
-      .sort((a, b) => (a.duration || 0) - (b.duration || 0));
+      .toSorted((a, b) => (a.duration || 0) - (b.duration || 0));
   });
 
   // カテゴリ別

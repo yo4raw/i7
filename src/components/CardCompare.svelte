@@ -38,7 +38,7 @@
   // ハイスコアイベントを新しい順に。開催中があれば既定選択。
   const highScoreEvents = [...events]
     .filter((e) => isHighScoreEvent(e.eventtype))
-    .sort((a, b) => b.start_date.localeCompare(a.start_date));
+    .toSorted((a, b) => b.start_date.localeCompare(a.start_date));
   const defaultEventId =
     highScoreEvents.find((e) => isEventLive(e.start_date, e.end_date))?.id ?? null;
 
@@ -113,10 +113,10 @@
   });
 
   const scoreUpEntries = $derived(
-    [...entries.filter((e) => classifyCard(e.card) === 'scoreUp')].sort(compareScoreUpBy(scoreUpSort)),
+    entries.filter((e) => classifyCard(e.card) === 'scoreUp').toSorted(compareScoreUpBy(scoreUpSort)),
   );
   const shrinkEntries = $derived(
-    [...entries.filter((e) => classifyCard(e.card) === 'shrink')].sort(compareShrinkBy(shrinkSort)),
+    entries.filter((e) => classifyCard(e.card) === 'shrink').toSorted(compareShrinkBy(shrinkSort)),
   );
 
   const selectedEntries = $derived(

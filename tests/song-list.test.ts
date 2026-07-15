@@ -71,8 +71,8 @@ test.describe('楽曲一覧ページ', () => {
     const rows = page.locator('#table-body tr');
     const first = await rows.first().locator('td').nth(4).textContent();
     const second = await rows.nth(1).locator('td').nth(4).textContent();
-    const firstNum = parseInt(first!.replace(/,/g, ''));
-    const secondNum = parseInt(second!.replace(/,/g, ''));
+    const firstNum = parseInt(first!.replaceAll(/,/g, ''));
+    const secondNum = parseInt(second!.replaceAll(/,/g, ''));
     expect(firstNum).toBeGreaterThanOrEqual(secondNum);
   });
 

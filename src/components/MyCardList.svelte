@@ -19,7 +19,7 @@
     const counts = allCounts();
     return cards
       .filter((c) => (counts[String(c.ID)] || 0) > 0)
-      .sort((a, b) => b.ID - a.ID);
+      .toSorted((a, b) => b.ID - a.ID);
   });
 
   let totalOwnedCount = $derived.by(() => {

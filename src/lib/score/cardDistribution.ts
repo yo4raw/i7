@@ -23,7 +23,7 @@ export function binomialPmf(n: number, p: number): number[] {
 function nP(entry: CardStrengthEntry): { n: number; p: number } {
   const n = entry.maxActivations;
   const p = entry.skill ? entry.skill.per / 100 : 0;
-  return { n: n > 0 ? n : 0, p };
+  return { n: Math.max(n, 0), p };
 }
 
 /** スキル上乗せ分の t（0〜1）以上を出す確率 = P(K ≥ ceil(t·n)) */

@@ -71,6 +71,6 @@ describe('runSimulation: 通常型スコアアップ (コンボ, Phase B 分岐)
     const pcts: number[] = [];
     await runSimulation(team, notes, 50, (p) => pcts.push(p), MC_SEED);
     expect(pcts.length).toBeGreaterThan(0);
-    expect(pcts[pcts.length - 1]).toBe(1);
+    expect(pcts.at(-1)).toBe(1);
   });
 });

@@ -37,7 +37,7 @@ test.describe('ホームページ', () => {
     const cardCount = page.locator('a[href$="/cards/"] .text-2xl');
     const text = await cardCount.textContent();
     expect(text).toMatch(/[\d,]+\s*枚/);
-    const num = parseInt(text!.replace(/[^\d]/g, ''));
+    const num = parseInt(text!.replaceAll(/[^\d]/g, ''));
     expect(num).toBeGreaterThan(0);
   });
 });

@@ -118,9 +118,9 @@ function parseWikitext(wikitext) {
     const m = wikitext.match(new RegExp(`\\|${key}\\s*=\\s*(.*)`));
     if (!m) return null;
     // HTMLタグ除去 (<span lang="ja">...</span> 等)
-    const val = m[1].trim().replace(/<[^>]+>/g, '').trim();
+    const val = m[1].trim().replaceAll(/<[^>]+>/g, '').trim();
     // ref タグの内容除去
-    return val.replace(/\[.*?\]/g, '').trim() || null;
+    return val.replaceAll(/\[.*?\]/g, '').trim() || null;
   };
   return {
     japanese: get('Japanese'),

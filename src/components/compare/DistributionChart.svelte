@@ -70,7 +70,7 @@
     const mx = Math.max(...s.points.map((p) => p.prob)) || 1;
     const pts = s.points.map((p) => `${sx(p.x).toFixed(1)},${(PAD_T + innerH - (p.prob / mx) * innerH).toFixed(1)}`);
     const first = sx(s.points[0].x).toFixed(1);
-    const last = sx(s.points[s.points.length - 1].x).toFixed(1);
+    const last = sx(s.points.at(-1).x).toFixed(1);
     return `${first},${PAD_T + innerH} ${pts.join(' ')} ${last},${PAD_T + innerH}`;
   }
 

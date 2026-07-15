@@ -159,7 +159,7 @@ export function createSearchContext(input: SearchInput): SearchContext {
 export function countCombos(ctx: SearchContext): number {
   const { input } = ctx;
   if (input.ownedOnly) {
-    if (ctx.owned.length < 1 || ctx.candidates.length < 1) return 0;
+    if (ctx.owned.length === 0 || ctx.candidates.length === 0) return 0;
     if (!input.shrinkPairOnly) {
       const limits = ctx.owned.map((c) => ctx.ownedLimit.get(c.ID!) ?? 0);
       let centerSum = 0;
@@ -194,7 +194,7 @@ export function countCombos(ctx: SearchContext): number {
     }
     return total;
   }
-  if (ctx.candidates.length < 1) return 0;
+  if (ctx.candidates.length === 0) return 0;
   if (!input.shrinkPairOnly) {
     return multichoose(ctx.candidates.length, 2) * multichoose(ctx.candidates.length, 4);
   }
@@ -472,7 +472,7 @@ export async function evaluateChunk(
 
 /** 各 Worker のローカル Top-K をスコア降順にマージして上位 k 件を返す */
 export function mergeTopK(lists: DeckRecord[][], k: number = TOP_K): DeckRecord[] {
-  return lists.flat().sort((a, b) => b.score - a.score).slice(0, k);
+  return lists.flat().toSorted((a, b) => b.score - a.score).slice(0, k);
 }
 
 /**

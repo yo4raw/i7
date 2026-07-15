@@ -139,8 +139,7 @@ describe('スプレッドシートオラクル(golden 各版) — ②engine差�
       trained,
       selectedBroachIds,
       sharedBroachSelections,
-      skillLevels,
-      undefined, // rabbitNotes
+      skillLevels, // rabbitNotes
     );
     const exclusion = computeShrinkExclusion(team, computeGroupSizes(song));
     // seed は固定。属性値・期待値・最大値はノート順序に依存しないので任意 seed で可

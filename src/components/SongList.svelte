@@ -49,25 +49,25 @@
     });
     switch (sortBy) {
       case 'name-asc':
-        result = [...result].sort((a, b) => (a.song_name || '').localeCompare(b.song_name || ''));
+        result = [...result].toSorted((a, b) => (a.song_name || '').localeCompare(b.song_name || ''));
         break;
       case 'notes-desc':
-        result = [...result].sort((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
+        result = [...result].toSorted((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
         break;
       case 'notes-asc':
-        result = [...result].sort((a, b) => (a.notes_count || 0) - (b.notes_count || 0));
+        result = [...result].toSorted((a, b) => (a.notes_count || 0) - (b.notes_count || 0));
         break;
       case 'stars-desc':
-        result = [...result].sort((a, b) => (b.stars || 0) - (a.stars || 0));
+        result = [...result].toSorted((a, b) => (b.stars || 0) - (a.stars || 0));
         break;
       case 'stars-asc':
-        result = [...result].sort((a, b) => (a.stars || 0) - (b.stars || 0));
+        result = [...result].toSorted((a, b) => (a.stars || 0) - (b.stars || 0));
         break;
       case 'duration-desc':
-        result = [...result].sort((a, b) => (b.duration || 0) - (a.duration || 0));
+        result = [...result].toSorted((a, b) => (b.duration || 0) - (a.duration || 0));
         break;
       case 'duration-asc':
-        result = [...result].sort((a, b) => (a.duration || 0) - (b.duration || 0));
+        result = [...result].toSorted((a, b) => (a.duration || 0) - (b.duration || 0));
         break;
     }
     return result;

@@ -187,7 +187,7 @@ describe('runSimulation: 統計・cardStats 分岐', () => {
   it('seed 省略時も実行できる (L639 path: seed ?? Date.now())', async () => {
     const team = makeTeam([skill({ count: 10, value: 100, per: 50 }), null, null, null, null, null]);
     const notes = plainNotes(40);
-    const r = await runSimulation(team, notes, 4, undefined, undefined);
+    const r = await runSimulation(team, notes, 4);
     expect(r.scores.length).toBe(4);
   });
 
@@ -195,7 +195,7 @@ describe('runSimulation: 統計・cardStats 分岐', () => {
     const team = makeTeam([skill({ count: 10, value: 100, per: 50 }), null, null, null, null, null]);
     const notes = plainNotes(40);
     const r = await runSimulation(team, notes, 4, undefined, 42);
-    const sorted = [...r.scores].sort((a, b) => a - b);
+    const sorted = [...r.scores].toSorted((a, b) => a - b);
     const expectedMedian = Math.round((sorted[1] + sorted[2]) / 2);
     expect(r.median).toBe(expectedMedian);
   });
@@ -205,7 +205,7 @@ describe('runSimulation: 統計・cardStats 分岐', () => {
     const notes = plainNotes(40);
     const r = await runSimulation(team, notes, 3, undefined, 42);
     expect(r.scores.length).toBe(3);
-    const sorted = [...r.scores].sort((a, b) => a - b);
+    const sorted = [...r.scores].toSorted((a, b) => a - b);
     expect(r.median).toBe(Math.round(sorted[1]));
   });
 

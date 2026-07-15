@@ -21,7 +21,7 @@ import { fetchCardsJson } from '../src/lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../src/lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../src/lib/data/fetchFixedBroachsJson.ts';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(import.meta.dirname, '..');
 const FIXTURES_DIR = resolve(ROOT, 'tests/fixtures');
 
 function writeJson(path: string, data: unknown): void {

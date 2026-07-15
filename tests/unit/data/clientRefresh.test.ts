@@ -38,7 +38,7 @@ describe('refreshData', () => {
     const cached = JSON.parse(sessionStorage.getItem(CACHE_PREFIX + 'songs')!);
     expect(cached.data).toEqual(fresh);
     // 成功インジケータが DOM に出る
-    const el = document.getElementById('data-freshness-indicator');
+    const el = document.querySelector('#data-freshness-indicator');
     expect(el?.textContent).toBe('最新データに更新済み');
     // 3秒後にフェードアウト
     vi.advanceTimersByTime(3000);

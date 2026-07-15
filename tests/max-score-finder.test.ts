@@ -28,7 +28,7 @@ test.describe('編成組合計算ページ', () => {
       .filter((e) => Date.parse(`${e.end_date}T17:00:00+09:00`) < Date.now())
       .map((e) => ({ e, ur: urCandidateCount(e) }))
       .filter(({ ur }) => ur >= 2 && ur <= 16)
-      .sort((a, b) => a.ur - b.ur)[0]?.e;
+      .toSorted((a, b) => a.ur - b.ur)[0]?.e;
     expect(pick, 'UR 特効が少数の終了済みハイスコアイベントが events.csv に存在すること').toBeTruthy();
 
     // 組合せ数が多い場合の confirm ダイアログは許可する

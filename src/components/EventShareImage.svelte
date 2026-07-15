@@ -12,7 +12,7 @@
 
   async function download() {
     if (busy) return;
-    const node = document.getElementById(targetId);
+    const node = document.querySelector(`#${targetId}`);
     if (!node) return;
     busy = true;
     try {
@@ -21,7 +21,7 @@
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = `${filename}.png`;
-      document.body.appendChild(a);
+      document.body.append(a);
       a.click();
       document.body.removeChild(a);
     } catch (e) {

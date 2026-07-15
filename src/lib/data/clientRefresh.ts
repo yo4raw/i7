@@ -27,7 +27,7 @@ function getIndicator(): HTMLElement {
   const el = document.createElement('div');
   el.id = 'data-freshness-indicator';
   el.className = 'fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm transition-all duration-300 opacity-0 pointer-events-none';
-  document.body.appendChild(el);
+  document.body.append(el);
   indicatorEl = el;
   return el;
 }

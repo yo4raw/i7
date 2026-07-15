@@ -74,7 +74,7 @@
     });
   }
 
-  const reverseDecks = $derived([...decks].reverse());
+  const reverseDecks = $derived([...decks].toReversed());
 </script>
 
 {#if decks.length === 0}

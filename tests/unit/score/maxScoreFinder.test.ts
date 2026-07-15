@@ -182,8 +182,8 @@ function enumerateAll(input: SearchInput): { count: number; keys: Set<string>; d
       count++;
       decks.push([...deck]); // yield された配列は再利用されるためコピー
       // 正規化キー: (center,friend) は対称なのでソートしたペア + ソートしたメンバー
-      const pair = [deck[0].ID!, deck[5].ID!].sort((a, b) => a - b).join('+');
-      const members = deck.slice(1, 5).map((c) => c.ID!).sort((a, b) => a - b).join(',');
+      const pair = [deck[0].ID!, deck[5].ID!].toSorted((a, b) => a - b).join('+');
+      const members = deck.slice(1, 5).map((c) => c.ID!).toSorted((a, b) => a - b).join(',');
       keys.add(`${pair}|${members}`);
     }
   }
@@ -200,7 +200,7 @@ function enumerateAllOwned(input: SearchInput): { count: number; keys: Set<strin
     for (const deck of enumerateChunkDecks(ctx, chunk)) {
       count++;
       decks.push([...deck]);
-      const members = deck.slice(1, 5).map((c) => c.ID!).sort((a, b) => a - b).join(',');
+      const members = deck.slice(1, 5).map((c) => c.ID!).toSorted((a, b) => a - b).join(',');
       keys.add(`${deck[0].ID}|${members}|${deck[5].ID}`);
     }
   }
@@ -304,7 +304,7 @@ describe('evaluateChunk / mergeTopK (実エンジン評価)', () => {
     expect(a.evaluated).toBe(countCombos(ctx));
     expect(b.evaluated).toBe(a.evaluated);
     expect(a.top.map((r) => r.score)).toEqual(b.top.map((r) => r.score));
-    expect(a.top[0].cardIds.slice().sort()).toEqual(b.top[0].cardIds.slice().sort());
+    expect(a.top[0].cardIds.slice().toSorted()).toEqual(b.top[0].cardIds.slice().toSorted());
   });
 
   it('evalMode=max でも動作しスコアは expected と異なりうる', async () => {

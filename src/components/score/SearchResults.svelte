@@ -70,7 +70,7 @@
     const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     const trained: boolean[] = [true, true, true, true, true, true];
     const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, result.best.sharedBroachIds ?? [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
-    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong, undefined);
+    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong);
     return { team, deck, resolvedBroachs };
   });
   const bestTeam = $derived(bestContext?.team ?? null);

@@ -588,7 +588,7 @@ describe('MONSTER GENERATiON で 縮小スキル 3 枚構成（キューイン�
     const shrinkCounts = team.cards
       .filter((dc) => dc.skill?.isShrink)
       .map((dc) => dc.skill!.count)
-      .sort((a, b) => a - b);
+      .toSorted((a, b) => a - b);
     expect(shrinkCounts).toEqual([20, 22, 23]);
   });
 

@@ -37,7 +37,7 @@ describe('refreshData: 並行フェッチでの pendingCount 分岐 (L92, L105)'
     await pB;
     expect(onB).toHaveBeenCalledWith([{ id: 2 }]);
 
-    const el = document.getElementById('data-freshness-indicator');
+    const el = document.querySelector('#data-freshness-indicator');
     expect(el?.textContent).toBe('最新データに更新済み');
   });
 });

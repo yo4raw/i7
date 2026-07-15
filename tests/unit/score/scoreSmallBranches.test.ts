@@ -69,7 +69,7 @@ function fullSong(groups: Partial<Record<string, Record<string, number | null>>>
   };
   const keys = ['notes_20', 'light_2', 'light_3', 'light_4', 'light_5', 'light_6', 'chorus_light_5', 'chorus_light_6'];
   const song: Record<string, unknown> = { id: 1, song_name: 'TEST', notes_count: null };
-  for (const k of keys) song[k] = { ...empty, ...(groups[k] ?? {}) };
+  for (const k of keys) song[k] = { ...empty, ...groups[k] };
   return song as unknown as Song;
 }
 

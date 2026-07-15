@@ -22,7 +22,7 @@ function makeSong(groups: Partial<Record<string, Partial<Record<string, number>>
     updated_at: null,
   };
   for (const k of allKeys) {
-    song[k] = { ...empty, ...(groups[k] ?? {}) };
+    song[k] = { ...empty, ...groups[k] };
   }
   return song as unknown as Song;
 }

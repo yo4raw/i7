@@ -19,7 +19,7 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = import.meta.dirname;
 const publicDir = resolve(__dirname, '..', 'public');
 
 const BG = '#4f46e5';

@@ -30,7 +30,7 @@ import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 const PROJECT_ROOT = join(__dirname, '..');
 
 const SOURCE_URLS = {
@@ -87,7 +87,7 @@ async function listLocalIds(dir) {
   return entries
     .filter((n) => /^\d+\.webp$/.test(n))
     .map((n) => n.replace(/\.webp$/, ''))
-    .sort((a, b) => Number(a) - Number(b));
+    .toSorted((a, b) => Number(a) - Number(b));
 }
 
 async function headRemote(url, retries = 2) {
