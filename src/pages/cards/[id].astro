@@ -153,7 +153,7 @@ const otherSkills = [
           centerText: { label: '合計', value: total.toLocaleString() },
         });
         return (
-          <section class="bg-white rounded-lg shadow p-4">
+          <section class="surface-card p-4">
             <h2 class="text-lg font-semibold mb-3">ステータス</h2>
             <div class="flex flex-col sm:flex-row items-center gap-4">
               <div class="w-28 h-28 relative flex-shrink-0" set:html={chartHtml} />
@@ -190,7 +190,7 @@ const otherSkills = [
 
       {/* その他スキル */}
       {otherSkills.length > 0 && (
-        <section class="bg-white rounded-lg shadow p-4">
+        <section class="surface-card p-4">
           <h2 class="text-lg font-semibold mb-3">その他スキル</h2>
           <table class="w-full text-sm">
             <tbody class="divide-y divide-gray-100">
@@ -209,7 +209,7 @@ const otherSkills = [
 
   <!-- APスキル -->
   {card.ap_skill_name && (
-    <section class="bg-white rounded-lg shadow p-6 mb-6">
+    <section class="surface-card p-6 mb-6">
       <h2 class="text-lg font-semibold mb-4">APスキル</h2>
       <div class="mb-3 text-sm text-gray-600">
         <p><strong>スキル名:</strong> {card.ap_skill_name}</p>
@@ -234,7 +234,7 @@ const otherSkills = [
 
   <!-- ブローチ情報 -->
   {broachs.length > 0 && (
-    <section class="bg-white rounded-lg shadow p-6 mb-6" id="broach-section">
+    <section class="surface-card p-6 mb-6" id="broach-section">
       <h2 class="text-lg font-semibold mb-4">固有ブローチ</h2>
       <div class="space-y-3">
         {broachs.map((b: any) => (

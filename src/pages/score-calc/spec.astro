@@ -187,7 +187,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     有志による計測・推定値を含むため、ゲーム内の挙動と完全に一致することを保証するものではありません。
   </p>
 
-  <nav class="bg-white rounded-lg shadow p-4 mb-6 text-sm">
+  <nav class="surface-card p-4 mb-6 text-sm">
     <h2 class="text-sm font-bold text-indigo-700 mb-2">目次</h2>
     <ol class="list-decimal pl-6 space-y-0.5 text-gray-700" start="0">
       <li><a href="#overview" class="hover:underline text-indigo-600">スコア計算の全体像とデモ編成</a></li>
@@ -201,7 +201,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </nav>
 
   <!-- ============================================================ -->
-  <section id="overview" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="overview" class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">0. スコア計算の全体像とデモ編成</h2>
     <p class="text-sm text-gray-700 mb-4">
       リザルトのスコアは <strong>チーム属性値</strong> を土台に、ノーツ 1 個ずつの<strong>素点</strong>を積み、
@@ -245,7 +245,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <!-- ============================================================ -->
-  <section id="team" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="team" class="surface-card p-6 mb-6">
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'attr' })} />
     </div>
@@ -284,7 +284,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <!-- ============================================================ -->
-  <section id="note" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="note" class="surface-card p-6 mb-6">
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'note' })} />
     </div>
@@ -327,7 +327,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <!-- ============================================================ -->
-  <section id="scoreup" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="scoreup" class="surface-card p-6 mb-6">
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'scoreUp' })} />
     </div>
@@ -387,7 +387,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <!-- ============================================================ -->
-  <section id="shrink" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="shrink" class="surface-card p-6 mb-6">
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'shrink' })} />
     </div>
@@ -502,7 +502,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <!-- ============================================================ -->
-  <section id="final" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="final" class="surface-card p-6 mb-6">
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'final' })} />
     </div>
@@ -534,7 +534,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <!-- ============================================================ -->
-  <section id="stats" class="bg-white rounded-lg shadow p-6 mb-6">
+  <section id="stats" class="surface-card p-6 mb-6">
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'stats' })} />
     </div>
@@ -582,7 +582,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </details>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-6 mb-6">
+  <section class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-indigo-700 mb-3">関連ページ</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
       <li>

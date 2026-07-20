@@ -157,7 +157,7 @@
   }
 </script>
 
-<div class="bg-white rounded-lg shadow p-4 mb-6">
+<div class="surface-card p-4 mb-6">
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <div>
       <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">曲名検索</label>
@@ -301,7 +301,7 @@
       {@const attr = dominantAttr(sr, br, mr)}
       {@const border = borderFor(attr)}
       <div
-        class="rounded-lg shadow p-3 hover:shadow-md transition-shadow cursor-pointer"
+        class="rounded-lg shadow p-3 hover:shadow-card-hover transition-shadow cursor-pointer"
         style="border-top:3px solid {border}; background: {mobileBg(sr, br, mr, imgUrl)}"
         onclick={(e) => { if (!(e.target as HTMLElement).closest('.song-check')) go(song.id); }}
         role="link"

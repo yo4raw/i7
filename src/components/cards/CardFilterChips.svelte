@@ -27,7 +27,7 @@
   });
 
   const chipBase =
-    'inline-flex items-center rounded-full border px-3 py-1 text-sm cursor-pointer select-none transition-colors';
+    'inline-flex items-center rounded-full border px-3 py-1 text-sm cursor-pointer select-none transition-colors pressable';
   const chipOff =
     'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
 

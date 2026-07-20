@@ -247,7 +247,7 @@
   }
 </script>
 
-<details id="breakdown-section" class="bg-white rounded-lg shadow p-4 group" open>
+<details id="breakdown-section" class="surface-card p-4 group" open>
   <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
     <span>📊 スキル詳細</span>
     <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -315,7 +315,7 @@
   <p id="breakdown-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!calc}>楽曲と衣装を設定するとスキル詳細が表示されます</p>
 </details>
 
-<section class="bg-white rounded-lg shadow p-4">
+<section class="surface-card p-4">
   <div class="grid grid-cols-2 gap-4 text-center">
     <div>
       <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最低</div>
@@ -370,7 +370,7 @@
   </div>
 </section>
 
-<section class="bg-white rounded-lg shadow p-4">
+<section class="surface-card p-4">
   <h2 class="text-sm font-bold text-gray-700 mb-3">🎲 シミュレーション統計</h2>
   <section id="mc-results" class:hidden={!simulationResult}>
     <table class="w-full text-sm">
@@ -400,7 +400,7 @@
   <p id="mc-placeholder" class="text-xs text-gray-400 text-center py-6" class:hidden={!!simulationResult}>計算を実行するとシミュレーション結果が表示されます</p>
 </section>
 
-<div class="bg-white rounded-lg shadow">
+<div class="surface-card">
   <div class="flex border-b overflow-x-auto" role="tablist" aria-label="結果タブ">
     {#each TABS as t (t.key)}
       <button

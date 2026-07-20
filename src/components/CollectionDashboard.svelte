@@ -55,7 +55,7 @@
   );
 </script>
 
-<section class="bg-white rounded-lg shadow p-4 mb-6" data-testid="collection-dashboard">
+<section class="surface-card p-4 mb-6" data-testid="collection-dashboard">
   <h2 class="text-lg font-bold text-gray-800 mb-3">コレクション状況</h2>
 
   <!-- 総括 -->

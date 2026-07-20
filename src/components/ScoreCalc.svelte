@@ -275,7 +275,7 @@
 
 <div id="score-share-target">
   <!-- 楽曲サマリーバー（全幅・横長） -->
-  <section class="bg-white rounded-lg shadow p-4 mb-4">
+  <section class="surface-card p-4 mb-4">
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
       <div class="min-w-0">
         <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
@@ -309,7 +309,7 @@
 
   <!-- 共通ブローチ スコア寄与 TOP10 -->
   {#if selectedSong && broachRanking.length > 0}
-    <details id="broach-ranking-section" class="bg-white rounded-lg shadow mb-4 group" open>
+    <details id="broach-ranking-section" class="surface-card mb-4 group" open>
       <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
         <span>🏅 共通ブローチ スコア寄与 TOP10</span>
         <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -322,7 +322,7 @@
   {/if}
 
   <!-- スキルオプション（折りたたみ可、デフォルト開） -->
-  <details class="bg-white rounded-lg shadow mb-4 group" open>
+  <details class="surface-card mb-4 group" open>
     <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
       <span>⚙️ スキルオプション</span>
       <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -348,7 +348,7 @@
   </details>
 
   <div class="space-y-4">
-    <section class="bg-white rounded-lg shadow p-4">
+    <section class="surface-card p-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
         <div class="relative flex gap-2" data-noshot>

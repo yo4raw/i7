@@ -55,7 +55,7 @@
     <ul class="space-y-2">
       {#each events as ev (ev.id)}
         {@const s = status(ev)}
-        <li class="event-item bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <li class="event-item surface-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <a href={`${base}events/${ev.id}/`} class="text-indigo-700 font-semibold hover:underline">
               {ev.eventname}

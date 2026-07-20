@@ -117,7 +117,7 @@
   }
 </script>
 
-<div class="bg-white rounded-lg shadow p-4 mb-6">
+<div class="surface-card p-4 mb-6">
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
     <div>
       <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">イベント名検索</label>

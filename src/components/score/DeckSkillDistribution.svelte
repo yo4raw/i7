@@ -82,7 +82,7 @@
 </script>
 
 {#if panels.length > 0}
-  <section class="bg-white rounded-lg shadow p-4 mb-4">
+  <section class="surface-card p-4 mb-4">
     <h2 class="text-sm font-bold text-gray-700 mb-1">スキル上乗せ分布</h2>
     <p class="text-[11px] text-gray-500 mb-3">
       現在の編成での各衣装のスキル発動による上乗せ分布（横軸は0起点の上乗せ{panels.some(p => p.metric === 'cover') ? 'スコア／カバー秒数' : 'スコア'}）。

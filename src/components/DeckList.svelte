@@ -88,7 +88,7 @@
       {@const song = d.state.songId != null ? songs.find((s) => s.id === d.state.songId) : null}
       {@const songName = song?.song_name ?? null}
       {@const cardCount = (d.state.deckIds || []).filter((id) => id != null).length}
-      <div class="bg-white rounded-lg shadow p-4">
+      <div class="surface-card p-4">
         <div class="flex items-start justify-between mb-3">
           <div class="min-w-0 flex-1">
             <h2 class="text-sm font-bold text-gray-800 truncate">{d.name}</h2>
