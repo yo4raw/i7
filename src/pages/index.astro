@@ -73,7 +73,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
 <BaseLayout title="ホーム" description={PAGE_DESCRIPTIONS.home}>
   <!-- ヒーロー -->
   <section class="surface-card border-l-4 border-indigo-500 p-6 mb-6">
-    <h1 class="text-2xl font-bold mb-2 text-gray-900">{SITE_NAME}</h1>
+    <h1 class="text-2xl font-bold text-display mb-2 text-gray-900">{SITE_NAME}</h1>
     <p class="text-sm text-gray-600 mb-4">
       スマートフォン向けゲーム『アイドリッシュセブン』の衣装・楽曲・イベント情報をまとめた、ファンによる<strong>非公式</strong>のデータベースサイトです。
       衣装/楽曲の検索、スコア計算・編成探索・衣装比較などのプレイヤー向けツール、所持衣装・デッキの管理を提供します。
@@ -115,7 +115,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
               <h4 class="text-base font-semibold text-indigo-700 mb-1">{c.title}</h4>
               <p class="text-xs text-gray-600">{c.desc}</p>
               {c.stat && (
-                <div class="text-2xl font-bold text-gray-800 mt-3">{c.stat.value.toLocaleString('ja-JP')}<span class="text-sm text-gray-500 ml-1">{c.stat.unit}</span></div>
+                <div class="text-2xl font-bold tabular-nums text-gray-800 mt-3">{c.stat.value.toLocaleString('ja-JP')}<span class="text-sm text-gray-500 ml-1">{c.stat.unit}</span></div>
               )}
             </a>
           ))}

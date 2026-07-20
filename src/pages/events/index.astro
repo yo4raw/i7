@@ -24,7 +24,7 @@ const collectionLd = collectionPageLd({
 ---
 
 <BaseLayout title="イベント情報" description={PAGE_DESCRIPTIONS.events} breadcrumbs={breadcrumbs} jsonLd={collectionLd}>
-  <h1 class="text-2xl font-bold mb-6">イベント情報</h1>
+  <h1 class="text-3xl font-bold text-display mb-6">イベント情報</h1>
 
   <EventList events={allEvents} eventTypes={eventTypes} base={base} client:load />
 </BaseLayout>
