@@ -231,6 +231,22 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 サイトは**ライトテーマ固定**（ダークモードは ADR 0020 で廃止済み。`dark:` バリアント・`html.dark`・テーマトグルは存在しない）。チャート配色は `src/styles/global.css` の `@layer base` 内 `:root` で `--chart-grid` `--chart-axis-label` `--chart-text` `--chart-exclude-bg` `--chart-exclude-border` `--chart-mute-fill` を定義し、`src/lib/donutChart.ts` / `src/lib/score/histogram.ts` / `src/lib/score/specDiagrams.ts` のチャート SVG が `fill="var(--chart-grid)"` 等で参照する。新規コンポーネントでは `dark:` バリアントを付けないこと。
 
+#### デザイン規約（apple-design / ADR 0046）
+
+`src/styles/global.css` にマテリアル用の `@utility` とトークンを定義済み。新規 UI は以下の規約に従う:
+
+- **マテリアル 3 層**:
+  - `material-chrome`（暗色インディゴ半透明 + blur）= ヘッダー等の構造チュローム専用（白テキスト前提）
+  - `material-overlay`（白半透明 + blur + border/shadow）= ドロップダウン等の浮遊オーバーレイ専用（暗色テキスト前提）
+  - `surface-card`（**完全不透明** 白 + `--radius-card` + `--shadow-card`）= 本文・データを載せるサーフェス
+- **本文テキストを載せる面は必ず不透明**（`surface-card`）にする。半透明面上のテキストは WCAG AA（4.5:1）を満たすこと（0001 の視認性破綻を繰り返さない）
+- **明色材の上に明色材を重ねない**（例: モーダルパネル内のカードは solid のまま）
+- **リスト行・タイル・大きな繰り返し要素に `backdrop-filter` を使わない**（半透明は chrome の小領域限定。パフォーマンス）
+- `prefers-reduced-transparency` / `prefers-contrast` / `prefers-reduced-motion` のフォールバックは `@utility` 定義内と global.css に集約済み。利用側で個別対応しない
+- **モーション**: 新規依存を増やさない。開閉トランジションは `src/lib/motion.ts` の `materialIn`/`materialOut`（svelte/transition）、押下フィードバックは `pressable` utility を使う。ジェスチャー駆動 UI（ドラッグシート等）は導入しない
+- **タイポグラフィ**: 大見出しは `text-display` utility（CJK 向け `palt` + 正トラッキング + `line-height:1.35`）。欧文向けの負トラッキングは使わない。数値の揃う列には `tabular-nums`
+- 影・角丸・blur・イージングは `@theme` のトークン（`--shadow-card` 等 → `shadow-card` / `rounded-card` utility）を使い、値を直書きしない
+
 ### Testing
 
 #### E2E テスト (Playwright)
