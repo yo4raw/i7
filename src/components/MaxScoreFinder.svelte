@@ -268,7 +268,7 @@
   }
 </script>
 
-<section class="bg-white rounded-lg shadow p-4 mb-4">
+<section class="surface-card p-4 mb-4">
   <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
   <SongSelect id="song-select" songs={allSongs} bind:value={selectedSongId} />
   {#if selectedSong}
@@ -286,7 +286,7 @@
   {/if}
 </section>
 
-<section class="bg-white rounded-lg shadow p-4 mb-4">
+<section class="surface-card p-4 mb-4">
   <h2 class="text-sm font-bold text-gray-700 mb-2">📅 対象イベント</h2>
   <div class="text-xs text-gray-600">
     {#if highScoreEvents.length === 0}
@@ -350,7 +350,7 @@
   </div>
 </section>
 
-<section class="bg-white rounded-lg shadow p-4 mb-4">
+<section class="surface-card p-4 mb-4">
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
     <div>
       <label for="eval-mode" class="block text-xs text-gray-500 mb-1">評価指標</label>

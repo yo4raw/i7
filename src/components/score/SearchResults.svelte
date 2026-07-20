@@ -115,7 +115,7 @@
     </div>
   </div>
 
-  <section class="bg-white rounded-lg shadow p-4">
+  <section class="surface-card p-4">
     <h2 class="text-sm font-bold text-gray-700 mb-3">🎴 最適編成</h2>
     <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
       {#each DISPLAY_ORDER as i}
@@ -148,7 +148,7 @@
     </div>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-4">
+  <section class="surface-card p-4">
     <h2 class="text-sm font-bold text-gray-700 mb-3">🧾 衣装詳細</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-xs">
@@ -242,7 +242,7 @@
     </div>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-4">
+  <section class="surface-card p-4">
     <h2 class="text-sm font-bold text-gray-700 mb-3">📊 スコア内訳</h2>
     <table class="w-full text-sm">
       <tbody>
@@ -267,7 +267,7 @@
   </section>
 
   {#if result.topFriends && result.topFriends.length > 0}
-    <section class="bg-white rounded-lg shadow p-4">
+    <section class="surface-card p-4">
       <h2 class="text-sm font-bold text-gray-700 mb-1">🤝 フレンド候補 TOP 5</h2>
       <p class="text-[11px] text-gray-500 mb-3">最適編成のセンター + メンバー4枚を固定し、フレンドだけ差し替えた場合のスコア（高い順）。マッチング次第で 1 位フレンドが取れない場合の代替候補です。</p>
       <div class="overflow-x-auto">
@@ -317,7 +317,7 @@
     </section>
   {/if}
 
-  <section class="bg-white rounded-lg shadow p-4">
+  <section class="surface-card p-4">
     <h2 class="text-sm font-bold text-gray-700 mb-1">🏅 上位候補 TOP 10</h2>
     <p class="text-[10px] text-gray-400 mb-3">スロット表記: ★センター / ✦フレンド / それ以外はメンバー</p>
     <div class="space-y-2">

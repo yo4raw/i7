@@ -48,7 +48,7 @@
 
 <div>
   {#each groups as group (group.name)}
-    <section class="bg-white rounded-lg shadow mb-4 border-l-4 {GROUP_COLORS[group.name]}">
+    <section class="surface-card mb-4 border-l-4 {GROUP_COLORS[group.name]}">
       <h2 class="text-lg font-bold px-4 pt-4 pb-2">{group.name}</h2>
       <div class="px-4 pb-4 space-y-2">
         {#each group.broachs as sb (sb.id)}

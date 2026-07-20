@@ -55,29 +55,29 @@
   );
 </script>
 
-<section class="bg-white rounded-lg shadow p-4 mb-6" data-testid="collection-dashboard">
+<section class="surface-card p-4 mb-6" data-testid="collection-dashboard">
   <h2 class="text-lg font-bold text-gray-800 mb-3">コレクション状況</h2>
 
   <!-- 総括 -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
       <div class="text-[11px] text-amber-700 font-medium">UR 収集率</div>
-      <div class="text-2xl font-bold text-amber-700">{overallUr.pct}%</div>
+      <div class="text-2xl font-bold tabular-nums text-amber-700">{overallUr.pct}%</div>
       <div class="text-[11px] text-gray-500">{overallUr.owned} / {overallUr.total} 種</div>
     </div>
     <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
       <div class="text-[11px] text-indigo-700 font-medium">全レアリティ収集率</div>
-      <div class="text-2xl font-bold text-indigo-700">{overallAll.pct}%</div>
+      <div class="text-2xl font-bold tabular-nums text-indigo-700">{overallAll.pct}%</div>
       <div class="text-[11px] text-gray-500">{overallAll.owned} / {overallAll.total} 種</div>
     </div>
     <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
       <div class="text-[11px] text-gray-600 font-medium">所持種類</div>
-      <div class="text-2xl font-bold text-gray-800">{overallAll.owned}</div>
+      <div class="text-2xl font-bold tabular-nums text-gray-800">{overallAll.owned}</div>
       <div class="text-[11px] text-gray-500">種</div>
     </div>
     <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
       <div class="text-[11px] text-gray-600 font-medium">合計枚数</div>
-      <div class="text-2xl font-bold text-gray-800">{totalCount.toLocaleString()}</div>
+      <div class="text-2xl font-bold tabular-nums text-gray-800">{totalCount.toLocaleString()}</div>
       <div class="text-[11px] text-gray-500">枚</div>
     </div>
   </div>

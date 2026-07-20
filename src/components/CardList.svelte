@@ -230,7 +230,7 @@
   });
 </script>
 
-<div class="bg-white rounded-lg shadow p-4 mb-6">
+<div class="surface-card p-4 mb-6">
   <div class="flex flex-wrap gap-3 mb-4">
     <div class="w-full sm:w-64">
       <label for="search-text" class="block text-xs font-medium text-gray-500 mb-1">名前検索</label>

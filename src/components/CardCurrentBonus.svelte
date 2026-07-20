@@ -34,7 +34,7 @@
 </script>
 
 {#if liveHits.length > 0}
-  <section class="bg-white rounded-lg shadow p-4">
+  <section class="surface-card p-4">
     <h2 class="text-lg font-semibold mb-3">🎯 現在開催中の特効</h2>
     <ul class="space-y-2 text-sm">
       {#each liveHits as h (h.id)}

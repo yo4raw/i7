@@ -21,7 +21,7 @@ const collectionLd = collectionPageLd({
 ---
 
 <BaseLayout title="楽曲一覧" description={PAGE_DESCRIPTIONS.songs} breadcrumbs={breadcrumbs} jsonLd={collectionLd}>
-  <h1 class="text-2xl font-bold mb-6">楽曲一覧</h1>
+  <h1 class="text-3xl font-bold text-display mb-6">楽曲一覧</h1>
 
   <SongList songs={allSongs} categories={categories} base={base} client:load />
 </BaseLayout>

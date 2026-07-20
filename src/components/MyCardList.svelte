@@ -42,7 +42,7 @@
   </div>
 {:else}
   <div>
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="surface-card p-4 mb-6">
       <div class="flex items-center gap-4 text-sm text-gray-600">
         <span>所持種類: {owned.length}種</span>
         <span>合計枚数: {totalOwnedCount}枚</span>

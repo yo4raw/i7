@@ -35,7 +35,7 @@
 </script>
 
 <div
-  class="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col"
+  class="surface-card hover:shadow-card-hover hover:-translate-y-0.5 transition-[box-shadow,transform] duration-150 overflow-hidden flex flex-col"
   style="border-top:3px solid {borderColor}"
   data-page-marker={pageMarker ?? undefined}
 >

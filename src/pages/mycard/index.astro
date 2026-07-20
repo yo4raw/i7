@@ -15,7 +15,7 @@ const breadcrumbs = [
 ---
 
 <BaseLayout title="所持衣装一覧" description={PAGE_DESCRIPTIONS.mycard} breadcrumbs={breadcrumbs}>
-  <h1 class="text-2xl font-bold mb-6">所持衣装一覧</h1>
+  <h1 class="text-3xl font-bold text-display mb-6">所持衣装一覧</h1>
 
   <CollectionDashboard cards={allCards} client:load />
   <MyCardList cards={allCards} base={base} thumbUrl={CARD_THUMB_BASE_URL} client:load />

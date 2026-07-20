@@ -56,7 +56,7 @@
 {#if pageMarker != null}
   <div data-page-marker={pageMarker} aria-hidden="true"></div>
 {/if}
-<div class="rounded-lg shadow p-3 hover:shadow-md transition-shadow" style="border-top:3px solid {borderColor}; background: {bg}">
+<div class="rounded-lg shadow p-3 hover:shadow-card-hover transition-shadow" style="border-top:3px solid {borderColor}; background: {bg}">
   <div class="flex gap-3 cursor-pointer" onclick={handleRowClick} role="presentation">
     <div class="flex-shrink-0">
       <img src={thumb} alt={card.cardname || ''} class="w-12 h-auto rounded" loading="lazy" />
