@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SITE_NAME } from '../lib/constants';
+  import { materialIn, materialOut } from '../lib/motion';
 
   type Props = { base: string };
   let { base }: Props = $props();
@@ -7,6 +8,7 @@
   let mobileOpen = $state(false);
   let openDropdown = $state<string | null>(null);
   let mobileDropdownOpen = $state<Record<string, boolean>>({});
+  let scrolled = $state(false);
   const dropdownWrappers = new Map<string, HTMLLIElement>();
 
   type LinkItem = { href: string; label: string };
@@ -61,6 +63,18 @@
   }
 
   $effect(() => {
+    // スクロールエッジ効果: 先頭では影なし、スクロール時に hairline+影をフェードイン (ADR 0046)
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        scrolled = window.scrollY > 0;
+        raf = 0;
+      });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
     document.addEventListener('contextmenu', contextHandler);
 
     const clickHandler = (e: MouseEvent) => {
@@ -80,6 +94,8 @@
     document.addEventListener('keydown', keyHandler);
 
     return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
       document.removeEventListener('contextmenu', contextHandler);
       document.removeEventListener('click', clickHandler);
       document.removeEventListener('keydown', keyHandler);
@@ -87,12 +103,16 @@
   });
 </script>
 
-<header class="bg-indigo-700 text-white sticky top-0 z-50 shadow-md">
+<header
+  class="material-chrome text-white sticky top-0 z-50 transition-shadow duration-200"
+  class:shadow-chrome={scrolled}
+  data-scrolled={scrolled}
+>
   <nav class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href={base} class="text-lg font-bold tracking-wide">{SITE_NAME}</a>
+    <a href={base} class="text-lg font-bold tracking-wide pressable">{SITE_NAME}</a>
     <button
       type="button"
-      class="md:hidden p-1"
+      class="md:hidden p-1 pressable"
       aria-label="メニュー"
       aria-expanded={mobileOpen}
       onclick={() => (mobileOpen = !mobileOpen)}
@@ -107,7 +127,7 @@
           <li class="relative" use:registerDropdown={item.label}>
             <button
               type="button"
-              class="hover:text-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+              class="hover:text-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer pressable"
               aria-haspopup="menu"
               aria-expanded={openDropdown === item.label}
               onclick={() => toggleDropdown(item.label)}
@@ -118,13 +138,18 @@
               </svg>
             </button>
             {#if openDropdown === item.label}
-              <ul role="menu" class="absolute left-0 top-full mt-2 min-w-44 bg-white text-gray-800 rounded-md shadow-lg ring-1 ring-black/10 py-1 z-50">
+              <ul
+                role="menu"
+                class="material-overlay absolute left-0 top-full mt-2 min-w-44 text-gray-800 rounded-xl py-1 z-50 origin-top-left"
+                in:materialIn
+                out:materialOut
+              >
                 {#each item.children as child}
                   <li role="none">
                     <a
                       role="menuitem"
                       href={child.href}
-                      class="block px-4 py-2 hover:bg-indigo-50 hover:text-indigo-700"
+                      class="block px-4 py-2 rounded-lg mx-1 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                     >
                       {child.label}
                     </a>
@@ -139,13 +164,14 @@
       {/each}
     </ul>
   </nav>
-  <ul class="flex-col gap-2 px-4 pb-3 text-sm font-medium md:hidden" class:hidden={!mobileOpen} class:flex={mobileOpen}>
+  {#if mobileOpen}
+  <ul class="flex flex-col gap-2 px-4 pb-3 text-sm font-medium md:hidden origin-top" in:materialIn={{ scaleFrom: 0.98 }} out:materialOut={{ scaleFrom: 0.98 }}>
     {#each items as item}
       {#if isDropdown(item)}
         <li>
           <button
             type="button"
-            class="w-full flex items-center justify-between py-1 hover:text-indigo-200"
+            class="w-full flex items-center justify-between py-1 hover:text-indigo-200 pressable"
             aria-expanded={!!mobileDropdownOpen[item.label]}
             onclick={() => toggleMobileDropdown(item.label)}
           >
@@ -167,4 +193,5 @@
       {/if}
     {/each}
   </ul>
+  {/if}
 </header>

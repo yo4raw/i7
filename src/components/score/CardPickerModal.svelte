@@ -1,5 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import { materialIn, materialOut } from '../../lib/motion';
   import type { Card } from '../../lib/data/fetchCardsJson';
   import { cardTextMatches } from '../../lib/cardFilter';
   import { normalizeAttribute } from '../../lib/score/types';
@@ -87,8 +89,8 @@
 {#if visible}
   <div id="card-picker-modal" class="fixed inset-0 z-50">
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="absolute inset-0 bg-black/50" id="modal-backdrop" onclick={close}></div>
-    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-lg shadow-xl max-h-[85vh] flex flex-col mx-4 sm:mx-auto">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="modal-backdrop" onclick={close} transition:fade={{ duration: 150 }}></div>
+    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-2xl shadow-overlay max-h-[85vh] flex flex-col mx-4 sm:mx-auto" in:materialIn out:materialOut>
       <div class="p-4 border-b flex-shrink-0">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-gray-700">衣装選択 - <span id="modal-slot-label">{slotLabel}</span></h3>
@@ -137,8 +139,8 @@
         {/each}
       </div>
       <div class="p-3 border-t flex justify-between flex-shrink-0">
-        <button id="modal-clear" type="button" class="text-sm text-red-500 hover:underline" onclick={clear}>枠をクリア</button>
-        <button id="modal-close" type="button" class="px-4 py-1.5 bg-gray-200 rounded text-sm hover:bg-gray-300" onclick={close}>閉じる</button>
+        <button id="modal-clear" type="button" class="text-sm text-red-500 hover:underline pressable" onclick={clear}>枠をクリア</button>
+        <button id="modal-close" type="button" class="px-4 py-1.5 bg-gray-200 rounded-lg text-sm hover:bg-gray-300 transition-colors pressable" onclick={close}>閉じる</button>
       </div>
     </div>
   </div>

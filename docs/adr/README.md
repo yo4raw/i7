@@ -56,3 +56,4 @@
 | [0043](0043-score-calc-spec-page-full-redesign.md) | スコア計算 仕様解説ページをパイプライン全体解説へ全面リデザイン | 承認 |
 | [0044](0044-spec-shrink-strategy-visual.md) | 仕様解説ページ §4 に期待カバー率の明示と縮小 vs スコアアップ戦略比較を追加 | 承認 |
 | [0045](0045-introduce-oxlint.md) | oxlint を唯一のリンターとして導入(pedantic の主観ルールは off・CI/プレコミットで強制) | 承認 |
+| [0046](0046-apple-design-redesign.md) | apple-design 原則に基づくサイト全体リデザイン(マテリアル3層・chrome限定半透明・CJKタイポ・依存ゼロモーション) | 承認 |

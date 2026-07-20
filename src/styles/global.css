@@ -1,14 +1,36 @@
 @import "tailwindcss";
 
 @theme {
+  /* 属性色。単一情報源は src/lib/constants.ts の ATTR_HEX。変更時は両方を更新する */
   --color-shout: #ef4444;
-  --color-beat: #3b82f6;
-  --color-melody: #22c55e;
+  --color-beat: #22c55e;
+  --color-melody: #3b82f6;
+
+  /* フォント: システムフォントスタック(CJK 明示)。カスタム Web フォントは導入しない (ADR 0046) */
+  --font-sans:
+    system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+
+  /* 角丸スケール */
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
+
+  /* 影スケール (ambient + key の 2 枚重ね)。ADR 0046 のマテリアル階層に対応 */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.07);
+  --shadow-card-hover: 0 4px 10px rgb(0 0 0 / 0.07), 0 2px 4px rgb(0 0 0 / 0.09);
+  --shadow-chrome: 0 1px 0 rgb(0 0 0 / 0.05), 0 6px 16px rgb(0 0 0 / 0.10);
+  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.14), 0 4px 8px rgb(0 0 0 / 0.08);
+
+  /* イージング。fluid=オーバーシュートなし / spring=わずかな overshoot (materialize 用) */
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+  --ease-spring: linear(
+    0, 0.006, 0.025, 0.101, 0.539, 0.826, 0.941, 0.994, 1.007, 1.004, 1
+  );
 }
 
 @layer base {
   :root {
-    /* チャート用テーマ変数（light） */
+    /* チャート用テーマ変数(light) */
     --chart-grid: #e5e7eb;
     --chart-axis-label: #6b7280;
     --chart-text: #374151;
@@ -16,7 +38,117 @@
     --chart-exclude-border: #d1d5db;
     --chart-mute-fill: #9ca3af;
   }
+
   html {
     @apply text-gray-900 bg-gray-50;
+    font-family: var(--font-sans);
+  }
+
+  /* body 背景: 上部にごく微弱な indigo ティント。半透明 chrome の存在意義を作る。
+     gray-500 キャプションの AA を割らない輝度に留める (ADR 0046) */
+  body {
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-indigo-100) 40%, transparent),
+      transparent 260px
+    );
+    background-repeat: no-repeat;
+  }
+
+  /* 見出しの CJK 向けデフォルト */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+/* ============================================================
+   マテリアル (ADR 0046)。フォールバックを定義側に集約し、
+   利用側 (各コンポーネント) には散らさない
+   ============================================================ */
+
+/* Chrome: 暗色インディゴ材。ヘッダー等の構造チュローム用 (白テキスト前提) */
+@utility material-chrome {
+  background-color: color-mix(in srgb, var(--color-indigo-700) 85%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-indigo-700);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  @media (prefers-contrast: more) {
+    background-color: var(--color-indigo-800);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Overlay: 明色材。ドロップダウン等の浮遊オーバーレイ用 (暗色テキスト前提)。
+   明色材の上に明色材を重ねないこと (ADR 0046) */
+@utility material-overlay {
+  background-color: color-mix(in srgb, white 82%, transparent);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid rgb(0 0 0 / 0.08);
+  box-shadow: var(--shadow-overlay);
+
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: white;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  @media (prefers-contrast: more) {
+    background-color: white;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: rgb(0 0 0 / 0.4);
+  }
+}
+
+/* Content: 完全不透明サーフェス。本文テキストを載せる面は必ずこれを使う (ADR 0046)。
+   リスト行・タイルに backdrop-filter は使わない */
+@utility surface-card {
+  background-color: #fff;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* 押下フィードバック: pointer-down 相当の即時反応 */
+@utility pressable {
+  transition: transform 100ms var(--ease-fluid);
+
+  &:active {
+    transform: scale(0.97);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+/* 大見出し: CJK 向け。負トラッキングは使わない (ADR 0046) */
+@utility text-display {
+  font-feature-settings: "palt";
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+/* ============================================================
+   モーション低減の一括対応 (ADR 0046)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
