@@ -357,8 +357,9 @@
           {@const cardBroachs = cardBroachsFor(card)}
           {@const maxShared = cardBroachs.length > 0 ? 1 : 2}
           <span
-            class="absolute left-0 top-1 bottom-1 w-0.5 rounded-r"
+            class="absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-full pointer-events-none"
             style="background-color:{characterColor(card.name || '')}"
+            data-testid="character-spine"
             aria-hidden="true"
           ></span>
           <img
