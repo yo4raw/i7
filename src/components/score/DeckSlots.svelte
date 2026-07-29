@@ -10,7 +10,7 @@
   import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
   import type { SharedBroach } from '../../lib/data/sharedBroachs';
-  import { ATTR_HEX } from '../../lib/constants';
+  import { ATTR_HEX, characterColor } from '../../lib/constants';
   import { normalizeAttribute } from '../../lib/score/types';
   import { countUsedBroachs } from '../../lib/score/broachInventory';
   import { cardThumbUrl } from '../../lib/ui';
@@ -76,7 +76,7 @@
       return `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-chrome-ink hover:bg-gray-100'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
     }
     const cursorClass = i === 5 ? 'cursor-pointer' : 'cursor-grab';
-    return `slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
+    return `slot-content relative border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
   }
 
   // 既存実装の踏襲: カード配置時のみ属性色を inline style で設定し、
@@ -356,6 +356,11 @@
           {@const attr = normalizeAttribute(card.attribute)}
           {@const cardBroachs = cardBroachsFor(card)}
           {@const maxShared = cardBroachs.length > 0 ? 1 : 2}
+          <span
+            class="absolute left-0 top-1 bottom-1 w-0.5 rounded-r"
+            style="background-color:{characterColor(card.name || '')}"
+            aria-hidden="true"
+          ></span>
           <img
             src={cardThumbUrl(card.ID!)}
             alt={card.cardname || ''}

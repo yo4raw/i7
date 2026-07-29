@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CHARACTER_GROUPS } from '../lib/constants';
+  import { CHARACTER_GROUPS, characterColor } from '../lib/constants';
   import { loadRabbitNotes, saveRabbitNotes, type RabbitNoteMap } from '../lib/data/rabbitNote';
 
   const ATTRS = [
@@ -7,14 +7,6 @@
     { key: 'beat', label: 'Beat', color: 'text-green-600', border: 'focus:border-green-400' },
     { key: 'melody', label: 'Melody', color: 'text-blue-600', border: 'focus:border-blue-400' },
   ] as const;
-
-  const GROUP_COLORS: Record<string, string> = {
-    // IDOLiSH7 のみ無彩色。グループ別アクセント全体はキャラクターカラー適用時に見直す
-    'IDOLiSH7': 'border-l-chrome-ink',
-    'TRIGGER': 'border-l-amber-500',
-    'Re:vale': 'border-l-pink-500',
-    'ŹOOĻ': 'border-l-emerald-500',
-  };
 
   let data = $state<RabbitNoteMap>({});
   let feedback = $state('');
@@ -64,7 +56,12 @@
 
 <div>
   {#each CHARACTER_GROUPS as group}
-    <section class="surface-card mb-4 border-l-4 {GROUP_COLORS[group.name] || ''}">
+    <section class="surface-card relative mb-4 overflow-hidden">
+      <span class="absolute left-0 top-0 bottom-0 flex w-1 flex-col" aria-hidden="true">
+        {#each group.members as member (member)}
+          <span class="flex-1" style="background-color:{characterColor(member)}"></span>
+        {/each}
+      </span>
       <h2 class="text-lg font-bold px-4 pt-4 pb-2">{group.name}</h2>
       <div class="px-4 pb-4 space-y-3">
         {#each group.members as member}

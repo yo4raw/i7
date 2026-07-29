@@ -4,12 +4,14 @@
 
   type GroupKey = 'ALL' | 'Shout' | 'Beat' | 'Melody' | '条件付き';
   const GROUP_ORDER: GroupKey[] = ['ALL', 'Shout', 'Beat', 'Melody', '条件付き'];
+  // 罫線の色は「特定の属性に対応する枠 = 属性色」「複数属性/条件依存で単一属性に紐付かない枠 = 無彩色」の
+  // 2 種類のみ。意味を持つ色はキャラ 16 色と属性 3 色だけという原則のため、恣意的なアクセント色（紫等）は使わない
   const GROUP_COLORS: Record<GroupKey, string> = {
-    ALL: 'border-l-gray-500',
+    ALL: 'border-l-gray-300',
     Shout: 'border-l-red-500',
     Beat: 'border-l-green-500',
     Melody: 'border-l-blue-500',
-    条件付き: 'border-l-purple-500',
+    条件付き: 'border-l-gray-300',
   };
 
   function groupOf(sb: SharedBroach): GroupKey {
