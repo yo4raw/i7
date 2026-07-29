@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+/* 数字・欧文専用。CJK には適用しない (ADR 0047 / ADR 0046 §5 の限定的な例外) */
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('/fonts/barlow-semi-condensed-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('/fonts/barlow-semi-condensed-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('/fonts/barlow-semi-condensed-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0, U+2000-206F, U+2212;
+}
+
 @theme {
   /* 属性色。単一情報源は src/lib/constants.ts の ATTR_HEX。変更時は両方を更新する */
   --color-shout: #ef4444;
@@ -10,10 +33,11 @@
   --color-chrome-ink: #14151A;
   --color-chrome-ink-soft: #2A2C33;
 
-  /* フォント: システムフォントスタック(CJK 明示)。カスタム Web フォントは導入しない (ADR 0046) */
+  /* フォント: 数字・欧文は Barlow Semi Condensed(unicode-range で CJK 対象外。ADR 0046 の限定的な例外)、
+     CJK はシステムフォントスタックのまま */
   --font-sans:
-    system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans",
-    "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+    'Barlow Semi Condensed', system-ui, -apple-system, "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
 
   /* 角丸スケール */
   --radius-card: 0.75rem;

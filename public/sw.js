@@ -4,13 +4,14 @@
 // キャッシュ戦略:
 //   - /_astro/*                                  → CacheFirst (immutable hashed)
 //   - /assets/cards|th_cards|songs/*             → CacheFirst (アセット)
+//   - /fonts/*                                    → CacheFirst (数字・欧文フォント。ADR 0047)
 //   - docs.google.com /spreadsheets/             → StaleWhileRevalidate (GViz)
 //   - ナビゲーション (HTML)                       → NetworkFirst (フォールバック: cache → /)
 //   - その他同オリジン                            → StaleWhileRevalidate
 //
 // SW_VERSION を上げると古い static キャッシュをパージする。
 
-const SW_VERSION = 'v2';
+const SW_VERSION = 'v3';
 const STATIC_CACHE = `i7-static-${SW_VERSION}`;
 // PNG → WebP 移行に伴い旧画像キャッシュ (i7-images) を破棄させるためバージョンを付与。
 // 旧キャッシュは activate の「未知キャッシュ掃除」で削除される。
@@ -71,6 +72,12 @@ self.addEventListener('fetch', (event) => {
 
   // ハッシュ付き immutable アセット
   if (url.pathname.startsWith('/_astro/')) {
+    event.respondWith(cacheFirst(req, STATIC_CACHE));
+    return;
+  }
+
+  // 数字・欧文フォント(woff2)
+  if (url.pathname.startsWith('/fonts/')) {
     event.respondWith(cacheFirst(req, STATIC_CACHE));
     return;
   }
