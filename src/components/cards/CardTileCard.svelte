@@ -42,7 +42,7 @@
   data-page-marker={pageMarker ?? undefined}
 >
   <span
-    class="absolute left-0 top-3 bottom-3 w-1 rounded-r"
+    class="absolute left-0.5 top-4 bottom-4 w-1 rounded-full pointer-events-none"
     style="background-color:{spineColor}"
     data-testid="character-spine"
     aria-hidden="true"

@@ -60,7 +60,7 @@
 {/if}
 <div class="relative rounded-lg shadow p-3 hover:shadow-card-hover transition-shadow" style="border-top:3px solid {borderColor}; background: {bg}">
   <span
-    class="absolute left-0 top-2 bottom-2 w-1 rounded-r"
+    class="absolute left-0.5 top-3 bottom-3 w-1 rounded-full pointer-events-none"
     style="background-color:{spineColor}"
     data-testid="character-spine"
     aria-hidden="true"

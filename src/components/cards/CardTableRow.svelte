@@ -83,7 +83,7 @@
 >
   <td class="px-3 py-2 relative">
     <span
-      class="absolute left-0 top-1 bottom-1 w-1 rounded-r"
+      class="absolute left-0.5 top-2 bottom-2 w-1 rounded-full pointer-events-none"
       style="background-color:{spineColor}"
       data-testid="character-spine"
       aria-hidden="true"
