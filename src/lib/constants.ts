@@ -37,6 +37,41 @@ export const ATTRS = [
   { key: 'melody', name: 'Melody' },
 ] as const;
 
+/** 無彩色クロームの基準色。ヘッダー等の構造面に使う */
+export const CHROME_INK = '#14151A';
+
+/**
+ * キャラクターカラー 16 色。色の単一情報源。
+ * 変更時は src/styles/global.css の @theme も更新する。
+ *
+ * 公式のカラーコードは公開されていない。定着した色名から校正した候補値であり、
+ * 全色が CHROME_INK に対して WCAG 1.4.11 の 3:1 を満たすよう調整してある。
+ * 十龍之介は原作では和泉一織と同じ「紺」だが、16 色を判別可能にするため彩度を下げている。
+ */
+export const CHARACTER_HEX: Record<string, string> = {
+  和泉一織: '#3D5FC4',
+  二階堂大和: '#43B75D',
+  和泉三月: '#F08322',
+  四葉環: '#56C5E8',
+  逢坂壮五: '#8A6BC8',
+  六弥ナギ: '#F5C518',
+  七瀬陸: '#E4373B',
+  八乙女楽: '#9AA3AD',
+  九条天: '#F2A7C3',
+  十龍之介: '#5878A6',
+  百: '#FF3D8B',
+  千: '#C3E829',
+  亥清悠: '#6FDCC0',
+  狗丸トウマ: '#C0353D',
+  棗巳波: '#D8C3A0',
+  御堂虎於: '#C77FC0',
+};
+
+/** キャラ名から色を引く。未知の名前には無彩色を返す */
+export function characterColor(name: string): string {
+  return CHARACTER_HEX[name] ?? '#6B7280';
+}
+
 /** 属性色: 属性名キー */
 export const ATTR_HEX: Record<string, string> = {
   Shout: '#ef4444', Beat: '#22c55e', Melody: '#3b82f6',
