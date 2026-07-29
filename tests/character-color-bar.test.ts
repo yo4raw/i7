@@ -17,3 +17,9 @@ test('衣装一覧の行にキャラスパインが出る', async ({ page }) => 
   await page.goto('/cards/');
   await expect(page.getByTestId('character-spine').first()).toBeVisible();
 });
+
+test('ホームのヒーローからキャラで絞り込める', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('七瀬陸の衣装一覧').click();
+  await expect(page).toHaveURL(/char=/);
+});

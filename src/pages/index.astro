@@ -1,10 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventCountdown from '../components/EventCountdown.svelte';
+import CharacterColorHero from '../components/CharacterColorHero.svelte';
 import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
 import { fetchEventsCsv } from '../lib/data/fetchEventsCsv.ts';
-import { RARITIES, RARITY_BADGE_CLASSES, SITE_NAME } from '../lib/constants.ts';
+import { RARITIES, RARITY_BADGE_CLASSES } from '../lib/constants.ts';
 import { PAGE_DESCRIPTIONS } from '../lib/seo.ts';
 
 const [cards, songs, events] = await Promise.all([
@@ -71,24 +72,18 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
 ---
 
 <BaseLayout title="ホーム" description={PAGE_DESCRIPTIONS.home}>
-  <!-- ヒーロー -->
-  <section class="surface-card border-l-4 border-chrome-ink p-6 mb-6">
-    <h1 class="text-2xl font-bold text-display mb-2 text-gray-900">{SITE_NAME}</h1>
-    <p class="text-sm text-gray-600 mb-4">
-      スマートフォン向けゲーム『アイドリッシュセブン』の衣装・楽曲・イベント情報をまとめた、ファンによる<strong>非公式</strong>のデータベースサイトです。
-      衣装/楽曲の検索、スコア計算・編成探索・衣装比較などのプレイヤー向けツール、所持衣装・デッキの管理を提供します。
-    </p>
-    <div class="flex flex-wrap gap-3">
-      {stats.map((s) => (
-        <a href={s.href}
-           class="flex items-baseline gap-1.5 px-4 py-2 rounded-lg bg-gray-100 border border-gray-200 hover:border-chrome-ink transition-colors">
-          <span class="text-xs text-gray-500">{s.label}</span>
-          <span class="text-xl font-bold tabular-nums text-gray-900">{s.value.toLocaleString('ja-JP')}</span>
-          <span class="text-xs text-gray-500">{s.unit}</span>
-        </a>
-      ))}
-    </div>
-  </section>
+  <!-- ヒーロー: 16 色バーを大判スケールで反復 (ADR 0047) -->
+  <CharacterColorHero base={base} client:load />
+  <div class="flex flex-wrap gap-3 mt-4 mb-6">
+    {stats.map((s) => (
+      <a href={s.href}
+         class="flex items-baseline gap-1.5 px-4 py-2 rounded-lg bg-gray-100 border border-gray-200 hover:border-chrome-ink transition-colors">
+        <span class="text-xs text-gray-500">{s.label}</span>
+        <span class="text-xl font-bold tabular-nums text-gray-900">{s.value.toLocaleString('ja-JP')}</span>
+        <span class="text-xs text-gray-500">{s.unit}</span>
+      </a>
+    ))}
+  </div>
 
   <!-- 開催中／次回イベント -->
   <EventCountdown
