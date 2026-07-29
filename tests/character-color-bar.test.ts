@@ -12,3 +12,8 @@ test('七瀬陸のセグメントが赤である', async ({ page }) => {
   const riku = page.locator('[data-character="七瀬陸"]');
   await expect(riku).toHaveCSS('background-color', 'rgb(228, 55, 59)');
 });
+
+test('衣装一覧の行にキャラスパインが出る', async ({ page }) => {
+  await page.goto('/cards/');
+  await expect(page.getByTestId('character-spine').first()).toBeVisible();
+});

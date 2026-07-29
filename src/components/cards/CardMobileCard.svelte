@@ -2,7 +2,7 @@
   import type { CardListItem } from '../../lib/cardListData';
   import type { Card } from '../../lib/data/fetchCardsJson';
   import { formatSkillEffectMax } from '../../lib/score/skillFormatter';
-  import { ATTR_BG, ATTR_HEX } from '../../lib/constants';
+  import { ATTR_BG, ATTR_HEX, characterColor } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { ATTR_TEXT_CLASS } from '../../lib/ui';
   import { attrDonutSvg } from '../../lib/donutChart';
@@ -24,6 +24,8 @@
 
   const attrBg = $derived(ATTR_BG[card.attribute] || 'transparent');
   const borderColor = $derived(ATTR_HEX[card.attribute] || 'transparent');
+  // キャラ色のスパイン用（name = キャラ名, cardname = 衣装名。取り違え注意）
+  const spineColor = $derived(characterColor(card.name || ''));
   const thumb = $derived(`${thumbUrl}/${card.ID}.webp`);
   const bg = $derived(
     `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.65)), linear-gradient(${attrBg}, ${attrBg}), url(${thumb}) no-repeat right 25% / auto 500%`
@@ -56,7 +58,13 @@
 {#if pageMarker != null}
   <div data-page-marker={pageMarker} aria-hidden="true"></div>
 {/if}
-<div class="rounded-lg shadow p-3 hover:shadow-card-hover transition-shadow" style="border-top:3px solid {borderColor}; background: {bg}">
+<div class="relative rounded-lg shadow p-3 hover:shadow-card-hover transition-shadow" style="border-top:3px solid {borderColor}; background: {bg}">
+  <span
+    class="absolute left-0 top-2 bottom-2 w-1 rounded-r"
+    style="background-color:{spineColor}"
+    data-testid="character-spine"
+    aria-hidden="true"
+  ></span>
   <div class="flex gap-3 cursor-pointer" onclick={handleRowClick} role="presentation">
     <div class="flex-shrink-0">
       <img src={thumb} alt={card.cardname || ''} class="w-12 h-auto rounded" loading="lazy" />

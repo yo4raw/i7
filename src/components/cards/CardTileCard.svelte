@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { CardListItem } from '../../lib/cardListData';
-  import { ATTR_HEX } from '../../lib/constants';
+  import { ATTR_HEX, characterColor } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import CountInput from './CountInput.svelte';
   import RarityBadge from '../ui/RarityBadge.svelte';
@@ -19,6 +19,8 @@
   let { card, base, thumbUrl, bonusTier, enableNameFilter = false, pageMarker = null, onFilterByName }: Props = $props();
 
   const borderColor = $derived(ATTR_HEX[card.attribute] || 'transparent');
+  // キャラ色のスパイン用（name = キャラ名, cardname = 衣装名。取り違え注意）
+  const spineColor = $derived(characterColor(card.name || ''));
   const thumb = $derived(`${thumbUrl}/${card.ID}.webp`);
   const bonusDef = $derived(bonusTier && bonusTier !== 'none' ? EVENT_BONUS_TIERS.find((t) => t.key === bonusTier) ?? null : null);
 
@@ -35,10 +37,16 @@
 </script>
 
 <div
-  class="surface-card hover:shadow-card-hover hover:-translate-y-0.5 transition-[box-shadow,transform] duration-150 overflow-hidden flex flex-col"
+  class="relative surface-card hover:shadow-card-hover hover:-translate-y-0.5 transition-[box-shadow,transform] duration-150 overflow-hidden flex flex-col"
   style="border-top:3px solid {borderColor}"
   data-page-marker={pageMarker ?? undefined}
 >
+  <span
+    class="absolute left-0 top-3 bottom-3 w-1 rounded-r"
+    style="background-color:{spineColor}"
+    data-testid="character-spine"
+    aria-hidden="true"
+  ></span>
   <button
     type="button"
     class="block w-full bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-chrome-ink"
