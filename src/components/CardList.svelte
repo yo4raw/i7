@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CardListItem } from '../lib/cardListData';
-  import { CHARACTER_GROUPS, RARITIES, ATTRIBUTES, CHROME_INK, characterColor } from '../lib/constants';
+  import { CHARACTER_GROUPS, RARITIES, ATTRIBUTES } from '../lib/constants';
+  import { chipActiveStyle } from '../lib/characterChipStyle';
   import { buildLiveTierMap, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
@@ -93,30 +94,11 @@
     { value: 'silver', label: '銀特効' },
     { value: 'bronze', label: '銅特効' },
   ];
-  // キャラ色チップの選択時スタイル (ADR 0047)。
-  // 16 色は明度がばらばらなので、塗り色に対して文字が WCAG AA (4.5:1) を満たすよう
-  // 実測コントラスト比に基づき個別に調整している（詳細は task-6-report.md）。
-  //
-  // - 既定: 塗り = キャラ色そのもの、文字 = 近黒 CHROME_INK
-  // - CHIP_TEXT_OVERRIDE: 近黒では 4.5:1 未満だが白文字なら満たす色 → 文字を白に
-  // - CHIP_DILUTED: 近黒・白のどちらでも 4.5:1 に届かない色 → 塗りを白で薄め、
-  //   境界線のみ原色を残して近黒文字を載せる
-  const CHIP_TEXT_OVERRIDE: Record<string, string> = {
-    和泉一織: '#FFFFFF',
-    十龍之介: '#FFFFFF',
-    狗丸トウマ: '#FFFFFF',
-  };
-  const CHIP_DILUTED = new Set(['逢坂壮五', '七瀬陸']);
-
+  // キャラ色チップの選択時スタイル (ADR 0047)。計算ロジックと判断根拠は characterChipStyle.ts 側に集約
+  // （tests/unit/characterChipStyle.test.ts で全16色の実効コントラストを検証している）
   const characterGroups = CHARACTER_GROUPS.map((g) => ({
     name: g.name,
-    options: g.members.map((m) => {
-      const hex = characterColor(m);
-      const activeStyle = CHIP_DILUTED.has(m)
-        ? `background-color:color-mix(in srgb, ${hex} 22%, white);border-color:${hex};color:${CHROME_INK}`
-        : `background-color:${hex};border-color:${hex};color:${CHIP_TEXT_OVERRIDE[m] ?? CHROME_INK}`;
-      return { value: m, label: m, activeStyle };
-    }),
+    options: g.members.map((m) => ({ value: m, label: m, activeStyle: chipActiveStyle(m) })),
   }));
   const skillOptions = $derived(skillTypes.map((s) => ({ value: s, label: s })));
 

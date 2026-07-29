@@ -64,7 +64,9 @@
     onclick={() => toggle(option.value)}
     style={selected.has(option.value) ? (option.activeStyle ?? '') : ''}
     class="{chipBase} {selected.has(option.value)
-      ? `${option.activeStyle ? '' : (option.activeClass ?? 'bg-chrome-ink border-chrome-ink')} text-white font-semibold`
+      ? option.activeStyle
+        ? 'font-semibold'
+        : `${option.activeClass ?? 'bg-chrome-ink border-chrome-ink'} text-white font-semibold`
       : chipOff}"
   >
     {selected.has(option.value) ? '✓ ' : ''}{option.label}
