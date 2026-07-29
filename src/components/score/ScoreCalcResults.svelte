@@ -210,7 +210,9 @@
     };
     return {
       shrink: make(result.shrinkScores, '縮小スキル寄与', '#10b981'),
-      scoreup: make(result.scoreUpScores, 'スコアアップ寄与', '#6366f1'),
+      // スコアアップは仕様解説ページ (ADR 0043) と同じ amber を使う。
+      // 同一パネル内の主ヒストグラム（インク）・縮小（emerald）と重ならない色にする
+      scoreup: make(result.scoreUpScores, 'スコアアップ寄与', '#f59e0b'),
     };
   });
 

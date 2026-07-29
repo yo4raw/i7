@@ -57,7 +57,7 @@
         {@const s = status(ev)}
         <li class="event-item surface-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <a href={`${base}events/${ev.id}/`} class="text-gray-900 font-semibold hover:underline">
+            <a href={`${base}events/${ev.id}/`} class="text-gray-900 font-semibold underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">
               {ev.eventname}
             </a>
             <div class="text-xs text-gray-500 mt-0.5">

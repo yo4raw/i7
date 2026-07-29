@@ -228,7 +228,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
             <tr class="border-b border-gray-100">
               <td class="py-1.5 pr-3 text-gray-500">{SLOT_ROLES[s.slotIndex]}</td>
               <td class="py-1.5 pr-3">
-                <a href={`${base}cards/${s.ID}/`} class="text-gray-900 hover:underline">{s.name}「{s.cardname}」</a>
+                <a href={`${base}cards/${s.ID}/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{s.name}「{s.cardname}」</a>
                 <span class="text-gray-400 ml-1">{s.rarity}</span>
               </td>
               <td class="py-1.5 pr-3">{s.attribute}</td>

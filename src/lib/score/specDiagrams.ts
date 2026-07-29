@@ -127,14 +127,30 @@ export function pipelineOverviewSvg(opts?: { highlight?: StageKey }): string {
  * 1. チーム属性値
  * ================================================================ */
 
+/**
+ * チーム属性値の内訳セグメント配色（無彩色 4 段階、寄与の大きい順に濃い）。
+ *
+ * 積み上げバーはセグメントを境界線なしで直接隣接させるため、隣り合う 2 色間で
+ * 十分な明度差が要る。下記は隣接ペアすべてで 1.8:1 以上を確保している:
+ *   raw–broach 2.41:1 / broach–center 2.31:1 / center–friend 1.82:1
+ * ブローチが 0 の行では raw と center が直接隣接するため、その組合せ (5.57:1) も
+ * 判別可能にしてある。最淡の friend も白カード地に対して 1.77:1 あり輪郭が見える。
+ */
+const ATTR_STACK_COLORS = {
+  raw: '#14151A',
+  broach: '#4B5563',
+  center: '#8A909C',
+  friend: '#BFC4CE',
+} as const;
+
 /** チーム属性値の内訳（素値/ブローチ/センター/フレンド）積み上げバー */
 export function teamAttrStackSvg(team: ComputedTeam): string {
   const c = STAGE_COLORS.attr;
   const SEGMENTS = [
-    { key: 'raw', label: '衣装素値 (特効込み)', color: c.main },
-    { key: 'broach', label: 'ブローチ', color: '#a5b4fc' },
-    { key: 'center', label: 'センタースキル', color: c.dark },
-    { key: 'friend', label: 'フレンドスキル', color: '#818cf8' },
+    { key: 'raw', label: '衣装素値 (特効込み)', color: ATTR_STACK_COLORS.raw },
+    { key: 'broach', label: 'ブローチ', color: ATTR_STACK_COLORS.broach },
+    { key: 'center', label: 'センタースキル', color: ATTR_STACK_COLORS.center },
+    { key: 'friend', label: 'フレンドスキル', color: ATTR_STACK_COLORS.friend },
   ] as const;
   const rows = (['Shout', 'Beat', 'Melody'] as const).map(attr => ({
     attr,

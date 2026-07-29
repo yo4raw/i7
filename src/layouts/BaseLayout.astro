@@ -143,9 +143,9 @@ try {
               <li class="flex items-center gap-1.5 min-w-0">
                 {i > 0 && <span aria-hidden="true" class="text-gray-300">/</span>}
                 {i === breadcrumbs.length - 1 ? (
-                  <span aria-current="page" class="text-gray-700 truncate">{b.name}</span>
+                  <span aria-current="page" class="text-gray-500 truncate">{b.name}</span>
                 ) : (
-                  <a href={b.url} class="hover:text-gray-900 hover:underline">{b.name}</a>
+                  <a href={b.url} class="text-gray-700 hover:text-gray-900 hover:underline">{b.name}</a>
                 )}
               </li>
             ))}

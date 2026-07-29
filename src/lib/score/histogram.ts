@@ -22,7 +22,8 @@ export function renderHistogramSvg(
     return '<span class="text-gray-400 text-xs">データなし</span>';
   }
   const xAxisLabel = options?.xAxisLabel ?? 'スコア';
-  const barColor = options?.barColor ?? '#6366f1';
+  // 既定はクロームのインク（無彩色）。スコア分布そのものは色で意味を持たせない
+  const barColor = options?.barColor ?? '#2A2C33';
 
   const range = maxScore - minScore;
   const binWidth = range / BIN_COUNT;

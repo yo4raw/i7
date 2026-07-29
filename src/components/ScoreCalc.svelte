@@ -352,7 +352,8 @@
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
         <div class="relative flex gap-2" data-noshot>
-          <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-700' : 'bg-chrome-ink text-white'} rounded hover:bg-chrome-ink-soft transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
+          <!-- hover は必ず分岐の中に置く。保存済み(緑)にインクの hover が掛かると AA を割るため -->
+          <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-chrome-ink text-white hover:bg-chrome-ink-soft'} rounded transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
           <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors" onclick={showLoadDropdown}>読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー" disabled={shareCopied} onclick={shareDeckUrl}>{shareCopied ? '✅ コピーしました' : '🔗 URLコピー'}</button>
           <button id="btn-share-image" type="button" class="text-xs px-2 py-1 bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-colors disabled:opacity-60" aria-label="編成とスコアを画像で保存" disabled={imageBusy} onclick={shareDeckImage}>{imageBusy ? '生成中…' : '📷 画像'}</button>

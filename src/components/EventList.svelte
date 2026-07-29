@@ -177,7 +177,7 @@
               <div class="text-xs mt-1 {remainClass}">{remainText}</div>
             {/if}
           </td>
-          <td class="px-3 py-2 font-medium"><a href={`${base}events/${ev.id}/`} class="text-gray-900 hover:underline">{ev.eventname}</a></td>
+          <td class="px-3 py-2 font-medium"><a href={`${base}events/${ev.id}/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{ev.eventname}</a></td>
           <td class="px-3 py-2 text-xs text-gray-600">{ev.eventtype}</td>
           <td class="px-3 py-2 text-xs text-gray-700">{ev.start_date}</td>
           <td class="px-3 py-2 text-xs text-gray-700">{ev.end_date}</td>
@@ -191,7 +191,7 @@
   {#each filtered as { ev, status, remainText, remainClass } (ev.id)}
     <div class="rounded-lg shadow p-3 bg-white {rowClass(status)}">
       <div class="flex items-start justify-between gap-2 mb-1">
-        <a href={`${base}events/${ev.id}/`} class="font-medium text-sm flex-1 text-gray-900 hover:underline">{ev.eventname}</a>
+        <a href={`${base}events/${ev.id}/`} class="font-medium text-sm flex-1 text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{ev.eventname}</a>
         <span class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-semibold {badgeClass(status)}">{badgeText(status)}</span>
       </div>
       {#if remainText}
