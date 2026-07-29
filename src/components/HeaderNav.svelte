@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SITE_NAME } from '../lib/constants';
   import { materialIn, materialOut } from '../lib/motion';
+  import CharacterColorBar from './CharacterColorBar.svelte';
 
   type Props = { base: string };
   let { base }: Props = $props();
@@ -164,6 +165,7 @@
       {/each}
     </ul>
   </nav>
+  <CharacterColorBar />
   {#if mobileOpen}
   <ul class="flex flex-col gap-2 px-4 pb-3 text-sm font-medium md:hidden origin-top" in:materialIn={{ scaleFrom: 0.98 }} out:materialOut={{ scaleFrom: 0.98 }}>
     {#each items as item}

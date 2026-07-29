@@ -1,0 +1,14 @@
+import { test, expect } from '@playwright/test';
+
+test('ヘッダーに 16 色バーが表示される', async ({ page }) => {
+  await page.goto('/');
+  const bar = page.getByTestId('character-color-bar');
+  await expect(bar).toBeVisible();
+  await expect(page.getByTestId('character-color-segment')).toHaveCount(16);
+});
+
+test('七瀬陸のセグメントが赤である', async ({ page }) => {
+  await page.goto('/');
+  const riku = page.locator('[data-character="七瀬陸"]');
+  await expect(riku).toHaveCSS('background-color', 'rgb(228, 55, 59)');
+});
