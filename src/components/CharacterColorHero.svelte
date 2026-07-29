@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CHARACTER_GROUPS, characterColor } from '../lib/constants';
+  import { CHARACTER_GROUPS, SITE_NAME, characterColor } from '../lib/constants';
 
   type Props = { base: string };
   let { base }: Props = $props();
@@ -8,7 +8,7 @@
 <!-- 大判の 16 色バー。ヘッダーの 3px 線と同じ並びを大きなスケールで反復する (ADR 0047) -->
 <section class="rounded-card overflow-hidden" style="background-color:var(--color-chrome-ink)">
   <div class="px-5 pt-5 pb-4">
-    <h1 class="text-display text-2xl font-bold text-white">i7マネ部屋</h1>
+    <h1 class="text-display text-2xl font-bold text-white">{SITE_NAME}</h1>
     <p class="mt-1.5 text-sm text-gray-300">
       アイドリッシュセブンの衣装・楽曲・イベントを調べて、デッキのスコアを試算できます。
     </p>
