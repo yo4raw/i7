@@ -1,5 +1,5 @@
 <script lang="ts">
-  export type ChipOption = { value: string; label: string; activeClass?: string };
+  export type ChipOption = { value: string; label: string; activeClass?: string; activeStyle?: string };
   export type ChipGroup = { name: string; options: ChipOption[] };
 
   type Props = {
@@ -30,6 +30,10 @@
     'inline-flex items-center rounded-full border px-3 py-1 text-sm cursor-pointer select-none transition-colors pressable';
   const chipOff =
     'bg-white border-gray-300 text-gray-700 hover:border-chrome-ink';
+  // グループ一括選択チップ（IDOLiSH7 等）の OFF 状態。個別メンバーチップ（chipOff）と紛らわしくならないよう、
+  // 枠線の濃さだけでなく背景も塗って区別する（border-dashed と合わせて二重に差をつける）
+  const chipGroupOff =
+    'bg-gray-100 border-gray-400 text-gray-600 hover:border-chrome-ink';
 
   function toggle(value: string) {
     const next = new Set(selected);
@@ -58,8 +62,9 @@
     type="button"
     aria-pressed={selected.has(option.value)}
     onclick={() => toggle(option.value)}
+    style={selected.has(option.value) ? (option.activeStyle ?? '') : ''}
     class="{chipBase} {selected.has(option.value)
-      ? `${option.activeClass ?? 'bg-chrome-ink border-chrome-ink'} text-white font-semibold`
+      ? `${option.activeStyle ? '' : (option.activeClass ?? 'bg-chrome-ink border-chrome-ink')} text-white font-semibold`
       : chipOff}"
   >
     {selected.has(option.value) ? '✓ ' : ''}{option.label}
@@ -77,7 +82,7 @@
             onclick={() => toggleGroup(group)}
             class="{chipBase} border-dashed font-semibold {isGroupOn(group)
               ? 'bg-chrome-ink border-chrome-ink text-white'
-              : 'bg-white border-gray-400 text-gray-700 hover:border-chrome-ink'}"
+              : chipGroupOff}"
           >
             {group.name}
           </button>
