@@ -64,12 +64,12 @@
 </script>
 
 <div
-  class="fixed bottom-0 inset-x-0 z-40 bg-white border-t-2 border-indigo-300 shadow-[0_-4px_12px_rgba(0,0,0,0.12)]"
+  class="fixed bottom-0 inset-x-0 z-40 bg-white border-t-2 border-chrome-ink shadow-[0_-4px_12px_rgba(0,0,0,0.12)]"
   data-testid="compare-detail"
 >
   <div class="max-w-7xl mx-auto px-4 py-2">
     <div class="flex items-center justify-between mb-1">
-      <span class="text-xs font-bold text-indigo-700">詳細比較（{entries.length}/4枚）</span>
+      <span class="text-xs font-bold text-gray-900">詳細比較（{entries.length}/4枚）</span>
       <button type="button" class="text-xs text-gray-500 hover:text-red-600 cursor-pointer" onclick={onClear}>✕ クリア</button>
     </div>
     {#if scoreChartEntries.length > 0}

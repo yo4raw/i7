@@ -97,9 +97,9 @@
 </script>
 
 <section class="space-y-4">
-  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
+  <div class="bg-gradient-to-br from-gray-50 to-gray-200 rounded-lg shadow p-4 md:p-6">
     <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">理論値最大編成</div>
-    <div class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">{result.best.score.toLocaleString()}</div>
+    <div class="text-3xl md:text-5xl font-bold text-gray-900 text-center mt-1 tabular-nums">{result.best.score.toLocaleString()}</div>
     <div class="text-center text-xs text-gray-500 mt-1">
       {result.aborted ? `${modeLabel} ※探索中断` : modeLabel}
     </div>
@@ -127,7 +127,7 @@
           {@const bonusLabel = BONUS_LABEL[tier]}
           {@const bonusClass = BONUS_CLASS[tier]}
           {@const slotLabel = SLOT_LABELS[i]}
-          {@const labelColor = i === 0 ? 'text-indigo-600' : i === 5 ? 'text-amber-600' : 'text-gray-500'}
+          {@const labelColor = i === 0 ? 'text-gray-900' : i === 5 ? 'text-amber-600' : 'text-gray-500'}
           <div>
             <div class="text-[10px] text-center {labelColor} font-bold mb-1">{slotLabel}</div>
             <div class="border-2 rounded-lg p-1.5 flex flex-col items-center min-h-[120px]" style="border-color:{attrColor}">
@@ -179,7 +179,7 @@
                 {@const bonusClass = BONUS_CLASS[tier]}
                 {@const sl = getApSkillLevel(card, 5)}
                 {@const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl)}
-                {@const labelColor = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
+                {@const labelColor = i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
                 {@const slotBroachs = bestContext.resolvedBroachs.get(i) ?? []}
                 <tr class="border-t">
                   <td class="py-1 px-1 text-[10px] {labelColor}">{SLOT_LABELS[i]}</td>
@@ -327,7 +327,7 @@
             <div class="text-xs text-gray-400">#{rank + 1}</div>
           </div>
           <div class="flex-shrink-0 text-right">
-            <div class="text-sm font-bold text-indigo-700">{rec.score.toLocaleString()}</div>
+            <div class="text-sm font-bold text-gray-900 tabular-nums">{rec.score.toLocaleString()}</div>
           </div>
           <div class="flex-1 min-w-0 overflow-x-auto">
             <div class="flex gap-1.5">
@@ -339,7 +339,7 @@
                   {@const tier = currentTierMap.get(card.ID!) ?? 'none'}
                   {@const tierMark = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : ''}
                   {@const slotMark = i === 0 ? '★' : i === 5 ? '✦' : ''}
-                  {@const slotColor = i === 0 ? 'text-indigo-600' : i === 5 ? 'text-amber-600' : 'text-gray-400'}
+                  {@const slotColor = i === 0 ? 'text-gray-900' : i === 5 ? 'text-amber-600' : 'text-gray-400'}
                   <div class="flex-shrink-0 flex flex-col items-center w-20" title={`${SLOT_LABELS[i]}: ${card.cardname || ''} (${card.name || ''})`}>
                     <div class="text-[10px] {slotColor} font-bold leading-none">{slotMark}{tierMark}</div>
                     <img
@@ -362,7 +362,7 @@
   </section>
 
   <div class="text-center">
-    <button type="button" class="text-xs text-indigo-600 hover:underline" onclick={sendToScoreCalc}>
+    <button type="button" class="text-xs text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900" onclick={sendToScoreCalc}>
       この編成をスコア計算ページに送る →
     </button>
   </div>

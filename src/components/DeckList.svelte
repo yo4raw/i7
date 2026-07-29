@@ -80,7 +80,7 @@
 {#if decks.length === 0}
   <div class="text-center py-12 text-gray-500">
     <p class="text-lg mb-2">保存されたデッキがありません</p>
-    <p class="text-sm"><a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算</a>でデッキを保存してください</p>
+    <p class="text-sm"><a href={`${base}score-calc/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">スコア計算</a>でデッキを保存してください</p>
   </div>
 {:else}
   <div class="space-y-4">
@@ -97,7 +97,7 @@
             </div>
           </div>
           <div class="flex gap-2 flex-shrink-0 ml-3">
-            <button type="button" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors" onclick={() => loadDeckToCalc(d.id)}>読み込む</button>
+            <button type="button" class="text-xs px-2 py-1 bg-chrome-ink text-white rounded hover:bg-chrome-ink-soft transition-colors" onclick={() => loadDeckToCalc(d.id)}>読み込む</button>
             <button type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors" onclick={() => renameDeck(d.id)}>名前変更</button>
             <button type="button" class="text-xs px-2 py-1 bg-red-50 text-red-500 rounded hover:bg-red-100 transition-colors" onclick={() => deleteDeck(d.id)}>削除</button>
           </div>
@@ -107,7 +107,7 @@
             {@const cardId = d.state.deckIds?.[i]}
             {@const card = cardId != null ? cards.find((c) => c.ID === cardId) : null}
             {@const label = SLOT_LABELS[i]}
-            {@const labelClass = i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
+            {@const labelClass = i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
             {#if card}
               {@const attr = normalizeAttribute(card.attribute)}
               <div class="flex flex-col items-center">

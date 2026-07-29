@@ -166,12 +166,12 @@
         type="text"
         placeholder="曲名/アーティスト"
         bind:value={text}
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       />
     </div>
     <div>
       <label for="search-group" class="block text-xs font-medium text-gray-500 mb-1">グループ</label>
-      <select id="search-group" bind:value={group} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <select id="search-group" bind:value={group} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink">
         <option value="">すべて</option>
         {#each categories as c}
           <option value={c}>{c}</option>
@@ -180,7 +180,7 @@
     </div>
     <div>
       <label for="search-stars" class="block text-xs font-medium text-gray-500 mb-1">難易度（星）</label>
-      <select id="search-stars" bind:value={stars} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <select id="search-stars" bind:value={stars} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink">
         <option value="">すべて</option>
         <option value="1">★☆☆☆☆</option>
         <option value="2">★★☆☆☆</option>
@@ -191,7 +191,7 @@
     </div>
     <div>
       <label for="sort-by" class="block text-xs font-medium text-gray-500 mb-1">ソート</label>
-      <select id="sort-by" bind:value={sortBy} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <select id="sort-by" bind:value={sortBy} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink">
         <option value="default">デフォルト</option>
         <option value="name-asc">曲名（A→Z）</option>
         <option value="notes-desc">ノーツ数（多い順）</option>
@@ -204,10 +204,10 @@
     </div>
   </div>
   <div class="mt-3 flex items-center gap-3">
-    <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
+    <button type="button" class="text-sm text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900" onclick={reset}>条件リセット</button>
     <span class="text-sm text-gray-500">{filtered.length}曲を表示</span>
     {#if selectedSongIds.size > 0}
-      <span class="text-sm text-indigo-600 font-medium">{selectedSongIds.size}曲を選択中</span>
+      <span class="text-sm text-gray-900 font-medium">{selectedSongIds.size}曲を選択中</span>
     {/if}
   </div>
 </div>
@@ -221,7 +221,7 @@
             <input
               type="checkbox"
               title="すべて選択/解除"
-              class="accent-indigo-500 cursor-pointer"
+              class="accent-chrome-ink cursor-pointer"
               checked={selectAllChecked}
               indeterminate={selectAllIndeterminate}
               onchange={(e) => toggleAll((e.currentTarget as HTMLInputElement).checked)}
@@ -256,14 +256,14 @@
             <td class="px-2 py-2 song-check">
               <input
                 type="checkbox"
-                class="accent-indigo-500 cursor-pointer"
+                class="accent-chrome-ink cursor-pointer"
                 checked={song.id != null && selectedSongIds.has(song.id)}
                 onchange={(e) => song.id != null && toggleSong(song.id, (e.currentTarget as HTMLInputElement).checked)}
                 onclick={(e) => e.stopPropagation()}
               />
             </td>
             <td class="px-3 py-2 text-xs">{song.category || ''}</td>
-            <td class="px-3 py-2 font-medium"><a href={`${base}songs/${song.id}/`} class="text-indigo-600 hover:underline" onclick={(e) => e.stopPropagation()}>{song.song_name || ''}</a></td>
+            <td class="px-3 py-2 font-medium"><a href={`${base}songs/${song.id}/`} class="text-gray-900 hover:underline" onclick={(e) => e.stopPropagation()}>{song.song_name || ''}</a></td>
             <td class="px-3 py-2">{song.artist || ''}</td>
             <td class="px-3 py-2 text-xs">
               <div>{song.difficulty || ''}</div>
@@ -311,14 +311,14 @@
           <div class="song-check pt-0.5">
             <input
               type="checkbox"
-              class="accent-indigo-500 cursor-pointer"
+              class="accent-chrome-ink cursor-pointer"
               checked={song.id != null && selectedSongIds.has(song.id)}
               onchange={(e) => song.id != null && toggleSong(song.id, (e.currentTarget as HTMLInputElement).checked)}
               onclick={(e) => e.stopPropagation()}
             />
           </div>
           <div class="flex-1">
-            <p class="font-medium text-sm text-indigo-600">{song.song_name || ''}</p>
+            <p class="font-medium text-sm text-gray-900">{song.song_name || ''}</p>
             <p class="text-xs text-gray-500">{song.artist || ''} / {song.category || ''}</p>
             <div class="flex gap-3 mt-1 text-xs text-gray-600">
               <span>{song.difficulty || ''}{song.stars ? ' ' + starsText(song.stars) : ''}</span>

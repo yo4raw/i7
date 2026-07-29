@@ -97,7 +97,7 @@
           <button id="modal-close-x" type="button" class="text-gray-400 hover:text-gray-600 text-xl leading-none" onclick={close}>&times;</button>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" bind:this={searchInputEl} oninput={onSearchInput} />
+          <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink" bind:this={searchInputEl} oninput={onSearchInput} />
           <select id="modal-rarity" class="border border-gray-300 rounded px-2 py-1.5 text-sm" bind:value={rarity}>
             <option value="">レアリティ</option>
             <option value="UR">UR</option>

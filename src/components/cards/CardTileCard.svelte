@@ -41,7 +41,7 @@
 >
   <button
     type="button"
-    class="block w-full bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    class="block w-full bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-chrome-ink"
     onclick={handleImageClick}
     aria-label="{card.cardname || ''} の詳細を表示"
   >
@@ -60,7 +60,7 @@
     <p class="font-medium text-sm leading-tight break-words">
       <button
         type="button"
-        class="text-left text-indigo-600 hover:underline cursor-pointer bg-transparent p-0 border-0"
+        class="text-left text-gray-900 hover:underline cursor-pointer bg-transparent p-0 border-0"
         onclick={handleNameClick}
       >{card.cardname || ''}</button>
     </p>

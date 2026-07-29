@@ -73,7 +73,7 @@
   function slotContentClass(i: number, card: Card | null): string {
     if (!card) {
       const isFriend = i === 5;
-      return `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-indigo-50'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
+      return `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-chrome-ink hover:bg-gray-100'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
     }
     const cursorClass = i === 5 ? 'cursor-pointer' : 'cursor-grab';
     return `slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
@@ -168,7 +168,7 @@
   }
 
   function bonusTierSelectClass(tier: EventBonusTier): string {
-    const base = 'bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400';
+    const base = 'bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-chrome-ink';
     const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
     return def && def.selectClasses.length > 0 ? `${base} ${def.selectClasses.join(' ')}` : base;
   }
@@ -219,7 +219,7 @@
   // --- D&D ---
 
   const DRAG_THRESHOLD = 6;
-  const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-indigo-400', 'ring-offset-1'];
+  const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-chrome-ink', 'ring-offset-1'];
 
   function clearDropHighlight() {
     gridEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
@@ -343,7 +343,7 @@
   {#each DISPLAY_ORDER as i (i)}
     {@const card = deckState.cards[i]}
     <div class="deck-slot" data-slot={i}>
-      <div class="text-[10px] text-center {i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'} mb-1">{SLOT_LABELS[i]}</div>
+      <div class="text-[10px] text-center {i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'} mb-1">{SLOT_LABELS[i]}</div>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class={slotContentClass(i, card)}
@@ -379,7 +379,7 @@
               <option value={t.key}>{t.optionLabel}</option>
             {/each}
           </select>
-          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot={i} value={deckState.skillLevels[i]} onclick={stopProp} onchange={(e) => onSkillLevelChange(e, i)}>
+          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-chrome-ink" data-skill-slot={i} value={deckState.skillLevels[i]} onclick={stopProp} onchange={(e) => onSkillLevelChange(e, i)}>
             {#each [1, 2, 3, 4, 5] as lv (lv)}
               <option value={lv}>スキルLv{lv}</option>
             {/each}

@@ -29,7 +29,7 @@
   const chipBase =
     'inline-flex items-center rounded-full border px-3 py-1 text-sm cursor-pointer select-none transition-colors pressable';
   const chipOff =
-    'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
+    'bg-white border-gray-300 text-gray-700 hover:border-chrome-ink';
 
   function toggle(value: string) {
     const next = new Set(selected);
@@ -59,7 +59,7 @@
     aria-pressed={selected.has(option.value)}
     onclick={() => toggle(option.value)}
     class="{chipBase} {selected.has(option.value)
-      ? `${option.activeClass ?? 'bg-indigo-600 border-indigo-600'} text-white font-semibold`
+      ? `${option.activeClass ?? 'bg-chrome-ink border-chrome-ink'} text-white font-semibold`
       : chipOff}"
   >
     {selected.has(option.value) ? '✓ ' : ''}{option.label}
@@ -76,8 +76,8 @@
             aria-pressed={isGroupOn(group)}
             onclick={() => toggleGroup(group)}
             class="{chipBase} border-dashed font-semibold {isGroupOn(group)
-              ? 'bg-indigo-600 border-indigo-600 text-white'
-              : 'bg-white border-indigo-300 text-indigo-600 hover:border-indigo-500'}"
+              ? 'bg-chrome-ink border-chrome-ink text-white'
+              : 'bg-white border-gray-400 text-gray-700 hover:border-chrome-ink'}"
           >
             {group.name}
           </button>
@@ -104,7 +104,7 @@
       <span class="flex items-center gap-2">
         {label}
         {#if selected.size > 0}
-          <span class="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white">{selected.size}</span>
+          <span class="rounded-full bg-chrome-ink px-2 py-0.5 text-xs font-bold text-white">{selected.size}</span>
         {/if}
       </span>
       <span aria-hidden="true" class="text-gray-400">{open ? '▴' : '▾'}</span>

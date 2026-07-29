@@ -75,7 +75,7 @@
             </span>
             <!-- 右: 属性値由来スコアバー（表示中の最大を 100% とした相対高さ） -->
             <span class="relative flex flex-col justify-end w-4">
-              <span class="block w-full bg-indigo-400 rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
+              <span class="block w-full bg-chrome-ink-soft rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
             </span>
           </span>
           <button
@@ -90,7 +90,7 @@
               loading="lazy"
               class="w-12 h-12 rounded border-[3px] object-cover"
               class:ring-2={selected}
-              class:ring-indigo-500={selected}
+              class:ring-chrome-ink={selected}
               class:ring-offset-1={selected}
               style={`border-color:${ATTR_HEX[entry.attribute]}`}
             />

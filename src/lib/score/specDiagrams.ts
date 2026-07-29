@@ -5,8 +5,9 @@
  * 呼び出し側は `<Fragment set:html={...} />` または `{@html ...}` で埋め込む。
  *
  * ビジュアル言語 (ADR 0043):
- *  - 計算段階別の配色: 属性値=indigo / 素点=sky / スコアアップ=amber / 縮小=orange /
+ *  - 計算段階別の配色: 属性値=インク（無彩色）/ 素点=sky / スコアアップ=amber / 縮小=orange /
  *    最終補正=emerald / 統計=グレー+赤アクセント
+ *    ※ 属性値と統計はどちらも無彩色だが、明度差（インク濃 / グレー中間）で識別する
  *  - floor（切り捨て）の発生箇所は ⌊ ⌋ マーカーで明示する
  *  - 俯瞰図 pipelineOverviewSvg は highlight 指定で「現在地」を示すミニマップとして再掲する
  */
@@ -26,7 +27,7 @@ export type StageKey = 'attr' | 'note' | 'scoreUp' | 'shrink' | 'final' | 'stats
 
 /** 計算段階別の配色（ライトテーマ固定） */
 export const STAGE_COLORS: Record<StageKey, { main: string; dark: string; pale: string }> = {
-  attr:    { main: '#6366f1', dark: '#4338ca', pale: '#e0e7ff' }, // indigo
+  attr:    { main: '#2A2C33', dark: '#14151A', pale: '#E8E9EC' }, // インク（無彩色クローム）
   note:    { main: '#0ea5e9', dark: '#0369a1', pale: '#e0f2fe' }, // sky
   scoreUp: { main: '#f59e0b', dark: '#b45309', pale: '#fef3c7' }, // amber
   shrink:  { main: '#f97316', dark: '#c2410c', pale: '#ffedd5' }, // orange

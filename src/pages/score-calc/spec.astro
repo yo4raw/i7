@@ -179,7 +179,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
 <BaseLayout title="スコア計算 仕様解説" description={PAGE_DESCRIPTIONS.scoreCalcSpec} breadcrumbs={breadcrumbs}>
   <div class="flex items-baseline gap-3 mb-2 flex-wrap">
     <h1 class="text-2xl font-bold text-display">スコア計算 仕様解説</h1>
-    <a href={`${base}score-calc/`} class="text-sm text-indigo-600 hover:underline">← 計算ページへ戻る</a>
+    <a href={`${base}score-calc/`} class="text-sm text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">← 計算ページへ戻る</a>
   </div>
   <p class="text-xs text-gray-500 mb-6">
     本ページは当サイトのスコア計算に実装されているロジック全体を、計算の流れ順に図で解説するものです。
@@ -188,21 +188,21 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </p>
 
   <nav class="surface-card p-4 mb-6 text-sm">
-    <h2 class="text-sm font-bold text-indigo-700 mb-2">目次</h2>
+    <h2 class="text-sm font-bold text-gray-900 mb-2">目次</h2>
     <ol class="list-decimal pl-6 space-y-0.5 text-gray-700" start="0">
-      <li><a href="#overview" class="hover:underline text-indigo-600">スコア計算の全体像とデモ編成</a></li>
-      <li><a href="#team" class="hover:underline text-indigo-600">チーム属性値</a></li>
-      <li><a href="#note" class="hover:underline text-indigo-600">1ノーツの素点とライト倍率</a></li>
-      <li><a href="#scoreup" class="hover:underline text-indigo-600">スコアアップスキル</a></li>
-      <li><a href="#shrink" class="hover:underline text-indigo-600">判定縮小スキル</a></li>
-      <li><a href="#final" class="hover:underline text-indigo-600">最終補正（バッジ・ブローチ）</a></li>
-      <li><a href="#stats" class="hover:underline text-indigo-600">理論値・期待値・シミュレーション</a></li>
+      <li><a href="#overview" class="hover:underline text-gray-900">スコア計算の全体像とデモ編成</a></li>
+      <li><a href="#team" class="hover:underline text-gray-900">チーム属性値</a></li>
+      <li><a href="#note" class="hover:underline text-gray-900">1ノーツの素点とライト倍率</a></li>
+      <li><a href="#scoreup" class="hover:underline text-gray-900">スコアアップスキル</a></li>
+      <li><a href="#shrink" class="hover:underline text-gray-900">判定縮小スキル</a></li>
+      <li><a href="#final" class="hover:underline text-gray-900">最終補正（バッジ・ブローチ）</a></li>
+      <li><a href="#stats" class="hover:underline text-gray-900">理論値・期待値・シミュレーション</a></li>
     </ol>
   </nav>
 
   <!-- ============================================================ -->
   <section id="overview" class="surface-card p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">0. スコア計算の全体像とデモ編成</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">0. スコア計算の全体像とデモ編成</h2>
     <p class="text-sm text-gray-700 mb-4">
       リザルトのスコアは <strong>チーム属性値</strong> を土台に、ノーツ 1 個ずつの<strong>素点</strong>を積み、
       そこへ<strong>スコアアップスキル</strong>と<strong>判定縮小スキル</strong>の上乗せ、最後に
@@ -228,7 +228,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
             <tr class="border-b border-gray-100">
               <td class="py-1.5 pr-3 text-gray-500">{SLOT_ROLES[s.slotIndex]}</td>
               <td class="py-1.5 pr-3">
-                <a href={`${base}cards/${s.ID}/`} class="text-indigo-600 hover:underline">{s.name}「{s.cardname}」</a>
+                <a href={`${base}cards/${s.ID}/`} class="text-gray-900 hover:underline">{s.name}「{s.cardname}」</a>
                 <span class="text-gray-400 ml-1">{s.rarity}</span>
               </td>
               <td class="py-1.5 pr-3">{s.attribute}</td>
@@ -249,7 +249,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'attr' })} />
     </div>
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">1. チーム属性値</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">1. チーム属性値</h2>
     <p class="text-sm text-gray-700 mb-4">
       まず編成 6 枠それぞれの Shout / Beat / Melody を合算して<strong>チーム属性値</strong>を作ります。
       衣装 1 枠ぶんの値は「基礎値 × イベント特効」にラビットノートとブローチを足したもの。
@@ -269,7 +269,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </div>
 
     <details class="mt-4 group">
-      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-700 select-none">実装詳細（式・丸めタイミング）</summary>
       <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
         <p>実装: <code class="px-1 bg-white rounded">computeTeam()</code> (src/lib/score/teamBuilder.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -288,7 +288,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'note' })} />
     </div>
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">2. 1ノーツの素点とライト倍率</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">2. 1ノーツの素点とライト倍率</h2>
     <p class="text-sm text-gray-700 mb-4">
       ノーツを 1 個叩くたびに「そのノーツの属性のチーム属性値」から素点が計算されます。
       レートは<strong>白ノーツ 2.5% / 色ノーツ 3.0%</strong>。さらにライブが進んでライトが増えるほど
@@ -313,7 +313,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </div>
 
     <details class="mt-4 group">
-      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-700 select-none">実装詳細（式・丸めタイミング）</summary>
       <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
         <p>実装: <code class="px-1 bg-white rounded">calcNoteScore()</code> (src/lib/score/simulation.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -331,7 +331,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'scoreUp' })} />
     </div>
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">3. スコアアップスキル</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">3. スコアアップスキル</h2>
     <p class="text-sm text-gray-700 mb-4">
       スコアアップスキルは<strong>発動するたびに固定値をそのまま加算</strong>するスキルです。
       発動タイミングの数え方で 2 種類あります:
@@ -373,7 +373,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </div>
 
     <details class="mt-4 group">
-      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-700 select-none">実装詳細（式・丸めタイミング）</summary>
       <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
         <p>実装: <code class="px-1 bg-white rounded">calcExpectedScore()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -391,7 +391,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'shrink' })} />
     </div>
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">4. 判定縮小スキル</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">4. 判定縮小スキル</h2>
     <p class="text-sm text-gray-700 mb-2">
       判定縮小スキルは「◯ノーツごと（タイマー型は◯秒ごと）」に確率 per% で発動し、
       <strong>持続◯秒のあいだに叩いたノーツの素点を倍率（Lv5 で 1.6 倍）に増幅</strong>するスキルです。
@@ -485,7 +485,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </div>
 
     <details class="mt-4 group">
-      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-700 select-none">実装詳細（式・丸めタイミング）</summary>
       <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
         <p>実装: <code class="px-1 bg-white rounded">calcShrinkCoverage()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)、<code class="px-1 bg-white rounded">computeShrinkExclusion()</code> (src/lib/score/shrinkExclusion.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -506,7 +506,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'final' })} />
     </div>
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">5. 最終補正（バッジ・ブローチ）</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">5. 最終補正（バッジ・ブローチ）</h2>
     <p class="text-sm text-gray-700 mb-4">
       ライブ終了時スコア（素点 + スコアアップ + 縮小）に、最後の 2 つの補正が掛かります。
       <strong>SCOREUP バッジ</strong>はスコア全体への倍率（例: {badgeRate}% なら ×1.{badgeRate}）、
@@ -521,7 +521,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </div>
 
     <details class="mt-4 group">
-      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（式・丸めタイミング）</summary>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-700 select-none">実装詳細（式・丸めタイミング）</summary>
       <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
         <p>実装: <code class="px-1 bg-white rounded">applyFinalBonus()</code> (src/lib/score/simulation.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -538,7 +538,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="overflow-x-auto -mx-2 px-2 mb-3 opacity-90">
       <Fragment set:html={pipelineOverviewSvg({ highlight: 'stats' })} />
     </div>
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">6. 理論値・期待値・シミュレーション</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">6. 理論値・期待値・シミュレーション</h2>
     <p class="text-sm text-gray-700 mb-4">
       スキルは確率発動なので、同じ編成でもスコアは揺らぎます。スコア計算ページでは 3 種類の数値を出しています:
       <strong>理論最低</strong>（全スキル不発）、<strong>理論最高</strong>（全スキル発動）、
@@ -569,7 +569,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </ul>
 
     <details class="mt-4 group">
-      <summary class="cursor-pointer text-xs font-semibold text-indigo-700 select-none">実装詳細（MC の内部構造）</summary>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-700 select-none">実装詳細（MC の内部構造）</summary>
       <div class="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700 space-y-1.5">
         <p>実装: <code class="px-1 bg-white rounded">runSimulation()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -583,13 +583,13 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </section>
 
   <section class="surface-card p-6 mb-6">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">関連ページ</h2>
+    <h2 class="text-lg font-bold text-display text-gray-900 mb-3">関連ページ</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
       <li>
-        <a href={`${base}score-calc/`} class="text-indigo-600 hover:underline">スコア計算ページに戻る</a>
+        <a href={`${base}score-calc/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">スコア計算ページに戻る</a>
       </li>
       <li>
-        <a href={`${base}score-calc/max-score-finder/`} class="text-indigo-600 hover:underline">編成組合計算（理論値最大編成の探索）</a>
+        <a href={`${base}score-calc/max-score-finder/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">編成組合計算（理論値最大編成の探索）</a>
       </li>
     </ul>
   </section>

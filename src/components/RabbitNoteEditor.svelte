@@ -9,7 +9,8 @@
   ] as const;
 
   const GROUP_COLORS: Record<string, string> = {
-    'IDOLiSH7': 'border-l-indigo-500',
+    // IDOLiSH7 のみ無彩色。グループ別アクセント全体はキャラクターカラー適用時に見直す
+    'IDOLiSH7': 'border-l-chrome-ink',
     'TRIGGER': 'border-l-amber-500',
     'Re:vale': 'border-l-pink-500',
     'ŹOOĻ': 'border-l-emerald-500',
@@ -97,7 +98,7 @@
 </div>
 
 <div class="mt-6 flex gap-3">
-  <button type="button" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-lg" onclick={onSave}>保存</button>
+  <button type="button" class="px-5 py-2.5 bg-chrome-ink text-white rounded-lg hover:bg-chrome-ink-soft font-bold shadow-lg" onclick={onSave}>保存</button>
   <button type="button" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-lg" onclick={onClear}>全てクリア</button>
   <span class="self-center text-sm text-green-600 font-medium transition-opacity duration-300" style:opacity={feedbackVisible ? 1 : 0}>{feedback}</span>
 </div>

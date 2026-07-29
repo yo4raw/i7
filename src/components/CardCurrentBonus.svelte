@@ -43,7 +43,7 @@
           {#if def}
             <span class="inline-block px-1.5 py-0.5 text-xs font-bold rounded border {def.selectClasses.join(' ')}">{def.shortLabel}</span>
           {/if}
-          <a href={`${base}events/${h.id}/`} class="text-indigo-600 hover:underline font-medium">{h.eventname}</a>
+          <a href={`${base}events/${h.id}/`} class="text-gray-900 hover:underline font-medium">{h.eventname}</a>
           <span class="text-xs text-gray-500">{h.start_date} 〜 {h.end_date}</span>
         </li>
       {/each}

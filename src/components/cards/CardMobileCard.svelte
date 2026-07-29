@@ -72,7 +72,7 @@
         {/if}
       </div>
       <p class="font-medium text-sm truncate" onclick={handleNameClick} role="presentation">
-        <span class="text-indigo-600 hover:underline cursor-pointer">{card.cardname || ''}</span>
+        <span class="text-gray-900 hover:underline cursor-pointer">{card.cardname || ''}</span>
       </p>
       <p class="text-xs text-gray-500">{card.name || ''}</p>
       <div class="flex items-center gap-2 mt-1">

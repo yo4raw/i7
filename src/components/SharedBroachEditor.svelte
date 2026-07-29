@@ -5,7 +5,7 @@
   type GroupKey = 'ALL' | 'Shout' | 'Beat' | 'Melody' | '条件付き';
   const GROUP_ORDER: GroupKey[] = ['ALL', 'Shout', 'Beat', 'Melody', '条件付き'];
   const GROUP_COLORS: Record<GroupKey, string> = {
-    ALL: 'border-l-indigo-500',
+    ALL: 'border-l-gray-500',
     Shout: 'border-l-red-500',
     Beat: 'border-l-green-500',
     Melody: 'border-l-blue-500',
@@ -71,12 +71,12 @@
                 value={getBroachCount(sb.id)}
                 data-broach-input={sb.id}
                 aria-label="{sb.name} の所持数"
-                class="w-14 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                class="w-14 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-chrome-ink"
                 onchange={(e) => onInput(e, sb.id)}
               />
               <button
                 type="button"
-                class="w-7 h-7 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-sm font-bold"
+                class="w-7 h-7 rounded bg-chrome-ink text-white hover:bg-chrome-ink-soft text-sm font-bold"
                 aria-label="{sb.name} の所持数を増やす"
                 data-broach-btn={sb.id}
                 data-delta="1"

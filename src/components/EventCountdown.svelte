@@ -51,13 +51,13 @@
 
 {#if events.length > 0}
   <section class="mb-8">
-    <h2 class="text-lg font-bold text-indigo-700 mb-3">{heading}</h2>
+    <h2 class="text-lg font-bold text-gray-900 mb-3">{heading}</h2>
     <ul class="space-y-2">
       {#each events as ev (ev.id)}
         {@const s = status(ev)}
         <li class="event-item surface-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <a href={`${base}events/${ev.id}/`} class="text-indigo-700 font-semibold hover:underline">
+            <a href={`${base}events/${ev.id}/`} class="text-gray-900 font-semibold hover:underline">
               {ev.eventname}
             </a>
             <div class="text-xs text-gray-500 mt-0.5">

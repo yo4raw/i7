@@ -84,7 +84,7 @@
   </td>
   <td class="px-3 py-2">{card.ID}</td>
   <td class="px-3 py-2" onclick={handleNameClick} role="presentation">
-    <span class="text-indigo-600 hover:underline cursor-pointer">{card.cardname || ''}</span>
+    <span class="text-gray-900 hover:underline cursor-pointer">{card.cardname || ''}</span>
   </td>
   <td class="px-3 py-2">{card.name || ''}</td>
   <td class="px-3 py-2">

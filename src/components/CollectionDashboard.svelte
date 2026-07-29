@@ -65,9 +65,9 @@
       <div class="text-2xl font-bold tabular-nums text-amber-700">{overallUr.pct}%</div>
       <div class="text-[11px] text-gray-500">{overallUr.owned} / {overallUr.total} 種</div>
     </div>
-    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-      <div class="text-[11px] text-indigo-700 font-medium">全レアリティ収集率</div>
-      <div class="text-2xl font-bold tabular-nums text-indigo-700">{overallAll.pct}%</div>
+    <div class="rounded-lg border border-gray-300 bg-gray-100 p-3">
+      <div class="text-[11px] text-gray-700 font-medium">全レアリティ収集率</div>
+      <div class="text-2xl font-bold tabular-nums text-gray-900">{overallAll.pct}%</div>
       <div class="text-[11px] text-gray-500">{overallAll.owned} / {overallAll.total} 種</div>
     </div>
     <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -91,7 +91,7 @@
           <div class="flex items-center gap-2 text-xs">
             <span class={`inline-block w-9 text-center text-white rounded text-[10px] py-0.5 font-bold ${RARITY_BADGE_CLASSES[r.rarity] ?? 'bg-gray-400'}`}>{r.rarity}</span>
             <div class="flex-1 h-3 bg-gray-100 rounded overflow-hidden">
-              <div class="h-full bg-indigo-400" style={`width:${r.pct}%`}></div>
+              <div class="h-full bg-chrome-ink-soft" style={`width:${r.pct}%`}></div>
             </div>
             <span class="w-24 text-right text-gray-600 tabular-nums">{r.owned}/{r.total}（{r.pct}%）</span>
           </div>
