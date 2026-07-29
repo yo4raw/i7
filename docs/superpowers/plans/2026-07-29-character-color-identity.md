@@ -36,7 +36,7 @@
 - Consumes: 既存の `CHARACTERS`（16 名の名前配列）、`CHARACTER_GROUPS`
 - Produces:
   - `CHARACTER_HEX: Record<string, string>` — キャラ名 → HEX（`#RRGGBB` 小文字許容せず大文字）
-  - `characterColor(name: string): string` — 未知の名前には `'#9AA3AD'` ではなく `CHROME_INK_FALLBACK = '#6B7280'` を返す
+  - `characterColor(name: string): string` — 未知の名前には無彩色 `'#6B7280'` を返す（八乙女楽の `#9AA3AD` と紛れないよう別の値にする）
   - `CHROME_INK = '#14151A'` — 無彩色クロームの基準色
 
 - [ ] **Step 1: 失敗するテストを書く**
@@ -713,6 +713,8 @@ git commit -m "feat: ホームのヒーローを 16 色バーに置き換え"
 **Files:**
 - Modify: `src/pages/cards/[id].astro:64` 付近（キャラクター行）
 - Modify: `src/components/score/DeckSlots.svelte:371` 付近（スロット内のキャラ名）
+- Modify: `src/components/RabbitNoteEditor.svelte:11-16, 67`（`GROUP_COLORS`）
+- Modify: `src/components/SharedBroachEditor.svelte:7, 51`（`GROUP_COLORS`）
 
 **Interfaces:**
 - Consumes: Task 1 の `characterColor`
@@ -766,19 +768,41 @@ import { characterColor } from '../../lib/constants';
 
 `http://localhost:4321/score-calc/` でデッキに衣装を入れ、スロット左端にキャラ色が出ることを確認する。スロットは小さいのでスパインは 2px にしてある。潰れて見える場合は色ドットへ切り替える。
 
-- [ ] **Step 5: 単体テストとビルドを通す**
+- [ ] **Step 5: ユニット別セクションの恣意的なグループ色を廃する**
+
+`RabbitNoteEditor.svelte` と `SharedBroachEditor.svelte` は、ユニットごとのセクションに `border-l-4` + `GROUP_COLORS`（TRIGGER=amber / Re:vale=pink / ŹOOĻ=emerald）を当てている。この 3 色はキャラ 16 色でも属性 3 色でもなく、「意味を持つ色は 16 色と属性 3 色だけ」という原則に反する。
+
+`GROUP_COLORS` を削除し、左罫線を**そのユニットのメンバー色を縦に積んだ帯**へ置き換える。ヘッダーの 16 色バーと同じ並びを縦向き・グループ単位で反復する形になり、かつ「誰が所属しているか」という実際の情報を持つ。
+
+両ファイルで、`GROUP_COLORS` の定義と `border-l-4 {GROUP_COLORS[...]}` を削除し、`<section>` に `relative overflow-hidden` を足したうえで先頭に挿入する:
+
+```svelte
+      <span class="absolute left-0 top-0 bottom-0 flex w-1 flex-col" aria-hidden="true">
+        {#each group.members as member (member)}
+          <span class="flex-1" style="background-color:{characterColor(member)}"></span>
+        {/each}
+      </span>
+```
+
+`characterColor` を import すること。`group.members` が使えない場合（`SharedBroachEditor` の `GroupKey` は `CHARACTER_GROUPS` と別構造の可能性がある）、`CHARACTER_GROUPS` から該当ユニットのメンバーを引いて使う。
+
+- [ ] **Step 6: dev サーバーで確認**
+
+`http://localhost:4321/rabbit-note/` と `http://localhost:4321/shared-broach/` を開き、各ユニットのセクション左端にメンバー色の帯が出ること、IDOLiSH7 が 7 段・TRIGGER が 3 段・Re:vale が 2 段・ŹOOĻ が 4 段になっていることを確認する。
+
+- [ ] **Step 7: 単体テストとビルドを通す**
 
 Run: `npm run test:unit`
 Expected: 全 PASS
 
-Run: `npm run build`（timeout 420000ms 以上）
+Run: `npm run build`（timeout 600000ms 以上）
 Expected: エラーなく完了
 
-- [ ] **Step 6: コミット**
+- [ ] **Step 8: コミット**
 
 ```bash
-git add "src/pages/cards/[id].astro" src/components/score/DeckSlots.svelte
-git commit -m "feat: 衣装詳細とデッキスロットにキャラクターカラーを適用"
+git add "src/pages/cards/[id].astro" src/components/score/DeckSlots.svelte src/components/RabbitNoteEditor.svelte src/components/SharedBroachEditor.svelte
+git commit -m "feat: 衣装詳細・デッキスロット・ユニット別セクションにキャラクターカラーを適用"
 ```
 
 ---
