@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SITE_NAME } from '../lib/constants';
   import { materialIn, materialOut } from '../lib/motion';
+  import CharacterColorBar from './CharacterColorBar.svelte';
 
   type Props = { base: string };
   let { base }: Props = $props();
@@ -127,7 +128,7 @@
           <li class="relative" use:registerDropdown={item.label}>
             <button
               type="button"
-              class="hover:text-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer pressable"
+              class="hover:text-gray-300 transition-colors inline-flex items-center gap-1 cursor-pointer pressable"
               aria-haspopup="menu"
               aria-expanded={openDropdown === item.label}
               onclick={() => toggleDropdown(item.label)}
@@ -149,7 +150,7 @@
                     <a
                       role="menuitem"
                       href={child.href}
-                      class="block px-4 py-2 rounded-lg mx-1 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                      class="block px-4 py-2 rounded-lg mx-1 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                     >
                       {child.label}
                     </a>
@@ -159,11 +160,12 @@
             {/if}
           </li>
         {:else}
-          <li><a href={item.href} class="hover:text-indigo-200 transition-colors">{item.label}</a></li>
+          <li><a href={item.href} class="hover:text-gray-300 transition-colors">{item.label}</a></li>
         {/if}
       {/each}
     </ul>
   </nav>
+  <CharacterColorBar />
   {#if mobileOpen}
   <ul class="flex flex-col gap-2 px-4 pb-3 text-sm font-medium md:hidden origin-top" in:materialIn={{ scaleFrom: 0.98 }} out:materialOut={{ scaleFrom: 0.98 }}>
     {#each items as item}
@@ -171,7 +173,7 @@
         <li>
           <button
             type="button"
-            class="w-full flex items-center justify-between py-1 hover:text-indigo-200 pressable"
+            class="w-full flex items-center justify-between py-1 hover:text-gray-300 pressable"
             aria-expanded={!!mobileDropdownOpen[item.label]}
             onclick={() => toggleMobileDropdown(item.label)}
           >
@@ -183,13 +185,13 @@
           {#if mobileDropdownOpen[item.label]}
             <ul class="pl-4 flex flex-col gap-1 mt-1">
               {#each item.children as child}
-                <li><a href={child.href} class="block py-1 hover:text-indigo-200">{child.label}</a></li>
+                <li><a href={child.href} class="block py-1 hover:text-gray-300">{child.label}</a></li>
               {/each}
             </ul>
           {/if}
         </li>
       {:else}
-        <li><a href={item.href} class="block py-1 hover:text-indigo-200">{item.label}</a></li>
+        <li><a href={item.href} class="block py-1 hover:text-gray-300">{item.label}</a></li>
       {/if}
     {/each}
   </ul>

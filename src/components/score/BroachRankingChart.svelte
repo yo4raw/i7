@@ -9,7 +9,7 @@
     Shout: 'bg-red-500',
     Beat: 'bg-green-500',
     Melody: 'bg-blue-500',
-    All: 'bg-indigo-500',
+    All: 'bg-gray-500',
   };
 </script>
 
@@ -21,7 +21,7 @@
         <span class="w-32 sm:w-40 truncate flex-shrink-0" title={entry.name}>{entry.name}</span>
         <div class="flex-1 bg-gray-100 rounded h-4 overflow-hidden">
           <div
-            class={`h-full rounded ${BAR_BG[entry.attribute] || 'bg-indigo-500'}`}
+            class={`h-full rounded ${BAR_BG[entry.attribute] || 'bg-gray-500'}`}
             style={`width: ${maxScore > 0 ? (entry.score / maxScore) * 100 : 0}%`}
           ></div>
         </div>

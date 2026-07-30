@@ -112,7 +112,7 @@
       totalActivations += activations;
       rows.push({
         i,
-        slotCls: i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500',
+        slotCls: i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500',
         cardname: card.cardname || '',
         name: card.name || '',
         skillType: card.ap_skill_type || '-',
@@ -210,7 +210,9 @@
     };
     return {
       shrink: make(result.shrinkScores, '縮小スキル寄与', '#10b981'),
-      scoreup: make(result.scoreUpScores, 'スコアアップ寄与', '#6366f1'),
+      // スコアアップは仕様解説ページ (ADR 0043) と同じ amber を使う。
+      // 同一パネル内の主ヒストグラム（インク）・縮小（emerald）と重ならない色にする
+      scoreup: make(result.scoreUpScores, 'スコアアップ寄与', '#f59e0b'),
     };
   });
 
@@ -336,7 +338,7 @@
       type="number"
       min="1"
       step="1"
-      class="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      class="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       bind:value={mcIterationsValue}
     />
     <span class="text-xs text-gray-500">回</span>
@@ -349,21 +351,21 @@
       <span>スコアアップ全発動</span>
     </label>
   </div>
-  <button id="btn-calculate" type="button" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={calcDisabled} onclick={runMC}>
+  <button id="btn-calculate" type="button" class="w-full bg-chrome-ink text-white py-3 rounded-lg font-bold text-lg hover:bg-chrome-ink-soft transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={calcDisabled} onclick={runMC}>
     {running ? '計算中...' : hasRunOnce ? 'シミュレーション計算' : '🧮 シミュレーション計算'}
   </button>
   <p id="calc-disabled-reason" class="text-xs text-center text-amber-600">{calcDisabledReason}</p>
   <div id="progress-container" class:hidden={!running}>
     <div class="w-full bg-gray-200 rounded-full h-2">
-      <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: {progressPercent}%"></div>
+      <div id="progress-bar" class="bg-chrome-ink h-2 rounded-full transition-all" style="width: {progressPercent}%"></div>
     </div>
     <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">{progressText}</p>
   </div>
 </div>
 
-<section class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg shadow p-4 md:p-6">
+<section class="bg-gradient-to-br from-gray-50 to-gray-200 rounded-lg shadow p-4 md:p-6">
   <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">平均スコア</div>
-  <div id="final-result" class="text-3xl md:text-5xl font-bold text-indigo-700 text-center mt-1">{simulationResult ? simulationResult.mean.toLocaleString() : '---'}</div>
+  <div id="final-result" class="text-3xl md:text-5xl font-bold text-gray-900 text-center mt-1 tabular-nums">{simulationResult ? simulationResult.mean.toLocaleString() : '---'}</div>
   <div class="mt-3 text-center">
     <span class="text-[10px] text-gray-500">試行回数: </span>
     <span id="mc-iterations" class="text-xs md:text-sm font-bold text-gray-700">{mcIterationsUsed != null ? mcIterationsUsed.toLocaleString() : '-'}</span>
@@ -406,7 +408,7 @@
       <button
         type="button"
         data-tab={t.key}
-        class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 hover:text-indigo-600 transition-colors {activeTab === t.key ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500'}"
+        class="result-tab px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 hover:text-gray-900 transition-colors {activeTab === t.key ? 'border-chrome-ink text-gray-900 bg-gray-100' : 'border-transparent text-gray-500'}"
         onclick={() => { activeTab = t.key; }}
       >{t.label}</button>
     {/each}

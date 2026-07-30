@@ -10,7 +10,7 @@
   import type { EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
   import type { SharedBroach } from '../../lib/data/sharedBroachs';
-  import { ATTR_HEX } from '../../lib/constants';
+  import { ATTR_HEX, characterColor } from '../../lib/constants';
   import { normalizeAttribute } from '../../lib/score/types';
   import { countUsedBroachs } from '../../lib/score/broachInventory';
   import { cardThumbUrl } from '../../lib/ui';
@@ -73,10 +73,10 @@
   function slotContentClass(i: number, card: Card | null): string {
     if (!card) {
       const isFriend = i === 5;
-      return `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-indigo-50'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
+      return `slot-content border-2 border-dashed ${isFriend ? 'border-amber-300 hover:border-amber-400 hover:bg-amber-50' : 'border-gray-300 hover:border-chrome-ink hover:bg-gray-100'} rounded-lg p-2 flex flex-col items-center justify-center min-h-[120px] cursor-pointer transition-colors`;
     }
     const cursorClass = i === 5 ? 'cursor-pointer' : 'cursor-grab';
-    return `slot-content border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
+    return `slot-content relative border-2 border-solid rounded-lg p-1.5 flex flex-col items-center ${cursorClass} min-h-[120px] transition-colors`;
   }
 
   // 既存実装の踏襲: カード配置時のみ属性色を inline style で設定し、
@@ -168,7 +168,7 @@
   }
 
   function bonusTierSelectClass(tier: EventBonusTier): string {
-    const base = 'bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400';
+    const base = 'bonus-tier-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-chrome-ink';
     const def = EVENT_BONUS_TIERS.find(t => t.key === tier);
     return def && def.selectClasses.length > 0 ? `${base} ${def.selectClasses.join(' ')}` : base;
   }
@@ -219,7 +219,7 @@
   // --- D&D ---
 
   const DRAG_THRESHOLD = 6;
-  const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-indigo-400', 'ring-offset-1'];
+  const DRAG_DROP_HIGHLIGHT = ['ring-2', 'ring-chrome-ink', 'ring-offset-1'];
 
   function clearDropHighlight() {
     gridEl.querySelectorAll<HTMLElement>('[data-slot-btn]').forEach(el => {
@@ -343,7 +343,7 @@
   {#each DISPLAY_ORDER as i (i)}
     {@const card = deckState.cards[i]}
     <div class="deck-slot" data-slot={i}>
-      <div class="text-[10px] text-center {i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'} mb-1">{SLOT_LABELS[i]}</div>
+      <div class="text-[10px] text-center {i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'} mb-1">{SLOT_LABELS[i]}</div>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class={slotContentClass(i, card)}
@@ -356,6 +356,12 @@
           {@const attr = normalizeAttribute(card.attribute)}
           {@const cardBroachs = cardBroachsFor(card)}
           {@const maxShared = cardBroachs.length > 0 ? 1 : 2}
+          <span
+            class="absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-full pointer-events-none"
+            style="background-color:{characterColor(card.name || '')}"
+            data-testid="character-spine"
+            aria-hidden="true"
+          ></span>
           <img
             src={cardThumbUrl(card.ID!)}
             alt={card.cardname || ''}
@@ -379,7 +385,7 @@
               <option value={t.key}>{t.optionLabel}</option>
             {/each}
           </select>
-          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400" data-skill-slot={i} value={deckState.skillLevels[i]} onclick={stopProp} onchange={(e) => onSkillLevelChange(e, i)}>
+          <select class="skill-level-select mt-1 w-full text-[9px] border border-gray-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-chrome-ink" data-skill-slot={i} value={deckState.skillLevels[i]} onclick={stopProp} onchange={(e) => onSkillLevelChange(e, i)}>
             {#each [1, 2, 3, 4, 5] as lv (lv)}
               <option value={lv}>スキルLv{lv}</option>
             {/each}

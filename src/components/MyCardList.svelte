@@ -38,7 +38,7 @@
 {#if owned.length === 0}
   <div class="text-center py-12 text-gray-500">
     <p class="text-lg mb-2">所持衣装がありません</p>
-    <p class="text-sm"><a href={`${base}cards/`} class="text-indigo-600 hover:underline">衣装一覧</a>で所持数を登録してください</p>
+    <p class="text-sm"><a href={`${base}cards/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">衣装一覧</a>で所持数を登録してください</p>
   </div>
 {:else}
   <div>

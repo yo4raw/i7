@@ -70,7 +70,7 @@ const breadcrumbs = [
     {releases.map((r) => (
       <li class="border-b border-gray-200 pb-4">
         <div class="flex items-baseline justify-between flex-wrap gap-2 mb-2">
-          <h2 class="text-lg font-semibold text-indigo-700">{r.tag}</h2>
+          <h2 class="text-lg font-semibold tabular-nums text-gray-900">{r.tag}</h2>
           {r.date && <time class="text-sm text-gray-500">{r.date}</time>}
         </div>
         {r.commits.length === 0 ? (

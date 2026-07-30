@@ -2,7 +2,7 @@
   import type { CardListItem } from '../../lib/cardListData';
   import type { Card } from '../../lib/data/fetchCardsJson';
   import { formatSkillEffectMax } from '../../lib/score/skillFormatter';
-  import { ATTR_BG, ATTR_BG_HOVER, ATTR_HEX } from '../../lib/constants';
+  import { ATTR_BG, ATTR_BG_HOVER, ATTR_HEX, characterColor } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import { attrDonutSvg } from '../../lib/donutChart';
   import CountInput from './CountInput.svelte';
@@ -34,6 +34,8 @@
   const attrBg = $derived(ATTR_BG[card.attribute] || 'transparent');
   const attrBgHover = $derived(ATTR_BG_HOVER[card.attribute] || 'rgba(0,0,0,0.04)');
   const borderColor = $derived(ATTR_HEX[card.attribute] || 'transparent');
+  // キャラ色のスパイン用（name = キャラ名, cardname = 衣装名。取り違え注意）
+  const spineColor = $derived(characterColor(card.name || ''));
   const thumb = $derived(`${thumbUrl}/${card.ID}.webp`);
   const rowBg = $derived(
     `linear-gradient(to right, rgba(255,255,255,1) 40%, rgba(255,255,255,0.92) 60%, rgba(255,255,255,0.55)), linear-gradient(${attrBg}, ${attrBg}), url(${thumb}) no-repeat right 25% / 50% auto`
@@ -79,12 +81,18 @@
   onmouseleave={() => (rowBgCurrent = rowBg)}
   onclick={handleRowClick}
 >
-  <td class="px-3 py-2">
+  <td class="px-3 py-2 relative">
+    <span
+      class="absolute left-0.5 top-2 bottom-2 w-1 rounded-full pointer-events-none"
+      style="background-color:{spineColor}"
+      data-testid="character-spine"
+      aria-hidden="true"
+    ></span>
     <img src={thumb} alt={card.cardname || ''} class="w-12 h-auto rounded" loading="lazy" />
   </td>
   <td class="px-3 py-2">{card.ID}</td>
   <td class="px-3 py-2" onclick={handleNameClick} role="presentation">
-    <span class="text-indigo-600 hover:underline cursor-pointer">{card.cardname || ''}</span>
+    <span class="text-gray-900 hover:underline cursor-pointer">{card.cardname || ''}</span>
   </td>
   <td class="px-3 py-2">{card.name || ''}</td>
   <td class="px-3 py-2">

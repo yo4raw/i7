@@ -16,6 +16,11 @@
 /assets/th_cards/*
   Cache-Control: public, max-age=604800, immutable
 
+# セルフホストフォント (ADR 0047)。ファイル名にハッシュを持たない固定名のため
+# immutable は付けない。差し替え時に最長 7 日で伝播する。
+/fonts/*
+  Cache-Control: public, max-age=604800
+
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

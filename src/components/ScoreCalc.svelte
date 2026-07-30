@@ -290,7 +290,7 @@
             <div><dt class="text-gray-500 text-[10px]">構成</dt><dd id="song-attr-counts">{#if songAttrCounts}<span style="color:{ATTR_HEX.Shout}">🔴{songAttrCounts.s}</span> <span style="color:{ATTR_HEX.Beat}">🟢{songAttrCounts.b}</span> <span style="color:{ATTR_HEX.Melody}">🔵{songAttrCounts.m}</span>{/if}</dd></div>
           </dl>
           <div class="mt-2 text-right">
-            <a id="song-detail-anchor" href={selectedSong ? `${base}songs/${selectedSong.id}/` : '#'} class="text-xs text-indigo-600 hover:underline">楽曲詳細を見る →</a>
+            <a id="song-detail-anchor" href={selectedSong ? `${base}songs/${selectedSong.id}/` : '#'} class="text-xs text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">楽曲詳細を見る →</a>
           </div>
         </div>
       </div>
@@ -352,7 +352,8 @@
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-bold text-gray-700">🎴 デッキ編成</h2>
         <div class="relative flex gap-2" data-noshot>
-          <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'} rounded hover:bg-indigo-200 transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
+          <!-- hover は必ず分岐の中に置く。保存済み(緑)にインクの hover が掛かると AA を割るため -->
+          <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-chrome-ink text-white hover:bg-chrome-ink-soft'} rounded transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
           <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors" onclick={showLoadDropdown}>読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー" disabled={shareCopied} onclick={shareDeckUrl}>{shareCopied ? '✅ コピーしました' : '🔗 URLコピー'}</button>
           <button id="btn-share-image" type="button" class="text-xs px-2 py-1 bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-colors disabled:opacity-60" aria-label="編成とスコアを画像で保存" disabled={imageBusy} onclick={shareDeckImage}>{imageBusy ? '生成中…' : '📷 画像'}</button>
@@ -362,14 +363,14 @@
                 <div class="p-3 text-xs text-gray-400 text-center">保存されたデッキがありません</div>
               {:else}
                 {#each loadDeckItems as d (d.id)}
-                  <div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0" data-deck-id={d.id} onclick={() => loadDeck(d.id)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadDeck(d.id); }}>
+                  <div class="load-deck-item flex items-center justify-between px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0" data-deck-id={d.id} onclick={() => loadDeck(d.id)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadDeck(d.id); }}>
                     <div class="min-w-0 flex-1">
                       <div class="text-xs font-medium text-gray-700 truncate">{d.name}</div>
                       <div class="text-[10px] text-gray-400">{d.dateLabel} / {d.cardCount}枚</div>
                     </div>
                   </div>
                 {/each}
-                <a href="{base}decks/" class="block text-center text-[10px] text-indigo-500 hover:text-indigo-700 py-2 border-t border-gray-100">デッキ管理ページ →</a>
+                <a href="{base}decks/" class="block text-center text-[10px] text-gray-600 hover:text-gray-900 py-2 border-t border-gray-100">デッキ管理ページ →</a>
               {/if}
             {/if}
           </div>

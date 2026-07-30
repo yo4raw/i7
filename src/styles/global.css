@@ -1,15 +1,45 @@
 @import "tailwindcss";
 
+/* 数字・欧文専用。CJK には適用しない (ADR 0047 / ADR 0046 §5 の限定的な例外) */
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('/fonts/barlow-semi-condensed-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('/fonts/barlow-semi-condensed-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  src: url('/fonts/barlow-semi-condensed-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0, U+2000-206F, U+2212;
+}
+
 @theme {
   /* 属性色。単一情報源は src/lib/constants.ts の ATTR_HEX。変更時は両方を更新する */
   --color-shout: #ef4444;
   --color-beat: #22c55e;
   --color-melody: #3b82f6;
 
-  /* フォント: システムフォントスタック(CJK 明示)。カスタム Web フォントは導入しない (ADR 0046) */
+  /* 無彩色クローム */
+  /* --color-chrome-ink の単一情報源は src/lib/constants.ts の CHROME_INK。変更時は両方を更新する */
+  --color-chrome-ink: #14151A;
+  /* --color-chrome-ink-soft は CSS 側だけで使う派生色。constants.ts に対応する定数はない */
+  --color-chrome-ink-soft: #2A2C33;
+
+  /* フォント: 数字・欧文は Barlow Semi Condensed(unicode-range で CJK 対象外。ADR 0046 の限定的な例外)、
+     CJK はシステムフォントスタックのまま */
   --font-sans:
-    system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans",
-    "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+    'Barlow Semi Condensed', system-ui, -apple-system, "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
 
   /* 角丸スケール */
   --radius-card: 0.75rem;
@@ -44,17 +74,6 @@
     font-family: var(--font-sans);
   }
 
-  /* body 背景: 上部にごく微弱な indigo ティント。半透明 chrome の存在意義を作る。
-     gray-500 キャプションの AA を割らない輝度に留める (ADR 0046) */
-  body {
-    background-image: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--color-indigo-100) 40%, transparent),
-      transparent 260px
-    );
-    background-repeat: no-repeat;
-  }
-
   /* 見出しの CJK 向けデフォルト */
   h1,
   h2,
@@ -68,19 +87,19 @@
    利用側 (各コンポーネント) には散らさない
    ============================================================ */
 
-/* Chrome: 暗色インディゴ材。ヘッダー等の構造チュローム用 (白テキスト前提) */
+/* Chrome: 無彩色材。ヘッダー等の構造チュローム用 (白テキスト前提) */
 @utility material-chrome {
-  background-color: color-mix(in srgb, var(--color-indigo-700) 85%, transparent);
+  background-color: color-mix(in srgb, var(--color-chrome-ink) 88%, transparent);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
 
   @media (prefers-reduced-transparency: reduce) {
-    background-color: var(--color-indigo-700);
+    background-color: var(--color-chrome-ink);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
   @media (prefers-contrast: more) {
-    background-color: var(--color-indigo-800);
+    background-color: #000;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

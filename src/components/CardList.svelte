@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CardListItem } from '../lib/cardListData';
   import { CHARACTER_GROUPS, RARITIES, ATTRIBUTES } from '../lib/constants';
+  import { chipActiveStyle } from '../lib/characterChipStyle';
   import { buildLiveTierMap, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
@@ -93,9 +94,11 @@
     { value: 'silver', label: '銀特効' },
     { value: 'bronze', label: '銅特効' },
   ];
+  // キャラ色チップの選択時スタイル (ADR 0047)。計算ロジックと判断根拠は characterChipStyle.ts 側に集約
+  // （tests/unit/characterChipStyle.test.ts で全16色の実効コントラストを検証している）
   const characterGroups = CHARACTER_GROUPS.map((g) => ({
     name: g.name,
-    options: g.members.map((m) => ({ value: m, label: m })),
+    options: g.members.map((m) => ({ value: m, label: m, activeStyle: chipActiveStyle(m) })),
   }));
   const skillOptions = $derived(skillTypes.map((s) => ({ value: s, label: s })));
 
@@ -240,7 +243,7 @@
         placeholder="衣装名/キャラ名"
         value={text}
         oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       />
     </div>
     <div class="w-full sm:w-56">
@@ -248,7 +251,7 @@
       <select
         id="sort-by"
         bind:value={sortBy}
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       >
         <option value="id-desc">ID降順（新しい順）</option>
         <option value="id-asc">ID昇順（古い順）</option>
@@ -298,12 +301,12 @@
     />
   </div>
   <div class="mt-3 flex items-center gap-3 flex-wrap">
-    <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
+    <button type="button" class="text-sm text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900" onclick={reset}>条件リセット</button>
     <span class="text-sm text-gray-500">{resultCountText}</span>
     <div class="ml-auto inline-flex rounded border border-gray-300 overflow-hidden text-xs" role="group" aria-label="表示モード切替">
       <button
         type="button"
-        class="px-3 py-1 {viewMode === 'list' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+        class="px-3 py-1 {viewMode === 'list' ? 'bg-chrome-ink text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
         aria-pressed={viewMode === 'list'}
         onclick={() => setViewMode('list')}
       >
@@ -311,7 +314,7 @@
       </button>
       <button
         type="button"
-        class="px-3 py-1 border-l border-gray-300 {viewMode === 'tile' ? 'bg-indigo-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+        class="px-3 py-1 border-l border-gray-300 {viewMode === 'tile' ? 'bg-chrome-ink text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}"
         aria-pressed={viewMode === 'tile'}
         onclick={() => setViewMode('tile')}
       >
@@ -393,7 +396,7 @@
 <div bind:this={sentinelEl} class="mt-6 flex justify-center py-8">
   {#if hasMore}
     <span class="text-sm text-gray-400">
-      <svg class="animate-spin inline-block h-4 w-4 mr-1 align-text-bottom text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <svg class="animate-spin inline-block h-4 w-4 mr-1 align-text-bottom text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
       </svg>

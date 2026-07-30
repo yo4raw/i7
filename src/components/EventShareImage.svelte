@@ -37,7 +37,7 @@
   type="button"
   onclick={download}
   disabled={busy}
-  class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+  class="inline-flex items-center gap-1.5 rounded-md bg-chrome-ink px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-chrome-ink-soft disabled:opacity-60 disabled:cursor-not-allowed"
 >
   {#if busy}
     <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">

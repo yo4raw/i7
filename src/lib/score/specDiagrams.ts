@@ -5,8 +5,9 @@
  * 呼び出し側は `<Fragment set:html={...} />` または `{@html ...}` で埋め込む。
  *
  * ビジュアル言語 (ADR 0043):
- *  - 計算段階別の配色: 属性値=indigo / 素点=sky / スコアアップ=amber / 縮小=orange /
+ *  - 計算段階別の配色: 属性値=インク（無彩色）/ 素点=sky / スコアアップ=amber / 縮小=orange /
  *    最終補正=emerald / 統計=グレー+赤アクセント
+ *    ※ 属性値と統計はどちらも無彩色だが、明度差（インク濃 / グレー中間）で識別する
  *  - floor（切り捨て）の発生箇所は ⌊ ⌋ マーカーで明示する
  *  - 俯瞰図 pipelineOverviewSvg は highlight 指定で「現在地」を示すミニマップとして再掲する
  */
@@ -26,7 +27,7 @@ export type StageKey = 'attr' | 'note' | 'scoreUp' | 'shrink' | 'final' | 'stats
 
 /** 計算段階別の配色（ライトテーマ固定） */
 export const STAGE_COLORS: Record<StageKey, { main: string; dark: string; pale: string }> = {
-  attr:    { main: '#6366f1', dark: '#4338ca', pale: '#e0e7ff' }, // indigo
+  attr:    { main: '#2A2C33', dark: '#14151A', pale: '#E8E9EC' }, // インク（無彩色クローム）
   note:    { main: '#0ea5e9', dark: '#0369a1', pale: '#e0f2fe' }, // sky
   scoreUp: { main: '#f59e0b', dark: '#b45309', pale: '#fef3c7' }, // amber
   shrink:  { main: '#f97316', dark: '#c2410c', pale: '#ffedd5' }, // orange
@@ -126,14 +127,44 @@ export function pipelineOverviewSvg(opts?: { highlight?: StageKey }): string {
  * 1. チーム属性値
  * ================================================================ */
 
+/**
+ * チーム属性値の内訳セグメント配色（無彩色 4 段階、寄与の大きい順に濃い）。
+ *
+ * 塗り同士の隣接コントラスト（WCAG 相対輝度、実測）:
+ *   raw–broach 2.41:1 / broach–center 2.36:1 / center–friend 1.83:1
+ *   raw–center 5.69:1（ブローチが 0 の行では raw と center が直接隣接する）
+ *   friend–白地 1.75:1
+ *
+ * 最淡の friend は白いカード地に対して 1.75:1 しかなく、塗りの明度差だけでは
+ * バー右端の輪郭も凡例スウォッチも視認できない。そのため塗りのコントラストには
+ * 依存せず、全セグメントと凡例矩形に {@link ATTR_STACK_STROKE} のヘアラインを引く。
+ */
+const ATTR_STACK_COLORS = {
+  raw: '#14151A',
+  broach: '#4B5563',
+  center: '#8A909C',
+  friend: '#BFC4CE',
+} as const;
+
+/**
+ * 積み上げバーのセグメント境界を成立させる 1px ヘアライン。
+ *
+ * 白地に対して 4.83:1（WCAG 1.4.11 の 3:1 を満たす）あり、バーの外周と凡例
+ * スウォッチの輪郭が塗りの明度によらず立つ。各境界は「2 辺のどちらか一方」で
+ * 線が判別できればよく、実測値は次の通り:
+ *   vs 白地 4.83:1 / vs raw 3.77:1 / vs friend 2.76:1
+ *   vs broach 1.56:1・vs center 1.51:1（この 2 者の境界は塗り同士で 2.36:1 あり成立）
+ */
+const ATTR_STACK_STROKE = '#6B7280';
+
 /** チーム属性値の内訳（素値/ブローチ/センター/フレンド）積み上げバー */
 export function teamAttrStackSvg(team: ComputedTeam): string {
   const c = STAGE_COLORS.attr;
   const SEGMENTS = [
-    { key: 'raw', label: '衣装素値 (特効込み)', color: c.main },
-    { key: 'broach', label: 'ブローチ', color: '#a5b4fc' },
-    { key: 'center', label: 'センタースキル', color: c.dark },
-    { key: 'friend', label: 'フレンドスキル', color: '#818cf8' },
+    { key: 'raw', label: '衣装素値 (特効込み)', color: ATTR_STACK_COLORS.raw },
+    { key: 'broach', label: 'ブローチ', color: ATTR_STACK_COLORS.broach },
+    { key: 'center', label: 'センタースキル', color: ATTR_STACK_COLORS.center },
+    { key: 'friend', label: 'フレンドスキル', color: ATTR_STACK_COLORS.friend },
   ] as const;
   const rows = (['Shout', 'Beat', 'Melody'] as const).map(attr => ({
     attr,
@@ -153,7 +184,7 @@ export function teamAttrStackSvg(team: ComputedTeam): string {
 
   const legend = SEGMENTS.map((s, i) =>
     `<g transform="translate(${M.left + i * 170}, 8)">
-      <rect width="12" height="10" rx="2" fill="${s.color}"/>
+      <rect width="12" height="10" rx="2" fill="${s.color}" stroke="${ATTR_STACK_STROKE}" stroke-width="1"/>
       <text x="16" y="9" fill="${TEXT}" font-size="10">${escapeXml(s.label)}</text>
     </g>`).join('');
 
@@ -164,7 +195,7 @@ export function teamAttrStackSvg(team: ComputedTeam): string {
       const v = r[s.key];
       if (v <= 0) return '';
       const w = xw(v);
-      const rect = `<rect x="${x}" y="${y}" width="${w}" height="${barH}" fill="${s.color}">
+      const rect = `<rect x="${x}" y="${y}" width="${w}" height="${barH}" fill="${s.color}" stroke="${ATTR_STACK_STROKE}" stroke-width="1">
         <title>${r.attr} ${escapeXml(s.label)}: ${fmt(v)}</title></rect>`;
       x += w;
       return rect;

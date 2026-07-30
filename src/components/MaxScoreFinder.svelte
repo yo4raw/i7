@@ -296,7 +296,7 @@
         <span class="text-gray-600 shrink-0">イベント</span>
         <select
           aria-label="対象イベント"
-          class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-chrome-ink"
           value={selectedEventId == null ? '' : String(selectedEventId)}
           onchange={(e) => {
             const v = e.currentTarget.value;
@@ -316,7 +316,7 @@
         <span class="ml-3">候補合計 <b>{currentCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedCandidates.length}）</span>{/if} → 評価する組合せ <b>{comboCount.toLocaleString()}</b> 通り</span>
       </div>
       <details class="mt-2">
-        <summary class="cursor-pointer text-[11px] text-indigo-600">候補衣装を展開</summary>
+        <summary class="cursor-pointer text-[11px] text-gray-700 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">候補衣装を展開</summary>
         <div class="mt-2">
           <div class="text-[11px] font-bold text-yellow-700">金特効（{goldCandidates.length}枚）</div>
           <div>
@@ -392,7 +392,7 @@
   <div class="flex gap-2">
     <button
       type="button"
-      class="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      class="flex-1 bg-chrome-ink text-white py-3 rounded-lg font-bold text-lg hover:bg-chrome-ink-soft transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       disabled={searchDisabled}
       onclick={runSearch}
     >
@@ -410,7 +410,7 @@
   {#if searching}
     <div>
       <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-indigo-600 h-2 rounded-full transition-all" style="width: {progressPct}%"></div>
+        <div class="bg-chrome-ink h-2 rounded-full transition-all" style="width: {progressPct}%"></div>
       </div>
       <p class="text-xs text-gray-500 mt-1 text-center">{progressText}</p>
     </div>

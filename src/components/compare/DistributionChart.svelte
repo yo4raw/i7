@@ -142,7 +142,7 @@
     <span class="shrink-0">一括しきい値</span>
     <input
       type="range" min="0" max="100" bind:value={sliderVal} oninput={onSlider}
-      class="flex-1 accent-indigo-600" aria-label="一括しきい値"
+      class="flex-1 accent-chrome-ink" aria-label="一括しきい値"
     />
     <span class="shrink-0 w-8 text-right">{sliderLabel}</span>
   </div>

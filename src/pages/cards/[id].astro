@@ -4,7 +4,7 @@ import CardCurrentBonus from '../../components/CardCurrentBonus.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
-import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG } from '../../lib/constants';
+import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, characterColor } from '../../lib/constants';
 import { ATTR_TEXT_CLASS, cardImageUrl } from '../../lib/ui';
 import { cardCreativeWorkLd } from '../../lib/seo';
 import { attrDonutSvg } from '../../lib/donutChart';
@@ -128,7 +128,16 @@ const otherSkills = [
             {infoRows.map(row => (
               <tr>
                 <td class="py-2 pr-4 font-medium text-gray-500 w-1/3">{row.label}</td>
-                <td class="py-2">{row.value}</td>
+                <td class="py-2">
+                  {row.label === 'キャラクター' && (
+                    <span
+                      class="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle"
+                      style={`background-color:${characterColor(card.name)}`}
+                      aria-hidden="true"
+                    ></span>
+                  )}
+                  {row.value}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -149,12 +149,12 @@
       songs={allSongsState}
       bind:value={selectedSongId}
       onChange={handleSongChange}
-      class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       placeholder={null}
     />
   </label>
   <label class="flex items-center gap-1.5 cursor-pointer">
-    <input type="checkbox" bind:checked={ownedOnly} disabled={!hasOwned} class="accent-indigo-600" />
+    <input type="checkbox" bind:checked={ownedOnly} disabled={!hasOwned} class="accent-chrome-ink" />
     <span class="text-gray-700" class:opacity-50={!hasOwned}>所持のみ</span>
   </label>
   {#if highScoreEvents.length > 0}
@@ -162,7 +162,7 @@
       <span class="text-gray-600 shrink-0">特効</span>
       <select
         aria-label="特効イベント"
-        class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-chrome-ink"
         value={selectedEventId == null ? '' : String(selectedEventId)}
         onchange={(e) => {
           const v = e.currentTarget.value;
@@ -187,7 +187,7 @@
     role="tab"
     aria-selected={tab === 'scoreUp'}
     class="px-5 py-2 text-sm rounded-t-lg border border-b-0 cursor-pointer {tab === 'scoreUp'
-      ? 'bg-white text-indigo-700 font-bold border-gray-200'
+      ? 'bg-white text-gray-900 font-bold border-gray-200'
       : 'bg-gray-100 text-gray-500 border-transparent'}"
     onclick={() => (tab = 'scoreUp')}
   >スコアアップ</button>
@@ -196,7 +196,7 @@
     role="tab"
     aria-selected={tab === 'shrink'}
     class="px-5 py-2 text-sm rounded-t-lg border border-b-0 cursor-pointer {tab === 'shrink'
-      ? 'bg-white text-indigo-700 font-bold border-gray-200'
+      ? 'bg-white text-gray-900 font-bold border-gray-200'
       : 'bg-gray-100 text-gray-500 border-transparent'}"
     onclick={() => (tab = 'shrink')}
   >判定縮小</button>
@@ -209,7 +209,7 @@
     <div class="flex items-center gap-2 px-3 pt-3 text-sm">
       <span class="text-gray-600 shrink-0">並び替え</span>
       <select
-        class="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-chrome-ink"
         bind:value={scoreUpSort}
         aria-label="スコアアップソート"
       >
@@ -222,7 +222,7 @@
     <div class="flex items-center gap-2 px-3 pt-3 text-sm">
       <span class="text-gray-600 shrink-0">並び替え</span>
       <select
-        class="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-chrome-ink"
         bind:value={shrinkSort}
         aria-label="縮小ソート"
       >

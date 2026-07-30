@@ -59,11 +59,11 @@
       const trained = deckState.trained[i];
       rows.push({
         i,
-        slotClass: i === 0 ? 'text-indigo-600 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500',
+        slotClass: i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500',
         cardname: card.cardname || '',
         name: card.name || '',
         trainedLabel: trained ? '済' : '未',
-        trainedClass: trained ? 'text-indigo-600 font-bold' : 'text-gray-400',
+        trainedClass: trained ? 'text-gray-900 font-bold' : 'text-gray-400',
         bonusLabel: BONUS_LABEL[tier],
         bonusClass: BONUS_CLASS[tier],
         statShout: dc.shout_max,
@@ -180,7 +180,7 @@
             <td colspan="2"></td>
           </tr>
           {#if f.hasBroachRow}
-            <tr class="font-bold text-xs text-indigo-600">
+            <tr class="font-bold text-xs text-gray-900">
               <td colspan="4" class="py-1 px-1 text-right">ブローチ</td>
               <td class="py-1 px-1 text-right">{f.totalBS > 0 ? `+${f.totalBS.toLocaleString()}` : '-'}</td>
               <td class="py-1 px-1 text-right">{f.totalBB > 0 ? `+${f.totalBB.toLocaleString()}` : '-'}</td>

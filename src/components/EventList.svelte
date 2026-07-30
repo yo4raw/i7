@@ -127,12 +127,12 @@
         placeholder="イベント名"
         value={text}
         oninput={(e) => onSearchInput((e.currentTarget as HTMLInputElement).value)}
-        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       />
     </div>
     <div>
       <label for="search-type" class="block text-xs font-medium text-gray-500 mb-1">イベントタイプ</label>
-      <select id="search-type" bind:value={typeFilter} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <select id="search-type" bind:value={typeFilter} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink">
         <option value="">すべて</option>
         {#each eventTypes as t}
           <option value={t}>{t}</option>
@@ -141,7 +141,7 @@
     </div>
     <div>
       <label for="search-status" class="block text-xs font-medium text-gray-500 mb-1">状態</label>
-      <select id="search-status" bind:value={statusFilter} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <select id="search-status" bind:value={statusFilter} class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink">
         <option value="">すべて</option>
         <option value="live">実施中</option>
         <option value="upcoming">開催予定</option>
@@ -150,7 +150,7 @@
     </div>
   </div>
   <div class="mt-3 flex items-center gap-3">
-    <button type="button" class="text-sm text-indigo-600 hover:underline" onclick={reset}>条件リセット</button>
+    <button type="button" class="text-sm text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900" onclick={reset}>条件リセット</button>
     <span class="text-sm text-gray-500">{filtered.length}件を表示</span>
   </div>
 </div>
@@ -177,7 +177,7 @@
               <div class="text-xs mt-1 {remainClass}">{remainText}</div>
             {/if}
           </td>
-          <td class="px-3 py-2 font-medium"><a href={`${base}events/${ev.id}/`} class="text-indigo-600 hover:underline">{ev.eventname}</a></td>
+          <td class="px-3 py-2 font-medium"><a href={`${base}events/${ev.id}/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{ev.eventname}</a></td>
           <td class="px-3 py-2 text-xs text-gray-600">{ev.eventtype}</td>
           <td class="px-3 py-2 text-xs text-gray-700">{ev.start_date}</td>
           <td class="px-3 py-2 text-xs text-gray-700">{ev.end_date}</td>
@@ -191,7 +191,7 @@
   {#each filtered as { ev, status, remainText, remainClass } (ev.id)}
     <div class="rounded-lg shadow p-3 bg-white {rowClass(status)}">
       <div class="flex items-start justify-between gap-2 mb-1">
-        <a href={`${base}events/${ev.id}/`} class="font-medium text-sm flex-1 text-indigo-600 hover:underline">{ev.eventname}</a>
+        <a href={`${base}events/${ev.id}/`} class="font-medium text-sm flex-1 text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{ev.eventname}</a>
         <span class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-semibold {badgeClass(status)}">{badgeText(status)}</span>
       </div>
       {#if remainText}

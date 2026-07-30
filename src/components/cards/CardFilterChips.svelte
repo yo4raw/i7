@@ -1,5 +1,5 @@
 <script lang="ts">
-  export type ChipOption = { value: string; label: string; activeClass?: string };
+  export type ChipOption = { value: string; label: string; activeClass?: string; activeStyle?: string };
   export type ChipGroup = { name: string; options: ChipOption[] };
 
   type Props = {
@@ -29,7 +29,11 @@
   const chipBase =
     'inline-flex items-center rounded-full border px-3 py-1 text-sm cursor-pointer select-none transition-colors pressable';
   const chipOff =
-    'bg-white border-gray-300 text-gray-700 hover:border-indigo-400';
+    'bg-white border-gray-300 text-gray-700 hover:border-chrome-ink';
+  // グループ一括選択チップ（IDOLiSH7 等）の OFF 状態。個別メンバーチップ（chipOff）と紛らわしくならないよう、
+  // 枠線の濃さだけでなく背景も塗って区別する（border-dashed と合わせて二重に差をつける）
+  const chipGroupOff =
+    'bg-gray-100 border-gray-400 text-gray-600 hover:border-chrome-ink';
 
   function toggle(value: string) {
     const next = new Set(selected);
@@ -58,8 +62,11 @@
     type="button"
     aria-pressed={selected.has(option.value)}
     onclick={() => toggle(option.value)}
+    style={selected.has(option.value) ? (option.activeStyle ?? '') : ''}
     class="{chipBase} {selected.has(option.value)
-      ? `${option.activeClass ?? 'bg-indigo-600 border-indigo-600'} text-white font-semibold`
+      ? option.activeStyle
+        ? 'font-semibold'
+        : `${option.activeClass ?? 'bg-chrome-ink border-chrome-ink'} text-white font-semibold`
       : chipOff}"
   >
     {selected.has(option.value) ? '✓ ' : ''}{option.label}
@@ -76,8 +83,8 @@
             aria-pressed={isGroupOn(group)}
             onclick={() => toggleGroup(group)}
             class="{chipBase} border-dashed font-semibold {isGroupOn(group)
-              ? 'bg-indigo-600 border-indigo-600 text-white'
-              : 'bg-white border-indigo-300 text-indigo-600 hover:border-indigo-500'}"
+              ? 'bg-chrome-ink border-chrome-ink text-white'
+              : chipGroupOff}"
           >
             {group.name}
           </button>
@@ -104,7 +111,7 @@
       <span class="flex items-center gap-2">
         {label}
         {#if selected.size > 0}
-          <span class="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white">{selected.size}</span>
+          <span class="rounded-full bg-chrome-ink px-2 py-0.5 text-xs font-bold text-white">{selected.size}</span>
         {/if}
       </span>
       <span aria-hidden="true" class="text-gray-400">{open ? '▴' : '▾'}</span>

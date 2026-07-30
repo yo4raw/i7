@@ -4,20 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Dev Commands
 
-ローカルでのビルド・プレビュー・テストはすべて **ホスト環境で直接 npm scripts** を実行する。Docker は使用しない。
+ローカルでのビルド・プレビュー・テストはすべて **ホスト環境で直接 npm scripts** を実行する。Docker は使用しない。コマンド一覧は `package.json` の `scripts` を参照。
 
-```bash
-npm run dev              # 開発サーバー (Astro dev / HMR、http://localhost:4321)
-npm run build            # 本番ビルド (dist/ に出力)
-npm run preview          # 本番ビルド + ローカル配信 (http://localhost:4321)
-npm run test             # Playwright E2E テスト (preview サーバーを自動起動)
-npm run test:ui          # Playwright を UI モードで実行
-npm run test:unit        # Vitest 単体テスト (1回実行、`tests/unit/` 配下)
-npm run test:unit:watch  # Vitest 単体テスト (watch モード)
-npm run extract-fixtures # Google Sheets からテストフィクスチャ JSON を再生成
-```
-
-Node.js は `.nvmrc` で 22 を指定。ホスト環境で Node.js 22 を用意すること（`nvm use` 等）。
+- `npm run preview` は build 込みで本番配信を再現する（`serve dist -l 4321`）
+- `npm run test` (Playwright E2E) は preview サーバーを自動起動する
+- Node.js は `.nvmrc` で 22 を指定。ホスト環境で Node.js 22 を用意すること（`nvm use` 等）
 
 ### 日常の検証は `npm run dev` (HMR) を使う
 
@@ -114,73 +105,9 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 楽曲ジャケット画像は `public/assets/songs/` に配置される（`SONG_IMAGE_BASE_URL` 経由で参照）。Wiki クローラー本体は `scripts/fetch-song-images.mjs`。
 
-### Key Constants (`src/lib/constants.ts`)
-
-- `CARD_IMAGE_BASE_URL` / `CARD_THUMB_BASE_URL` / `SONG_IMAGE_BASE_URL` — `import.meta.env.BASE_URL` ベースの画像パス
-- `CHARACTERS` / `CHARACTER_GROUPS` — IDOLiSH7 / TRIGGER / Re:vale / ŹOOĻ のキャラ定義
-- `RARITIES` / `ATTRIBUTES` / `ATTRIBUTE_MAP` / `ATTRS` — レアリティ・属性の定数
-- `ATTR_HEX` / `ATTR_BADGE_BG` / `ATTR_BG` / `ATTR_BG_HOVER` / `RARITY_BADGE_CLASSES` — 属性/レアリティ別の表示スタイル
-- `PAGE_SIZE` — カード一覧のページネーションサイズ
-
-### Client-Side Modules
-
-| モジュール | 役割 |
-|-----------|------|
-| `src/lib/cardListData.ts` | カード一覧の行データ型 (`CardListItem`) 定義。フィルタ/ソート/ページネーションの実装は `src/components/CardList.svelte` |
-| `src/lib/cardFilter.ts` | カード名・キャラ名の部分一致検索述語（`cardTextMatches`） |
-| `src/lib/donutChart.ts` | 属性比率のドーナツチャート描画 |
-| `src/lib/storage.ts` | localStorage ラッパー。キー一覧は `STORAGE_KEYS` で集中管理（新しいキー追加時はここに追記） |
-| `src/lib/ui.ts` | UI 共通ヘルパー |
-| `src/lib/score/` | スコア計算エンジン（モンテカルロシミュレーション） |
-| `src/components/FooterTools.svelte` | フッターからの localStorage エクスポート/インポート UI |
-
-スコア計算エンジンの主要コンポーネント:
-
-| ファイル | 役割 |
-|---------|------|
-| `engine.ts` | 互換 re-export レイヤー（実体は teamBuilder / simulation） |
-| `teamBuilder.ts` | チーム属性値・センタースキル計算（`computeTeam`, `getCenterSkillRate`） |
-| `simulation.ts` | 理論値・期待値・MC シミュレーション（`runSimulation`, `calcMinScore`, `calcMaxScore` 等） |
-| `types.ts` | 型定義 |
-| `constants.ts` | スコア計算用定数 |
-| `rng.ts` | 乱数生成 |
-| `noteFlattener.ts` | ノーツ展開 |
-| `histogram.ts` | スコア分布のヒストグラム描画 |
-| `broachResolver.ts` | 固有ブローチ・共有ブローチの効果解決 |
-| `skillFormatter.ts` | スキル表示文字列の生成 |
-| `shrinkExclusion.ts` | 縮小スキルの並び順検証ロジック |
-| `specDiagrams.ts` | スキル仕様可視化用ダイアグラム生成 |
-| `deckState.ts` | デッキ編成状態（`DeckState`、6 スロット: 0=センター, 1-4=メンバー, 5=フレンド。表示順は `DISPLAY_ORDER`） |
-| `maxScoreFinder.ts` | 編成組合計算（max-score-finder）の総当たり探索ロジック。UI / Worker 両方から import される純粋モジュール |
-| `maxScoreFinder.worker.ts` | 探索 Web Worker。chunk を受けて `maxScoreFinder.ts` の `evaluateChunk` に委譲 |
-| `searchWorkerPool.ts` | 探索 Worker プール制御（Worker 生成・chunk dispatch・進捗集約・abort・terminate） |
-
-スコア計算系コンポーネントの構成:
-
-| ディレクトリ | 内容 |
-|-------------|------|
-| `src/components/score/` | `ScoreCalc.svelte` / `MaxScoreFinder.svelte` の子コンポーネント群（`CardPickerModal` / `DeckSlots` / `CardDetailTable` / `ScoreCalcResults` / `SearchResults` 等） |
-| `src/components/ui/` | 汎用バッジ（`RarityBadge` / `AttributeBadge`） |
-
 ### Page Patterns
 
-| ページ | ルート | 描画方式 |
-|--------|--------|----------|
-| ホーム | `src/pages/index.astro` | ビルド時プリレンダリング |
-| 衣装一覧 | `src/pages/cards/index.astro` | ビルド時 + クライアント JS（フィルタ/ソート/ページネーション/イベント特効表示） |
-| 衣装詳細 | `src/pages/cards/[id].astro` | `getStaticPaths()` による動的ルート |
-| 楽曲一覧 | `src/pages/songs/index.astro` | ビルド時プリレンダリング |
-| 楽曲詳細 | `src/pages/songs/[id].astro` | `getStaticPaths()` による動的ルート |
-| 所持衣装 | `src/pages/mycard/index.astro` | ビルド時 + クライアント JS（localStorage ベースの所持数管理） |
-| スコア計算 | `src/pages/score-calc/index.astro` | ビルド時 + クライアント JS（モンテカルロシミュレーション、開催中イベントの特効反映） |
-| 保存デッキ | `src/pages/decks/index.astro` | ビルド時 + クライアント JS（localStorage ベースのデッキ管理） |
-| イベント一覧 | `src/pages/events/index.astro` | ビルド時プリレンダリング（`fetchEventsCsv` を build 時に読込） |
-| イベント詳細 | `src/pages/events/[id].astro` | `getStaticPaths()` による動的ルート |
-| ラビットノート | `src/pages/rabbit-note/index.astro` | ビルド時プリレンダリング |
-| 共通ブローチ | `src/pages/shared-broach/index.astro` | ビルド時 + クライアント JS（localStorage ベースの共通ブローチ所持数登録。実装は `src/components/SharedBroachEditor.svelte`） |
-| About | `src/pages/about/index.astro` | ビルド時プリレンダリング |
-| リリースノート | `src/pages/releases/index.astro` | ビルド時プリレンダリング |
-| 編成組合計算 | `src/pages/score-calc/max-score-finder/index.astro` | ビルド時 + クライアント JS（理論値最大編成探索。所持衣装縛りモード（`i7_card_counts` の枚数を上限とした多重集合探索）あり。実装は `src/components/MaxScoreFinder.svelte`） |
+全ページは `src/pages/` 配下。ビルド時プリレンダリングが基本で、`cards/[id]` / `songs/[id]` / `events/[id]` は `getStaticPaths()` による動的ルート。所持衣装・スコア計算・保存デッキ・共通ブローチ・編成組合計算はクライアント JS + localStorage で状態を持つ。
 
 ### User Data Backup
 
@@ -201,15 +128,7 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 ### Deployment
 
-Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。静的アセットのみの Worker はリクエスト課金対象外で無料運用できる。GitHub Actions (`.github/workflows/deploy.yml`) が `v*` タグ push もしくは手動実行 (`workflow_dispatch`) で `wrangler deploy` を叩く。
-
-- 必要な GitHub Secret: `CLOUDFLARE_API_TOKEN` (Account > Workers Scripts:Edit 権限), `CLOUDFLARE_ACCOUNT_ID`
-- Worker 名: `i7-gottani` (`wrangler.toml` の `name` で指定)
-- 静的配信設定: `wrangler.toml` の `[assets] directory = "./dist"` で `dist/` を紐付け、`not_found_handling = "404-page"` で Astro の 404.html を返す
-- リリース手順: `git tag v1.x.x && git push origin v1.x.x` でタグを push すると `release.yml` が GitHub Release を作成、同時に `deploy.yml` が Cloudflare Workers へデプロイする
-- スプレッドシートのマスターデータ反映など、タグ発行なしで再デプロイしたい場合は Actions タブから `Deploy to Cloudflare Workers` を手動実行する
-
-**CI**: PR 時にビルドチェック（`.github/workflows/ci.yml`）が自動実行される。画像パス（`public/assets/cards/**`, `public/assets/th_cards/**`）の変更は CI スキップ。
+Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。リリース・デプロイの具体的な手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照。
 
 ### PWA
 
@@ -231,12 +150,12 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 サイトは**ライトテーマ固定**（ダークモードは ADR 0020 で廃止済み。`dark:` バリアント・`html.dark`・テーマトグルは存在しない）。チャート配色は `src/styles/global.css` の `@layer base` 内 `:root` で `--chart-grid` `--chart-axis-label` `--chart-text` `--chart-exclude-bg` `--chart-exclude-border` `--chart-mute-fill` を定義し、`src/lib/donutChart.ts` / `src/lib/score/histogram.ts` / `src/lib/score/specDiagrams.ts` のチャート SVG が `fill="var(--chart-grid)"` 等で参照する。新規コンポーネントでは `dark:` バリアントを付けないこと。
 
-#### デザイン規約（apple-design / ADR 0046）
+#### デザイン規約（apple-design / ADR 0046 / ADR 0047）
 
 `src/styles/global.css` にマテリアル用の `@utility` とトークンを定義済み。新規 UI は以下の規約に従う:
 
 - **マテリアル 3 層**:
-  - `material-chrome`（暗色インディゴ半透明 + blur）= ヘッダー等の構造チュローム専用（白テキスト前提）
+  - `material-chrome`（近黒 `#14151A` 半透明 + blur）= ヘッダー等の構造クローム専用（白テキスト前提）。ADR 0047 で indigo から無彩色へ変更済み
   - `material-overlay`（白半透明 + blur + border/shadow）= ドロップダウン等の浮遊オーバーレイ専用（暗色テキスト前提）
   - `surface-card`（**完全不透明** 白 + `--radius-card` + `--shadow-card`）= 本文・データを載せるサーフェス
 - **本文テキストを載せる面は必ず不透明**（`surface-card`）にする。半透明面上のテキストは WCAG AA（4.5:1）を満たすこと（0001 の視認性破綻を繰り返さない）
@@ -244,25 +163,27 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 - **リスト行・タイル・大きな繰り返し要素に `backdrop-filter` を使わない**（半透明は chrome の小領域限定。パフォーマンス）
 - `prefers-reduced-transparency` / `prefers-contrast` / `prefers-reduced-motion` のフォールバックは `@utility` 定義内と global.css に集約済み。利用側で個別対応しない
 - **モーション**: 新規依存を増やさない。開閉トランジションは `src/lib/motion.ts` の `materialIn`/`materialOut`（svelte/transition）、押下フィードバックは `pressable` utility を使う。ジェスチャー駆動 UI（ドラッグシート等）は導入しない
-- **タイポグラフィ**: 大見出しは `text-display` utility（CJK 向け `palt` + 正トラッキング + `line-height:1.35`）。欧文向けの負トラッキングは使わない。数値の揃う列には `tabular-nums`
+- **タイポグラフィ**: 大見出しは `text-display` utility（CJK 向け `palt` + 正トラッキング + `line-height:1.35`）。欧文向けの負トラッキングは使わない。数値の揃う列には `tabular-nums`（数字・欧文は ADR 0047 でセルフホストした Barlow Semi Condensed を適用。CJK には適用しない）
 - 影・角丸・blur・イージングは `@theme` のトークン（`--shadow-card` 等 → `shadow-card` / `rounded-card` utility）を使い、値を直書きしない
+- **色の 3 チャンネル分離（ADR 0047）**: 構造・ナビゲーション・アイデンティティ表現の配色は「属性」「キャラ」「構造」の 3 チャンネルのみとし、混同しない（データ区分を表す配色は後述の対象外）
+  - 属性（Shout/Beat/Melody）= **塗りのチップ**。`ATTR_HEX`（`src/lib/constants.ts`）固定
+  - キャラ（誰の衣装か）= **線・縁・小さな点のみ**（スパイン・タブ・ドット）。`CHARACTER_HEX`（`src/lib/constants.ts`）が単一情報源
+  - 構造（ページ・ナビ・面）= 無彩色（近黒 `#14151A` / 白 / グレー階調）
+  - **キャラ色は面を塗らない。テキスト色にも使わない**（属性色との衝突・淡色キャラでのコントラスト破綻を避けるため）。キャラ名等のテキストは近黒のまま、色はスパイン等の別要素が担う
+  - **`indigo`（クラス名・HEX とも）は `src/` に増やさない**。リンク・見出し・主ボタン・フォーカスリングも無彩色（近黒 + 下線 / 近黒 / 近黒の塗り / 近黒）とする
+  - **3 チャンネル規約の対象外（無彩色化してはならない）**: データそのものの区分を表す配色は現状を維持する。詳細と理由は ADR 0047「適用範囲」の対象外表を参照
+    - レアリティバッジ（`RARITY_BADGE_CLASSES`）
+    - イベント特効の段階（金銀銅、`EVENT_BONUS_TIERS`）
+    - スコア計算仕様ページの計算段階配色（`STAGE_COLORS` / `CARD_COLORS`、ADR 0043）
+    - デッキのフレンドスロットの amber（`DeckSlots.svelte` ほか）
+    - ホームの免責事項セクションの yellow（`src/pages/index.astro`）
+    - 上記以外で新たに色相を持つクラスを足す場合は 3 チャンネル規約に従うか、ADR 0047 の対象外表を更新する
 
 ### Testing
 
 #### E2E テスト (Playwright)
 
 `tests/` 直下に配置。`playwright.config.ts` で設定。
-
-| テスト | 対象ページ |
-|--------|-----------|
-| `home.test.ts` | ホームページ |
-| `card-list.test.ts` | カード一覧 |
-| `card-detail.test.ts` | カード詳細 |
-| `song-list.test.ts` | 楽曲一覧 |
-| `song-detail.test.ts` | 楽曲詳細 |
-| `mycard.test.ts` | 所持カード |
-| `score-calc-spec.test.ts` | スコア計算ページのスキル仕様表示 |
-| `card-compare.test.ts` | 衣装比較 |
 
 ##### ローカルでの E2E は dev サーバー (HMR) を再利用する
 
@@ -278,13 +199,7 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 #### 単体テスト (Vitest)
 
-スコア計算エンジン等のロジックは `tests/unit/` 配下で Vitest により検証（`vitest.config.ts`）。
-
-| テスト | 対象 |
-|--------|-----|
-| `tests/unit/score/engine.test.ts` | `src/lib/score/engine.ts` のシミュレーションロジック |
-| `tests/unit/score/shrinkExclusion.test.ts` | `src/lib/score/shrinkExclusion.ts` の縮小スキル並び順検証 |
-| `tests/unit/score/specDiagrams.test.ts` | `src/lib/score/specDiagrams.ts` のダイアグラム生成 |
+スコア計算エンジン等のロジックは `tests/unit/` 配下で Vitest により検証（`vitest.config.ts`）。`src/lib/score/` の各モジュールに対応する単体テストを置く。
 
 #### テストフィクスチャ
 
