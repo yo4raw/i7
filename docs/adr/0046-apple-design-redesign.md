@@ -66,3 +66,4 @@
 - ダークモード廃止（[0020](0020-abolish-dark-mode.md)）は継続。`dark:` バリアントは引き続き使用しない。
 - View Transitions の導入は本 ADR のスコープ外（将来課題）。
 - `CLAUDE.md` にデザイン規約（マテリアル 3 層・utility 使用規約・「本文面は不透明」「行アイテムに backdrop-filter 禁止」）を追記。
+- 本 ADR の §1（クロームの indigo 材）と §5（カスタム Web フォントを導入しない）は、[0047](0047-character-color-identity.md) により部分的に上書きされた。マテリアル 3 層の構造とアクセシビリティ・モーションの方針は引き続き有効。
