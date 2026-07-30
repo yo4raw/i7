@@ -30,7 +30,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@playform/compress": "0.2.3",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@vitest/coverage-v8": "^4.1.9",
     "husky": "9.1.7",
     "jsdom": "^29.1.1",
