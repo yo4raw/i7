@@ -130,11 +130,14 @@ export function pipelineOverviewSvg(opts?: { highlight?: StageKey }): string {
 /**
  * チーム属性値の内訳セグメント配色（無彩色 4 段階、寄与の大きい順に濃い）。
  *
- * 積み上げバーはセグメントを境界線なしで直接隣接させるため、隣り合う 2 色間で
- * 十分な明度差が要る。下記は隣接ペアすべてで 1.8:1 以上を確保している:
- *   raw–broach 2.41:1 / broach–center 2.31:1 / center–friend 1.82:1
- * ブローチが 0 の行では raw と center が直接隣接するため、その組合せ (5.57:1) も
- * 判別可能にしてある。最淡の friend も白カード地に対して 1.77:1 あり輪郭が見える。
+ * 塗り同士の隣接コントラスト（WCAG 相対輝度、実測）:
+ *   raw–broach 2.41:1 / broach–center 2.36:1 / center–friend 1.83:1
+ *   raw–center 5.69:1（ブローチが 0 の行では raw と center が直接隣接する）
+ *   friend–白地 1.75:1
+ *
+ * 最淡の friend は白いカード地に対して 1.75:1 しかなく、塗りの明度差だけでは
+ * バー右端の輪郭も凡例スウォッチも視認できない。そのため塗りのコントラストには
+ * 依存せず、全セグメントと凡例矩形に {@link ATTR_STACK_STROKE} のヘアラインを引く。
  */
 const ATTR_STACK_COLORS = {
   raw: '#14151A',
@@ -142,6 +145,17 @@ const ATTR_STACK_COLORS = {
   center: '#8A909C',
   friend: '#BFC4CE',
 } as const;
+
+/**
+ * 積み上げバーのセグメント境界を成立させる 1px ヘアライン。
+ *
+ * 白地に対して 4.83:1（WCAG 1.4.11 の 3:1 を満たす）あり、バーの外周と凡例
+ * スウォッチの輪郭が塗りの明度によらず立つ。各境界は「2 辺のどちらか一方」で
+ * 線が判別できればよく、実測値は次の通り:
+ *   vs 白地 4.83:1 / vs raw 3.77:1 / vs friend 2.76:1
+ *   vs broach 1.56:1・vs center 1.51:1（この 2 者の境界は塗り同士で 2.36:1 あり成立）
+ */
+const ATTR_STACK_STROKE = '#6B7280';
 
 /** チーム属性値の内訳（素値/ブローチ/センター/フレンド）積み上げバー */
 export function teamAttrStackSvg(team: ComputedTeam): string {
@@ -170,7 +184,7 @@ export function teamAttrStackSvg(team: ComputedTeam): string {
 
   const legend = SEGMENTS.map((s, i) =>
     `<g transform="translate(${M.left + i * 170}, 8)">
-      <rect width="12" height="10" rx="2" fill="${s.color}"/>
+      <rect width="12" height="10" rx="2" fill="${s.color}" stroke="${ATTR_STACK_STROKE}" stroke-width="1"/>
       <text x="16" y="9" fill="${TEXT}" font-size="10">${escapeXml(s.label)}</text>
     </g>`).join('');
 
@@ -181,7 +195,7 @@ export function teamAttrStackSvg(team: ComputedTeam): string {
       const v = r[s.key];
       if (v <= 0) return '';
       const w = xw(v);
-      const rect = `<rect x="${x}" y="${y}" width="${w}" height="${barH}" fill="${s.color}">
+      const rect = `<rect x="${x}" y="${y}" width="${w}" height="${barH}" fill="${s.color}" stroke="${ATTR_STACK_STROKE}" stroke-width="1">
         <title>${r.attr} ${escapeXml(s.label)}: ${fmt(v)}</title></rect>`;
       x += w;
       return rect;
