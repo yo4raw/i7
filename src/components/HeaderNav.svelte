@@ -105,7 +105,7 @@
 </script>
 
 <header
-  class="material-chrome text-white sticky top-0 z-50 transition-shadow duration-200"
+  class="material-chrome text-white sticky top-0 z-(--z-chrome) transition-shadow duration-200"
   class:shadow-chrome={scrolled}
   data-scrolled={scrolled}
 >
@@ -118,7 +118,7 @@
       aria-expanded={mobileOpen}
       onclick={() => (mobileOpen = !mobileOpen)}
     >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
@@ -134,14 +134,14 @@
               onclick={() => toggleDropdown(item.label)}
             >
               {item.label}
-              <svg class="w-3 h-3 transition-transform" class:rotate-180={openDropdown === item.label} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="size-3 transition-transform" class:rotate-180={openDropdown === item.label} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             {#if openDropdown === item.label}
               <ul
                 role="menu"
-                class="material-overlay absolute left-0 top-full mt-2 min-w-44 text-gray-800 rounded-xl py-1 z-50 origin-top-left"
+                class="material-overlay absolute left-0 top-full mt-2 min-w-44 text-gray-800 rounded-card py-1 z-(--z-overlay) origin-top-left"
                 in:materialIn
                 out:materialOut
               >
@@ -178,7 +178,7 @@
             onclick={() => toggleMobileDropdown(item.label)}
           >
             <span>{item.label}</span>
-            <svg class="w-3 h-3 transition-transform" class:rotate-180={mobileDropdownOpen[item.label]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="size-3 transition-transform" class:rotate-180={mobileDropdownOpen[item.label]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>

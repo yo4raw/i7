@@ -50,7 +50,7 @@
   });
   const attrDonut = $derived(
     ownedByAttr.total > 0
-      ? attrDonutSvg(ownedByAttr.s, ownedByAttr.b, ownedByAttr.m, { sizeClass: 'w-28 h-28', strokeWidth: 4 })
+      ? attrDonutSvg(ownedByAttr.s, ownedByAttr.b, ownedByAttr.m, { sizeClass: 'size-28', strokeWidth: 4 })
       : ''
   );
 </script>

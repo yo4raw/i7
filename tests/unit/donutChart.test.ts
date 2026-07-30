@@ -33,7 +33,7 @@ describe('donutChartSvg', () => {
 
   it('デフォルトオプション (sizeClass / strokeWidth) を適用', () => {
     const html = donutChartSvg([{ value: 10, color: '#ef4444' }]);
-    expect(html).toContain('class="w-10 h-10"');
+    expect(html).toContain('class="size-10"');
     expect(html).toContain('stroke-width="5"');
   });
 

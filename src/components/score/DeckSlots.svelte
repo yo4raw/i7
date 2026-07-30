@@ -377,7 +377,7 @@
           <div class="text-[8px] text-gray-400 text-center">{card.name || ''}</div>
           <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
           <label class="trained-label mt-1 flex items-center gap-1 text-[9px] text-gray-600 cursor-pointer" onclick={stopProp}>
-            <input type="checkbox" class="trained-check w-3 h-3" data-trained-slot={i} checked={deckState.trained[i]} onchange={(e) => onTrainedChange(e, i)} />
+            <input type="checkbox" class="trained-check size-3" data-trained-slot={i} checked={deckState.trained[i]} onchange={(e) => onTrainedChange(e, i)} />
             <span>特訓済</span>
           </label>
           <select class={bonusTierSelectClass(deckState.bonusTiers[i])} data-bonus-slot={i} value={deckState.bonusTiers[i]} onclick={stopProp} onchange={(e) => onBonusTierChange(e, i)}>
@@ -414,7 +414,7 @@
             {/each}
           {/if}
         {:else}
-          <svg class="w-8 h-8 {i === 5 ? 'text-amber-300' : 'text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="size-8 {i === 5 ? 'text-amber-300' : 'text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           <span class="text-[10px] {i === 5 ? 'text-amber-400' : 'text-gray-400'} mt-1">選択</span>
         {/if}
       </div>

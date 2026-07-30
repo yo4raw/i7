@@ -10,7 +10,7 @@
 <div class="flex items-center justify-center gap-1" onclick={(e) => e.stopPropagation()} role="presentation">
   <button
     type="button"
-    class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none"
+    class="size-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none"
     onclick={(e) => { e.stopPropagation(); deltaCount(cardId, -1); }}
     aria-label="所持数を1減らす"
   >−</button>
@@ -28,7 +28,7 @@
   />
   <button
     type="button"
-    class="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none"
+    class="size-6 rounded bg-gray-200 hover:bg-gray-300 text-sm font-bold leading-none"
     onclick={(e) => { e.stopPropagation(); deltaCount(cardId, 1); }}
     aria-label="所持数を1増やす"
   >+</button>

@@ -64,7 +64,7 @@
 </script>
 
 <div
-  class="fixed bottom-0 inset-x-0 z-40 bg-white border-t-2 border-chrome-ink shadow-[0_-4px_12px_rgba(0,0,0,0.12)]"
+  class="fixed bottom-0 inset-x-0 z-(--z-panel) bg-white border-t-2 border-chrome-ink shadow-panel-top pb-safe"
   data-testid="compare-detail"
 >
   <div class="max-w-7xl mx-auto px-4 py-2">
@@ -90,7 +90,7 @@
                     src={cardThumbUrl(entry.card.ID ?? '')}
                     alt={entry.card.cardname || ''}
                     loading="lazy"
-                    class="w-10 h-10 rounded border-2 object-cover"
+                    class="size-10 rounded border-2 object-cover"
                     style={`border-color:${ATTR_HEX[entry.attribute]}`}
                   />
                   <span class="max-w-32 truncate">{entry.card.cardname}</span>

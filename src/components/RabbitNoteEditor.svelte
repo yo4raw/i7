@@ -1,6 +1,10 @@
 <script lang="ts">
   import { CHARACTER_GROUPS, characterColor } from '../lib/constants';
   import { loadRabbitNotes, saveRabbitNotes, type RabbitNoteMap } from '../lib/data/rabbitNote';
+  import ModalDialog from './ui/ModalDialog.svelte';
+
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
+  let dialog: ModalDialog | undefined;
 
   const ATTRS = [
     { key: 'shout', label: 'Shout', color: 'text-red-600', border: 'focus:border-red-400' },
@@ -46,8 +50,14 @@
     showFeedback('保存しました');
   }
 
-  function onClear() {
-    if (!confirm('全てのラビットノート値をクリアしますか？')) return;
+  async function onClear() {
+    const ok = await dialog?.confirm({
+      title: '全てのラビットノート値をクリアしますか？',
+      message: '登録済みの値がすべて失われます。この操作は取り消せません。',
+      confirmLabel: 'クリアする',
+      danger: true,
+    });
+    if (!ok) return;
     saveRabbitNotes({});
     data = {};
     showFeedback('クリアしました');
@@ -97,5 +107,7 @@
 <div class="mt-6 flex gap-3">
   <button type="button" class="px-5 py-2.5 bg-chrome-ink text-white rounded-lg hover:bg-chrome-ink-soft font-bold shadow-lg" onclick={onSave}>保存</button>
   <button type="button" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-lg" onclick={onClear}>全てクリア</button>
-  <span class="self-center text-sm text-green-600 font-medium transition-opacity duration-300" style:opacity={feedbackVisible ? 1 : 0}>{feedback}</span>
+  <span class="self-center text-sm text-green-600 font-medium transition-opacity duration-200" style:opacity={feedbackVisible ? 1 : 0}>{feedback}</span>
 </div>
+
+<ModalDialog bind:this={dialog} />

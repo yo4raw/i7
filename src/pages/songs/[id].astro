@@ -46,7 +46,7 @@ const totalRatio = sr + br + mr;
 const sPct = totalRatio ? Math.round(sr * 100) : 0;
 const bPct = totalRatio ? Math.round(br * 100) : 0;
 const mPct = totalRatio ? Math.round(mr * 100) : 0;
-const ratioChartHtml = attrDonutSvg(sr, br, mr, { sizeClass: 'w-full h-full', strokeWidth: 4 });
+const ratioChartHtml = attrDonutSvg(sr, br, mr, { sizeClass: 'size-full', strokeWidth: 4 });
 
 // 基本情報
 const infoRows = [
@@ -115,11 +115,11 @@ const broachRanking = buildBroachRanking(song);
     <section class={`surface-card p-6 ${noteBreakdown.hasNotes ? 'lg:col-span-2' : 'lg:col-span-5'}`}>
       <h2 class="text-lg font-semibold mb-4">属性比率</h2>
       <div class="flex flex-col sm:flex-row items-center gap-6">
-        <div class="w-36 h-36 flex-shrink-0" set:html={ratioChartHtml} />
+        <div class="size-36 flex-shrink-0" set:html={ratioChartHtml} />
         <div class="space-y-2">
           {(['Shout', 'Beat', 'Melody'] as const).map((attr, i) => (
             <div class="flex items-center gap-2">
-              <span class={`w-3 h-3 rounded-full inline-block ${ATTR_BADGE_BG[attr]}`}></span>
+              <span class={`size-3 rounded-full inline-block ${ATTR_BADGE_BG[attr]}`}></span>
               <span class="text-sm font-medium w-16">{attr}</span>
               <span class="text-sm">{[sPct, bPct, mPct][i]}%</span>
             </div>

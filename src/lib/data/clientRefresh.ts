@@ -22,11 +22,21 @@ let indicatorEl: HTMLElement | null = null;
 let fadeTimer: ReturnType<typeof setTimeout> | undefined;
 let pendingCount = 0;
 
+/**
+ * トーストの位置・形状。変化するのは opacity と配色だけなので
+ * transition は opacity に限定する (transition-all はレイアウト系プロパティまで
+ * 拾ってしまうため使わない)。bottom-safe で下部セーフエリアを避ける。
+ */
+const INDICATOR_BASE =
+  'fixed bottom-safe right-4 z-(--z-overlay) px-4 py-2 rounded-control shadow-overlay text-sm transition-opacity duration-200 pointer-events-none';
+
 function getIndicator(): HTMLElement {
   if (indicatorEl) return indicatorEl;
   const el = document.createElement('div');
   el.id = 'data-freshness-indicator';
-  el.className = 'fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm transition-all duration-300 opacity-0 pointer-events-none';
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.className = `${INDICATOR_BASE} opacity-0`;
   document.body.append(el);
   indicatorEl = el;
   return el;
@@ -37,10 +47,10 @@ function showIndicator(message: string, type: 'loading' | 'success') {
   clearTimeout(fadeTimer);
 
   if (type === 'loading') {
-    el.className = 'fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm transition-all duration-300 opacity-100 bg-white text-gray-600 border border-gray-200';
+    el.className = `${INDICATOR_BASE} opacity-100 bg-white text-gray-600 border border-gray-200`;
     el.textContent = message;
   } else {
-    el.className = 'fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm transition-all duration-300 opacity-100 bg-green-50 text-green-700 border border-green-200';
+    el.className = `${INDICATOR_BASE} opacity-100 bg-green-50 text-green-700 border border-green-200`;
     el.textContent = message;
     fadeTimer = setTimeout(() => {
       el.classList.replace('opacity-100', 'opacity-0');

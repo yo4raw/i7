@@ -97,8 +97,8 @@
 </script>
 
 <section class="space-y-4">
-  <div class="bg-gradient-to-br from-gray-50 to-gray-200 rounded-lg shadow p-4 md:p-6">
-    <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">理論値最大編成</div>
+  <div class="surface-card p-4 md:p-6">
+    <div class="text-[10px] text-gray-500 text-center">理論値最大編成</div>
     <div class="text-3xl md:text-5xl font-bold text-gray-900 text-center mt-1 tabular-nums">{result.best.score.toLocaleString()}</div>
     <div class="text-center text-xs text-gray-500 mt-1">
       {result.aborted ? `${modeLabel} ※探索中断` : modeLabel}

@@ -276,7 +276,7 @@
             <td class="px-3 py-2">
               {#if sr || br || mr}
                 <div class="flex items-center gap-2">
-                  {@html attrDonutSvg(sr, br, mr, { sizeClass: 'w-10 h-10 flex-shrink-0' })}
+                  {@html attrDonutSvg(sr, br, mr, { sizeClass: 'size-10 flex-shrink-0' })}
                   <div class="text-[10px] text-gray-500 leading-tight">
                     <span style="color:{ATTR_HEX.Shout}">S:{Math.round(sr * 100)}%</span>
                     <span style="color:{ATTR_HEX.Beat}">B:{Math.round(br * 100)}%</span>
@@ -328,7 +328,7 @@
             <div class="mt-2">
               {#if sr || br || mr}
                 <div class="flex items-center gap-2">
-                  {@html attrDonutSvg(sr, br, mr, { sizeClass: 'w-10 h-10 flex-shrink-0' })}
+                  {@html attrDonutSvg(sr, br, mr, { sizeClass: 'size-10 flex-shrink-0' })}
                   <div class="text-[10px] text-gray-500 leading-tight">
                     <span style="color:{ATTR_HEX.Shout}">S:{Math.round(sr * 100)}%</span>
                     <span style="color:{ATTR_HEX.Beat}">B:{Math.round(br * 100)}%</span>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import InlineAlert from './ui/InlineAlert.svelte';
+
   interface Props {
     /** 拡張子なしのダウンロードファイル名 */
     filename: string;
@@ -9,12 +11,14 @@
   let { filename, targetId = 'share-panel' }: Props = $props();
 
   let busy = $state(false);
+  let error = $state<string | null>(null);
 
   async function download() {
     if (busy) return;
     const node = document.querySelector(`#${targetId}`);
     if (!node) return;
     busy = true;
+    error = null;
     try {
       const { domToPng } = await import('modern-screenshot');
       const dataUrl = await domToPng(node, { scale: 2, backgroundColor: '#ffffff' });
@@ -26,13 +30,14 @@
       a.remove();
     } catch (e) {
       console.error(e);
-      alert('画像の生成に失敗しました。時間をおいて再度お試しください。');
+      error = '画像の生成に失敗しました。時間をおいて再度お試しください。';
     } finally {
       busy = false;
     }
   }
 </script>
 
+<span class="inline-flex flex-col items-start gap-1">
 <button
   type="button"
   onclick={download}
@@ -40,13 +45,13 @@
   class="inline-flex items-center gap-1.5 rounded-md bg-chrome-ink px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-chrome-ink-soft disabled:opacity-60 disabled:cursor-not-allowed"
 >
   {#if busy}
-    <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
     生成中…
   {:else}
-    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -54,3 +59,5 @@
     画像をダウンロード
   {/if}
 </button>
+<InlineAlert message={error} />
+</span>

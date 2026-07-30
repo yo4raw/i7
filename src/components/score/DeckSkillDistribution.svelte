@@ -111,7 +111,7 @@
           <ul class="mt-2 flex flex-col gap-1">
             {#each [...panel.curves, ...panel.legendOnly] as e (e.slotIndex)}
               <li class="flex items-center gap-2 text-[11px] text-gray-700">
-                <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:{e.color}"></span>
+                <span class="inline-block size-3 rounded-sm flex-shrink-0" style="background:{e.color}"></span>
                 <img src={e.thumbUrl} alt="" width="20" height="20" class="rounded flex-shrink-0" loading="lazy" />
                 <span class="truncate max-w-[10rem]">{e.cardName}</span>
                 <span class="ml-auto tabular-nums text-gray-500">属性値 {e.effectiveAppeal.toLocaleString()}</span>

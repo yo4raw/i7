@@ -252,7 +252,7 @@
 <details id="breakdown-section" class="surface-card p-4 group" open>
   <summary class="cursor-pointer text-sm font-bold text-gray-700 flex items-center justify-between select-none mb-3">
     <span>📊 スキル詳細</span>
-    <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    <svg class="size-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
   </summary>
   <section id="score-breakdown" class:hidden={!calc}>
     <div class="space-y-1">
@@ -320,11 +320,11 @@
 <section class="surface-card p-4">
   <div class="grid grid-cols-2 gap-4 text-center">
     <div>
-      <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最低</div>
+      <div class="text-[10px] text-gray-500">理論最低</div>
       <div id="score-min" class="text-base md:text-lg font-bold text-gray-700 mt-1">{scoreMinText}</div>
     </div>
     <div>
-      <div class="text-[10px] text-gray-500 uppercase tracking-widest">理論最高</div>
+      <div class="text-[10px] text-gray-500">理論最高</div>
       <div id="score-max" class="text-base md:text-lg font-bold text-gray-700 mt-1">{scoreMaxText}</div>
     </div>
   </div>
@@ -356,15 +356,16 @@
   </button>
   <p id="calc-disabled-reason" class="text-xs text-center text-amber-600">{calcDisabledReason}</p>
   <div id="progress-container" class:hidden={!running}>
-    <div class="w-full bg-gray-200 rounded-full h-2">
-      <div id="progress-bar" class="bg-chrome-ink h-2 rounded-full transition-all" style="width: {progressPercent}%"></div>
+    <!-- width ではなく scaleX を動かす: レイアウトを再計算させないため (Baseline UI) -->
+    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+      <div id="progress-bar" class="bg-chrome-ink h-2 w-full rounded-full origin-left transition-transform duration-200" style="transform: scaleX({progressPercent / 100})"></div>
     </div>
     <p id="progress-text" class="text-xs text-gray-500 mt-1 text-center">{progressText}</p>
   </div>
 </div>
 
-<section class="bg-gradient-to-br from-gray-50 to-gray-200 rounded-lg shadow p-4 md:p-6">
-  <div class="text-[10px] text-gray-500 uppercase tracking-widest text-center">平均スコア</div>
+<section class="surface-card p-4 md:p-6">
+  <div class="text-[10px] text-gray-500 text-center">平均スコア</div>
   <div id="final-result" class="text-3xl md:text-5xl font-bold text-gray-900 text-center mt-1 tabular-nums">{simulationResult ? simulationResult.mean.toLocaleString() : '---'}</div>
   <div class="mt-3 text-center">
     <span class="text-[10px] text-gray-500">試行回数: </span>

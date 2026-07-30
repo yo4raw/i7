@@ -99,7 +99,7 @@
   }
 
   function badgeClass(status: Status): string {
-    if (status === 'live') return 'text-white bg-red-600 animate-pulse';
+    if (status === 'live') return 'text-white bg-red-600';
     if (status === 'upcoming') return 'text-blue-700 bg-blue-100';
     return 'text-gray-400 bg-gray-50';
   }
