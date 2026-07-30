@@ -52,7 +52,7 @@
 
   const label = $derived(status === 'live' ? '実施中' : status === 'upcoming' ? '開催予定' : '終了');
   const badgeClass = $derived(
-    status === 'live' ? 'text-white bg-red-600 animate-pulse'
+    status === 'live' ? 'text-white bg-red-600'
     : status === 'upcoming' ? 'text-blue-700 bg-blue-100'
     : 'text-gray-400 bg-gray-50'
   );
