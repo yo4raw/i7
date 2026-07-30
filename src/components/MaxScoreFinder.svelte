@@ -22,6 +22,8 @@
   import { loadJson, saveJson, STORAGE_KEYS } from '../lib/storage';
   import { ATTR_HEX } from '../lib/constants';
   import SearchResults from './score/SearchResults.svelte';
+  import ModalDialog from './ui/ModalDialog.svelte';
+  import InlineAlert from './ui/InlineAlert.svelte';
   import { formatElapsed } from '../lib/ui';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
@@ -77,6 +79,12 @@
   let lastResult = $state<SearchResult | null>(null);
   let abortRequested = false;
   let activeRun: SearchPoolRun | null = null;
+
+  /** 探索ボタン直下に出す失敗理由。ネイティブ alert() の置き換え */
+  let searchError = $state<string | null>(null);
+
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
+  let dialog: ModalDialog | undefined;
 
   $effect(() => {
     const id = setInterval(() => { now = Date.now(); }, 60_000);
@@ -199,13 +207,17 @@
     const input = buildSearchInput();
     if (!input || input.candidates.length === 0) return;
 
+    searchError = null;
+
     const ctx = createSearchContext(input);
     const totalEvals = countCombos(ctx);
     if (totalEvals > 5_000_000) {
       const estMinutes = Math.ceil(totalEvals / 300_000 / 60);
-      const ok = confirm(
-        `評価する組合せが ${totalEvals.toLocaleString()} 通りあります。\n計算時間は目安として ${estMinutes} 分以上かかる可能性があります。\n続行しますか？`
-      );
+      const ok = await dialog?.confirm({
+        title: '探索に時間がかかります',
+        message: `評価する組合せが ${totalEvals.toLocaleString()} 通りあります。\n計算時間は目安として ${estMinutes} 分以上かかる可能性があります。`,
+        confirmLabel: '続行する',
+      });
       if (!ok) return;
     }
 
@@ -240,7 +252,7 @@
       const top = mergeTopK(localTops, TOP_K);
 
       if (top.length === 0) {
-        alert('評価できる組合せがありませんでした');
+        searchError = '評価できる組合せがありませんでした';
       } else {
         // 最適編成の center + member1..4 を固定し、friend だけ全候補に切り替えて Top 5 を抽出
         const topFriends = evaluateFriendSwap(ctx, top[0].cardIds);
@@ -255,7 +267,7 @@
         };
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : '探索中にエラーが発生しました');
+      searchError = err instanceof Error ? err.message : '探索中にエラーが発生しました';
     } finally {
       activeRun = null;
       searching = false;
@@ -407,10 +419,13 @@
   {#if searchDisabledReason && !searching}
     <p class="text-xs text-center text-amber-600">{searchDisabledReason}</p>
   {/if}
+  <!-- 失敗理由は探索ボタンの直下に出す (ブラウザモーダルでは何の操作の結果か伝わらない) -->
+  <InlineAlert message={searchError} class="text-center" />
   {#if searching}
     <div>
-      <div class="w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-chrome-ink h-2 rounded-full transition-all" style="width: {progressPct}%"></div>
+      <!-- width ではなく scaleX を動かす: レイアウトを再計算させないため (Baseline UI) -->
+      <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div class="bg-chrome-ink h-2 w-full rounded-full origin-left transition-transform duration-200" style="transform: scaleX({progressPct / 100})"></div>
       </div>
       <p class="text-xs text-gray-500 mt-1 text-center">{progressText}</p>
     </div>
@@ -420,3 +435,5 @@
 {#if lastResult}
   <SearchResults result={lastResult} selectedSong={selectedSong} {allCards} {allBroachs} {currentTierMap} {base} scoreUpAssist={scoreUpAssist} scoreUpBadgeRate={Number(scoreUpBadgeRate) || 0} />
 {/if}
+
+<ModalDialog bind:this={dialog} />

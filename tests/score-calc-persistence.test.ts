@@ -38,8 +38,13 @@ test.describe('スコア計算ページ 永続化フロー', () => {
     await page.goto(`${BASE}/score-calc/`);
     await buildMinimalDeck(page);
 
-    page.once('dialog', (d) => d.accept('E2Eテストデッキ'));
     await page.locator('#btn-save-deck').click();
+    // 自前のデッキ名入力ダイアログ (ネイティブ prompt の置き換え)
+    const nameDialog = page.getByTestId('modal-dialog');
+    await expect(nameDialog).toBeVisible();
+    await nameDialog.getByRole('textbox').fill('E2Eテストデッキ');
+    await nameDialog.getByRole('button', { name: '保存する' }).click();
+    await expect(nameDialog).toBeHidden();
 
     // 編成をクリア（ピッカーのクリアボタン）してから読込
     await page.locator('[data-slot-btn="0"]').click();

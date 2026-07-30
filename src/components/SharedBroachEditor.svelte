@@ -1,6 +1,10 @@
 <script lang="ts">
   import { SHARED_BROACHS, type SharedBroach } from '../lib/data/sharedBroachs';
   import { getBroachCount, setBroachCount, deltaBroachCount, totalOwnedBroachs, MAX_BROACH_COUNT } from '../lib/stores/broachCounts.svelte';
+  import ModalDialog from './ui/ModalDialog.svelte';
+
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
+  let dialog: ModalDialog | undefined;
 
   type GroupKey = 'ALL' | 'Shout' | 'Beat' | 'Melody' | '条件付き';
   const GROUP_ORDER: GroupKey[] = ['ALL', 'Shout', 'Beat', 'Melody', '条件付き'];
@@ -42,8 +46,14 @@
     input.value = String(getBroachCount(id));
   }
 
-  function onClear() {
-    if (!confirm('全ての共通ブローチ所持数をクリアしますか？')) return;
+  async function onClear() {
+    const ok = await dialog?.confirm({
+      title: '全ての共通ブローチ所持数をクリアしますか？',
+      message: '登録済みの所持数がすべて 0 になります。この操作は取り消せません。',
+      confirmLabel: 'クリアする',
+      danger: true,
+    });
+    if (!ok) return;
     for (const sb of SHARED_BROACHS) setBroachCount(sb.id, 0);
   }
 </script>
@@ -60,7 +70,7 @@
             <div class="flex items-center gap-1 shrink-0">
               <button
                 type="button"
-                class="w-7 h-7 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-bold"
+                class="size-7 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-bold"
                 aria-label="{sb.name} の所持数を減らす"
                 data-broach-btn={sb.id}
                 data-delta="-1"
@@ -78,7 +88,7 @@
               />
               <button
                 type="button"
-                class="w-7 h-7 rounded bg-chrome-ink text-white hover:bg-chrome-ink-soft text-sm font-bold"
+                class="size-7 rounded bg-chrome-ink text-white hover:bg-chrome-ink-soft text-sm font-bold"
                 aria-label="{sb.name} の所持数を増やす"
                 data-broach-btn={sb.id}
                 data-delta="1"
@@ -96,4 +106,6 @@
   <span class="text-sm text-gray-700">合計所持数: <b data-broach-total>{totalOwnedBroachs()}</b> 個</span>
   <button type="button" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 shadow-lg text-sm" onclick={onClear}>全てクリア</button>
 </div>
-<p class="mt-2 text-xs text-gray-400">入力は即時保存されます。1 種類あたり {MAX_BROACH_COUNT} 個まで登録できます（スコア計算に影響するのは自チーム 5 枠 × 2 個 = 最大 10 個のため）。</p>
+<p class="mt-2 text-xs text-gray-400 text-pretty">入力は即時保存されます。1 種類あたり {MAX_BROACH_COUNT} 個まで登録できます（スコア計算に影響するのは自チーム 5 枠 × 2 個 = 最大 10 個のため）。</p>
+
+<ModalDialog bind:this={dialog} />

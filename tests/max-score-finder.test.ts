@@ -31,9 +31,6 @@ test.describe('編成組合計算ページ', () => {
       .toSorted((a, b) => a.ur - b.ur)[0]?.e;
     expect(pick, 'UR 特効が少数の終了済みハイスコアイベントが events.csv に存在すること').toBeTruthy();
 
-    // 組合せ数が多い場合の confirm ダイアログは許可する
-    page.on('dialog', (dialog) => dialog.accept());
-
     await page.goto(`${BASE}/score-calc/max-score-finder/`);
     await page.waitForFunction(
       () => document.querySelectorAll('#song-select option').length > 1,
@@ -52,6 +49,12 @@ test.describe('編成組合計算ページ', () => {
     const searchBtn = page.getByRole('button', { name: /総当たり探索を開始/ });
     await expect(searchBtn).toBeEnabled({ timeout: 15000 });
     await searchBtn.click();
+
+    // 組合せ数が多い場合は自前の確認ダイアログが出るので続行する
+    const confirmDialog = page.getByTestId('modal-dialog');
+    if (await confirmDialog.isVisible()) {
+      await confirmDialog.getByRole('button', { name: '続行する' }).click();
+    }
 
     // Worker 並列探索の完了を待ち、最適編成と上位候補が表示される
     await expect(page.getByRole('heading', { name: /最適編成/ })).toBeVisible({ timeout: 150_000 });

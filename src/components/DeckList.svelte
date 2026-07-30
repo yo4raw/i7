@@ -6,6 +6,10 @@
   import { cardThumbUrl } from '../lib/ui';
   import RarityBadge from './ui/RarityBadge.svelte';
   import AttributeBadge from './ui/AttributeBadge.svelte';
+  import ModalDialog from './ui/ModalDialog.svelte';
+
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
+  let dialog: ModalDialog | undefined;
 
   type Props = {
     cards: Card[];
@@ -51,10 +55,15 @@
     window.location.href = `${base}score-calc/`;
   }
 
-  function renameDeck(deckId: string) {
+  async function renameDeck(deckId: string) {
     const target = decks.find((d) => d.id === deckId);
     if (!target) return;
-    const newName = prompt('新しいデッキ名', target.name);
+    const newName = await dialog?.prompt({
+      title: '新しいデッキ名',
+      value: target.name,
+      placeholder: 'デッキ名',
+      confirmLabel: '変更する',
+    });
     if (!newName) return;
     const next = decks.map((d) =>
       d.id === deckId ? { ...d, name: newName.trim() || d.name, updatedAt: Date.now() } : d
@@ -62,8 +71,15 @@
     writeDecks(next);
   }
 
-  function deleteDeck(deckId: string) {
-    if (!confirm('このデッキを削除しますか？')) return;
+  async function deleteDeck(deckId: string) {
+    const target = decks.find((d) => d.id === deckId);
+    const ok = await dialog?.confirm({
+      title: 'このデッキを削除しますか？',
+      message: target ? `「${target.name}」を削除します。この操作は取り消せません。` : undefined,
+      confirmLabel: '削除する',
+      danger: true,
+    });
+    if (!ok) return;
     writeDecks(decks.filter((d) => d.id !== deckId));
   }
 
@@ -80,7 +96,7 @@
 {#if decks.length === 0}
   <div class="text-center py-12 text-gray-500">
     <p class="text-lg mb-2">保存されたデッキがありません</p>
-    <p class="text-sm"><a href={`${base}score-calc/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">スコア計算</a>でデッキを保存してください</p>
+    <p class="text-sm text-pretty"><a href={`${base}score-calc/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">スコア計算</a>でデッキを保存してください</p>
   </div>
 {:else}
   <div class="space-y-4">
@@ -133,3 +149,5 @@
     {/each}
   </div>
 {/if}
+
+<ModalDialog bind:this={dialog} />

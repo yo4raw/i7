@@ -1,7 +1,13 @@
 <script lang="ts">
   import { STORAGE_KEYS } from '../lib/storage';
+  import ModalDialog from './ui/ModalDialog.svelte';
+  import InlineAlert from './ui/InlineAlert.svelte';
 
   let fileInput: HTMLInputElement | undefined = $state();
+  let feedback = $state<{ message: string; tone: 'error' | 'success' } | null>(null);
+
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
+  let dialog: ModalDialog | undefined;
 
   type Backup = {
     schema: 'i7-backup';
@@ -50,12 +56,14 @@
     input.value = '';
     if (!file) return;
 
+    feedback = null;
+
     let parsed: unknown;
     try {
       const text = await file.text();
       parsed = JSON.parse(text);
     } catch {
-      alert('JSON の読み込みに失敗しました');
+      feedback = { message: 'JSON の読み込みに失敗しました', tone: 'error' };
       return;
     }
 
@@ -66,11 +74,17 @@
       typeof (parsed as { data?: unknown }).data !== 'object' ||
       (parsed as { data: unknown }).data === null
     ) {
-      alert('不正なバックアップファイルです');
+      feedback = { message: '不正なバックアップファイルです', tone: 'error' };
       return;
     }
 
-    if (!confirm('既存データを上書きします。続行しますか？')) return;
+    const ok = await dialog?.confirm({
+      title: '既存データを上書きします',
+      message: '所持衣装・保存デッキなど現在のデータはバックアップの内容で置き換わります。この操作は取り消せません。',
+      confirmLabel: 'インポートする',
+      danger: true,
+    });
+    if (!ok) return;
 
     const backup = parsed as Backup;
     const validKeys = new Set<string>(Object.values(STORAGE_KEYS));
@@ -83,8 +97,9 @@
       }
     }
 
-    alert('インポートが完了しました。ページを再読み込みします。');
-    location.reload();
+    feedback = { message: 'インポートが完了しました。ページを再読み込みします。', tone: 'success' };
+    // 完了表示を一瞬見せてから再読み込みする (即 reload すると何が起きたか伝わらない)
+    setTimeout(() => location.reload(), 800);
   }
 </script>
 
@@ -110,4 +125,8 @@
     class="hidden"
     onchange={handleFileChange}
   />
+  <!-- 結果はインポートボタンの隣に出す (どの操作の結果かが分かるように) -->
+  <InlineAlert message={feedback?.message ?? null} tone={feedback?.tone ?? 'error'} />
 </span>
+
+<ModalDialog bind:this={dialog} />

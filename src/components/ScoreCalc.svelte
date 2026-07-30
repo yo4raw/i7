@@ -22,6 +22,8 @@
   import ScoreCalcResults from './score/ScoreCalcResults.svelte';
   import BroachRankingChart from './score/BroachRankingChart.svelte';
   import DeckSkillDistribution from './score/DeckSkillDistribution.svelte';
+  import ModalDialog from './ui/ModalDialog.svelte';
+  import InlineAlert from './ui/InlineAlert.svelte';
   type Props = { cards: Card[]; songs: Song[]; broachs: FixedBroach[]; events: EventForBonus[]; base: string };
 
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events: initialEvents, base }: Props = $props();
@@ -66,7 +68,7 @@
     return { s, b, m };
   });
   const songChartSvg = $derived(selectedSong
-    ? attrDonutSvg(selectedSong.shout_ratio || 0, selectedSong.beat_ratio || 0, selectedSong.melody_ratio || 0, { sizeClass: 'w-20 h-20' })
+    ? attrDonutSvg(selectedSong.shout_ratio || 0, selectedSong.beat_ratio || 0, selectedSong.melody_ratio || 0, { sizeClass: 'size-20' })
     : '');
   const broachRanking = $derived(selectedSong ? buildBroachRanking(selectedSong) : []);
 
@@ -78,6 +80,18 @@
   let deckSaved = $state(false);
   let shareCopied = $state(false);
   let imageBusy = $state(false);
+
+  /** デッキ操作ボタン群の直下に出すエラー。ネイティブ alert() の置き換え */
+  let deckActionError = $state<string | null>(null);
+
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
+  let dialog: ModalDialog | undefined;
+
+  /** エラーは一定時間で消す (操作をやり直すと再度出る) */
+  function showDeckActionError(message: string) {
+    deckActionError = message;
+    setTimeout(() => { deckActionError = null; }, 4000);
+  }
 
   function handleSongChange(id: number | null) {
     selectedSong = id !== null && id !== undefined ? allSongsState.find(s => s.id === id) || null : null;
@@ -152,7 +166,8 @@
 
   async function shareDeckUrl() {
     const state = buildStateObject();
-    if (isDeckEmpty(state)) { alert('編成が空です。楽曲や衣装を選んでから共有してください。'); return; }
+    if (isDeckEmpty(state)) { showDeckActionError('編成が空です。楽曲や衣装を選んでから共有してください。'); return; }
+    deckActionError = null;
     const params = encodeDeckToParams(state);
     const url = `${window.location.origin}${base}score-calc/?${params.toString()}`;
     let copied = false;
@@ -163,16 +178,22 @@
       shareCopied = true;
       setTimeout(() => { shareCopied = false; }, 2000);
     } else {
-      window.prompt('URL を選択してコピーしてください', url);
+      // クリップボードが使えない環境向けに、選択してコピーできる形で提示する
+      await dialog?.prompt({
+        title: 'URL を選択してコピーしてください',
+        value: url,
+        readonly: true,
+      });
     }
   }
 
   // 編成＋スコアを PNG 画像として保存（data-noshot を付けた操作ボタン類は除外）
   async function shareDeckImage() {
     if (imageBusy) return;
-    if (isDeckEmpty(buildStateObject())) { alert('編成が空です。楽曲や衣装を選んでから画像化してください。'); return; }
+    if (isDeckEmpty(buildStateObject())) { showDeckActionError('編成が空です。楽曲や衣装を選んでから画像化してください。'); return; }
     const node = document.querySelector('#score-share-target');
     if (!node) return;
+    deckActionError = null;
     imageBusy = true;
     try {
       const { domToPng } = await import('modern-screenshot');
@@ -189,7 +210,7 @@
       a.remove();
     } catch (e) {
       console.error(e);
-      alert('画像の生成に失敗しました。時間をおいて再度お試しください。');
+      showDeckActionError('画像の生成に失敗しました。時間をおいて再度お試しください。');
     } finally {
       imageBusy = false;
     }
@@ -201,13 +222,19 @@
 
   function writeSavedDecks(decks: SavedDeck[]) { saveJson(STORAGE_KEYS.SAVED_DECKS, decks); }
 
-  function saveDeck() {
+  async function saveDeck() {
     const hasCards = deckState.cards.some(c => c !== null);
-    if (!hasCards) { alert('デッキに衣装を1枚以上セットしてください'); return; }
+    if (!hasCards) { showDeckActionError('デッキに衣装を1枚以上セットしてください'); return; }
+    deckActionError = null;
 
     const existing = loadSavedDecks();
     const defaultName = `デッキ ${existing.length + 1}`;
-    const name = prompt('デッキ名を入力してください', defaultName);
+    const name = await dialog?.prompt({
+      title: 'デッキ名を入力してください',
+      value: defaultName,
+      placeholder: 'デッキ名',
+      confirmLabel: '保存する',
+    });
     if (!name) return;
 
     const now = Date.now();
@@ -312,7 +339,7 @@
     <details id="broach-ranking-section" class="surface-card mb-4 group" open>
       <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
         <span>🏅 共通ブローチ スコア寄与 TOP10</span>
-        <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg class="size-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </summary>
       <div class="px-4 pb-4 border-t border-gray-100 pt-3">
         <p class="text-[11px] text-gray-500 mb-3">この楽曲のノーツ分布における各共通ブローチ単独のスコア寄与（デッキ非依存の目安）。</p>
@@ -325,7 +352,7 @@
   <details class="surface-card mb-4 group" open>
     <summary class="p-4 cursor-pointer font-bold text-sm text-gray-700 flex items-center justify-between select-none">
       <span>⚙️ スキルオプション</span>
-      <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <svg class="size-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </summary>
     <div class="px-4 pb-4 border-t border-gray-100 pt-3">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -357,7 +384,7 @@
           <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors" onclick={showLoadDropdown}>読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー" disabled={shareCopied} onclick={shareDeckUrl}>{shareCopied ? '✅ コピーしました' : '🔗 URLコピー'}</button>
           <button id="btn-share-image" type="button" class="text-xs px-2 py-1 bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-colors disabled:opacity-60" aria-label="編成とスコアを画像で保存" disabled={imageBusy} onclick={shareDeckImage}>{imageBusy ? '生成中…' : '📷 画像'}</button>
-          <div id="load-deck-dropdown" class="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" class:hidden={loadDeckItems === null}>
+          <div id="load-deck-dropdown" class="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-control shadow-overlay z-(--z-overlay) max-h-60 overflow-y-auto" class:hidden={loadDeckItems === null}>
             {#if loadDeckItems !== null}
               {#if loadDeckItems.length === 0}
                 <div class="p-3 text-xs text-gray-400 text-center">保存されたデッキがありません</div>
@@ -376,12 +403,14 @@
           </div>
         </div>
       </div>
+      <!-- 保存/共有/画像化の失敗理由は、押したボタン群の直下に出す -->
+      <InlineAlert message={deckActionError} class="mb-2 text-right" />
       <DeckSlots deckState={deckState} selectedSong={selectedSong} allBroachs={allBroachsState} onSlotClick={handleSlotClick} onSwap={handleSwap} onChanged={saveState} ownedBroachLimit={ownedBroachLimit} broachCounts={broachCounts} />
       {#if ownedBroachLimit && totalOwnedBroachs() === 0}
         <p class="mt-2 text-xs text-amber-600">共通ブローチが未登録です。<a class="underline" href={`${base}shared-broach/`}>共通ブローチ登録ページ</a>で所持数を登録してください。</p>
       {/if}
       {#if hasRegisteredBroachCounts(broachCounts) && violationNames.length > 0}
-        <p class="mt-2 text-xs text-red-600">⚠️ 所持数を超える共通ブローチが装備されています: {violationNames.join('、')}（装備はそのまま残ります。選び直すと所持数の範囲に制限されます）</p>
+        <p class="mt-2 text-xs text-red-600 text-pretty">⚠️ 所持数を超える共通ブローチが装備されています: {violationNames.join('、')}（装備はそのまま残ります。選び直すと所持数の範囲に制限されます）</p>
       {/if}
     </section>
 
@@ -394,5 +423,6 @@
 
   <div data-noshot>
     <CardPickerModal bind:this={picker} allCards={allCardsState} onPick={handlePick} onClear={handleClear} />
+    <ModalDialog bind:this={dialog} />
   </div>
 </div>
