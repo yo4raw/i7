@@ -157,7 +157,7 @@ const otherSkills = [
         const bPct = total ? Math.round((bMax / total) * 100) : 0;
         const mPct = total ? Math.round((mMax / total) * 100) : 0;
         const chartHtml = attrDonutSvg(sMax, bMax, mMax, {
-          sizeClass: 'w-full h-full',
+          sizeClass: 'size-full',
           strokeWidth: 4,
           centerText: { label: '合計', value: total.toLocaleString() },
         });
@@ -165,13 +165,13 @@ const otherSkills = [
           <section class="surface-card p-4">
             <h2 class="text-lg font-semibold mb-3">ステータス</h2>
             <div class="flex flex-col sm:flex-row items-center gap-4">
-              <div class="w-28 h-28 relative flex-shrink-0" set:html={chartHtml} />
+              <div class="size-28 relative flex-shrink-0" set:html={chartHtml} />
               <div class="flex-1 w-full space-y-2">
                 {stats.map((s, i) => {
                   const pct = [sPct, bPct, mPct][i];
                   return (
                     <div class="flex items-center gap-3">
-                      <span class="w-2 h-2 rounded-full flex-shrink-0" style={`background:${s.color}`}></span>
+                      <span class="size-2 rounded-full flex-shrink-0" style={`background:${s.color}`}></span>
                       <span class="font-medium text-sm w-16">{s.label}</span>
                       <span class="text-sm text-gray-500 w-10 text-right">{pct}%</span>
                       <span class="text-sm text-right flex-1">
@@ -185,7 +185,7 @@ const otherSkills = [
                 })}
                 {hasTraining && (
                   <div class="flex items-center gap-3">
-                    <span class="w-2 h-2 flex-shrink-0"></span>
+                    <span class="size-2 flex-shrink-0"></span>
                     <span class="font-medium text-sm w-16">特訓</span>
                     <span class="text-sm text-gray-500 w-10 text-right"></span>
                     <span class="text-sm text-right flex-1">{trainCount}回 / +{trainTotal.toLocaleString()}</span>

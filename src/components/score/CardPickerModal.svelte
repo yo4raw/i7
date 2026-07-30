@@ -87,14 +87,16 @@
 
 <!-- 衣装選択モーダル -->
 {#if visible}
-  <div id="card-picker-modal" class="fixed inset-0 z-50">
+  <div id="card-picker-modal" class="fixed inset-0 z-(--z-overlay)">
+    <!-- スクリムは blur を持たない: 全画面の backdrop-filter を opacity フェードさせると
+         合成コストが跳ね上がるため (Baseline UI) -->
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="modal-backdrop" onclick={close} transition:fade={{ duration: 150 }}></div>
-    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-2xl shadow-overlay max-h-[85vh] flex flex-col mx-4 sm:mx-auto" in:materialIn out:materialOut>
+    <div class="absolute inset-0 bg-black/40" id="modal-backdrop" onclick={close} transition:fade={{ duration: 150 }}></div>
+    <div class="relative max-w-2xl mx-auto mt-8 mb-8 bg-white rounded-card shadow-overlay max-h-[85vh] flex flex-col mx-4 sm:mx-auto" in:materialIn out:materialOut>
       <div class="p-4 border-b flex-shrink-0">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-gray-700">衣装選択 - <span id="modal-slot-label">{slotLabel}</span></h3>
-          <button id="modal-close-x" type="button" class="text-gray-400 hover:text-gray-600 text-xl leading-none" onclick={close}>&times;</button>
+          <button id="modal-close-x" type="button" class="text-gray-400 hover:text-gray-600 text-xl leading-none" aria-label="衣装選択を閉じる" onclick={close}>&times;</button>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <input type="text" id="modal-search" placeholder="衣装名/キャラ名" class="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink" bind:this={searchInputEl} oninput={onSearchInput} />

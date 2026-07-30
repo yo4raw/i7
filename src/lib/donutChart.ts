@@ -13,7 +13,7 @@ export interface DonutSegment {
 }
 
 export interface DonutChartOptions {
-  /** チャートサイズの Tailwind クラス（デフォルト: 'w-10 h-10'） */
+  /** チャートサイズの Tailwind クラス（デフォルト: 'size-10'） */
   sizeClass?: string;
   /** ストローク幅（デフォルト: 5） */
   strokeWidth?: number;
@@ -32,7 +32,7 @@ export interface DonutChartOptions {
  */
 export function donutChartSvg(segments: DonutSegment[], opts: DonutChartOptions = {}): string {
   const {
-    sizeClass = 'w-10 h-10',
+    sizeClass = 'size-10',
     strokeWidth = 5,
     showTitle = false,
     centerText,

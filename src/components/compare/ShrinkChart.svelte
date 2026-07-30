@@ -88,7 +88,7 @@
               src={cardThumbUrl(entry.card.ID ?? '')}
               alt={entry.card.cardname || ''}
               loading="lazy"
-              class="w-12 h-12 rounded border-[3px] object-cover"
+              class="size-12 rounded border-[3px] object-cover"
               class:ring-2={selected}
               class:ring-chrome-ink={selected}
               class:ring-offset-1={selected}

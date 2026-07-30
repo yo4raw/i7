@@ -178,7 +178,7 @@
   <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px]">
     {#each series as s, i (s.entry.card.ID)}
       <span class="flex items-center gap-1" style={`color:${s.color}`}>
-        <img src={cardThumbUrl(s.entry.card.ID ?? '')} alt="" loading="lazy" class="w-5 h-5 rounded object-cover" />
+        <img src={cardThumbUrl(s.entry.card.ID ?? '')} alt="" loading="lazy" class="size-5 rounded object-cover" />
         {#if s.degenerate}
           <span>ばらつきなし</span>
         {:else}
