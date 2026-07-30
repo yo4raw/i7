@@ -246,12 +246,19 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 - **モーション**: 新規依存を増やさない。開閉トランジションは `src/lib/motion.ts` の `materialIn`/`materialOut`（svelte/transition）、押下フィードバックは `pressable` utility を使う。ジェスチャー駆動 UI（ドラッグシート等）は導入しない
 - **タイポグラフィ**: 大見出しは `text-display` utility（CJK 向け `palt` + 正トラッキング + `line-height:1.35`）。欧文向けの負トラッキングは使わない。数値の揃う列には `tabular-nums`（数字・欧文は ADR 0047 でセルフホストした Barlow Semi Condensed を適用。CJK には適用しない）
 - 影・角丸・blur・イージングは `@theme` のトークン（`--shadow-card` 等 → `shadow-card` / `rounded-card` utility）を使い、値を直書きしない
-- **色の 3 チャンネル分離（ADR 0047）**: 意味を持つ色は「属性」「キャラ」「構造」の 3 チャンネルのみとし、混同しない
+- **色の 3 チャンネル分離（ADR 0047）**: 構造・ナビゲーション・アイデンティティ表現の配色は「属性」「キャラ」「構造」の 3 チャンネルのみとし、混同しない（データ区分を表す配色は後述の対象外）
   - 属性（Shout/Beat/Melody）= **塗りのチップ**。`ATTR_HEX`（`src/lib/constants.ts`）固定
   - キャラ（誰の衣装か）= **線・縁・小さな点のみ**（スパイン・タブ・ドット）。`CHARACTER_HEX`（`src/lib/constants.ts`）が単一情報源
   - 構造（ページ・ナビ・面）= 無彩色（近黒 `#14151A` / 白 / グレー階調）
   - **キャラ色は面を塗らない。テキスト色にも使わない**（属性色との衝突・淡色キャラでのコントラスト破綻を避けるため）。キャラ名等のテキストは近黒のまま、色はスパイン等の別要素が担う
   - **`indigo`（クラス名・HEX とも）は `src/` に増やさない**。リンク・見出し・主ボタン・フォーカスリングも無彩色（近黒 + 下線 / 近黒 / 近黒の塗り / 近黒）とする
+  - **3 チャンネル規約の対象外（無彩色化してはならない）**: データそのものの区分を表す配色は現状を維持する。詳細と理由は ADR 0047「適用範囲」の対象外表を参照
+    - レアリティバッジ（`RARITY_BADGE_CLASSES`）
+    - イベント特効の段階（金銀銅、`EVENT_BONUS_TIERS`）
+    - スコア計算仕様ページの計算段階配色（`STAGE_COLORS` / `CARD_COLORS`、ADR 0043）
+    - デッキのフレンドスロットの amber（`DeckSlots.svelte` ほか）
+    - ホームの免責事項セクションの yellow（`src/pages/index.astro`）
+    - 上記以外で新たに色相を持つクラスを足す場合は 3 チャンネル規約に従うか、ADR 0047 の対象外表を更新する
 
 ### Testing
 
