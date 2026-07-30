@@ -29,8 +29,10 @@
   --color-beat: #22c55e;
   --color-melody: #3b82f6;
 
-  /* 無彩色クローム。単一情報源は src/lib/constants.ts の CHROME_INK。変更時は両方を更新する */
+  /* 無彩色クローム */
+  /* --color-chrome-ink の単一情報源は src/lib/constants.ts の CHROME_INK。変更時は両方を更新する */
   --color-chrome-ink: #14151A;
+  /* --color-chrome-ink-soft は CSS 側だけで使う派生色。constants.ts に対応する定数はない */
   --color-chrome-ink-soft: #2A2C33;
 
   /* フォント: 数字・欧文は Barlow Semi Condensed(unicode-range で CJK 対象外。ADR 0046 の限定的な例外)、
@@ -70,11 +72,6 @@
   html {
     @apply text-gray-900 bg-gray-50;
     font-family: var(--font-sans);
-  }
-
-  /* 背景は素のグレー。無彩色クロームの背後に色ティントを置く意義がなくなったため (ADR 0047) */
-  body {
-    background-image: none;
   }
 
   /* 見出しの CJK 向けデフォルト */
