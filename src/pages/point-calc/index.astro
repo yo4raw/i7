@@ -31,5 +31,5 @@ const events: PointEventSummary[] = (await fetchEventsCsv())
     差異ぴったりになるライブの組合せをライブ回数の少ない順に提示します。
   </p>
 
-  <PointCalc events={events} client:load />
+  <PointCalc events={events} client:only="svelte" />
 </BaseLayout>
