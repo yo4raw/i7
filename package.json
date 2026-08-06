@@ -15,6 +15,7 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "extract-fixtures": "tsx scripts/extract-test-fixtures.ts",
+    "extract-point-calc-golden": "node scripts/extract-point-calc-golden.mjs",
     "prepare": "husky"
   },
   "dependencies": {
