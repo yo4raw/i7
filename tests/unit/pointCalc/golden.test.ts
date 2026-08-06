@@ -23,9 +23,31 @@ const toSpec = (c: LiveSpec): LiveSpec => ({
   bonusPct: c.bonusPct, unit: c.unit, multiplier: c.multiplier,
 });
 
+/**
+ * 公開 8 シート分の抽出件数（scripts/extract-point-calc-golden.mjs 実行結果を固定）。
+ * スプレッドシート側の列構成が変わって extractSheet が列を静かに落としても、
+ * 総数だけでなくシート単位の件数を固定しておくことで検知できる。
+ */
+const EXPECTED_SHEET_COUNTS: Record<string, number> = {
+  'バディナナ用': 737,
+  '吉兆用': 737,
+  "La'Stiara②用": 677,
+  "La'Stiara用": 492,
+  'ISL②用': 485,
+  'Sugao①用': 462,
+  'Sugao②用': 462,
+  'IDOL STAR LIVE用': 371,
+};
+
 describe('ゴールデン: 参照スプレッドシートの獲得pt表', () => {
-  it('4000 セル以上を検証対象にしている（フィクスチャが空でないことの保険）', () => {
-    expect(cells.length).toBeGreaterThan(4000);
+  it('公開8シートの合計 4,423 セルを検証対象にしている', () => {
+    expect(cells.length).toBe(4423);
+  });
+
+  it('シート単位の抽出件数が想定どおりである（列検出の静かな抜け漏れを検知する）', () => {
+    const bySheet = new Map<string, number>();
+    for (const c of cells) bySheet.set(c.sheet, (bySheet.get(c.sheet) ?? 0) + 1);
+    expect(Object.fromEntries(bySheet)).toEqual(EXPECTED_SHEET_COUNTS);
   });
 
   it('全セルが livePoint と一致する', () => {
