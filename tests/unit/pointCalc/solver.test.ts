@@ -282,5 +282,6 @@ describe('solve: kBack の探索幅（DEFAULT_K_BACK 固定値による取りこ
     }
     // サンプリングが偏って「到達可能ケースが 0 件」のまま素通りしていないことの保険
     expect(checkedReachable).toBeGreaterThan(10);
-  });
+    // v8 カバレッジ計測下では計装オーバーヘッドで既定の 5 秒を超えるため、このテストだけ延長する
+  }, 30_000);
 });
