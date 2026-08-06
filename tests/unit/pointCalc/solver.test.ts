@@ -154,3 +154,77 @@ describe('solve: 実データ相当', () => {
     expect(results[0].remainder).toBe(0);
   });
 });
+
+/**
+ * mulberry32: シード固定の擬似乱数生成器。テストの再現性のために Math.random は使わない。
+ */
+function mulberry32(seed: number): () => number {
+  let state = seed;
+  return () => {
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 32bit整数のラップアラウンドが必要で Math.trunc では代替できない
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- 符号なし32bit整数への変換が必要で Math.trunc では代替できない
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * 素朴な unbounded coin change の最小枚数 DP。solver.ts の二分探索+枝刈り DP と
+ * 独立した実装で正しさを突き合わせる基準にする。
+ */
+function naiveMinCoins(points: readonly number[], target: number): number {
+  const INF = Number.POSITIVE_INFINITY;
+  const dp = Array.from<number>({ length: target + 1 }).fill(INF);
+  dp[0] = 0;
+  for (let amount = 1; amount <= target; amount++) {
+    for (const p of points) {
+      if (p <= amount && dp[amount - p] + 1 < dp[amount]) dp[amount] = dp[amount - p] + 1;
+    }
+  }
+  return dp[target];
+}
+
+describe('solve: DP枝刈りの正しさ（乱択プロパティテスト）', () => {
+  // diff < maxPoint（候補の最大値）に限れば kBase = 0 になり、solve() の結果は
+  // 「候補全体を使った diff 単体の unbounded coin change の最小枚数」に一致するはず。
+  // これを素朴な DP（naiveMinCoins）と数百ケース突き合わせて、二分探索+降順走査+
+  // 許容下界による枝刈りが最適性を壊していないことを検証する。
+  const rand = mulberry32(0xc0ffee);
+  const TRIALS = 300;
+
+  it(`${TRIALS} 件の乱択ケースで solve() が naiveMinCoins と一致する`, () => {
+    let reachableCases = 0;
+    let unreachableCases = 0;
+    for (let trial = 0; trial < TRIALS; trial++) {
+      const size = 2 + Math.floor(rand() * 4); // 2..5 種類
+      const pointSet = new Set<number>();
+      while (pointSet.size < size) {
+        pointSet.add(1 + Math.floor(rand() * 60)); // 1..60
+      }
+      const points = [...pointSet].toSorted((a, b) => a - b);
+      const maxPoint = points.at(-1)!;
+      if (maxPoint < 2) continue; // diff を作れない
+      const diff = 1 + Math.floor(rand() * (maxPoint - 1)); // 1..maxPoint-1 → kBase = 0
+
+      const candidates = fake(...points);
+      const results = solve({ diff, candidates });
+      const naive = naiveMinCoins(points, diff);
+
+      if (Number.isFinite(naive)) {
+        reachableCases++;
+        const exact = results.find(r => r.remainder === 0);
+        expect(exact, `diff=${diff} points=${points} で naive=${naive} だが solve() にぴったり解が無い`).toBeDefined();
+        expect(exact!.totalCount, `diff=${diff} points=${points}`).toBe(naive);
+      } else {
+        unreachableCases++;
+        const exact = results.find(r => r.remainder === 0);
+        expect(exact, `diff=${diff} points=${points} は到達不能なはずだが solve() がぴったり解を返した`).toBeUndefined();
+      }
+    }
+    // 両方のケース種別が十分な件数含まれていることを確認（乱数の偏りで片方に倒れていないこと）
+    expect(reachableCases).toBeGreaterThan(50);
+    expect(unreachableCases).toBeGreaterThan(50);
+  });
+});
