@@ -30,6 +30,13 @@ export interface Solution {
 
 export const DEFAULT_K_BACK = 2;
 export const DEFAULT_MAX_RESULTS = 5;
+/**
+ * kBack を適応的に決めるときの端数 DP 予算（pt）。rMax ≈ (kBack + 1) * mainPoint が
+ * この値程度に収まるよう kBack = floor(R_BUDGET / mainPoint) とする。
+ * mainPoint が大きい（＝候補が絞られていて探索が軽い）ときほど kBack を広げ、
+ * 固定 kBack=2 では取りこぼしていたぴったり解を拾う。DEFAULT_K_BACK 未満には縮めない。
+ */
+export const R_BUDGET = 200_000;
 
 const UNREACHABLE = 0x3fff_ffff;
 
@@ -37,17 +44,25 @@ export function solve(input: SolverInput): Solution[] {
   const { diff, candidates } = input;
   if (diff <= 0 || candidates.length === 0) return [];
 
-  const kBack = input.kBack ?? DEFAULT_K_BACK;
   const maxResults = input.maxResults ?? DEFAULT_MAX_RESULTS;
 
   const points = Int32Array.from(candidates.map(c => c.point));
   const specsOf = new Map(candidates.map(c => [c.point, c.specs]));
   const maxPoint = points.at(-1)!;
-  const mainPoint = input.mainPoint !== undefined && specsOf.has(input.mainPoint)
-    ? input.mainPoint
-    : maxPoint;
+  const mainPointExplicit = input.mainPoint !== undefined && specsOf.has(input.mainPoint);
+  const mainPoint = mainPointExplicit ? input.mainPoint! : maxPoint;
 
   const kBase = Math.floor(diff / mainPoint);
+  // 明示指定があれば常にそれを使う（後方互換）。
+  // mainPoint をユーザーが明示指定したときは「主にその pt を使う」意図を尊重し、
+  // 従来通り kBase 近傍の狭い範囲だけを探索する（DEFAULT_K_BACK）。
+  // mainPoint 未指定（候補最大値を自動採用）のときだけ、R_BUDGET の予算内で
+  // DEFAULT_K_BACK 以上・kBase 以下まで広げる。mainPoint が大きい＝候補が絞られて
+  // 探索が軽いケースほど広く探索できるので、固定 kBack=2 では取りこぼしていた
+  // ぴったり解を拾える（kBase を超えても kMin は 0 で飽和するだけなので無意味）。
+  const kBack = input.kBack ?? (mainPointExplicit
+    ? DEFAULT_K_BACK
+    : Math.min(kBase, Math.max(DEFAULT_K_BACK, Math.floor(R_BUDGET / mainPoint))));
   const kMin = Math.max(0, kBase - kBack);
   // 末尾の + mainPoint は超過側の近似解を作るための余裕。
   // これが無いと「候補 100pt だけ・差異 7pt」で 0 回の解しか作れず結果が空になる。

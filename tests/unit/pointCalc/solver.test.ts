@@ -228,3 +228,59 @@ describe('solve: DP枝刈りの正しさ（乱択プロパティテスト）', (
     expect(unreachableCases).toBeGreaterThan(50);
   });
 });
+
+/**
+ * naiveMinCoins の全区間版。amount 0..maxTarget の最小枚数を 1 回の DP で求め、
+ * 複数の diff に対する到達可否判定を毎回 O(diff × 候補数) で作り直さずに済ませる。
+ */
+function naiveMinCoinsTable(points: readonly number[], maxTarget: number): number[] {
+  const INF = Number.POSITIVE_INFINITY;
+  const dp = Array.from<number>({ length: maxTarget + 1 }).fill(INF);
+  dp[0] = 0;
+  for (let amount = 1; amount <= maxTarget; amount++) {
+    for (const p of points) {
+      if (p <= amount && dp[amount - p] + 1 < dp[amount]) dp[amount] = dp[amount - p] + 1;
+    }
+  }
+  return dp;
+}
+
+describe('solve: kBack の探索幅（DEFAULT_K_BACK 固定値による取りこぼしの回帰テスト）', () => {
+  // レビューで実測した取りこぼし repro: 候補を極端に絞る（bonusPct 300% のみ・FC のみ・
+  // MAX編成のみ・倍率3倍のみ）と候補は 20 個・最小 10,050pt になる。この設定で
+  // 差異 150,000〜150,299 を調べると、候補の gcd が 3 のため約 2/3 の差異はそもそも
+  // 数学的に到達不能（naiveMinCoinsTable で判定できる ground truth）。
+  // 固定 kBack=2 では、残る「本来到達可能な差異」のうち 66/300 件でぴったり解を
+  // 取りこぼしていた（近似解を返してしまう）。kBack を R_BUDGET から適応的に広げる
+  // ことで、到達可能な差異は 1 件も取りこぼさないことをここで固定する。
+  const candidates = buildCandidates({
+    bonusPcts: [300],
+    playModes: ['FC'],
+    units: ['max'],
+    multipliers: [3],
+  });
+  const points = candidates.map(c => c.point);
+  const RANGE_START = 150_000;
+  const RANGE_END = 150_299;
+  const reachabilityTable = naiveMinCoinsTable(points, RANGE_END);
+  // 総当たり300件は重いので6件おきに間引く（50件）。取りこぼしが再発すれば依然として検知できる。
+  const sampleDiffs: number[] = [];
+  for (let diff = RANGE_START; diff <= RANGE_END; diff += 6) sampleDiffs.push(diff);
+
+  it(`差異 ${RANGE_START}〜${RANGE_END} を間引いた ${sampleDiffs.length} 件で、到達可能な差異のぴったり解を1件も取りこぼさない`, () => {
+    let checkedReachable = 0;
+    for (const diff of sampleDiffs) {
+      const reachable = Number.isFinite(reachabilityTable[diff]);
+      const results = solve({ diff, candidates });
+      const exact = results.some(r => r.remainder === 0);
+      if (reachable) {
+        checkedReachable++;
+        expect(exact, `diff=${diff} は到達可能（naive最小回数=${reachabilityTable[diff]}）なのに solve() がぴったり解を取りこぼした`).toBe(true);
+      } else {
+        expect(exact, `diff=${diff} は候補の gcd から到達不能なはずなのに solve() がぴったり解を返した`).toBe(false);
+      }
+    }
+    // サンプリングが偏って「到達可能ケースが 0 件」のまま素通りしていないことの保険
+    expect(checkedReachable).toBeGreaterThan(10);
+  });
+});
