@@ -59,3 +59,5 @@
 | [0046](0046-apple-design-redesign.md) | apple-design 原則に基づくサイト全体リデザイン(マテリアル3層・chrome限定半透明・CJKタイポ・依存ゼロモーション) | 承認 |
 | [0047](0047-character-color-identity.md) | キャラクターカラーを軸としたビジュアルアイデンティティ(16色チャンネル分離・indigo全廃・Barlow Semi Condensed) | 承認 |
 | [0048](0048-baseline-ui-compliance.md) | Baseline UI 規約への準拠(z-index スケール・セーフエリア・ネイティブダイアログ全廃) | 承認 |
+| [0049](0049-point-calc-tool.md) | ポイント芸計算ツールを式ベースの自動ソルバーとして実装する | 承認 |
+| [0050](0050-point-calc-bonus-count-input.md) | ポイント芸計算ツールの特効入力を「上昇率 × 使える枚数」にする | 承認 |

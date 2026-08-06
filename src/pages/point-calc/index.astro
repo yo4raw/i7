@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PointCalc from '../../components/PointCalc.svelte';
+import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
+
+const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'ポイント芸計算', url: `${base}point-calc/` },
+];
+---
+
+<BaseLayout title="ポイント芸計算" description={PAGE_DESCRIPTIONS.pointCalc} breadcrumbs={breadcrumbs}>
+  <h1 class="text-2xl font-bold text-display mb-4">ポイント芸計算</h1>
+  <p class="text-sm text-gray-600 mb-6 text-pretty">
+    イベントポイントを狙った数字にぴったり合わせるための計算ツールです。目標ptと現在ptを入れると、
+    差異ぴったりになるライブの組合せをライブ回数の少ない順に提示します。
+  </p>
+
+  <PointCalc client:only="svelte" />
+</BaseLayout>
