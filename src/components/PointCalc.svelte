@@ -1,20 +1,22 @@
 <script lang="ts">
   import { buildCandidates } from '../lib/pointCalc/candidates';
   import { solve, type Solution } from '../lib/pointCalc/solver';
-  import { defaultBonusPcts, type PointEventSummary } from '../lib/pointCalc/bonusPresets';
+  import { achievableBonusPcts } from '../lib/pointCalc/bonusPresets';
   import {
-    DEFAULT_PLAY_MODES, MAX_BONUS_PCT, MULTIPLIERS, PLAY_MODES, UNIT_LABEL, UNIT_PRESETS,
+    BONUS_TIER_KEYS, BONUS_TIER_LABEL, DEFAULT_BONUS_COUNTS, DEFAULT_BONUS_RATES,
+    DEFAULT_PLAY_MODES, MAX_BONUS_COUNT, MAX_BONUS_RATE_PCT, MULTIPLIERS, PLAY_MODES,
+    UNIT_LABEL, UNIT_PRESETS,
   } from '../lib/pointCalc/constants';
-  import type { Multiplier, PlayMode, UnitPreset } from '../lib/pointCalc/types';
+  import type {
+    BonusCounts, BonusRates, BonusTierKey, Multiplier, PlayMode, UnitPreset,
+  } from '../lib/pointCalc/types';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
-
-  type Props = { events: PointEventSummary[] };
-  let { events }: Props = $props();
 
   interface PersistedState {
     targetPt: number | null;
     currentPt: number | null;
-    bonusPcts: number[];
+    bonusRates: BonusRates;
+    bonusCounts: BonusCounts;
     playModes: PlayMode[];
     units: UnitPreset[];
     multipliers: Multiplier[];
@@ -24,7 +26,8 @@
     return {
       targetPt: null,
       currentPt: null,
-      bonusPcts: defaultBonusPcts(events),
+      bonusRates: { ...DEFAULT_BONUS_RATES },
+      bonusCounts: { ...DEFAULT_BONUS_COUNTS },
       playModes: [...DEFAULT_PLAY_MODES],
       units: [...UNIT_PRESETS],
       multipliers: [...MULTIPLIERS],
@@ -36,20 +39,21 @@
 
   let targetPt = $state<number | null>(saved.targetPt ?? base.targetPt);
   let currentPt = $state<number | null>(saved.currentPt ?? base.currentPt);
-  let bonusPcts = $state<number[]>(saved.bonusPcts ?? base.bonusPcts);
+  let bonusRates = $state<BonusRates>(saved.bonusRates ?? base.bonusRates);
+  let bonusCounts = $state<BonusCounts>(saved.bonusCounts ?? base.bonusCounts);
   let playModes = $state<PlayMode[]>(saved.playModes ?? base.playModes);
   let units = $state<UnitPreset[]>(saved.units ?? base.units);
   let multipliers = $state<Multiplier[]>(saved.multipliers ?? base.multipliers);
-  let newBonusPct = $state<number | null>(null);
   let solutions = $state<Solution[]>([]);
   let calculating = $state(false);
   let message = $state('');
 
   const diff = $derived((targetPt ?? 0) - (currentPt ?? 0));
+  const bonusPcts = $derived(achievableBonusPcts(bonusRates, bonusCounts));
 
   $effect(() => {
     saveJson(STORAGE_KEYS.POINT_CALC_STATE, {
-      targetPt, currentPt, bonusPcts, playModes, units, multipliers,
+      targetPt, currentPt, bonusRates, bonusCounts, playModes, units, multipliers,
     } satisfies PersistedState);
   });
 
@@ -57,19 +61,19 @@
     return list.includes(value) ? list.filter(v => v !== value) : [...list, value];
   }
 
-  function addBonusPct() {
-    const v = newBonusPct;
-    if (v === null || !Number.isInteger(v) || v < 0 || v > MAX_BONUS_PCT) return;
-    if (!bonusPcts.includes(v)) bonusPcts = [...bonusPcts, v].toSorted((a, b) => a - b);
-    newBonusPct = null;
+  /** 入力文字列を 0〜max の整数へ丸める。空欄や不正値は 0 にする */
+  function clampInput(raw: string, max: number): number {
+    const n = Math.trunc(Number(raw));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(max, n);
   }
 
-  function removeBonusPct(pct: number) {
-    bonusPcts = bonusPcts.filter(p => p !== pct);
+  function setRate(tier: BonusTierKey, raw: string) {
+    bonusRates = { ...bonusRates, [tier]: clampInput(raw, MAX_BONUS_RATE_PCT) };
   }
 
-  function resetBonusPcts() {
-    bonusPcts = defaultBonusPcts(events);
+  function setCount(tier: BonusTierKey, raw: string) {
+    bonusCounts = { ...bonusCounts, [tier]: clampInput(raw, MAX_BONUS_COUNT) };
   }
 
   function calculate() {
@@ -81,7 +85,7 @@
     }
     const candidates = buildCandidates({ bonusPcts, playModes, units, multipliers });
     if (candidates.length === 0) {
-      message = '条件に合うライブがありません。特効%・プレイ方法・編成・倍率のいずれかを有効にしてください。';
+      message = '条件に合うライブがありません。プレイ方法・編成・倍率のいずれかを有効にしてください。';
       return;
     }
     calculating = true;
@@ -131,29 +135,46 @@
 </section>
 
 <section class="surface-card p-4 mb-6">
-  <div class="flex items-baseline justify-between mb-3">
-    <h2 class="text-lg font-bold">使ってよい特効%</h2>
-    <button type="button" class="text-sm text-gray-600 underline" onclick={resetBonusPcts}>既定に戻す</button>
+  <h2 class="text-lg font-bold mb-3">特効</h2>
+  <div class="space-y-3">
+    <fieldset>
+      <legend class="text-sm text-gray-600 mb-1">上昇率</legend>
+      <div class="flex flex-wrap gap-4">
+        {#each BONUS_TIER_KEYS as tier (tier)}
+          <label class="inline-flex items-center gap-1.5 text-sm">
+            {BONUS_TIER_LABEL[tier]}
+            <input
+              type="number" min="0" max={MAX_BONUS_RATE_PCT} inputmode="numeric"
+              data-testid="bonus-rate-{tier}"
+              value={bonusRates[tier]}
+              oninput={(e) => setRate(tier, e.currentTarget.value)}
+              class="w-20 border border-gray-300 rounded px-2 py-1 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-chrome-ink"
+            />%
+          </label>
+        {/each}
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend class="text-sm text-gray-600 mb-1">使える特効衣装（フレンドから借りる分を含む）</legend>
+      <div class="flex flex-wrap gap-4">
+        {#each BONUS_TIER_KEYS as tier (tier)}
+          <label class="inline-flex items-center gap-1.5 text-sm">
+            {BONUS_TIER_LABEL[tier]}
+            <input
+              type="number" min="0" max={MAX_BONUS_COUNT} inputmode="numeric"
+              data-testid="bonus-count-{tier}"
+              value={bonusCounts[tier]}
+              oninput={(e) => setCount(tier, e.currentTarget.value)}
+              class="w-20 border border-gray-300 rounded px-2 py-1 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-chrome-ink"
+            />枚
+          </label>
+        {/each}
+      </div>
+    </fieldset>
   </div>
-  <div class="flex flex-wrap gap-2 mb-3" data-testid="bonus-chips">
-    {#each bonusPcts as pct (pct)}
-      <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white px-3 py-1 text-sm tabular-nums">
-        <span>{pct}%</span>
-        <button type="button" class="text-gray-500 hover:text-gray-900" aria-label="{pct}% を削除" onclick={() => removeBonusPct(pct)}>×</button>
-      </span>
-    {/each}
-    {#if bonusPcts.length === 0}
-      <span class="text-sm text-gray-500">特効%が 1 つも選ばれていません。</span>
-    {/if}
-  </div>
-  <div class="flex items-center gap-2">
-    <input
-      type="number" min="0" max={MAX_BONUS_PCT} placeholder="追加する%" data-testid="new-bonus-pct"
-      bind:value={newBonusPct}
-      class="w-32 border border-gray-300 rounded px-3 py-1.5 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-chrome-ink"
-    />
-    <button type="button" class="px-4 py-1.5 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm" onclick={addBonusPct}>追加</button>
-  </div>
+  <p class="mt-3 text-sm text-gray-600 text-pretty" data-testid="derived-bonus-pcts">
+    使う特効%: {bonusPcts.map(p => `${p}%`).join(' / ')}（{bonusPcts.length} 段階）
+  </p>
 </section>
 
 <section class="surface-card p-4 mb-6">

@@ -23,3 +23,20 @@ export interface LiveSpec {
   unit: UnitPreset;
   multiplier: Multiplier;
 }
+
+/** 特効のティア。金 = special1 / 銀 = special2 / 銅 = special3 */
+export type BonusTierKey = 'gold' | 'silver' | 'bronze';
+
+/** 各ティアの特効上昇率（整数パーセント） */
+export interface BonusRates {
+  gold: number;
+  silver: number;
+  bronze: number;
+}
+
+/** 使える特効衣装の枚数。フレンドから借りる分を含む */
+export interface BonusCounts {
+  gold: number;
+  silver: number;
+  bronze: number;
+}

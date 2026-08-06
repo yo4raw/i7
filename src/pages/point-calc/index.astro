@@ -2,26 +2,12 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PointCalc from '../../components/PointCalc.svelte';
 import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
-import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
-import { isPointEvent, type PointEventSummary } from '../../lib/pointCalc/bonusPresets.ts';
 
 const base = import.meta.env.BASE_URL;
 const breadcrumbs = [
   { name: 'ホーム', url: base },
   { name: 'ポイント芸計算', url: `${base}point-calc/` },
 ];
-
-// 特効%の既定値を作るため、ポイント系イベントの gpt_up だけをビルド時に渡す。
-// 開催中かどうかの判定はクライアント側の現在時刻で行う（静的サイトのため）。
-const events: PointEventSummary[] = (await fetchEventsCsv())
-  .filter(event => isPointEvent(event.eventtype))
-  .map(event => ({
-    id: event.id,
-    eventname: event.eventname,
-    start_date: event.start_date,
-    end_date: event.end_date,
-    gptUps: [event.gold.gpt_up, event.silver.gpt_up, event.bronze.gpt_up],
-  }));
 ---
 
 <BaseLayout title="ポイント芸計算" description={PAGE_DESCRIPTIONS.pointCalc} breadcrumbs={breadcrumbs}>
@@ -31,5 +17,5 @@ const events: PointEventSummary[] = (await fetchEventsCsv())
     差異ぴったりになるライブの組合せをライブ回数の少ない順に提示します。
   </p>
 
-  <PointCalc events={events} client:only="svelte" />
+  <PointCalc client:only="svelte" />
 </BaseLayout>
