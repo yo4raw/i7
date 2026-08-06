@@ -68,12 +68,20 @@
     return Math.min(max, n);
   }
 
-  function setRate(tier: BonusTierKey, raw: string) {
-    bonusRates = { ...bonusRates, [tier]: clampInput(raw, MAX_BONUS_RATE_PCT) };
+  /** クランプ後の値を state に反映しつつ、input 要素にも書き戻す。
+   *  value={} の一方向バインドは新旧が同値だと DOM 更新をスキップするため、
+   *  範囲外の入力（例: 6→9 のように既定値と異なる値への変化を経ない入力）が
+   *  画面に残ってしまう。el.value を明示的に上書きして表示と state を一致させる */
+  function setRate(tier: BonusTierKey, el: HTMLInputElement) {
+    const v = clampInput(el.value, MAX_BONUS_RATE_PCT);
+    el.value = String(v);
+    bonusRates = { ...bonusRates, [tier]: v };
   }
 
-  function setCount(tier: BonusTierKey, raw: string) {
-    bonusCounts = { ...bonusCounts, [tier]: clampInput(raw, MAX_BONUS_COUNT) };
+  function setCount(tier: BonusTierKey, el: HTMLInputElement) {
+    const v = clampInput(el.value, MAX_BONUS_COUNT);
+    el.value = String(v);
+    bonusCounts = { ...bonusCounts, [tier]: v };
   }
 
   function calculate() {
@@ -147,7 +155,7 @@
               type="number" min="0" max={MAX_BONUS_RATE_PCT} inputmode="numeric"
               data-testid="bonus-rate-{tier}"
               value={bonusRates[tier]}
-              oninput={(e) => setRate(tier, e.currentTarget.value)}
+              oninput={(e) => setRate(tier, e.currentTarget)}
               class="w-20 border border-gray-300 rounded px-2 py-1 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-chrome-ink"
             />%
           </label>
@@ -155,7 +163,7 @@
       </div>
     </fieldset>
     <fieldset>
-      <legend class="text-sm text-gray-600 mb-1">使える特効衣装（フレンドから借りる分を含む）</legend>
+      <legend class="text-sm text-gray-600 mb-1">使える特効衣装（フレンドから借りる分を含む、合計6枠まで）</legend>
       <div class="flex flex-wrap gap-4">
         {#each BONUS_TIER_KEYS as tier (tier)}
           <label class="inline-flex items-center gap-1.5 text-sm">
@@ -164,7 +172,7 @@
               type="number" min="0" max={MAX_BONUS_COUNT} inputmode="numeric"
               data-testid="bonus-count-{tier}"
               value={bonusCounts[tier]}
-              oninput={(e) => setCount(tier, e.currentTarget.value)}
+              oninput={(e) => setCount(tier, e.currentTarget)}
               class="w-20 border border-gray-300 rounded px-2 py-1 text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-chrome-ink"
             />枚
           </label>

@@ -18,7 +18,7 @@ export interface LiveSpec {
   stars: Stars;
   difficulty: Difficulty;
   playMode: PlayMode;
-  /** 特効ボーナス（整数パーセント。0〜300） */
+  /** 特効ボーナス（整数パーセント。上昇率0〜100% × 最大6枠で0〜600） */
   bonusPct: number;
   unit: UnitPreset;
   multiplier: Multiplier;
