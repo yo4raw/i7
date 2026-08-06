@@ -49,9 +49,9 @@ export function pickDefaultEvent(
   events: readonly PointEventSummary[],
   now: number = Date.now(),
 ): PointEventSummary | null {
-  const usable = events.filter(e => e.gptUps.some(v => v > 0));
+  const usable = events.filter(event => event.gptUps.some(v => v > 0));
   if (usable.length === 0) return null;
-  const live = usable.find(e => isEventLive(e.start_date, e.end_date, now));
+  const live = usable.find(event => isEventLive(event.start_date, event.end_date, now));
   if (live) return live;
   return usable.reduce((a, b) => (b.start_date > a.start_date ? b : a));
 }
