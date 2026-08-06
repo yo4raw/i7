@@ -28,20 +28,33 @@ test.describe('ポイント芸計算', () => {
     await expect(solutions.getByText('ぴったり').first()).toBeVisible();
   });
 
-  test('特効%チップを追加・削除できる', async ({ page }) => {
-    const chips = page.getByTestId('bonus-chips');
-    await page.getByTestId('new-bonus-pct').fill('7');
-    await page.getByRole('button', { name: '追加' }).click();
-    await expect(chips.getByText('7%', { exact: true })).toBeVisible();
-    await chips.getByRole('button', { name: '7% を削除' }).click();
-    await expect(chips.getByText('7%', { exact: true })).toHaveCount(0);
+  test('既定の特効設定から 50 刻み 7 段階が導出される', async ({ page }) => {
+    await expect(page.getByTestId('bonus-rate-gold')).toHaveValue('50');
+    await expect(page.getByTestId('bonus-count-gold')).toHaveValue('6');
+    await expect(page.getByTestId('derived-bonus-pcts'))
+      .toHaveText('使う特効%: 0% / 50% / 100% / 150% / 200% / 250% / 300%（7 段階）');
+  });
+
+  test('使える枚数を減らすと導出される特効%が減る', async ({ page }) => {
+    await page.getByTestId('bonus-count-gold').fill('1');
+    await expect(page.getByTestId('derived-bonus-pcts'))
+      .toHaveText('使う特効%: 0% / 50%（2 段階）');
+  });
+
+  test('上昇率を変えると導出される特効%が変わる', async ({ page }) => {
+    await page.getByTestId('bonus-count-gold').fill('2');
+    await page.getByTestId('bonus-rate-gold').fill('30');
+    await expect(page.getByTestId('derived-bonus-pcts'))
+      .toHaveText('使う特効%: 0% / 30% / 60%（3 段階）');
   });
 
   test('入力がリロード後も復元される', async ({ page }) => {
     await page.getByTestId('target-pt').fill('1234567');
+    await page.getByTestId('bonus-count-silver').fill('3');
     await page.getByTestId('play-mode-オート').uncheck();
     await page.reload();
     await expect(page.getByTestId('target-pt')).toHaveValue('1234567');
+    await expect(page.getByTestId('bonus-count-silver')).toHaveValue('3');
     await expect(page.getByTestId('play-mode-オート')).not.toBeChecked();
   });
 
