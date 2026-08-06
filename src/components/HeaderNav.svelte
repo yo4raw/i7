@@ -30,6 +30,7 @@
         { href: `${base}score-calc/`, label: 'スコア計算' },
         { href: `${base}score-calc/max-score-finder/`, label: '編成組合計算' },
         { href: `${base}card-compare/`, label: '衣装比較' },
+        { href: `${base}point-calc/`, label: 'ポイント芸計算' },
       ],
     },
     {

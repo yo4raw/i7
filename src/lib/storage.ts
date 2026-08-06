@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   CARD_LIST_VIEW_MODE: 'i7_card_list_view_mode',
   COMPARE_EVENT_ID: 'i7_compare_event_id',
   MAX_FINDER_EVENT_ID: 'i7_max_finder_event_id',
+  POINT_CALC_STATE: 'i7_point_calc_state',
 } as const;
 
 export function loadJson<T>(key: string, fallback: T): T {
