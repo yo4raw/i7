@@ -32,9 +32,9 @@
 
 2. **計算は整数演算で行う。** `floor(gradePt * (1 + pct/100))` を浮動小数点で書くと `660 × 2.3 = 1517.9999999999998` となり 1pt ずれる。解析時に実際にこの原因で 124 セルが不一致になった。実装は `Math.floor(gradePt * (100 + bonusPct) / 100)` とし、特効率は整数パーセントで保持する。
 
-3. **スプレッドシート側の入力ミス 27 セルは再現しない。** 全 5,109 セル中 5,082 セル（99.47%）が式と一致し、残る 27 セルは以下のいずれかで、シート側の誤りと判断した。
+3. **スプレッドシート側の入力ミスは再現しない。** ただしゴールデンフィクスチャの抽出対象は、全 11 シートのうち公開されている 8 シートのみとする。非公開の隠しシート 3 枚（`アイスタ⑧用` / `マリマリ用` / `Sugao用`）は htmlview のシートスイッチャーから gid を取得する手段がなく、また pt 表の内容は公開シートと重複するため実害がない。抽出スクリプト (`scripts/extract-point-calc-golden.mjs`) の `SHEETS` は公開 8 シートのみを列挙し、合計 4,449 セル中 4,423 セル（99.4%）が式と一致し、残る 26 セルは以下のいずれかで、シート側の誤りと判断した。
 
-   - ★2 NORMAL FC 60% が `2031`（4 シート）— 他 6 シートの同条件は `2013`。桁の入れ替わり
+   - ★2 NORMAL FC 60% が `2031`（3 シート）— 他 5 シートの同条件は `2013`。桁の入れ替わり
    - ★4 EASY PC 180% が `8188/3 = 2729.33…`（5 シート）— 非整数。正しくは `8118/3 = 2706`
    - Sugao①用 / Sugao②用の 200% 列に 210% の値（18 セル）— 隣の 210% 列と同値
 
@@ -67,5 +67,5 @@
 - `src/lib/pointCalc/`（`types.ts` / `constants.ts` / `engine.ts` / `candidates.ts` / `solver.ts`）を新設。
 - `src/pages/point-calc/index.astro` と `src/components/PointCalc.svelte` を追加し、ナビゲーションにも追加。
 - `src/lib/storage.ts` の `STORAGE_KEYS` に `i7_point_calc_state` を追加（`FooterTools.svelte` のバックアップ対象に含めるため）。
-- `tests/fixtures/point-calc-golden.json`（5,082 件 + `knownSheetErrors` 27 件）と抽出スクリプト `scripts/extract-point-calc-golden.mjs` を追加。
+- `tests/fixtures/point-calc-golden.json`（公開 8 シート・4,423 件 + `knownSheetErrors` 26 件）と抽出スクリプト `scripts/extract-point-calc-golden.mjs` を追加。
 - 詳細設計は `docs/superpowers/specs/2026-08-06-point-calc-design.md` を参照。

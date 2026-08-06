@@ -60,7 +60,7 @@
 | `AH24` 相当（バディナナ用 / 吉兆用 / LaStiara②用 / ISL②用 / LaStiara用） | ★4 EASY PC 180% が `8188/3 = 2729.33…` | 非整数。正しくは `8118/3 = 2706` |
 | `Y*` / `Z*`（Sugao①用 / Sugao②用の★1行と★5 EASY） | 200% 列に 210% の値が入っている | 隣の 210% 列（`AA` / `AB`）と同値 |
 
-**この 27 セルはツール側では再現しない。** 除外リストとして理由付きでフィクスチャに記録し、将来シート側が修正されても差分を追える形にする。
+**この 27 セルはツール側では再現しない。** ただしゴールデンフィクスチャ（`tests/fixtures/point-calc-golden.json`）が対象にするのは、非公開の隠しシート 3 枚（`アイスタ⑧用` / `マリマリ用` / `Sugao用`）を除いた公開 8 シートのみである。隠しシートは htmlview のシートスイッチャーから gid を取得する手段がなく、また pt 表の内容は公開シートと重複するため実害はない。公開 8 シートでは合計 4,449 セル中 4,423 セルが式と一致し、残る 26 セル（上表のうち `アイスタ⑧用` の `N17` を除いたもの）を `knownSheetErrors` として理由付きで記録し、「ツールの出力が正しい値と一致し、かつシートの値とは一致しない」ことをテストで固定する。将来シート側が修正されても差分を追える形にする。
 
 ### 2.3 浮動小数点の落とし穴
 
@@ -212,7 +212,7 @@ export function livePoint(spec: LiveSpec): number;
 
 ### 6.1 ゴールデンテスト（pt 表）
 
-スプレッドシート全 11 シートの pt 表（特効%列 + 弱編成 2 列）を `tests/fixtures/point-calc-golden.json` に抽出する。
+スプレッドシート全 11 シートを手動解析した結果は前述のとおりだが、抽出スクリプトによる自動フィクスチャ化の対象は、gid を取得できる公開 8 シートの pt 表（特効%列 + 弱編成 2 列）のみである。`tests/fixtures/point-calc-golden.json` に抽出する。
 
 ```jsonc
 {
@@ -220,20 +220,21 @@ export function livePoint(spec: LiveSpec): number;
   "extractedAt": "2026-08-06",
   "cells": [
     { "sheet": "バディナナ用", "cell": "F16", "stars": 2, "difficulty": "EASY",
-      "playMode": "FC", "bonusPct": 0, "unit": "max", "expected": 1386 },
-    { "sheet": "バディナナ用", "cell": "C16", "stars": 2, "difficulty": "EASY",
-      "playMode": "放置", "bonusPct": 0, "unit": "weak", "expected": 81 }
-    // … 5,082 件
+      "playMode": "FC", "bonusPct": 0, "unit": "max", "multiplier": 1, "value": 1386, "expected": 1386 },
+    { "sheet": "バディナナ用", "cell": "C12", "stars": 1, "difficulty": "EASY",
+      "playMode": "放置", "bonusPct": 0, "unit": "weak", "multiplier": 1, "value": 79, "expected": 79 }
+    // … 4,423 件
   ],
   "knownSheetErrors": [
-    { "sheet": "アイスタ⑧用", "cell": "N17", "sheetValue": 2031, "correctValue": 2013,
-      "reason": "他 6 シートの同条件は 2013。桁の入れ替わり" }
-    // … 27 件
+    { "sheet": "バディナナ用", "cell": "AH24", "stars": 4, "difficulty": "EASY",
+      "playMode": "PC", "bonusPct": 180, "unit": "max", "multiplier": 1, "value": 2729,
+      "reason": "★4 EASY PC 180%。セルの式が 8188/3 = 2729.33… で非整数。正しくは 8118/3 = 2706" }
+    // … 26 件
   ]
 }
 ```
 
-テストは `cells` 全件で `livePoint` の出力が `expected` に一致することを検証する。`knownSheetErrors` は「ツールの出力が `correctValue` と一致し、かつ `sheetValue` とは一致しない」ことを検証し、除外が意図的であることを固定する。
+テストは `cells` 全件で `livePoint` の出力が `expected`（`value` と同値）に一致することを検証する。`knownSheetErrors` は「ツールの出力（`livePoint`）が `value`（シート側の誤値）とは一致しない」ことを検証し、除外が意図的であることを固定する。
 
 抽出スクリプトは `scripts/extract-point-calc-golden.mjs` として置き、シートが更新されたら再生成できるようにする。
 
