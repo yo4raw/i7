@@ -138,7 +138,7 @@
   <div class="flex flex-wrap gap-2 mb-3" data-testid="bonus-chips">
     {#each bonusPcts as pct (pct)}
       <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white px-3 py-1 text-sm tabular-nums">
-        {pct}%
+        <span>{pct}%</span>
         <button type="button" class="text-gray-500 hover:text-gray-900" aria-label="{pct}% を削除" onclick={() => removeBonusPct(pct)}>×</button>
       </span>
     {/each}
