@@ -28,7 +28,7 @@ describe('isPointEvent', () => {
     expect(isPointEvent('ミッションイベント')).toBe(false);
     expect(isPointEvent('')).toBe(false);
     expect(isPointEvent(null)).toBe(false);
-    // eslint-disable-next-line unicorn/no-useless-undefined
+    // oxlint-disable-next-line no-useless-undefined -- undefined の引数も null と同様にテストする必要があるため
     expect(isPointEvent(undefined)).toBe(false);
   });
 });
