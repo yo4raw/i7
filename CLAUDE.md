@@ -126,6 +126,24 @@ IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Wor
 
 `src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
 
+### ブランチ戦略（Git Flow / ADR 0052）
+
+`main` の不変条件は **「常にリリース済み（本番にデプロイ済み）」**。人手の変更は `develop` に溜める。
+
+| ブランチ | 役割 | 派生元 | マージ先 | マージ方式 |
+|---------|------|--------|---------|-----------|
+| `main` | 常にリリース済み | — | — | — |
+| `develop` | 統合ブランチ（GitHub default） | `main` | `main`（リリース時） | fast-forward |
+| `feat/` `fix/` `chore/` `docs/` `refactor/` `test/` `ci/` | 人手の作業 | `develop` | `develop` | squash |
+| `hotfix/` | 本番の緊急修正 | `main` | `main` | squash |
+| `auto/` | cron の自動取り込み | `main` | `main` | squash（自動） |
+
+- **通常の作業は `develop` から切って `develop` に PR を出す**。マージしても本番には出ない
+- **毎時のアセット自動取り込み（cron 4 本）は `main` 直行の例外**。マージ直後に自動採番タグが打たれ即デプロイされるため、`main` の不変条件は崩れない。新カード画像が 1 時間以内に本番へ出る即時性を維持するための例外
+- **`main` への push は `sync-main-to-develop.yml` が `develop` へ自動 back-merge する**。これにより「`main` は常に `develop` の祖先」が保たれ、リリースが fast-forward で通る
+- **`release/*` ブランチは作らない**。`main` にブランチ保護は設定していない
+- リリース手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照
+
 ### Deployment
 
 Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。リリース・デプロイの具体的な手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照。
@@ -248,6 +266,6 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 2. Playwright MCP / chrome-devtools MCP で dev サーバー（`http://localhost:4321/`）にアクセスし、変更箇所の画面表示を確認する
 3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
 4. **本番ビルドでしか検出できない項目**（動的ルート全件生成・`@playform/compress` の圧縮後挙動・`BASE_URL` 解決など）に関わる変更の場合のみ、追加で `npm run preview` を実行して最終確認する
-5. `git` に `commit` する前に必ずリリースノートを更新する
-6. ユーザーの確認が取れたら 対応内容に応じたブランチを作成して `git commit` → `git push` と PR の作成を行い、CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない。
-7. **リリース（タグ push）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照。
+5. ユーザーの確認が取れたら **`develop` から** 対応内容に応じたブランチを作成して `git commit` → `git push` し、**base を `develop` にして** PR を作成する。CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない
+6. リリースは `develop` を `main` へ fast-forward してタグを打つ（`release` スキル参照）。本番の緊急修正だけは `main` から `hotfix/` を切って `main` に PR を出す
+7. **リリース（タグ push）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照

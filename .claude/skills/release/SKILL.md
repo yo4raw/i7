@@ -10,8 +10,16 @@ Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイす�
 ## 通常のリリース
 
 ```bash
-git tag v1.x.x && git push origin v1.x.x
+git fetch origin
+git push origin develop:main                            # fast-forward（main は常に develop の祖先）
+git tag v1.x.x origin/main && git push origin v1.x.x
 ```
+
+`develop` を `main` へ **fast-forward** してからタグを打つ。PR を経由しないのは、`main` にマージコミットを残さずリリースノートを綺麗に保つため（内容は `develop` 上の各 PR で確認済みという前提）。**squash merge は絶対に使わない** — `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる。
+
+fast-forward が拒否された場合は、`main` に入った自動取り込みが `develop` へ back-merge されるのを待って再実行する（`sync-main-to-develop.yml` が自動で行う）。非破壊な失敗なので安全側に倒れる。
+
+本番の緊急修正は `main` から `hotfix/` を切り、`main` に PR を出してマージしてから手動でタグを打つ。
 
 タグを push すると `release.yml` が GitHub Release を作成し、同時に `deploy.yml` が Cloudflare Workers へデプロイする。
 
