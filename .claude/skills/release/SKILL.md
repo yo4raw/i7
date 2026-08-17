@@ -10,9 +10,17 @@ Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイす�
 ## 通常のリリース
 
 ```bash
+# 1. fast-forward できるか確認する
 git fetch origin
-# main が develop の祖先であることを確認する（fast-forward の前提）
-git merge-base --is-ancestor origin/main origin/develop || echo "NG: sync-main-to-develop の完了を待つ"
+git merge-base --is-ancestor origin/main origin/develop \
+  && echo "OK: fast-forward 可能" \
+  || echo "NG: main が develop の祖先ではない"
+```
+
+`NG` の場合は以降を実行せず、`sync-main-to-develop` ワークフローの完了を待ってから 1. からやり直す。`OK` を確認できたら次に進む。
+
+```bash
+# 2. fast-forward してタグを打つ
 git push origin origin/develop:main    # ローカルの develop ブランチに依存しない
 git fetch origin
 git tag v1.x.x origin/main && git push origin v1.x.x
