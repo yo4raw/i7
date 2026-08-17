@@ -62,3 +62,4 @@
 | [0049](0049-point-calc-tool.md) | ポイント芸計算ツールを式ベースの自動ソルバーとして実装する | 承認 |
 | [0050](0050-point-calc-bonus-count-input.md) | ポイント芸計算ツールの特効入力を「上昇率 × 使える枚数」にする | 承認 |
 | [0051](0051-tag-creation-via-github-api.md) | 自動採番タグの作成を git push から GitHub API 経由へ変更する | 承認 |
+| [0052](0052-adopt-git-flow.md) | GitHub Flow から簡易 Git Flow へ移行する(develop 統合・main は常にリリース済み) | 承認 |
