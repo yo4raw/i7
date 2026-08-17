@@ -35,7 +35,7 @@ try {
     let commits: ReleaseCommit[] = [];
     try {
       const range = prev ? `${prev}..${tag}` : tag;
-      const logRaw = run(`git log --format=%H%x09%s ${range}`);
+      const logRaw = run(`git log --no-merges --format=%H%x09%s ${range}`);
       if (logRaw) {
         commits = logRaw.split('\n').map((line) => {
           const [hash, ...rest] = line.split('\t');
