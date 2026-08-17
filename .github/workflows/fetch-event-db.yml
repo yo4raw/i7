@@ -14,6 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # default branch が develop になっても main を見続ける。
+          # PR の base だけでなく、タグ採番が参照する origin/main の解決にも効く
+          # （checkout は checkout したブランチ向けに remote.origin.fetch を設定するため）。
+          ref: main
 
       - name: Download event DB CSV
         id: fetch
@@ -55,6 +60,8 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v8
         with:
+          # base の既定値は「checkout されたブランチ」。default branch 変更の影響を受けないよう明示する
+          base: main
           add-paths: public/events/events.csv
           commit-message: "Update event DB CSV"
           branch: auto/update-event-db
