@@ -1,0 +1,37 @@
+name: Sync main to develop
+
+# main に入った変更（アセット自動取り込み / hotfix / リリース）を develop へ取り込み、
+# 「main は常に develop の祖先」という不変条件を保つ。
+# これによりリリースを develop -> main の fast-forward で行える（main にマージコミットが載らない）。
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-main-to-develop
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Merge main into develop
+        run: |
+          set -e -o pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "develop already contains main; nothing to do"
+            exit 0
+          fi
+          git merge --no-edit origin/main
+          git push origin HEAD:develop
