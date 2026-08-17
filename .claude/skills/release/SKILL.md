@@ -11,11 +11,14 @@ Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイす�
 
 ```bash
 git fetch origin
-git push origin develop:main                            # fast-forward（main は常に develop の祖先）
+# main が develop の祖先であることを確認する（fast-forward の前提）
+git merge-base --is-ancestor origin/main origin/develop || echo "NG: sync-main-to-develop の完了を待つ"
+git push origin origin/develop:main    # ローカルの develop ブランチに依存しない
+git fetch origin
 git tag v1.x.x origin/main && git push origin v1.x.x
 ```
 
-`develop` を `main` へ **fast-forward** してからタグを打つ。PR を経由しないのは、`main` にマージコミットを残さずリリースノートを綺麗に保つため（内容は `develop` 上の各 PR で確認済みという前提）。**squash merge は絶対に使わない** — `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる。
+`develop` を `main` へ **fast-forward** してからタグを打つ。`origin/develop:main` と**リモート追跡ブランチを push 元に指定する**のは、ローカルに `develop` ブランチが存在しない（または古い）場合でも常にリモートの最新状態を基準に動かすため。PR を経由しないのは、`main` にマージコミットを残さずリリースノートを綺麗に保つため（内容は `develop` 上の各 PR で確認済みという前提）。**squash merge は絶対に使わない** — `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる。
 
 fast-forward が拒否された場合は、`main` に入った自動取り込みが `develop` へ back-merge されるのを待って再実行する（`sync-main-to-develop.yml` が自動で行う）。非破壊な失敗なので安全側に倒れる。
 
@@ -23,7 +26,7 @@ fast-forward が拒否された場合は、`main` に入った自動取り込み
 
 タグを push すると `release.yml` が GitHub Release を作成し、同時に `deploy.yml` が Cloudflare Workers へデプロイする。
 
-リリースノート (`src/pages/releases/index.astro`) は **git タグとコミット件名から build 時に自動生成される**（手で編集するファイルはない）。したがって **コミット件名がそのままリリースノートの本文になる**。タグを打つ前に `git log <前のタグ>..HEAD --oneline` を確認し、ユーザーに見せて意味が通る件名になっているか点検すること。
+リリースノート (`src/pages/releases/index.astro`) は **git タグとコミット件名から build 時に自動生成される**（手で編集するファイルはない）。したがって **コミット件名がそのままリリースノートの本文になる**。タグを打つ前に `git log <前のタグ>..origin/develop --oneline` を確認し、ユーザーに見せて意味が通る件名になっているか点検すること。
 
 リリース後は `release-tweet` スキルで告知ツイートを投稿する。
 

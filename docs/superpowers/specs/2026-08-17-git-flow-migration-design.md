@@ -46,7 +46,9 @@ feat/xxx ──(PR, squash)──▶ develop
 
 ```bash
 git fetch origin
-git push origin develop:main                            # fast-forward
+git merge-base --is-ancestor origin/main origin/develop || echo "NG: sync-main-to-develop の完了を待つ"
+git push origin origin/develop:main    # ローカルの develop ブランチに依存しない
+git fetch origin
 git tag v1.x.x origin/main && git push origin v1.x.x    # → deploy.yml + release.yml
 ```
 
