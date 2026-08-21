@@ -104,17 +104,23 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
       <p class="text-xs text-gray-500">各ページはヘッダーナビゲーションからもアクセスできます</p>
     </div>
 
-    {categories.map((cat) => (
+    {categories.map((cat, ci) => (
       <div class="mb-6">
         <h3 class="text-sm font-semibold text-gray-600 mb-2">{cat.heading}</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cat.cards.map((c) => (
             <a href={c.href}
+               data-motion-item
+               data-motion-group={`feature-${ci}`}
                class="block surface-card border-l-4 border-chrome-ink p-5 hover:shadow-card-hover transition-shadow">
               <h4 class="text-base font-semibold text-gray-900 mb-1">{c.title}</h4>
               <p class="text-xs text-gray-600">{c.desc}</p>
               {c.stat && (
-                <div class="text-2xl font-bold tabular-nums text-gray-800 mt-3">{c.stat.value.toLocaleString('ja-JP')}<span class="text-sm text-gray-500 ml-1">{c.stat.unit}</span></div>
+                <div class="mt-3">
+                  {/* 数値だけを data-count-to の対象にする。既存 E2E が読む .text-2xl の textContent は変えない */}
+                  <div class="text-2xl font-bold tabular-nums text-gray-800" aria-hidden="true"><span data-count-to={c.stat.value}>{c.stat.value.toLocaleString('ja-JP')}</span><span class="text-sm text-gray-500 ml-1">{c.stat.unit}</span></div>
+                  <span class="sr-only">{c.stat.value.toLocaleString('ja-JP')}{c.stat.unit}</span>
+                </div>
               )}
             </a>
           ))}
@@ -133,9 +139,12 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
     <div class="surface-card p-5">
       <div class="flex flex-wrap gap-2">
         {rarityEntries.map(([rarity, count]) => (
-          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 text-sm">
+          <span data-motion-item
+                data-motion-group="rarity-chip"
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-200 text-sm">
             <span class={`inline-block px-2 py-0.5 rounded text-xs font-bold text-white ${RARITY_BADGE_CLASSES[rarity] ?? 'bg-gray-400'}`}>{rarity}</span>
-            <span class="text-gray-700">{count}<span class="text-xs text-gray-500 ml-0.5">枚</span></span>
+            <span class="text-gray-700 tabular-nums" aria-hidden="true"><span data-count-to={count}>{count}</span><span class="text-xs text-gray-500 ml-0.5">枚</span></span>
+            <span class="sr-only">{count}枚</span>
           </span>
         ))}
       </div>
@@ -143,7 +152,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
   </section>
 
   <!-- 謝辞 -->
-  <section class="surface-card p-6 mb-6">
+  <section data-motion-item data-motion-group="text-section" class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">謝辞</h2>
     <dl class="text-sm text-gray-700 space-y-3 mb-4">
       <div class="flex flex-col sm:flex-row sm:gap-4">
@@ -173,7 +182,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
   </section>
 
   <!-- お問い合わせ -->
-  <section class="surface-card p-6 mb-6">
+  <section data-motion-item data-motion-group="text-section" class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">お問い合わせ</h2>
     <p class="text-sm text-gray-700 mb-2">
       ご意見・ご要望・不具合報告・権利に関するお問い合わせは、以下のいずれかへお願いいたします。
@@ -186,7 +195,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
   </section>
 
   <!-- プライバシー -->
-  <section class="surface-card p-6 mb-6">
+  <section data-motion-item data-motion-group="text-section" class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">プライバシー</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700 text-pretty">
       <li>所持衣装・デッキ・ラビットノート値・共通ブローチなどのユーザー入力は、ブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
@@ -195,7 +204,7 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
   </section>
 
   <!-- 免責事項・権利表記 -->
-  <section class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+  <section data-motion-item data-motion-group="text-section" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
     <h2 class="text-lg font-bold text-yellow-800 mb-3">免責事項・権利表記</h2>
     <ul class="list-disc pl-5 space-y-2 text-sm text-gray-800 text-pretty">
       <li>

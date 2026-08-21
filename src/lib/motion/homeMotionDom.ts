@@ -17,6 +17,16 @@ export const COUNT_TARGET_ATTR = 'data-count-to';
 export const WATCHDOG_MS = 2500;
 /** 画面下から 15% 入った時点でスクロール登場を発火させる */
 export const REVEAL_ROOT_MARGIN = '0px 0px -15% 0px';
+/** REVEAL_ROOT_MARGIN と等価な閾値。rect ベースの拾い直しで使う */
+export const REVEAL_VIEWPORT_RATIO = 0.85;
+
+/**
+ * 要素の上端がビューポートの 85% ラインより上にあるか。
+ * REVEAL_ROOT_MARGIN と同じ判定を rect から行うためのもの。
+ */
+export function shouldReveal(rectTop: number, viewportHeight: number): boolean {
+  return rectTop < viewportHeight * REVEAL_VIEWPORT_RATIO;
+}
 
 export interface RevealSpec {
   /** GSAP の fromTo に渡す開始値 */
@@ -108,37 +118,61 @@ export type ObserverFactory = (
   options: IntersectionObserverInit,
 ) => IntersectionObserver;
 
+export interface RevealController {
+  /** 未再生グループのうち、閾値を越えているものを rect ベースで再生する */
+  sweep: (viewportHeight: number) => void;
+  /** 未再生グループ数 */
+  pending: () => number;
+}
+
 /**
  * 各グループの先頭要素を観測し、画面に入った時点で onReveal を 1 回だけ呼ぶ。
- * 一気にスクロールされて画面上方へ抜けた要素も取りこぼさない。
  * 発火した要素は unobserve し、全グループを消化したら disconnect する。
+ *
+ * IntersectionObserver は「画面下」から「画面上」へ 1 フレームで飛び越えた要素に対して
+ * コールバックを発火しない (isIntersecting が false のまま変化しないため)。最下部への
+ * 一気なスクロール・リロード時のスクロール位置復元・アンカーリンクでこれが起きると
+ * data-motion-item が残り続けて要素が永久に隠れる。そのため
+ *   1. コールバックのたびに未再生グループ全体を rect ベースで拾い直す
+ *   2. 呼び出し側がスクロール等から明示的に叩ける sweep() を返す
+ * の二段で取りこぼしを防ぐ。
  */
 export function observeRevealGroups(
   groups: RevealGroup[],
   createObserver: ObserverFactory,
   onReveal: (group: RevealGroup) => void,
-): IntersectionObserver | null {
+): RevealController | null {
   if (groups.length === 0) return null;
 
   const pending = new Map<Element, RevealGroup>();
   for (const group of groups) pending.set(group.elements[0], group);
 
-  const observer = createObserver((entries, self) => {
-    for (const entry of entries) {
-      // 画面内に入った場合に加え、最下部へ一気にスクロールされて画面上方へ
-      // 抜けてしまった場合 (bottom <= 0) も再生する。これを拾わないと
-      // data-motion-item が残り続け、要素が永久に隠れたままになる。
-      const passedAbove = entry.boundingClientRect.bottom <= 0;
-      if (!entry.isIntersecting && !passedAbove) continue;
-      const group = pending.get(entry.target);
-      if (!group) continue;
-      pending.delete(entry.target);
-      self.unobserve(entry.target);
-      onReveal(group);
+  let observer: IntersectionObserver | null = null;
+
+  const consume = (target: Element): void => {
+    const group = pending.get(target);
+    if (!group) return;
+    pending.delete(target);
+    observer?.unobserve(target);
+    onReveal(group);
+    if (pending.size === 0) observer?.disconnect();
+  };
+
+  const sweep = (viewportHeight: number): void => {
+    // consume() は反復中に自身のキーを消すが、Map のイテレータは削除済みを安全にスキップする
+    for (const target of pending.keys()) {
+      if (shouldReveal(target.getBoundingClientRect().top, viewportHeight)) consume(target);
     }
-    if (pending.size === 0) self.disconnect();
+  };
+
+  observer = createObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting || entry.boundingClientRect.bottom <= 0) consume(entry.target);
+    }
+    const viewportHeight = entries[0]?.rootBounds?.height ?? 0;
+    if (viewportHeight > 0) sweep(viewportHeight);
   }, { rootMargin: REVEAL_ROOT_MARGIN });
 
   for (const target of pending.keys()) observer.observe(target);
-  return observer;
+  return { sweep, pending: () => pending.size };
 }

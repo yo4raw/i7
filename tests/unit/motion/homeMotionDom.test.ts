@@ -15,6 +15,7 @@ import {
   applyCount,
   observeRevealGroups,
   REVEAL_ROOT_MARGIN,
+  shouldReveal,
 } from '../../../src/lib/motion/homeMotionDom';
 import type { RevealGroup } from '../../../src/lib/motion/homeMotionDom';
 
@@ -144,17 +145,19 @@ class FakeObserver {
   unobserve(el: Element) { this.unobserved.push(el); }
   disconnect() { this.disconnected = true; }
   /** bottom を負にすると「スクロールで画面上方へ抜けた要素」を再現できる */
-  fire(el: Element, isIntersecting: boolean, bottom = 100) {
+  fire(el: Element, isIntersecting: boolean, bottom = 100, rootBounds: { height: number } | null = null) {
     this.cb(
-      [{ target: el, isIntersecting, boundingClientRect: { bottom } } as IntersectionObserverEntry],
+      [{ target: el, isIntersecting, boundingClientRect: { bottom }, rootBounds } as IntersectionObserverEntry],
       this as unknown as IntersectionObserver,
     );
   }
 }
 
-function makeGroup(key: string, ids: string[]): { group: RevealGroup; els: HTMLElement[] } {
+function makeGroup(key: string, ids: string[], rectTop = 10_000): { group: RevealGroup; els: HTMLElement[] } {
   const host = mount(ids.map((id) => `<div data-motion-group="${key}" id="${id}"></div>`).join(''));
   const els = collectGroup(host, key);
+  // jsdom は常に全ゼロの rect を返すため、スクロール位置を明示的に差し替える
+  for (const el of els) el.getBoundingClientRect = () => ({ top: rectTop, bottom: rectTop + 50 }) as DOMRect;
   return { group: { key, spec: REVEAL_SPECS[key], elements: els }, els };
 }
 
@@ -249,5 +252,76 @@ describe('observeRevealGroups', () => {
     const result = observeRevealGroups([], () => { calls += 1; return null as unknown as IntersectionObserver; }, () => {});
     expect(result).toBeNull();
     expect(calls).toBe(0);
+  });
+
+  it('pending() は未再生グループ数を返す', () => {
+    const a = makeGroup('event-item', ['e1']);
+    const b = makeGroup('rarity-chip', ['r1']);
+    let created: FakeObserver | null = null;
+    const ctrl = observeRevealGroups(
+      [a.group, b.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      () => {},
+    )!;
+    expect(ctrl.pending()).toBe(2);
+    created!.fire(a.els[0], true);
+    expect(ctrl.pending()).toBe(1);
+  });
+
+  it('sweep() は閾値を越えたグループだけを再生する', () => {
+    // 画面 900px に対し 85% ライン = 765px。上端 700px は越えており、2000px は未達
+    const near = makeGroup('event-item', ['e1'], 700);
+    const far = makeGroup('rarity-chip', ['r1'], 2000);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    const ctrl = observeRevealGroups(
+      [near.group, far.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    )!;
+    ctrl.sweep(900);
+    expect(revealed).toEqual(['event-item']);
+    expect(created!.unobserved.map((el) => el.id)).toEqual(['e1']);
+    expect(ctrl.pending()).toBe(1);
+  });
+
+  it('コールバック時に rootBounds があれば、交差しなかったグループも拾い直す', () => {
+    // 最下部へ一気にスクロールした場合、飛び越された feature-2 には
+    // コールバックが来ない。text-section の交差を契機に拾い直せること。
+    const jumped = makeGroup('feature-2', ['f1'], -500);
+    const entered = makeGroup('text-section', ['t1'], 100);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [jumped.group, entered.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    );
+    created!.fire(entered.els[0], true, 100, { height: 900 });
+    expect(revealed.toSorted()).toEqual(['feature-2', 'text-section']);
+    expect(created!.disconnected).toBe(true);
+  });
+
+  it('rootBounds が無ければコールバック内の拾い直しは行わない', () => {
+    const jumped = makeGroup('feature-2', ['f1'], -500);
+    const entered = makeGroup('text-section', ['t1'], 100);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [jumped.group, entered.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    );
+    created!.fire(entered.els[0], true, 100, null);
+    expect(revealed).toEqual(['text-section']);
+    expect(created!.disconnected).toBe(false);
+  });
+});
+
+describe('shouldReveal', () => {
+  it('ビューポート高さの 85% ラインより上なら true', () => {
+    expect(shouldReveal(764, 900)).toBe(true);
+    expect(shouldReveal(765, 900)).toBe(false);
+    expect(shouldReveal(-100, 900)).toBe(true);
   });
 });

@@ -19,6 +19,7 @@ import {
   observeRevealGroups,
   releaseGroup,
   revealTo,
+  type RevealController,
   type RevealGroup,
 } from './homeMotionDom';
 
@@ -63,6 +64,24 @@ function revealGroup(group: RevealGroup): void {
   });
 }
 
+/**
+ * IntersectionObserver が拾えない飛び越しスクロールへの保険。
+ * rAF で 1 フレーム 1 回に間引き、全グループを消化したらリスナーごと外す。
+ */
+function attachScrollSweep(controller: RevealController): void {
+  let queued = false;
+  const onScroll = (): void => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      controller.sweep(window.innerHeight);
+      if (controller.pending() === 0) window.removeEventListener('scroll', onScroll);
+    });
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+}
+
 /** トップページのモーションを開始する。index.astro の <script> から 1 回だけ呼ぶ */
 export function initHomeMotion(): void {
   const root = document.documentElement;
@@ -102,11 +121,12 @@ export function initHomeMotion(): void {
 
     tl.add(() => countUpIn(statChip), 0.55);
 
-    observeRevealGroups(
+    const controller = observeRevealGroups(
       collectRevealGroups(document),
       (cb, options) => new IntersectionObserver(cb, options),
       revealGroup,
     );
+    if (controller) attachScrollSweep(controller);
 
     window.clearTimeout(watchdog);
   } catch {

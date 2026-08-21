@@ -1459,6 +1459,8 @@ astro dev stop
 **セルフレビューで見つけて修正した欠陥:**
 
 1. **最下部へ一気にスクロールすると要素が永久に隠れる。** IntersectionObserver は「画面より上へ抜けた要素」を `isIntersecting: false` として報告するため、初稿の実装ではそれらのグループが一度も再生されず `data-motion-item` が残り続けた。リロード時のスクロール位置復元やアンカーリンクでも同じ事故が起きる。`boundingClientRect.bottom <= 0` を再生条件に加え、Task 3 に専用のテストを追加した。spec 側にも設計として追記した。
+
+   **【実装中に判明・再修正】この対策では不十分だった。** 実ブラウザで検証したところ 9 要素が隠れたまま残った。要素が「画面下」→「画面上」へ 1 フレームで移動すると `isIntersecting` が `false` のまま変化しないため、**コールバック自体が発火しない**。`bottom <= 0` の判定はコールバックが呼ばれた場合にしか効かない。rect ベースの拾い直し（コールバック契機の全体 sweep + `scroll` からの `sweep()`）を追加して解決した。詳細は spec の「ScrollTrigger は使わない」節を参照。
 2. **既存 E2E の安定化ロケータが strict mode 違反になる。** `a[href$="/cards/"] [data-count-to]` は統計チップと機能カードの 2 つに一致する。Task 7 で最初から `[data-motion-group^="feature-"]` で絞る形に直した。
 3. **空配列を GSAP に渡していた。** `EventCountdown` は開催中・次回イベントが無ければ何も描画しない（`{#if events.length > 0}`）。対象ゼロのまま `gsap.fromTo` を呼ぶと警告が出るため、`hasTargets()` ガードを入れた。
 

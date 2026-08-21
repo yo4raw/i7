@@ -73,7 +73,14 @@ Vite がこのページ専用のチャンクにバンドルし、`type="module"`
 
 スクロール登場は IntersectionObserver（`rootMargin: '0px 0px -15% 0px'`）で実装する。要素が画面下から 15% 入った時点で発火し、発火後は `unobserve`、全消化後に `disconnect` する。
 
-**交差判定に加えて「画面上方へ抜けた要素」（`boundingClientRect.bottom <= 0`）も再生済みとして扱う。** 最下部へ一気にスクロールした場合・リロード時にスクロール位置が復元された場合・アンカーリンクで途中へ飛んだ場合、対象は一度も交差しないまま画面より上に来る。これを拾わないと `data-motion-item` が残り続け、要素が永久に隠れたままになる。
+**交差判定だけでは取りこぼす。** 最下部へ一気にスクロールした場合・リロード時にスクロール位置が復元された場合・アンカーリンクで途中へ飛んだ場合、対象は「画面下」から「画面上」へ 1 フレームで移動する。このとき `isIntersecting` は `false` のまま変化しないため、**IntersectionObserver のコールバックがそもそも発火しない**。放置すると `data-motion-item` が残り続け、要素が永久に隠れたままになる。
+
+そのため、交差イベントに加えて **rect ベースの拾い直し（sweep）** を二段で用意する。
+
+1. IntersectionObserver のコールバックが発火するたびに、未再生グループ全体を `getBoundingClientRect()` で判定し直す（別のグループが画面に入ったことを契機に、飛び越された要素を回収する）
+2. 呼び出し側が `scroll` イベント（`requestAnimationFrame` で 1 フレーム 1 回に間引き、`passive: true`）から明示的に叩ける `sweep(viewportHeight)` を公開する。全グループを消化した時点でリスナーごと外す
+
+判定の閾値は `rootMargin` と等価な「要素の上端がビューポート高さの 85% ラインより上」（`REVEAL_VIEWPORT_RATIO = 0.85`）とし、`shouldReveal()` として純粋関数に切り出して単体テストする。
 
 ScrollTrigger の追加コスト（gzip 約 12KB、全体の約 31% 増）に見合う機能（pin / scrub / parallax）を本設計では使わないため。将来「演出重視」へ強度を上げる場合は、その時点で ADR を追記した上で ScrollTrigger を導入する。
 
