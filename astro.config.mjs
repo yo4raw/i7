@@ -11,11 +11,19 @@ export default defineConfig({
 
   integrations: [
     sitemap({
+      // インデックス対象を絞る (ADR 0057)。ページ側の noindex と必ず対で設定すること。
+      //   - 衣装詳細 2824 件: 元データが既にインデックス済みの i7.step-on-dream.net 由来で、
+      //     1 ページあたりの独自テキストも中央値 515 文字と薄い
+      //   - イベント共有ページ 150 件: SNS 共有用のレアリティ別抜粋で、イベント詳細と内容が重複する
+      //   - 個人データページ 4 件: localStorage 依存で静的 HTML が実質空 (144〜929 文字)
+      // 無名ドメインで 3223 ページを申告すると評価が薄く広がり、全ページが
+      // 「クロール済み - インデックス未登録」になるため、独自性のあるページへ集中させる。
+      filter: (page) =>
+        !/\/cards\/\d+\/?$/.test(page)
+        && !/\/events\/\d+\/share\//.test(page)
+        && !/\/(mycard|decks|rabbit-note|shared-broach)\/?$/.test(page),
       serialize(item) {
         const url = item.url;
-        if (/\/cards\/\d+\/?$/.test(url)) {
-          return { ...item, changefreq: 'monthly', priority: 0.5 };
-        }
         if (/\/songs\/\d+\/?$/.test(url)) {
           return { ...item, changefreq: 'weekly', priority: 0.7 };
         }

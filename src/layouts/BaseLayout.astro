@@ -18,9 +18,11 @@ interface Props {
   ogType?: 'website' | 'article';
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
   breadcrumbs?: Breadcrumb[];
+  /** 検索エンジンにインデックスさせない (ADR 0057)。sitemap 側の除外と必ず対で設定する */
+  noindex?: boolean;
 }
 
-const { title, description, image, ogType = 'website', jsonLd, breadcrumbs } = Astro.props;
+const { title, description, image, ogType = 'website', jsonLd, breadcrumbs, noindex = false } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
 const DEFAULT_DESCRIPTION = 'アイドリッシュセブン (アイナナ) の衣装・楽曲・イベントを検索できるデータベース。スコア計算・所持衣装管理・特効衣装一覧などの便利ツールも提供します。';
@@ -103,6 +105,12 @@ try {
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="i7マネ部屋" />
     <link rel="canonical" href={canonicalUrl} />
+    {/*
+      noindex,follow: インデックスはさせないがリンクは辿らせる (ADR 0057)。
+      robots.txt でブロックすると Google がこのタグ自体を読めず noindex が効かないため、
+      クロールは許可したままにすること。
+    */}
+    {noindex && <meta name="robots" content="noindex,follow" />}
     <title>{fullTitle}</title>
     <!-- OGP -->
     <meta property="og:title" content={fullTitle} />

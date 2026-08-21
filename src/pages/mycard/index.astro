@@ -14,7 +14,8 @@ const breadcrumbs = [
 ];
 ---
 
-<BaseLayout title="所持衣装一覧" description={PAGE_DESCRIPTIONS.mycard} breadcrumbs={breadcrumbs}>
+<BaseLayout
+  noindex title="所持衣装一覧" description={PAGE_DESCRIPTIONS.mycard} breadcrumbs={breadcrumbs}>
   <h1 class="text-3xl font-bold text-display mb-6">所持衣装一覧</h1>
 
   <CollectionDashboard cards={allCards} client:load />

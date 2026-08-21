@@ -67,3 +67,4 @@
 | [0054](0054-gsap-home-motion.md) | トップページに限り GSAP を導入する(ADR 0046 §4 の部分的上書き) | 承認 |
 | [0055](0055-e2e-hydration-fixture.md) | E2E のハイドレート待ちを Playwright フィクスチャへ集約する | 承認 |
 | [0056](0056-worker-pool-sizing.md) | Web Worker プール数は現状維持とする(調査の結果) | 承認（現状確認） |
+| [0057](0057-focus-indexable-pages.md) | インデックス対象を独自性のあるページへ絞る | 承認 |
