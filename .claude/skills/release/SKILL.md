@@ -22,9 +22,11 @@ git merge-base --is-ancestor origin/main origin/develop \
 ```bash
 # 2. fast-forward してタグを打つ
 SHA=$(git rev-parse origin/develop)    # 1. で確認したコミットを固定する
-git push origin "$SHA:refs/heads/main"
+git push origin "${SHA}:refs/heads/main"
 git tag v1.x.x "$SHA" && git push origin v1.x.x
 ```
+
+> **注記**: `${SHA}` を波括弧で括るのは zsh 対策。zsh は `$SHA:r` を「拡張子を除く」修飾子として解釈するため、`"$SHA:refs/heads/main"` と書くと SHA の末尾に `efs/heads/main` が連結された不正な refspec になり push が失敗する（本リポジトリのシェルは zsh）。
 
 `develop` を `main` へ **fast-forward** してからタグを打つ。1. で確認した `origin/develop` のコミットを `$SHA` に固定し、push とタグ付けの両方でその値を使うのは、push とタグ付けの間に cron の自動取り込みが `main` へ入っても、確認したコミットにタグが載るようにするため（`origin/main` を再取得してから使うと、その間に入った cron の squash コミットを指してしまい、既にタグ済みの同一コミットへ二重にタグを打つおそれがある）。`origin/develop` という**リモート追跡ブランチを基準にする**のは、ローカルに `develop` ブランチが存在しない（または古い）場合でも常にリモートの最新状態を基準に動かすため。PR を経由しないのは、`main` にマージコミットを残さずリリースノートを綺麗に保つため（内容は `develop` 上の各 PR で確認済みという前提）。**squash merge は絶対に使わない** — `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる。
 
