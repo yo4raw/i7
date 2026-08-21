@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **注記（最終レビュー後）**: 本プランはブランチ全体レビュー前の時点の記録であり、一部の記述はレビューの指摘で上書きされている（例: `deploy.yml` は変更しない、リリースのタグ対象を `origin/main` から再取得する、等）。本プラン自体は書き換えない。リリース手順・どのワークフローを変更したかについては `.claude/skills/release/SKILL.md` と `docs/superpowers/specs/2026-08-17-git-flow-migration-design.md` を正とする。
+
 **Goal:** GitHub Flow から簡易 Git Flow へ移行し、`main` の不変条件を「常にリリース済み（本番にデプロイ済み）」にする。
 
 **Architecture:** `develop` を統合ブランチ兼 GitHub default branch とし、人手の変更をそこに溜める。毎時のアセット自動取り込み（cron 4 本）は即時デプロイを維持するため `main` 直行の例外とし、新規ワークフロー `sync-main-to-develop.yml` が `main` の変更を `develop` へ back-merge する。これにより「`main` は常に `develop` の祖先」が保たれ、リリースは `develop` → `main` の fast-forward で行える（`main` にマージコミットが載らない）。

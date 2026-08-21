@@ -21,8 +21,10 @@ jobs:
       # 手動実行で誤って未リリースの develop を本番へ出さないよう、main 以外を弾く。
       - name: Guard manual dispatch to main
         if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        env:
+          SELECTED_REF: ${{ github.ref }}
         run: |
-          echo "::error::手動デプロイは main からのみ許可されています（選択されたのは ${{ github.ref }}）。"
+          echo "::error::手動デプロイは main からのみ許可されています（選択されたのは ${SELECTED_REF}）。"
           echo "Run workflow の 'Use workflow from' で main を選び直してください。"
           exit 1
       - uses: actions/checkout@v7
