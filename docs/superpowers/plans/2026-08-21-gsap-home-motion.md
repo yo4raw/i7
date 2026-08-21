@@ -18,6 +18,8 @@
 すべてのタスクの要件に、以下が暗黙に含まれる。
 
 - **Node.js は 22 を使う。** `.nvmrc` が `22` を指定している。**Node 25 では jsdom の `localStorage` が壊れ、`tests/unit/storage.test.ts` / `tests/unit/data/rabbitNote.test.ts` / `tests/unit/stores/broachCounts.test.ts` / `tests/unit/stores/cardCounts.test.ts` の 22 テストが `localStorage.clear is not a function` で失敗する。これは本計画と無関係の環境起因であり、CI（Node 22）では green。** 作業開始前に `node -v` が `v22.x` であることを確認すること。
+
+  Node 22 が用意できない場合の縮退運用: 本計画が追加するテストは `localStorage` を使わないため、`npx vitest run tests/unit/motion/` は Node 25 でも通る。**通らないのは `npm run coverage`（既存 22 テストの失敗で exit≠0 になる）だけ**なので、カバレッジゲートの確認は CI に委ねること。その場合は Task 3 Step 5 と Task 8 Step 2 をスキップした事実を PR に明記する。
 - **ライトテーマ固定。** `dark:` バリアントを新規に付けない（ADR 0020）。
 - **`indigo` をクラス名・HEX とも `src/` に増やさない**（ADR 0047）。構造の配色は無彩色（近黒 `#14151A` / 白 / グレー階調）。
 - **ユーザー可視テキストでは「カード」ではなく「衣装」を使う。** 内部識別子は `card` のまま。
