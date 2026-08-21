@@ -20,6 +20,8 @@ test('衣装一覧の行にキャラスパインが出る', async ({ page }) => 
 
 test('ホームのヒーローからキャラで絞り込める', async ({ page }) => {
   await page.goto('/');
+  // 16 色バーの立ち上がり (ADR 0054) が終わってからクリックする
+  await expect(page.locator('[data-motion-group="hero-bar"][data-motion-item]')).toHaveCount(0);
   await page.getByLabel('七瀬陸の衣装一覧').click();
   await expect(page).toHaveURL(/char=/);
 });

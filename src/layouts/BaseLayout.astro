@@ -86,6 +86,15 @@ try {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#14151A" />
+    <!--
+      モーション有効フラグ (ADR 0054)。ネットワーク不要のインラインで、body 描画前に確定させる。
+      prefers-reduced-motion / JS 無効ではフラグが立たず、global.css の初期非表示ルールも効かない。
+    -->
+    <script is:inline>
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.documentElement.dataset.motion = 'on';
+      }
+    </script>
     <meta name="description" content={desc} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="apple-touch-icon" href={`${base}apple-touch-icon.png`} />

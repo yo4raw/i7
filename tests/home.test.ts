@@ -34,6 +34,13 @@ test.describe('ホームページ', () => {
   });
 
   test('衣装枚数と楽曲数が0より大きい', async ({ page }) => {
+    // カウントアップ (ADR 0054) の途中値を読まないよう、最終値に落ち着くまで待つ。
+    // a[href$="/cards/"] は統計チップと機能カードの 2 つに一致するため、
+    // data-motion-group で機能カード側に絞らないと strict mode 違反になる。
+    const numSpan = page.locator('a[href$="/cards/"][data-motion-group^="feature-"] [data-count-to]');
+    const target = Number(await numSpan.getAttribute('data-count-to'));
+    await expect(numSpan).toHaveText(target.toLocaleString('ja-JP'));
+
     const cardCount = page.locator('a[href$="/cards/"] .text-2xl');
     const text = await cardCount.textContent();
     expect(text).toMatch(/[\d,]+\s*枚/);

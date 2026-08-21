@@ -180,7 +180,10 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 - **明色材の上に明色材を重ねない**（例: モーダルパネル内のカードは solid のまま）
 - **リスト行・タイル・大きな繰り返し要素に `backdrop-filter` を使わない**（半透明は chrome の小領域限定。パフォーマンス）
 - `prefers-reduced-transparency` / `prefers-contrast` / `prefers-reduced-motion` のフォールバックは `@utility` 定義内と global.css に集約済み。利用側で個別対応しない
-- **モーション**: 新規依存を増やさない。開閉トランジションは `src/lib/motion.ts` の `materialIn`/`materialOut`（svelte/transition）、押下フィードバックは `pressable` utility を使う。ジェスチャー駆動 UI（ドラッグシート等）は導入しない
+- **モーション**: 開閉トランジションは `src/lib/motion.ts` の `materialIn`/`materialOut`（svelte/transition）、押下フィードバックは `pressable` utility を使う。ジェスチャー駆動 UI（ドラッグシート等）は導入しない
+  - **GSAP はトップページ専用**（`src/pages/index.astro` + `src/lib/motion/home*.ts`、ADR 0054）。他ページへ広げる場合は必ず ADR を追加すること。トップページ以外では引き続き新規モーション依存を増やさない
+  - トップページの要素に付いた `data-motion-item` / `data-motion-group` / `data-count-to` は `src/lib/motion/homeMotion.ts` から参照されている。マークアップを変更する際は同ファイルと `src/lib/motion/homeMotionDom.ts` の `REVEAL_SPECS` も確認すること
+  - `data-motion-group` のキーを増やす場合は `REVEAL_SPECS` にも対応する行を追加する（キーが無いグループは再生されず、要素が隠れたままになる）
 - **タイポグラフィ**: 大見出しは `text-display` utility（CJK 向け `palt` + 正トラッキング + `line-height:1.35`）。欧文向けの負トラッキングは使わない。数値の揃う列には `tabular-nums`（数字・欧文は ADR 0047 でセルフホストした Barlow Semi Condensed を適用。CJK には適用しない）
 - 影・角丸・blur・イージングは `@theme` のトークン（`--shadow-card` 等 → `shadow-card` / `rounded-card` utility）を使い、値を直書きしない
 - **色の 3 チャンネル分離（ADR 0047）**: 構造・ナビゲーション・アイデンティティ表現の配色は「属性」「キャラ」「構造」の 3 チャンネルのみとし、混同しない（データ区分を表す配色は後述の対象外）
