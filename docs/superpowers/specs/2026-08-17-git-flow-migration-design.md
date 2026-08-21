@@ -91,7 +91,7 @@ main ──▶ hotfix/xxx ──(PR, squash)──▶ main ──(手動タグ)�
 
 | 項目 | 内容 |
 |------|------|
-| トリガー | `push` → `branches: [main]`（タグ push では発火しない） |
+| トリガー | `push` → `branches: [main]`（タグ push では発火しない）+ `workflow_dispatch`（衝突や push レースで失敗した際、次の `main` push を待たずに手動再実行するため） |
 | 権限 | `contents: write` |
 | 並行制御 | `concurrency: { group: sync-main-to-develop, cancel-in-progress: false }` |
 | checkout | `ref: develop`, `fetch-depth: 0` |
@@ -164,7 +164,8 @@ git push origin HEAD:develop
 | リスク | 影響 | 対応 |
 |-------|------|------|
 | default 切替後に cron が `develop` を向く | 画像 PR の誤送、タグの誤採番 | 手順 2 → 3 の順序を守る。§5 の `ref`/`base` 明示が本質的な対策 |
-| sync の衝突 | `develop` が `main` を含まなくなり、次のリリースの fast-forward が失敗する | ジョブが fail するので気づける。手動でマージして解決 |
+| sync の衝突 | `develop` が `main` を含まなくなり、次のリリースの fast-forward が失敗する | ジョブが fail するので気づける。**失敗は待っても解消しない**（次の `main` push まで再実行されないため）。`workflow_dispatch` で再実行するか、手元でマージして push |
+| sync の push レース（checkout 後・push 前に人間が `develop` へマージし non-fast-forward で拒否される） | sync が失敗し、上と同じくリリースの fast-forward が通らなくなる | ジョブが fail するので気づける。`workflow_dispatch` で再実行するか、手元で `origin/develop` を取り込んでから push |
 | リリースの fast-forward 拒否 | リリースが一時的に行えない | 非破壊な失敗。sync の完了を待って再実行 |
 | `develop` の長期滞留 | 本番に出ていない変更が増える | 本設計の目的そのもので、許容する。滞留量が問題になる場合はリリース頻度で調整する |
 | リリース時に squash merge を選んでしまう | `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる | リリースは PR ではなく fast-forward push で行う手順とし、`release` スキルに明記する |

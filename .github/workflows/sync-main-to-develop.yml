@@ -6,6 +6,8 @@ name: Sync main to develop
 on:
   push:
     branches: [main]
+  # 衝突や push レースで失敗したあと、main への次の push を待たずに手動で再実行するため
+  workflow_dispatch:
 
 permissions:
   contents: write

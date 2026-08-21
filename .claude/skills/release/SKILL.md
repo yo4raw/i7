@@ -30,6 +30,17 @@ git tag v1.x.x origin/main && git push origin v1.x.x
 
 fast-forward が拒否された場合は、`main` に入った自動取り込みが `develop` へ back-merge されるのを待って再実行する（`sync-main-to-develop.yml` が自動で行う）。非破壊な失敗なので安全側に倒れる。
 
+ただし「待つ」で解決するのは sync が **まだ動いていない / 実行中** の場合のみ。sync が既に**失敗している**場合は、`main` への次の push（cron 実行など）が来るまで再実行されず、待っても解消しない。Actions タブで `Sync main to develop` の実行結果を確認し、失敗していたら次のいずれかで復旧する:
+
+- `workflow_dispatch` で `Sync main to develop` を手動再実行する
+- 手元で復旧する:
+
+```bash
+git fetch origin
+git checkout develop && git merge origin/main   # 衝突したら解決してコミット
+git push origin develop
+```
+
 本番の緊急修正は `main` から `hotfix/` を切り、`main` に PR を出してマージしてから手動でタグを打つ。
 
 タグを push すると `release.yml` が GitHub Release を作成し、同時に `deploy.yml` が Cloudflare Workers へデプロイする。
