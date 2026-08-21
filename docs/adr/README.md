@@ -65,3 +65,4 @@
 | [0052](0052-adopt-git-flow.md) | GitHub Flow から簡易 Git Flow へ移行する(develop 統合・main は常にリリース済み) | 承認 |
 | [0053](0053-archive-stale-documents.md) | 陳腐化した要件定義書・旧スプレッドシート仕様を docs/archive/ へ隔離する | 承認 |
 | [0054](0054-gsap-home-motion.md) | トップページに限り GSAP を導入する(ADR 0046 §4 の部分的上書き) | 承認 |
+| [0055](0055-e2e-hydration-fixture.md) | E2E のハイドレート待ちを Playwright フィクスチャへ集約する | 承認 |

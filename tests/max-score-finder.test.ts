@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 import { fetchEventsCsv } from '../src/lib/data/fetchEventsCsv';
 import { fetchCardsJson } from '../src/lib/data/fetchCardsJson';
 import { isHighScoreEvent } from '../src/lib/data/eventBonusTiers';
@@ -6,8 +6,11 @@ import { isHighScoreEvent } from '../src/lib/data/eventBonusTiers';
 const BASE = '';
 
 test.describe('編成組合計算ページ', () => {
-  // Worker 並列探索は組合せ数次第で数十秒かかるため余裕を持たせる
-  test.setTimeout(180_000);
+  // 総当たり探索は Web Worker を hardwareConcurrency 分だけ起動する CPU バウンド処理。
+  // Playwright が複数ワーカーで並列実行すると、ブラウザごとにその数だけスレッドが立って
+  // コア数を大きく超過し、単独なら数秒で終わる探索が数分かかることがある（実測で 150 秒の
+  // 待機を超過して落ちた）。単独実行時の所要時間ではなく、枯渇時の最悪値に合わせて確保する。
+  test.setTimeout(420_000);
 
   test('過去のハイスコアイベントを選択すると探索が完走し最適編成が表示される', async ({ page }) => {
     // 「対象イベント」セレクタでハイスコアイベントを明示選択する（過去イベント選択可）。
@@ -57,7 +60,8 @@ test.describe('編成組合計算ページ', () => {
     }
 
     // Worker 並列探索の完了を待ち、最適編成と上位候補が表示される
-    await expect(page.getByRole('heading', { name: /最適編成/ })).toBeVisible({ timeout: 150_000 });
-    await expect(page.getByRole('heading', { name: /上位候補 TOP 10/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /最適編成/ })).toBeVisible({ timeout: 360_000 });
+    // 同じコンポーネントの同一レンダリングで出るが、10 件分の描画が挟まるため既定 5 秒には頼らない
+    await expect(page.getByRole('heading', { name: /上位候補 TOP 10/ })).toBeVisible({ timeout: 30_000 });
   });
 });

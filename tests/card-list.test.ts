@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 import { SITE_NAME } from '../src/lib/constants';
 
 const BASE = '/i7';

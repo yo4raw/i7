@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 
 test.describe('衣装比較ページ', () => {
   test.beforeEach(async ({ page }) => {

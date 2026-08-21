@@ -1,8 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 
 const BASE = '';
 
 test.describe('スコア計算ページ', () => {
+  // MC シミュレーションは CPU バウンドで、並列実行時はコアの奪い合いで大きく伸びる。
+  // playwright.config.ts の既定 30 秒では枯渇時に足りないため上書きする。
+  test.setTimeout(180_000);
+
   test.beforeEach(async ({ page }) => {
     await page.goto(`${BASE}/score-calc/`);
     // GViz から楽曲リストがクライアントサイドで読み込まれるのを待つ
@@ -41,8 +45,11 @@ test.describe('スコア計算ページ', () => {
     await expect(calcBtn).toBeEnabled();
     await calcBtn.click();
 
-    // シミュレーション結果が表示される
-    await expect(page.locator('#mc-results')).toBeVisible({ timeout: 20000 });
+    // シミュレーション結果が表示される。
+    // MC シミュレーションは CPU バウンドで、Playwright が複数ワーカーで並列実行すると
+    // ブラウザ同士がコアを奪い合って単独実行の数倍かかる（実測で 20 秒を超過して落ちた）。
+    // 枯渇時の最悪値に合わせて確保する。
+    await expect(page.locator('#mc-results')).toBeVisible({ timeout: 120_000 });
     await expect(page.locator('#mc-mean')).toHaveText(/[\d,]+/);
     await expect(page.locator('#final-result')).toHaveText(/[\d,]+/);
   });

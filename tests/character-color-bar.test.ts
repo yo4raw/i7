@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 
 test('ヘッダーに 16 色バーが表示される', async ({ page }) => {
   await page.goto('/');
