@@ -130,7 +130,7 @@ git push origin HEAD:develop
 
 順序に依存関係がある。**この順で実施する**。
 
-1. **`develop` ブランチを作成する** — `git push origin main:develop`
+1. **`develop` ブランチを作成する** — `git push origin origin/main:refs/heads/develop`
    sync ワークフローは `develop` を checkout するため、ワークフロー投入前に存在させる。
 2. **変更一式を `main` への PR にしてマージする**（`ci.yml` / cron 4 本 / releases ページ / sync ワークフロー / ドキュメント / ADR）
    この時点では default branch はまだ `main` なので、base は `main` のままでよい。

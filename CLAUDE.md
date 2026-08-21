@@ -22,10 +22,10 @@ UI の見た目確認・スタイル調整・クライアントサイド JS の�
   - GViz API 経由のクライアントサイドフェッチ（カード 2689 件等）も dev サーバー上で通常通り動作する
 - エージェント側の確認フロー:
   1. `npm run dev` を `run_in_background: true` で起動
-  2. ログに `astro  v6.x.x ready in XXX ms` が出るまで `until grep -q "ready in"` で待つ（数秒）
+  2. `curl -s -o /dev/null -w "%{http_code}" http://localhost:4321/` で疎通確認する（`astro dev` はデーモン化されており `npm run dev` はログに `Dev server running at http://localhost:4321 (pid NNNNN)` を出して即 exit する。起動完了を告げる旧来の文字列は出力されないため、それを待つ `grep` ループは永久に一致しない）
   3. Playwright / chrome-devtools MCP で `http://localhost:4321/` にアクセス → スクリーンショット取得
   4. 必要に応じてファイル編集 → 数秒待って再スクショ（手動 reload は不要、`navigate_page reload` でも可）
-  5. 検証完了後は `TaskStop` で dev サーバーを停止
+  5. 検証完了後は `astro dev stop` で dev サーバーを停止する（デーモン化されているため `TaskStop` では止まらない）
 
 ### `npm run build` / `npm run preview` が必要なケース
 
@@ -52,7 +52,7 @@ UI の見た目確認・スタイル調整・クライアントサイド JS の�
 
 ## Architecture
 
-IDOLiSH7 カードデータベースの Astro 6 静的サイト（Cloudflare Workers Static Assets にデプロイ）。
+IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Workers Static Assets にデプロイ）。
 
 ### 設計原則: 完全静的サイト
 
@@ -150,7 +150,7 @@ Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。�
 
 ### PWA
 
-ホーム画面追加・オフライン閲覧用の Service Worker と manifest を `public/` 配下に手書きで配置している（vite-plugin-pwa は Astro 6 静的ビルドで `sw.js` を吐かない不具合があり、また `@vite-pwa/astro` は Astro 5 までしか対応していないため自前実装を採用）。
+ホーム画面追加・オフライン閲覧用の Service Worker と manifest を `public/` 配下に手書きで配置している（vite-plugin-pwa は Astro 7 静的ビルドで `sw.js` を吐かない不具合があり、また `@vite-pwa/astro` は Astro 5 までしか対応していないため自前実装を採用）。
 
 - `public/manifest.webmanifest` — アプリ名・テーマカラー (#4f46e5)・アイコン (192/512/maskable) を定義
 - `public/sw.js` — Workbox なしの軽量 SW。`SW_VERSION` 文字列を上げると古い static キャッシュをパージ
