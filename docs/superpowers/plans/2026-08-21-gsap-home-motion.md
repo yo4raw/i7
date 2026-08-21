@@ -1464,6 +1464,10 @@ astro dev stop
 2. **既存 E2E の安定化ロケータが strict mode 違反になる。** `a[href$="/cards/"] [data-count-to]` は統計チップと機能カードの 2 つに一致する。Task 7 で最初から `[data-motion-group^="feature-"]` で絞る形に直した。
 3. **空配列を GSAP に渡していた。** `EventCountdown` は開催中・次回イベントが無ければ何も描画しない（`{#if events.length > 0}`）。対象ゼロのまま `gsap.fromTo` を呼ぶと警告が出るため、`hasTargets()` ガードを入れた。
 
+4. **【本番ビルドでのみ発生】client:load の島の DOM 差し替えでヒーローが永久に消える。** dev では完全に正常だったが、本番ビルドでヒーロー（16 色バー・サイト名）とイベントカードが `opacity: 0` のまま表示されなかった。`CharacterColorHero` から `client:load` を外す / `astro-island[ssr]` の消滅を待つ / 初回タイムライン分を無条件解放する、の三段で修正した。詳細は spec の「client:load の島がハイドレートし終えるまで待つ」節を参照。**`npm run dev` だけでは検出できない類の不具合であり、本番ビルド検証を省略していたら本番事故になっていた。**
+
+5. **`<link rel="modulepreload">` は出力されない。** spec に「Vite が modulepreload を出力する」と書いたが、実際に出るのは `<script type="module" src=...>` だった。単一チャンクなのでラウンドトリップは 1 回のままであり結論は変わらないが、事実誤りのため spec を訂正した。
+
 **未解決として残した spec 項目:**
 
 - **`will-change` の明示的な付与と除去**（spec「パフォーマンス」）は実装しない。GSAP は `transform` / `opacity` のトゥイーン時に自動で合成レイヤーを立てるため、手動の `will-change` 管理は二重になる。**16 セグメントに常時 `will-change` を付けないという意図は満たされている。** 実測で問題が出た場合のみ追加する。

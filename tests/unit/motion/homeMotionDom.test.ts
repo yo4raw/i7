@@ -16,6 +16,9 @@ import {
   observeRevealGroups,
   REVEAL_ROOT_MARGIN,
   shouldReveal,
+  TIMELINE_GROUP_KEYS,
+  pendingIslandCount,
+  releaseTimelineGroups,
 } from '../../../src/lib/motion/homeMotionDom';
 import type { RevealGroup } from '../../../src/lib/motion/homeMotionDom';
 
@@ -323,5 +326,38 @@ describe('shouldReveal', () => {
     expect(shouldReveal(764, 900)).toBe(true);
     expect(shouldReveal(765, 900)).toBe(false);
     expect(shouldReveal(-100, 900)).toBe(true);
+  });
+});
+
+describe('TIMELINE_GROUP_KEYS / releaseTimelineGroups', () => {
+  it('初回タイムラインのキーはスクロール登場のキーと重ならない', () => {
+    for (const key of TIMELINE_GROUP_KEYS) expect(REVEAL_GROUP_KEYS).not.toContain(key);
+  });
+
+  it('初回タイムライン分だけ data-motion-item を外し、スクロール登場分は残す', () => {
+    const host = mount(`
+      <h1 data-motion-item data-motion-group="hero-text" id="h"></h1>
+      <a data-motion-item data-motion-group="hero-bar" id="b"></a>
+      <a data-motion-item data-motion-group="stat-chip" id="s"></a>
+      <li data-motion-item data-motion-group="event-item" id="e"></li>
+    `);
+    releaseTimelineGroups(host);
+    const pending = [...host.querySelectorAll('[data-motion-item]')].map((el) => el.id);
+    expect(pending).toEqual(['e']);
+  });
+});
+
+describe('pendingIslandCount', () => {
+  it('ハイドレート待ちの astro-island だけを数える', () => {
+    const host = mount(`
+      <astro-island ssr></astro-island>
+      <astro-island></astro-island>
+      <astro-island ssr></astro-island>
+    `);
+    expect(pendingIslandCount(host)).toBe(2);
+  });
+
+  it('島が無ければ 0', () => {
+    expect(pendingIslandCount(mount('<div></div>'))).toBe(0);
   });
 });

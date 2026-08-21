@@ -17,7 +17,9 @@ import {
   disableMotion,
   isMotionEnabled,
   observeRevealGroups,
+  pendingIslandCount,
   releaseGroup,
+  releaseTimelineGroups,
   revealTo,
   type RevealController,
   type RevealGroup,
@@ -82,13 +84,47 @@ function attachScrollSweep(controller: RevealController): void {
   window.addEventListener('scroll', onScroll, { passive: true });
 }
 
+/**
+ * client:load の Astro 島 (CharacterColorHero / EventCountdown) がハイドレートを終えるまで待つ。
+ *
+ * 島がハイドレートすると Svelte が DOM ノードを差し替えるため、その前に GSAP が掴んだ要素は
+ * 切り離された古いノードになる。すると生きている側は data-motion-item と opacity:0 を
+ * 抱えたまま取り残され、本番ビルドでヒーローが永久に消える (実測で発生済み)。
+ * astro-island は ハイドレート完了時に ssr 属性を外すので、それが尽きるまで待つ。
+ */
+function whenIslandsReady(start: () => void): void {
+  if (pendingIslandCount(document) === 0) {
+    start();
+    return;
+  }
+  let done = false;
+  const run = (): void => {
+    if (done) return;
+    done = true;
+    observer.disconnect();
+    window.clearTimeout(fallback);
+    start();
+  };
+  const observer = new MutationObserver(() => {
+    if (pendingIslandCount(document) === 0) run();
+  });
+  observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['ssr'] });
+  // 島のハイドレートが失敗しても、いつまでも隠したままにはしない
+  const fallback = window.setTimeout(run, WATCHDOG_MS);
+}
+
 /** トップページのモーションを開始する。index.astro の <script> から 1 回だけ呼ぶ */
 export function initHomeMotion(): void {
   const root = document.documentElement;
   if (!isMotionEnabled(root)) return;
+  whenIslandsReady(() => startHomeMotion(root));
+}
 
+function startHomeMotion(root: HTMLElement): void {
   // タイムライン構築中に例外が出ても要素が隠れたままにならないようにする保険
   const watchdog = window.setTimeout(() => disableMotion(root), WATCHDOG_MS);
+  // 何が起きても初回タイムライン分は必ず可視へ戻す最終フェイルセーフ (ADR 0054)
+  window.setTimeout(() => releaseTimelineGroups(document), WATCHDOG_MS);
 
   try {
     const heroText = collectGroup(document, 'hero-text');

@@ -53,6 +53,23 @@ export const REVEAL_SPECS: Record<string, RevealSpec> = {
 
 export const REVEAL_GROUP_KEYS: readonly string[] = Object.keys(REVEAL_SPECS);
 
+/** 初回タイムラインで再生するグループ。スクロール登場とは別に強制解放の対象にする */
+export const TIMELINE_GROUP_KEYS: readonly string[] = ['hero-text', 'hero-bar', 'hero-unit', 'stat-chip'];
+
+/** ハイドレート待ちの Astro 島が残っているか (island が DOM を差し替える前に GSAP を当てないため) */
+export function pendingIslandCount(scope: ParentNode): number {
+  return scope.querySelectorAll('astro-island[ssr]').length;
+}
+
+/**
+ * 初回タイムライン分の要素を無条件で解放する最終フェイルセーフ。
+ * ADR 0054 の「動かないことはあっても見えないことは起きない」を守る最後の砦。
+ * 正常系ではタイムラインが既に解放済みのため何もしない。
+ */
+export function releaseTimelineGroups(scope: ParentNode): void {
+  for (const key of TIMELINE_GROUP_KEYS) releaseGroup(collectGroup(scope, key));
+}
+
 /** from に含まれるキーに対応する終了値だけを組み立てる */
 export function revealTo(spec: RevealSpec): Record<string, number> {
   const to: Record<string, number> = { opacity: 1 };

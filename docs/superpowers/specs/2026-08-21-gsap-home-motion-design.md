@@ -65,7 +65,7 @@ Vite がこのページ専用のチャンクにバンドルし、`type="module"`
 
 ### GSAP は静的 import にする
 
-`homeMotion.ts` から `gsap` を静的に import する。Vite が `<link rel="modulepreload">` を出力するため HTML と並行取得となり、ラウンドトリップは 1 回で済む。Service Worker が `/_astro/*` を CacheFirst しているので、2 回目以降の訪問はネットワークアクセスが発生しない。
+`homeMotion.ts` から `gsap` を静的に import する。Astro がページ専用チャンクとして `<script type="module" src=...>` を出力し、HTML の解析と並行して取得されるためラウンドトリップは 1 回で済む。Service Worker が `/_astro/*` を CacheFirst しているので、2 回目以降の訪問はネットワークアクセスが発生しない。
 
 動的 import にすれば `prefers-reduced-motion` 時に 0KB で済むが、追加のラウンドトリップが入りヒーロー表示までの空白が伸びる。reduced-motion 時は GSAP をダウンロードした上でスクリプトが即 return する、という割り切りを取る。
 
@@ -98,6 +98,16 @@ ScrollTrigger の追加コスト（gzip 約 12KB、全体の約 31% 増）に見
 フラグは「タイムライン完了時」ではなく**失敗時のみ**外す。スクロール登場を待っている画面外の要素は、それぞれが発火するまで隠れたままである必要があるため。
 
 JavaScript 無効・reduced-motion・チャンク取得失敗・スクリプト例外のいずれの場合でも要素は通常どおり表示される。**「動かない」ことはあっても「見えない」ことは起きない。**
+
+### client:load の島がハイドレートし終えるまで待つ
+
+`CharacterColorHero` と `EventCountdown` は `client:load` の Svelte 島だった。島がハイドレートすると Svelte が **DOM ノードを差し替える**ため、その前に GSAP が掴んだ要素は切り離された古いノードになる。GSAP は見えないノードを animate し続け、生きている側は `data-motion-item` と `opacity: 0` を抱えたまま取り残される。
+
+**本番ビルドでヒーローが完全に消える事故として実測された**（dev サーバーでは再現しない）。[0001](../../adr/0001-reject-glassmorphism-redesign.md) の視認性破綻と同じ結末であり、三段で防ぐ。
+
+1. **`CharacterColorHero` から `client:load` を外す。** このコンポーネントは状態も副作用も持たない静的マークアップで、ハイドレートする必要が無い。演出の主役をそもそも問題の対象外にすると同時に、配信 JS も減る
+2. **`astro-island[ssr]` が尽きるまでモーションの開始を待つ。** Astro の島はハイドレート完了時に `ssr` 属性を外す。`MutationObserver` で監視し、`WATCHDOG_MS` で打ち切る。今後 `client:load` の島が増えても自動的に守られる
+3. **初回タイムライン分は `WATCHDOG_MS` 後に無条件で解放する。** 何が起きてもヒーローと統計チップが永久に消えないことを保証する最後の砦（正常系ではタイムラインが解放済みのため何もしない）
 
 ### data 属性の役割
 

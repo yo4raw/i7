@@ -73,7 +73,11 @@ const categories: { heading: string; cards: FeatureCard[] }[] = [
 
 <BaseLayout title="ホーム" description={PAGE_DESCRIPTIONS.home}>
   <!-- ヒーロー: 16 色バーを大判スケールで反復 (ADR 0047) -->
-  <CharacterColorHero base={base} client:load />
+  {/*
+    client:load を付けない。このコンポーネントは状態も副作用も持たない静的マークアップであり、
+    ハイドレートすると Svelte が DOM を差し替えて GSAP の対象を切り離してしまう (ADR 0054)。
+  */}
+  <CharacterColorHero base={base} />
   <div class="flex flex-wrap gap-3 mt-4 mb-6">
     {stats.map((s) => (
       <a href={s.href}
