@@ -139,9 +139,12 @@ function startHomeMotion(root: HTMLElement): void {
       { opacity: 1, y: 0, duration: 0.45, stagger: 0.06, onComplete: () => releaseGroup(heroText) },
       0);
 
-    // 16 色バーが左から順に立ち上がるのがこの演出の主役 (ADR 0047 のアイデンティティ)
+    // 16 色バーが左から順に立ち上がるのがこの演出の主役 (ADR 0047 のアイデンティティ)。
+    // opacity はフェードさせず 1 のまま scaleY だけを伸ばす。近黒のヒーロー背景の上で
+    // opacity を上げると、キャラ色が背景に溶けて「暗い矩形」に見えてしまうため。
+    // scaleY: 0 から始めれば出番が来るまで見えず、順に色が点灯するように立ち上がる。
     if (hasTargets(heroBar)) tl.fromTo(heroBar,
-      { opacity: 0, scaleY: 0.15 },
+      { opacity: 1, scaleY: 0 },
       { opacity: 1, scaleY: 1, transformOrigin: 'bottom', duration: 0.4, stagger: 0.025, onComplete: () => releaseGroup(heroBar) },
       0.12);
 
