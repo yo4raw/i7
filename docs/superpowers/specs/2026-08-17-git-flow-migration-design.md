@@ -56,12 +56,12 @@ git merge-base --is-ancestor origin/main origin/develop \
 
 ```bash
 # 2. fast-forward してタグを打つ
-git push origin origin/develop:main    # ローカルの develop ブランチに依存しない
-git fetch origin
-git tag v1.x.x origin/main && git push origin v1.x.x    # → deploy.yml + release.yml
+SHA=$(git rev-parse origin/develop)    # 1. で確認したコミットを固定する
+git push origin "$SHA:refs/heads/main"
+git tag v1.x.x "$SHA" && git push origin v1.x.x
 ```
 
-`main` へのマージコミットを作らないため、PR は経由しない。内容は `develop` 上の各 PR で確認済みである前提。
+1. で確認した `origin/develop` のコミットを `$SHA` に固定し、push とタグ付けの両方でその値を使うのは、push とタグ付けの間に cron の自動取り込みが `main` へ入っても確認したコミットにタグが載るようにするため（`origin/main` を再取得してから使うと、その間に入った cron の squash コミットを指してしまい、既にタグ済みの同一コミットへ二重にタグを打つおそれがある）。`main` へのマージコミットを作らないため、PR は経由しない。内容は `develop` 上の各 PR で確認済みである前提。
 
 fast-forward が拒否された場合は、`main` に入った自動取り込みが `develop` へ back-merge されるのを待ってから再実行する（§7 リスク参照）。失敗は非破壊なので安全側に倒れる。
 

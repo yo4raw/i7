@@ -21,12 +21,12 @@ git merge-base --is-ancestor origin/main origin/develop \
 
 ```bash
 # 2. fast-forward してタグを打つ
-git push origin origin/develop:main    # ローカルの develop ブランチに依存しない
-git fetch origin
-git tag v1.x.x origin/main && git push origin v1.x.x
+SHA=$(git rev-parse origin/develop)    # 1. で確認したコミットを固定する
+git push origin "$SHA:refs/heads/main"
+git tag v1.x.x "$SHA" && git push origin v1.x.x
 ```
 
-`develop` を `main` へ **fast-forward** してからタグを打つ。`origin/develop:main` と**リモート追跡ブランチを push 元に指定する**のは、ローカルに `develop` ブランチが存在しない（または古い）場合でも常にリモートの最新状態を基準に動かすため。PR を経由しないのは、`main` にマージコミットを残さずリリースノートを綺麗に保つため（内容は `develop` 上の各 PR で確認済みという前提）。**squash merge は絶対に使わない** — `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる。
+`develop` を `main` へ **fast-forward** してからタグを打つ。1. で確認した `origin/develop` のコミットを `$SHA` に固定し、push とタグ付けの両方でその値を使うのは、push とタグ付けの間に cron の自動取り込みが `main` へ入っても、確認したコミットにタグが載るようにするため（`origin/main` を再取得してから使うと、その間に入った cron の squash コミットを指してしまい、既にタグ済みの同一コミットへ二重にタグを打つおそれがある）。`origin/develop` という**リモート追跡ブランチを基準にする**のは、ローカルに `develop` ブランチが存在しない（または古い）場合でも常にリモートの最新状態を基準に動かすため。PR を経由しないのは、`main` にマージコミットを残さずリリースノートを綺麗に保つため（内容は `develop` 上の各 PR で確認済みという前提）。**squash merge は絶対に使わない** — `develop` の全コミットが 1 つに潰れ、リリースノートが 1 行になる。
 
 fast-forward が拒否された場合は、`main` に入った自動取り込みが `develop` へ back-merge されるのを待って再実行する（`sync-main-to-develop.yml` が自動で行う）。非破壊な失敗なので安全側に倒れる。
 
