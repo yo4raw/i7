@@ -57,7 +57,7 @@ git merge-base --is-ancestor origin/main origin/develop \
 ```bash
 # 2. fast-forward してタグを打つ
 SHA=$(git rev-parse origin/develop)    # 1. で確認したコミットを固定する
-git push origin "$SHA:refs/heads/main"
+git push origin "${SHA}:refs/heads/main"
 git tag v1.x.x "$SHA" && git push origin v1.x.x
 ```
 
