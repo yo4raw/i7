@@ -46,7 +46,7 @@
 ## 影響
 
 - `package.json` に `gsap` を追加する。
-- `src/lib/motion/homeMotion.ts` / `src/lib/motion/countUp.ts` を新設する。既存の `src/lib/motion.ts`（`materialIn` / `materialOut` / `prefersReducedMotion`）はそのまま残し、`prefersReducedMotion()` は再利用する。
+- `src/lib/motion/countUp.ts` / `src/lib/motion/homeMotionDom.ts` / `src/lib/motion/homeMotion.ts` を新設する。GSAP の import は `homeMotion.ts` だけに閉じ、同ファイルは `/* v8 ignore */` でカバレッジ対象外とする（`maxScoreFinder.worker.ts` と同じ方針）。既存の `src/lib/motion.ts`（`materialIn` / `materialOut` / `prefersReducedMotion`）はそのまま残す。
 - `src/layouts/BaseLayout.astro` の `<head>` にモーションフラグ判定のインラインスクリプトを追加する。トップページ以外でもフラグは立つが、参照する CSS ルールの対象要素がトップページにしか無いため実害はない。
 - `docs/adr/0046-apple-design-redesign.md` §4 に本 ADR への参照を追記する。
 - `CLAUDE.md` のモーション規約に「GSAP はトップページ専用」「`data-motion-*` 属性は `homeMotion.ts` から参照される」を追記する。

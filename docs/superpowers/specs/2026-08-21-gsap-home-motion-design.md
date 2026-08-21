@@ -37,8 +37,9 @@ GSAP は 3.15.0 時点でコアが gzip 約 27KB。ライセンスは 2025 年�
 
 | 種別 | パス | 役割 |
 | --- | --- | --- |
-| 新規 | `src/lib/motion/homeMotion.ts` | タイムライン構築とスクロール登場の登録。唯一のエントリポイント |
-| 新規 | `src/lib/motion/countUp.ts` | 数値カウントアップ。表示整形と補間を純粋関数として分離 |
+| 新規 | `src/lib/motion/countUp.ts` | 数値の整形・補間・属性パース。純粋関数のみ（node 環境で単体テスト） |
+| 新規 | `src/lib/motion/homeMotionDom.ts` | DOM ヘルパーと演出パラメータ表。GSAP に依存しない（jsdom 環境で単体テスト） |
+| 新規 | `src/lib/motion/homeMotion.ts` | GSAP ブートストラップとタイムライン。`initHomeMotion()` のみを公開 |
 | 変更 | `src/pages/index.astro` | `<script>` の追加と `data-motion-*` 属性の付与 |
 | 変更 | `src/components/CharacterColorHero.svelte` | `data-motion-*` 属性の付与のみ |
 | 変更 | `src/components/EventCountdown.svelte` | `data-motion-*` 属性の付与のみ |
@@ -46,6 +47,8 @@ GSAP は 3.15.0 時点でコアが gzip 約 27KB。ライセンスは 2025 年�
 | 変更 | `src/layouts/BaseLayout.astro` | `<head>` にモーションフラグ判定のインラインスクリプト |
 
 ### Svelte island ではなく Astro の `<script>` を使う
+
+GSAP を import するのは `homeMotion.ts` だけに閉じる。`homeMotionDom.ts` を分離するのは、GSAP を静的 import したモジュールを jsdom 単体テストから読み込むと不安定になるため。既存の `src/lib/score/maxScoreFinder.worker.ts`（`/* v8 ignore start */` で実行環境専用のブートストラップを除外）と同じ方針を取る。
 
 `index.astro` に次を置く。
 
@@ -70,6 +73,8 @@ Vite がこのページ専用のチャンクにバンドルし、`type="module"`
 
 スクロール登場は IntersectionObserver（`rootMargin: '0px 0px -15% 0px'`）で実装する。要素が画面下から 15% 入った時点で発火し、発火後は `unobserve`、全消化後に `disconnect` する。
 
+**交差判定に加えて「画面上方へ抜けた要素」（`boundingClientRect.bottom <= 0`）も再生済みとして扱う。** 最下部へ一気にスクロールした場合・リロード時にスクロール位置が復元された場合・アンカーリンクで途中へ飛んだ場合、対象は一度も交差しないまま画面より上に来る。これを拾わないと `data-motion-item` が残り続け、要素が永久に隠れたままになる。
+
 ScrollTrigger の追加コスト（gzip 約 12KB、全体の約 31% 増）に見合う機能（pin / scrub / parallax）を本設計では使わないため。将来「演出重視」へ強度を上げる場合は、その時点で ADR を追記した上で ScrollTrigger を導入する。
 
 **トップページの追加ペイロードは gzip 約 27KB。他ページは 0KB。**
@@ -93,7 +98,7 @@ JavaScript 無効・reduced-motion・チャンク取得失敗・スクリプト�
 | --- | --- | --- |
 | `data-motion="on"`（`<html>`） | `BaseLayout.astro` のインラインスクリプトが動的に付与 | モーション有効フラグ。CSS の初期非表示ルールのスイッチ |
 | `data-motion-item` | アニメーション対象の全要素 | 初期非表示の対象マーカー。トゥイーン完了時に除去する |
-| `data-motion-group="hero-bar"` 等 | グループで stagger させる要素の親 | `homeMotion.ts` が対象を収集するためのキー |
+| `data-motion-group="hero-bar"` 等 | アニメーション対象の要素自身（`data-motion-item` と併記） | stagger をまとめる単位。DOM 順がそのまま stagger 順になる |
 | `data-count-to="2689"` | カウントアップ対象の `<span>` | 最終値。サーバーレンダリング値と一致させる |
 
 ## 演出プラン
@@ -149,9 +154,12 @@ JavaScript 無効・reduced-motion・チャンク取得失敗・スクリプト�
 `tests/unit/motion/countUp.test.ts` を新規作成する。
 
 - 補間値の整形: `formatCount(1234.7)` → `"1,235"`、進捗 0 / 0.5 / 1 の各点で期待値を検証
-- `prefersReducedMotion()` は既に `src/lib/motion.ts` にあるため再利用する（重複実装しない）
+- `prefersReducedMotion()` の再実装はしない。`prefers-reduced-motion` の判定は `BaseLayout.astro` の `<head>` インラインスクリプトが 1 箇所で行い、`homeMotion.ts` は `<html>` の `data-motion` フラグを読むだけとする（判定ロジックの二重化を避ける）
+- `homeMotion.ts` は GSAP と実ブラウザ API に依存するため `/* v8 ignore start */` 〜 `/* v8 ignore stop */` でカバレッジ計測から除外し、E2E で検証する。テスト可能なロジックはすべて `countUp.ts` と `homeMotionDom.ts` に置く
 
-CI にカバレッジ 95% ゲート（ADR 0032）があるため、`countUp.ts` と `homeMotion.ts` はテスト可能な純粋部分（整形・stagger 計算・対象要素の収集）と DOM 副作用部分を明確に分離して実装する。
+`tests/unit/motion/homeMotionDom.test.ts` も新規作成する（`// @vitest-environment jsdom`）。属性の読み書き・グループ収集・IntersectionObserver の登録と解除を、観測子をファクトリ経由で注入して検証する。
+
+CI にカバレッジ 95% ゲート（ADR 0032）があり、対象は `src/lib/**` 全体。`countUp.ts` と `homeMotionDom.ts` は 100% を狙い、`homeMotion.ts` は全体を `v8 ignore` で除外する。
 
 ### E2E テスト（Playwright）
 
