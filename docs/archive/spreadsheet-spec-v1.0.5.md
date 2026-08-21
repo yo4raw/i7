@@ -1,5 +1,10 @@
 # スプレッドシート「アイナナスコア計算 v1.0.5」完全仕様書
 
+> **アーカイブ（2026-08-21）**: スコア計算の検証で正とするのは v1.0.7（ADR 0040）であり、本書は**現行仕様ではない**。
+> ただし単純な旧版ではなく、別コピー（id `1St4Hf609y9FobAn6-UjDIbkzDedo4Bssl5HT7PalFRk`）の v1.0.5 を対象とした調査記録であり、
+> [`docs/spreadsheet-spec-v1.0.7.md`](../spreadsheet-spec-v1.0.7.md) が「本書のベースライン」として依拠し §15 に差分を記録している。参照元として残す。
+
+
 > **対象**: [Google スプレッドシート（ota-life.com 配布版）](https://docs.google.com/spreadsheets/d/1St4Hf609y9FobAn6-UjDIbkzDedo4Bssl5HT7PalFRk/edit)
 >
 > **採取日**: 2026-04-25
