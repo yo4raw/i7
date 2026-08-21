@@ -1,0 +1,78 @@
+---
+/**
+ * ツールページ下部に置く静的な解説セクション (ADR 0058)。
+ *
+ * 各ツールは `client:only="svelte"` のクライアントサイドアプリで、静的 HTML が
+ * 118〜210 文字しか無かった。検索エンジンに提示できる内容が無く、サイトの独自価値の
+ * 中心でありながらインデックスされない状態だったため、ビルド時に出力される解説を置く。
+ *
+ * 内容はツールの実挙動を説明するものに限る（検索対策の水増しは書かない）。
+ * ツールの仕様を変えたときはここも必ず更新すること。
+ */
+interface Step {
+  /** 手順の見出し */
+  title: string;
+  /** 手順の説明 */
+  body: string;
+}
+
+interface Faq {
+  /** 利用者が実際に迷う点を問いにする */
+  q: string;
+  a: string;
+}
+
+interface Props {
+  /** このツールが何をするものかの要約（1〜2 文） */
+  summary: string;
+  /** 使い方の手順 */
+  steps: Step[];
+  /** 補足・注意点 */
+  notes?: string[];
+  /** よくある質問 */
+  faqs?: Faq[];
+}
+
+const { summary, steps, notes = [], faqs = [] } = Astro.props;
+---
+
+<section class="mt-10 surface-card p-6" aria-labelledby="tool-guide-heading">
+  <h2 id="tool-guide-heading" class="text-lg font-bold text-display text-gray-900 mb-3">このツールについて</h2>
+  <p class="text-sm text-gray-700 text-pretty mb-6">{summary}</p>
+
+  <h3 class="text-base font-semibold text-gray-900 mb-3">使い方</h3>
+  <ol class="mb-6 space-y-3">
+    {steps.map((step, i) => (
+      <li class="flex gap-3">
+        <span class="shrink-0 w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold tabular-nums grid place-items-center mt-0.5">{i + 1}</span>
+        <div>
+          <p class="text-sm font-semibold text-gray-900">{step.title}</p>
+          <p class="text-sm text-gray-700 text-pretty">{step.body}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+
+  {notes.length > 0 && (
+    <>
+      <h3 class="text-base font-semibold text-gray-900 mb-2">計算の前提と注意点</h3>
+      <ul class="mb-6 list-disc pl-5 space-y-1.5 text-sm text-gray-700 text-pretty">
+        {notes.map((note) => <li>{note}</li>)}
+      </ul>
+    </>
+  )}
+
+  {faqs.length > 0 && (
+    <>
+      <h3 class="text-base font-semibold text-gray-900 mb-2">よくある質問</h3>
+      <dl class="space-y-3">
+        {faqs.map((faq) => (
+          <div>
+            <dt class="text-sm font-semibold text-gray-900">{faq.q}</dt>
+            <dd class="text-sm text-gray-700 text-pretty">{faq.a}</dd>
+          </div>
+        ))}
+      </dl>
+    </>
+  )}
+</section>
