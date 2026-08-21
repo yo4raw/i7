@@ -215,6 +215,8 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 注意点:
 
+- **`test` / `expect` は `@playwright/test` ではなく `tests/helpers/fixtures.ts` から import する**（ADR 0055）。このフィクスチャが `page.goto` / `page.reload` の直後に `client:load` の島のハイドレート完了を自動で待つ。待たずにクリックするとイベントハンドラ未登録で握り潰され、並列実行時だけ落ちるフレークになる。型のみの import（`type Page` 等）は `@playwright/test` から直接でよい
+- **CPU バウンドなテスト**（総当たり探索・MC シミュレーション）は、単独実行時ではなく並列実行で枯渇したときの最悪値にタイムアウトを合わせる（`playwright.config.ts` の既定 30 秒では不足する）
 - dev では Astro dev toolbar が `<select name="dev-toolbar-select">` 等を DOM に注入する。ロケータは `getByTestId` / `getByLabel` / role で対象を特定し、裸の `locator('select')` のような曖昧なセレクタは使わない（strict mode 違反になる）
 - 本番ビルド経由の E2E（サーバーなしで `npm run test`）が必要なのは、圧縮後挙動・動的ルート全件生成などビルド必須項目の検証とリリース前最終確認のみ。ビルド成否自体は PR の CI ビルドチェックでもカバーされる
 

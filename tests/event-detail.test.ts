@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 import { fetchEventsCsv } from '../src/lib/data/fetchEventsCsv';
 import { isHighScoreEvent } from '../src/lib/data/eventBonusTiers';
 

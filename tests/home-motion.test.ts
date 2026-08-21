@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/fixtures';
 
 test.describe('トップページのモーション (ADR 0054)', () => {
   test('reduced-motion ではフラグが立たず、要素は最初から可視', async ({ page }) => {
