@@ -56,3 +56,45 @@ test.describe('構造化データ (JSON-LD)', () => {
     expect(desc).toContain('スコア');
   });
 });
+
+test.describe('インデックス対象の絞り込み (ADR 0057)', () => {
+  test('衣装詳細は noindex,follow で、クロール自体は許可される', async ({ page }) => {
+    const cards = await fetchCardsJson();
+    const id = (cards as Array<{ ID: number }>)[0].ID;
+    await page.goto(`${BASE}/cards/${id}/`);
+    const robots = page.locator('meta[name="robots"]');
+    await expect(robots).toHaveAttribute('content', 'noindex,follow');
+  });
+
+  test('個人データページと共有ページも noindex になる', async ({ page }) => {
+    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/']) {
+      await page.goto(`${BASE}${path}`);
+      await expect(page.locator('meta[name="robots"]'), `${path} は noindex であること`)
+        .toHaveAttribute('content', 'noindex,follow');
+    }
+  });
+
+  test('ツール系・一覧ページには robots メタが付かない', async ({ page }) => {
+    for (const path of ['/', '/cards/', '/songs/', '/events/', '/score-calc/', '/score-calc/spec/', '/card-compare/', '/point-calc/']) {
+      await page.goto(`${BASE}${path}`);
+      await expect(page.locator('meta[name="robots"]'), `${path} は index 対象であること`).toHaveCount(0);
+    }
+  });
+
+  test('sitemap に衣装詳細が含まれず、ツール系ページは含まれる', async ({ page }) => {
+    const res = await page.request.get(`${BASE}/sitemap-0.xml`);
+    expect(res.ok()).toBe(true);
+    const xml = await res.text();
+
+    // noindex にしたページを sitemap に載せると矛盾したシグナルになる
+    expect(xml).not.toMatch(/<loc>[^<]*\/cards\/\d+\/<\/loc>/);
+    expect(xml).not.toMatch(/<loc>[^<]*\/events\/\d+\/share\//);
+    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/']) {
+      expect(xml, `${path} は sitemap から外れていること`).not.toContain(`<loc>https://i7.yo4raw.com${path}</loc>`);
+    }
+
+    for (const path of ['/', '/cards/', '/songs/', '/events/', '/score-calc/spec/']) {
+      expect(xml, `${path} は sitemap に載っていること`).toContain(`<loc>https://i7.yo4raw.com${path}</loc>`);
+    }
+  });
+});

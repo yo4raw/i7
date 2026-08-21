@@ -17,7 +17,8 @@ const breadcrumbs = [
 ];
 ---
 
-<BaseLayout title="保存デッキ" description={PAGE_DESCRIPTIONS.decks} breadcrumbs={breadcrumbs}>
+<BaseLayout
+  noindex title="保存デッキ" description={PAGE_DESCRIPTIONS.decks} breadcrumbs={breadcrumbs}>
   <h1 class="text-3xl font-bold text-display mb-6">保存デッキ</h1>
 
   <DeckList cards={allCards} songs={allSongs} base={base} client:load />
