@@ -101,3 +101,44 @@ export function countTargetsIn(elements: readonly HTMLElement[]): HTMLElement[] 
 export function applyCount(el: Element, value: number): void {
   el.textContent = formatCount(value);
 }
+
+/** IntersectionObserver の生成を注入するためのファクトリ (jsdom には実装が無いためテストで差し替える) */
+export type ObserverFactory = (
+  cb: IntersectionObserverCallback,
+  options: IntersectionObserverInit,
+) => IntersectionObserver;
+
+/**
+ * 各グループの先頭要素を観測し、画面に入った時点で onReveal を 1 回だけ呼ぶ。
+ * 一気にスクロールされて画面上方へ抜けた要素も取りこぼさない。
+ * 発火した要素は unobserve し、全グループを消化したら disconnect する。
+ */
+export function observeRevealGroups(
+  groups: RevealGroup[],
+  createObserver: ObserverFactory,
+  onReveal: (group: RevealGroup) => void,
+): IntersectionObserver | null {
+  if (groups.length === 0) return null;
+
+  const pending = new Map<Element, RevealGroup>();
+  for (const group of groups) pending.set(group.elements[0], group);
+
+  const observer = createObserver((entries, self) => {
+    for (const entry of entries) {
+      // 画面内に入った場合に加え、最下部へ一気にスクロールされて画面上方へ
+      // 抜けてしまった場合 (bottom <= 0) も再生する。これを拾わないと
+      // data-motion-item が残り続け、要素が永久に隠れたままになる。
+      const passedAbove = entry.boundingClientRect.bottom <= 0;
+      if (!entry.isIntersecting && !passedAbove) continue;
+      const group = pending.get(entry.target);
+      if (!group) continue;
+      pending.delete(entry.target);
+      self.unobserve(entry.target);
+      onReveal(group);
+    }
+    if (pending.size === 0) self.disconnect();
+  }, { rootMargin: REVEAL_ROOT_MARGIN });
+
+  for (const target of pending.keys()) observer.observe(target);
+  return observer;
+}

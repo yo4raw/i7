@@ -13,7 +13,10 @@ import {
   releaseGroup,
   countTargetsIn,
   applyCount,
+  observeRevealGroups,
+  REVEAL_ROOT_MARGIN,
 } from '../../../src/lib/motion/homeMotionDom';
+import type { RevealGroup } from '../../../src/lib/motion/homeMotionDom';
 
 function mount(html: string): HTMLElement {
   const host = document.createElement('div');
@@ -128,5 +131,123 @@ describe('applyCount', () => {
     const el = host.querySelector('span')!;
     applyCount(el, 1234.7);
     expect(el.textContent).toBe('1,235');
+  });
+});
+
+/** jsdom には IntersectionObserver が無いので、コールバックを手動で発火できる偽物を使う */
+class FakeObserver {
+  observed: Element[] = [];
+  unobserved: Element[] = [];
+  disconnected = false;
+  constructor(readonly cb: IntersectionObserverCallback, readonly options: IntersectionObserverInit) {}
+  observe(el: Element) { this.observed.push(el); }
+  unobserve(el: Element) { this.unobserved.push(el); }
+  disconnect() { this.disconnected = true; }
+  /** bottom を負にすると「スクロールで画面上方へ抜けた要素」を再現できる */
+  fire(el: Element, isIntersecting: boolean, bottom = 100) {
+    this.cb(
+      [{ target: el, isIntersecting, boundingClientRect: { bottom } } as IntersectionObserverEntry],
+      this as unknown as IntersectionObserver,
+    );
+  }
+}
+
+function makeGroup(key: string, ids: string[]): { group: RevealGroup; els: HTMLElement[] } {
+  const host = mount(ids.map((id) => `<div data-motion-group="${key}" id="${id}"></div>`).join(''));
+  const els = collectGroup(host, key);
+  return { group: { key, spec: REVEAL_SPECS[key], elements: els }, els };
+}
+
+describe('observeRevealGroups', () => {
+  it('各グループの先頭要素だけを観測し、rootMargin を渡す', () => {
+    const a = makeGroup('event-item', ['e1', 'e2']);
+    const b = makeGroup('rarity-chip', ['r1']);
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [a.group, b.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      () => {},
+    );
+    expect(created!.observed.map((el) => el.id)).toEqual(['e1', 'r1']);
+    expect(created!.options.rootMargin).toBe(REVEAL_ROOT_MARGIN);
+  });
+
+  it('交差したグループだけ onReveal を呼び、その要素の観測をやめる', () => {
+    const a = makeGroup('event-item', ['e1']);
+    const b = makeGroup('rarity-chip', ['r1']);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [a.group, b.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    );
+    created!.fire(a.els[0], true);
+    expect(revealed).toEqual(['event-item']);
+    expect(created!.unobserved.map((el) => el.id)).toEqual(['e1']);
+    expect(created!.disconnected).toBe(false);
+  });
+
+  it('画面上方へ抜けた要素 (bottom <= 0) も再生する', () => {
+    // 最下部へ一気にスクロールした場合、対象は交差せず画面より上に居る。
+    // ここを拾わないと data-motion-item が残り続けて要素が永久に隠れる。
+    const a = makeGroup('event-item', ['e1']);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [a.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    );
+    created!.fire(a.els[0], false, -10);
+    expect(revealed).toEqual(['event-item']);
+    expect(created!.disconnected).toBe(true);
+  });
+
+  it('交差しておらず画面下に居るエントリは無視する', () => {
+    const a = makeGroup('event-item', ['e1']);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [a.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    );
+    created!.fire(a.els[0], false, 800);
+    expect(revealed).toEqual([]);
+    expect(created!.disconnected).toBe(false);
+  });
+
+  it('同じ要素が二度発火しても onReveal は一度だけ', () => {
+    const a = makeGroup('event-item', ['e1']);
+    const revealed: string[] = [];
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [a.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      (g) => revealed.push(g.key),
+    );
+    created!.fire(a.els[0], true);
+    created!.fire(a.els[0], true);
+    expect(revealed).toEqual(['event-item']);
+  });
+
+  it('全グループが再生されたら disconnect する', () => {
+    const a = makeGroup('event-item', ['e1']);
+    let created: FakeObserver | null = null;
+    observeRevealGroups(
+      [a.group],
+      (cb, options) => { created = new FakeObserver(cb, options); return created as unknown as IntersectionObserver; },
+      () => {},
+    );
+    created!.fire(a.els[0], true);
+    expect(created!.disconnected).toBe(true);
+  });
+
+  it('グループが空なら観測子を作らず null を返す', () => {
+    let calls = 0;
+    const result = observeRevealGroups([], () => { calls += 1; return null as unknown as IntersectionObserver; }, () => {});
+    expect(result).toBeNull();
+    expect(calls).toBe(0);
   });
 });
