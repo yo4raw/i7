@@ -17,6 +17,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # default branch は develop のため、Run workflow の既定選択は develop になる。
+      # 手動実行で誤って未リリースの develop を本番へ出さないよう、main 以外を弾く。
+      - name: Guard manual dispatch to main
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::手動デプロイは main からのみ許可されています（選択されたのは ${{ github.ref }}）。"
+          echo "Run workflow の 'Use workflow from' で main を選び直してください。"
+          exit 1
       - uses: actions/checkout@v7
         with:
           fetch-tags: true

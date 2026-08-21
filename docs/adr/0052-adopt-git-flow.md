@@ -51,7 +51,8 @@
 - cron 4 本（`fetch-new-cards` / `fetch-gap-cards` / `fetch-event-db` / `fetch-new-songs`）: `actions/checkout` に `ref: main`、`create-pull-request` に `base: main` を明示。**default branch 変更の影響を受けないようにするため必須**。PR の宛先だけでなく、タグ採番が参照する `origin/main` の解決にも効く（`actions/checkout` は checkout したブランチ向けに `remote.origin.fetch` を設定するため、`develop` を checkout すると `git fetch origin main` で `origin/main` が更新されず、タグが誤ったコミットに付く恐れがある）
 - `src/pages/releases/index.astro`: `git log` に `--no-merges` を追加
 - `CLAUDE.md` / `.claude/skills/release/SKILL.md`: ブランチ戦略とリリース手順を改訂
-- `deploy.yml` / `release.yml` / `.github/dependabot.yml`: 変更なし（Dependabot は default branch に追従する）
+- `deploy.yml`: `workflow_dispatch` にブランチガードを追加（default branch 変更により `Run workflow` の既定 ref が `develop` になり、既定のまま実行すると未リリースの `develop` を本番へ出してしまうため）
+- `release.yml` / `.github/dependabot.yml`: 変更なし（Dependabot は default branch に追従する）
 - GitHub 側: `develop` ブランチ作成、default branch 変更、既存 open PR 5 件（Dependabot）の base 付け替え
 - **実施順序に制約がある**。cron 4 本に `base: main` / `ref: main` を入れる変更を `main` へ入れてから default branch を切り替える。逆順にすると、切替直後の毎時実行で画像 PR が `develop` に流れ、タグ採番も誤る。
 - 詳細な設計と手順は `docs/superpowers/specs/2026-08-17-git-flow-migration-design.md` を参照。

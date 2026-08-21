@@ -42,6 +42,8 @@ fast-forward が拒否された場合は、`main` に入った自動取り込み
 
 スプレッドシートのマスターデータ反映など、コード変更を伴わない再デプロイは Actions タブから `Deploy to Cloudflare Workers` を手動実行する。
 
+**`Use workflow from` で必ず `main` を選ぶこと。** default branch は `develop` のため、ドロップダウンは既定で `develop` を選んでしまう。既定のまま実行すると未リリースの `develop` が本番へ出てしまうため、選択し直すこと（ワークフロー側にもガードがあり、main 以外を選ぶと実行が失敗する）。
+
 ## 設定
 
 - 必要な GitHub Secret: `CLOUDFLARE_API_TOKEN` (Account > Workers Scripts:Edit 権限), `CLOUDFLARE_ACCOUNT_ID`

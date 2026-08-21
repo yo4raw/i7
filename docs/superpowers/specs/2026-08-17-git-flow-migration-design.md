@@ -122,8 +122,9 @@ git push origin HEAD:develop
 | `CLAUDE.md` | ブランチ戦略の節を追加し、Workflow 節（手順 6）を改訂 | 作業ブランチの派生元・マージ先が `develop` になる |
 | `.claude/skills/release/SKILL.md` | リリース手順に `develop` → `main` の fast-forward を追加 | |
 | `docs/adr/README.md` | ADR 0052 の行を追加 | |
+| `deploy.yml` | `workflow_dispatch` 実行に `main` 以外を弾くブランチガードを追加 | default branch 変更により `Run workflow` の既定 ref が `develop` になるため。既定のまま手動実行すると未リリースの `develop` が本番へ出てしまう |
 
-**変更しないもの**: `deploy.yml`（タグ契機のまま）、`release.yml`、`.github/dependabot.yml`（default branch に追従するため設定変更不要）。
+**変更しないもの**: `release.yml`、`.github/dependabot.yml`（default branch に追従するため設定変更不要）。
 
 ## 6. 移行手順
 
