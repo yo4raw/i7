@@ -83,6 +83,9 @@ test.describe('インデックス対象の絞り込み (ADR 0057)', () => {
 
   test('sitemap に衣装詳細が含まれず、ツール系ページは含まれる', async ({ page }) => {
     const res = await page.request.get(`${BASE}/sitemap-0.xml`);
+    // @astrojs/sitemap はビルド時にしか生成しないため、dev サーバー上では検証できない。
+    // 本番ビルド (npm run preview / CI) での実行時のみ有効なテスト。
+    test.skip(res.status() === 404, 'sitemap はビルド成果物のため dev サーバーでは検証できない');
     expect(res.ok()).toBe(true);
     const xml = await res.text();
 
@@ -96,5 +99,33 @@ test.describe('インデックス対象の絞り込み (ADR 0057)', () => {
     for (const path of ['/', '/cards/', '/songs/', '/events/', '/score-calc/spec/']) {
       expect(xml, `${path} は sitemap に載っていること`).toContain(`<loc>https://i7.yo4raw.com${path}</loc>`);
     }
+  });
+});
+
+test.describe('ツールページの静的な解説 (ADR 0058)', () => {
+  const TOOLS = [
+    { path: '/score-calc/', label: 'スコア計算' },
+    { path: '/score-calc/max-score-finder/', label: '編成組合計算' },
+    { path: '/card-compare/', label: '衣装比較' },
+    { path: '/point-calc/', label: 'ポイント芸計算' },
+  ];
+
+  for (const { path, label } of TOOLS) {
+    test(`${label}にビルド時出力の解説セクションがある`, async ({ page }) => {
+      await page.goto(`${BASE}${path}`);
+      const guide = page.locator('section[aria-labelledby="tool-guide-heading"]');
+      await expect(guide).toBeVisible();
+      await expect(guide.getByRole('heading', { name: '使い方' })).toBeVisible();
+      // 手順が空のまま公開されるのを防ぐ
+      expect(await guide.locator('ol > li').count()).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  test('解説はクライアント JS ではなく静的 HTML に含まれる', async ({ page }) => {
+    // JS 実行前の生 HTML に入っていないと検索エンジンに提示できない
+    const res = await page.request.get(`${BASE}/score-calc/`);
+    const html = await res.text();
+    expect(html).toContain('tool-guide-heading');
+    expect(html).toContain('このツールについて');
   });
 });

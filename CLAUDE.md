@@ -234,6 +234,12 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 - **Context7**: Astro・Tailwind CSS・Svelte 等のライブラリやフレームワークに関する作業では、必ず Context7 で最新の公式ドキュメントを参照してから実装する
 
+## SEO / インデックス方針
+
+インデックス対象は独自性のあるページへ絞っている（ADR 0057）。衣装詳細・イベント共有ページ・個人データページは `noindex,follow` とし、`astro.config.mjs` の `sitemap.filter` からも除外する。**ページ側の `noindex` と sitemap の除外は必ず対で設定すること**（片方だけだと矛盾したシグナルになる）。`robots.txt` でブロックしてはならない（クロールを止めると `noindex` 自体が読まれない）。
+
+ツールページには `src/components/seo/ToolGuide.astro` による静的な解説セクションを置いている（ADR 0058）。**ツールの仕様を変えたら解説の内容も必ず更新すること。** 実挙動と食い違うと利用者を誤らせる。検索対策の水増しは書かず、実際に使う人が読んで役に立つ説明だけを置く。
+
 ## 用語ポリシー
 
 ユーザー可視テキスト（HTML、ラベル、alert/placeholder、aria-label、SVG `<title>` など）では「カード」ではなく **「衣装」** を用いる。アイドリッシュセブンの用語に揃えるため。
