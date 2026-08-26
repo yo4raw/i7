@@ -70,3 +70,4 @@
 | [0057](0057-focus-indexable-pages.md) | インデックス対象を独自性のあるページへ絞る | 承認 |
 | [0058](0058-tool-page-static-guide.md) | ツールページに静的な解説セクションを置く | 承認 |
 | [0059](0059-auto-tag-on-main-push.md) | main への push でリリースタグを自動採番する | 承認 |
+| [0060](0060-sync-back-merge-on-cron-merge.md) | cron の自動取り込みでも main → develop の back-merge を起動する | 承認 |

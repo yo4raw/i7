@@ -6,6 +6,9 @@ name: Sync main to develop
 on:
   push:
     branches: [main]
+  # 画像取得 cron 4 本から呼ばれる。cron の auto-merge は GITHUB_TOKEN 由来のため
+  # main への push イベントを発火せず、上の push トリガーでは起動しないため。
+  workflow_call:
   # 衝突や push レースで失敗したあと、main への次の push を待たずに手動で再実行するため
   workflow_dispatch:
 
