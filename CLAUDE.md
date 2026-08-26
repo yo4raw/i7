@@ -139,7 +139,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 | `auto/` | cron の自動取り込み | `main` | `main` | squash（自動） |
 
 - **通常の作業は `develop` から切って `develop` に PR を出す**。マージしても本番には出ない
-- **毎時のアセット自動取り込み（cron 4 本）は `main` 直行の例外**。マージ直後に自動採番タグが打たれ即デプロイされるため、`main` の不変条件は崩れない。新カード画像が 1 時間以内に本番へ出る即時性を維持するための例外
+- **毎時のアセット自動取り込み（cron 4 本）は `main` 直行の例外**。マージ直後に `tag-release.yml` が自動採番タグ（PATCH）を打ち即デプロイされるため、`main` の不変条件は崩れない。新カード画像が 1 時間以内に本番へ出る即時性を維持するための例外
 - **`main` への push は `sync-main-to-develop.yml` が `develop` へ自動 back-merge する**。これにより「`main` は常に `develop` の祖先」が保たれ、リリースが fast-forward で通る
 - **`release/*` ブランチは作らない**。`main` にブランチ保護は設定していない
 - リリース手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照
@@ -278,5 +278,5 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
 4. **本番ビルドでしか検出できない項目**（動的ルート全件生成・`@playform/compress` の圧縮後挙動・`BASE_URL` 解決など）に関わる変更の場合のみ、追加で `npm run preview` を実行して最終確認する
 5. ユーザーの確認が取れたら **`develop` から** 対応内容に応じたブランチを作成して `git commit` → `git push` し、**base を `develop` にして** PR を作成する。CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない
-6. リリースは `develop` を `main` へ fast-forward してタグを打つ（`release` スキル参照）。本番の緊急修正だけは `main` から `hotfix/` を切って `main` に PR を出す
-7. **リリース（タグ push）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照
+6. リリースは `develop` を `main` へ fast-forward するだけでよい。**タグは `tag-release.yml` が自動採番する**（人手のリリースは MINOR、cron の自動取り込みは PATCH。ADR 0059）。手順の詳細は `release` スキル参照。本番の緊急修正だけは `main` から `hotfix/` を切って `main` に PR を出す
+7. **リリース（タグ採番）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照

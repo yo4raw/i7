@@ -69,3 +69,4 @@
 | [0056](0056-worker-pool-sizing.md) | Web Worker プール数は現状維持とする(調査の結果) | 承認（現状確認） |
 | [0057](0057-focus-indexable-pages.md) | インデックス対象を独自性のあるページへ絞る | 承認 |
 | [0058](0058-tool-page-static-guide.md) | ツールページに静的な解説セクションを置く | 承認 |
+| [0059](0059-auto-tag-on-main-push.md) | main への push でリリースタグを自動採番する | 承認 |
