@@ -1,10 +1,14 @@
 version: 2
 updates:
+  # 依存更新は develop に溜めず main 直行とする（ADR 0061）。
+  # target-branch を指定しないと default branch (develop) が使われる。
   - package-ecosystem: npm
     directory: /
+    target-branch: main
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
     directory: /
+    target-branch: main
     schedule:
       interval: weekly
