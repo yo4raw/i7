@@ -19,7 +19,7 @@ UI の見た目確認・スタイル調整・クライアントサイド JS の�
 - ホットリロード挙動（実測確認済み）:
   - `.astro` ファイル編集 → Vite の WebSocket 経由でブラウザへ通知 → 手動リロード不要でフルページ再描画
   - `.svelte` / `.ts` / `global.css` も同様に HMR が効く
-  - GViz API 経由のクライアントサイドフェッチ（カード 2689 件等）も dev サーバー上で通常通り動作する
+  - GViz API 経由のクライアントサイドフェッチ（衣装 2,800 件超）も dev サーバー上で通常通り動作する
 - エージェント側の確認フロー:
   1. `npm run dev` を `run_in_background: true` で起動
   2. `curl -s -o /dev/null -w "%{http_code}" http://localhost:4321/` で疎通確認する（`astro dev` はデーモン化されており `npm run dev` はログに `Dev server running at http://localhost:4321 (pid NNNNN)` を出して即 exit する。起動完了を告げる旧来の文字列は出力されないため、それを待つ `grep` ループは永久に一致しない）
@@ -32,22 +32,24 @@ UI の見た目確認・スタイル調整・クライアントサイド JS の�
 以下は HMR では確認できないので、従来通り `npm run preview`（= build + `serve`）で検証する:
 
 - `@playform/compress` による圧縮後の HTML / JS / CSS / 画像サイズの確認
-- `getStaticPaths()` 経由で生成される動的ルート全件 (カード詳細 2689 件 / 楽曲詳細 / イベント詳細など) のビルド成否
+- `getStaticPaths()` 経由で生成される動的ルート全件 (衣装詳細 2,800 件超 / 楽曲詳細 / イベント詳細など) のビルド成否
 - 本番配信時のパス解決 (`import.meta.env.BASE_URL` / Cloudflare Workers の `[assets]` 挙動) の確認
 - Playwright E2E テスト (`npm run test`) — 内部で preview サーバーが自動起動される
 - リリース直前の最終動作確認
 
 ### ビルド所要時間の目安
 
-`npm run build` は 2779 ページを静的生成するため数分かかる。エージェントから起動する際のタイムアウト / sleep 目安:
+`npm run build` は 3,200 ページ超を静的生成するため数分かかる。エージェントから起動する際のタイムアウト / sleep 目安:
 
-| 実測日 | 内訳 | 合計 |
-|--------|------|------|
-| 2026-04-22 | 主要ビルド 264s + `@playform/compress` 76s | **約 340 秒 (5.5 分)** |
+| 実測日 | 対象 | 実測値 |
+|--------|------|--------|
+| 2026-08-26 | `npm run build` (GitHub Actions) | **5 分 23 秒**（圧縮対象 3,234 HTML） |
+| 2026-08-26 | `npm run test:unit` (Vitest) | **約 13 秒**（79 ファイル / 822 テスト） |
+| 2026-08-26 | `npx playwright test` (dev サーバー再利用) | **約 7.5 分**（56 passed / 2 skipped） |
 
 - Bash の `timeout` は **最低 420000 ms (7 分)** を確保する (デフォルト 120000 ms では不足)
 - `run_in_background: true` + `ScheduleWakeup` で待つ場合は初回 **300 秒後** を目安に、完了していなければさらに 120 秒後に再確認
-- 単体テスト (`npm run test:unit`) は約 1 秒 / フル Playwright E2E (`npm run test`) は build 込みで 5〜7 分
+- E2E をビルドから通す (`npm run test`) と build 5.5 分 + E2E 7.5 分で **合計 13 分前後**かかる
 - `npm run dev` は約 1 秒で起動するため、日常検証では build を走らせないこと
 
 ## Architecture
@@ -123,6 +125,8 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 | `i7_shared_broach_counts` | 共通ブローチ所持数 |
 | `i7_compare_event_id` | 衣装比較画面で選択中の特効イベント |
 | `i7_max_finder_event_id` | 編成組合計算画面で選択中の対象イベント |
+| `i7_card_list_view_mode` | 衣装一覧の表示モード |
+| `i7_point_calc_state` | ポイント芸計算画面の状態 |
 
 `src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
 
@@ -152,9 +156,9 @@ Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。�
 
 ### PWA
 
-ホーム画面追加・オフライン閲覧用の Service Worker と manifest を `public/` 配下に手書きで配置している（vite-plugin-pwa は Astro 7 静的ビルドで `sw.js` を吐かない不具合があり、また `@vite-pwa/astro` は Astro 5 までしか対応していないため自前実装を採用）。
+ホーム画面追加・オフライン閲覧用の Service Worker と manifest を `public/` 配下に手書きで配置している。`@vite-pwa/astro` は最新の 1.2.0 でも peer 依存が `astro: ^1 || ^2 || ^3 || ^4 || ^5` で **Astro 5 までしか対応していない**（2026-08-26 時点）。導入検討時には `vite-plugin-pwa` 単体も静的ビルドで `sw.js` を出力しなかったため、自前実装を採用した。
 
-- `public/manifest.webmanifest` — アプリ名・テーマカラー (#4f46e5)・アイコン (192/512/maskable) を定義
+- `public/manifest.webmanifest` — アプリ名・テーマカラー (`#14151A`)・アイコン (192/512/maskable) を定義
 - `public/sw.js` — Workbox なしの軽量 SW。`SW_VERSION` 文字列を上げると古い static キャッシュをパージ
 - 登録: `src/layouts/BaseLayout.astro` の `<head>` 内インラインスクリプトで `navigator.serviceWorker.register('/sw.js')`
 - キャッシュ戦略:
@@ -210,7 +214,7 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 
 ##### ローカルでの E2E は dev サーバー (HMR) を再利用する
 
-4321 番ポートにサーバーがない状態で実行すると `npm run preview`（本番ビルド + ローカルサーバー）が自動起動されるが、本番ビルドは衣装詳細など数千ページの静的生成で **約 10 分** かかる。`playwright.config.ts` は `reuseExistingServer: true` のため、**先に dev サーバーを起動しておけばビルドなしで E2E が回る**（実測 20 秒弱）。ローカル開発中はこちらを使うこと:
+4321 番ポートにサーバーがない状態で実行すると `npm run preview`（本番ビルド + ローカルサーバー）が自動起動され、本番ビルドの **5.5 分**が上乗せされる。`playwright.config.ts` は `reuseExistingServer: true` のため、**先に dev サーバーを起動しておけばビルドを省いて E2E が回る**（全 19 ファイルで実測 7.5 分、単一ファイルなら数十秒）。ローカル開発中はこちらを使うこと:
 
 1. `npm run dev` をバックグラウンド起動（約 1 秒で ready、dev と本番でパス構成は同一）
 2. `npx playwright test tests/<対象>.test.ts` — 4321 番の dev サーバーが再利用され、ビルドは走らない
@@ -281,4 +285,4 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 4. **本番ビルドでしか検出できない項目**（動的ルート全件生成・`@playform/compress` の圧縮後挙動・`BASE_URL` 解決など）に関わる変更の場合のみ、追加で `npm run preview` を実行して最終確認する
 5. ユーザーの確認が取れたら **`develop` から** 対応内容に応じたブランチを作成して `git commit` → `git push` し、**base を `develop` にして** PR を作成する。CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない
 6. リリースは `develop` を `main` へ fast-forward するだけでよい。**タグは `tag-release.yml` が自動採番する**（人手のリリースは MINOR、cron の自動取り込みは PATCH。ADR 0059）。手順の詳細は `release` スキル参照。本番の緊急修正だけは `main` から `hotfix/` を切って `main` に PR を出す
-7. **リリース（タグ採番）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照
+7. **リリースごとに、リリース告知ツイートを作成する** — `release-tweet` スキルを使い、今回リリースした変更点から告知文を 3 案作成し、本文をプリフィルした X の intent リンクとして提示する。**投稿はユーザーが手動で行う**（スキルはブラウザ自動操作も認証情報による自動投稿も行わない）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照
