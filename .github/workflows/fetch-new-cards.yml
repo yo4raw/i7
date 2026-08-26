@@ -12,6 +12,8 @@ permissions:
 jobs:
   fetch-cards:
     runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.cpr.outputs.pull-request-number }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -184,31 +186,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --delete-branch
 
-      - name: Bump tag and trigger release/deploy
-        if: steps.cpr.outputs.pull-request-number
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          set -e -o pipefail
-          git fetch --tags origin
-          git fetch origin main
-          SHA=$(git rev-parse origin/main)
-          # 同一コミットに既に vX.Y.Z が付いていれば、二重タグ（= 重複リリース/デプロイ）を避けて抜ける。
-          # 4 本の fetch 系ワークフローが毎時同時に走るため、後続分がここで止まる。
-          if git tag --points-at "$SHA" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "$SHA is already tagged; skip"
-            exit 0
-          fi
-          LATEST=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          MAJOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f1)
-          MINOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f2)
-          PATCH=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f3)
-          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-          echo "Latest: $LATEST  ->  New: $NEW_TAG  ($SHA)"
-          # タグ作成は git push ではなく GitHub API で行う。
-          # actions/checkout v7 は認証情報を includeIf.gitdir 経由の別ファイルに置くようになったため、
-          # local の extraheader を unset する従来の回避策が効かず、push が GITHUB_TOKEN 扱いになる。
-          # GITHUB_TOKEN 由来の push は deploy.yml / release.yml をトリガーしない。
-          # API 経由なら RELEASE_PAT が確実に使われ、ローカル git の認証設定に依存しない。
-          gh api --method POST "repos/${{ github.repository }}/git/refs" \
-            -f ref="refs/tags/$NEW_TAG" -f sha="$SHA"
+  # auto-merge は GITHUB_TOKEN 由来のため main への push イベントを発火せず、
+  # tag-release.yml の push トリガーでは起動しない。reusable workflow として直接呼び出す。
+  tag-release:
+    needs: fetch-cards
+    if: needs.fetch-cards.outputs.merged
+    permissions:
+      contents: read
+    uses: ./.github/workflows/tag-release.yml
+    with:
+      bump: patch
+    secrets: inherit

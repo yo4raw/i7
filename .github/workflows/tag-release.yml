@@ -1,0 +1,74 @@
+name: Tag main and trigger release
+
+# main が進んだら自動でパッチ版タグを採番し、deploy.yml / release.yml を起動する。
+#
+# 入口は 2 つある:
+#   - push (branches: main): 人手のリリース（develop → main の fast-forward）
+#   - workflow_call: 画像取得 cron 4 本からの呼び出し。cron の auto-merge は
+#     GITHUB_TOKEN 由来のため main への push イベントを発火せず、上の push
+#     トリガーでは起動しないため、明示的に呼び出す必要がある
+on:
+  push:
+    branches: [main]
+  workflow_call:
+    inputs:
+      bump:
+        description: 'どの桁を上げるか (minor | patch)。cron の自動取り込みだけが patch を使う'
+        type: string
+        default: minor
+
+permissions:
+  contents: read
+
+# 毎時 4 本の cron が同時に走るため、タグ採番を直列化して競合を避ける。
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # default branch が develop になっても main を見続ける
+          # （checkout は checkout したブランチ向けに remote.origin.fetch を設定するため）。
+          ref: main
+
+      - name: Bump tag and trigger release/deploy
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          set -e -o pipefail
+          git fetch --tags origin
+          git fetch origin main
+          SHA=$(git rev-parse origin/main)
+          # 同一コミットに既に vX.Y.Z が付いていれば、二重タグ（= 重複リリース/デプロイ）を避けて抜ける。
+          # 4 本の fetch 系ワークフローが毎時同時に走る場合の後続分に加えて、
+          # minor / major を上げたいときに手動で先にタグを打つケースもここで止まる。
+          if git tag --points-at "$SHA" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "$SHA is already tagged; skip"
+            exit 0
+          fi
+          LATEST=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          MAJOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f3)
+          # 人手のリリース（develop → main の fast-forward / hotfix のマージ）は MINOR を上げる。
+          # PATCH 系列は cron の自動取り込み専用で、人手のリリースが割り込むとタグ列の意味が壊れる。
+          # push トリガーでは inputs が空になるため、その場合は minor とみなす。
+          BUMP="${{ inputs.bump }}"
+          if [ -z "$BUMP" ]; then BUMP=minor; fi
+          case "$BUMP" in
+            minor) NEW_TAG="v${MAJOR}.$((MINOR + 1)).0" ;;
+            patch) NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
+            *) echo "unknown bump: $BUMP" >&2; exit 1 ;;
+          esac
+          echo "Latest: $LATEST  ->  New: $NEW_TAG  ($SHA, bump=$BUMP)"
+          # タグ作成は git push ではなく GitHub API で行う。
+          # actions/checkout v7 は認証情報を includeIf.gitdir 経由の別ファイルに置くようになったため、
+          # local の extraheader を unset する従来の回避策が効かず、push が GITHUB_TOKEN 扱いになる。
+          # GITHUB_TOKEN 由来の push は deploy.yml / release.yml をトリガーしない。
+          # API 経由なら RELEASE_PAT が確実に使われ、ローカル git の認証設定に依存しない。
+          gh api --method POST "repos/${{ github.repository }}/git/refs" \
+            -f ref="refs/tags/$NEW_TAG" -f sha="$SHA"
