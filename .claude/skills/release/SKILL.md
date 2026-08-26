@@ -53,6 +53,8 @@ git merge origin/main                           # 衝突したら解決してコ
 git push origin develop
 ```
 
+> **`Sync main to develop` の実行履歴自体が古い場合**（失敗ですらなく、`main` が進んでいるのに起動した形跡がない）は、ワークフローが呼ばれていないことを疑う。cron の auto-merge は `GITHUB_TOKEN` 由来のため `main` への push イベントを発火せず、`on: push` だけでは起動しない。ADR 0060 で cron 4 本から `workflow_call` で直接呼ぶようにしてあるので、cron 側の `sync-main-to-develop` ジョブが失敗していないか確認すること。復旧自体は上の手元の手順で行う。
+
 本番の緊急修正は `main` から `hotfix/` を切り、`main` に PR を出してマージする。マージが `main` への push になるため、通常リリースと同じく `tag-release.yml` が MINOR を上げたタグを自動採番する。手動でタグを打つ必要はない。
 
 タグが作られると `release.yml` が GitHub Release を作成し、同時に `deploy.yml` が Cloudflare Workers へデプロイする。`main` へ push してから本番へ反映されるまでは、タグ採番 → ビルド → デプロイの順に進む。

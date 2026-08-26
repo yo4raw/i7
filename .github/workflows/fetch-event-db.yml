@@ -95,3 +95,13 @@ jobs:
     with:
       bump: patch
     secrets: inherit
+
+  # 同上。back-merge も cron 経由では push トリガーで起動しないため直接呼び出す。
+  # これが無いと develop が main から取り残され、リリースの fast-forward が通らなくなる。
+  sync-main-to-develop:
+    needs: fetch-event-db
+    if: needs.fetch-event-db.outputs.merged
+    permissions:
+      contents: write
+    uses: ./.github/workflows/sync-main-to-develop.yml
+    secrets: inherit
