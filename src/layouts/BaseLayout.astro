@@ -74,9 +74,11 @@ const extraJsonLd: Array<Record<string, unknown>> = jsonLd
 
 let version = 'dev';
 try {
-  version = execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim();
+  const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+  const date = execSync('git log -1 --format=%aI', { encoding: 'utf-8' }).trim().slice(0, 10);
+  version = `${date} (${sha})`;
 } catch {
-  // git 未使用環境やタグ不在時はフォールバック
+  // git 未使用環境ではフォールバック
 }
 ---
 
@@ -155,7 +157,7 @@ try {
       <slot />
     </main>
     <footer class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center gap-3">
-      <a href={`${base}releases/`} class="hover:text-gray-600 hover:underline underline-offset-2">{version}</a>
+      <span>{version}</span>
       <FooterTools client:load />
     </footer>
   </body>

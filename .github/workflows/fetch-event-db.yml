@@ -12,6 +12,8 @@ permissions:
 jobs:
   fetch-event-db:
     runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.cpr.outputs.pull-request-number }}
     steps:
       - uses: actions/checkout@v7
 
@@ -75,23 +77,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --squash --delete-branch
 
-      - name: Bump tag and trigger release/deploy
-        if: steps.cpr.outputs.pull-request-number
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          set -e -o pipefail
-          git fetch --tags origin
-          LATEST=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          MAJOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f1)
-          MINOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f2)
-          PATCH=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f3)
-          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-          echo "Latest: $LATEST  ->  New: $NEW_TAG"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          # actions/checkout が永続化した GITHUB_TOKEN の認証ヘッダを除去し、RELEASE_PAT で push する。
-          # （GITHUB_TOKEN 由来の push は deploy.yml をトリガーしないため、PAT を確実に使わせる）
-          git config --local --unset-all http."https://github.com/".extraheader 2>/dev/null || true
-          git fetch origin main
-          git tag "$NEW_TAG" origin/main
-          git push origin "$NEW_TAG"
+  # auto-merge は GITHUB_TOKEN 由来のため main への push イベントを発火しない。
+  # deploy.yml を reusable workflow として直接呼び出して本番へ反映する。
+  deploy:
+    needs: fetch-event-db
+    if: needs.fetch-event-db.outputs.merged
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

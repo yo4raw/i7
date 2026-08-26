@@ -2,12 +2,17 @@ name: Deploy to Cloudflare Workers
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '.claude/**'
+  # 画像取得 cron から呼ばれる。cron の auto-merge は GITHUB_TOKEN 由来のため
+  # main への push イベントを発火せず、上の push トリガーでは起動しない。
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
   group: cloudflare-deploy

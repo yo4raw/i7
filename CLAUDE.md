@@ -248,6 +248,5 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 2. Playwright MCP / chrome-devtools MCP で dev サーバー（`http://localhost:4321/`）にアクセスし、変更箇所の画面表示を確認する
 3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
 4. **本番ビルドでしか検出できない項目**（動的ルート全件生成・`@playform/compress` の圧縮後挙動・`BASE_URL` 解決など）に関わる変更の場合のみ、追加で `npm run preview` を実行して最終確認する
-5. `git` に `commit` する前に必ずリリースノートを更新する
-6. ユーザーの確認が取れたら 対応内容に応じたブランチを作成して `git commit` → `git push` と PR の作成を行い、CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない。
-7. **リリース（タグ push）ごとに、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、最新リリースタグの変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照。
+5. ユーザーの確認が取れたら 対応内容に応じたブランチを作成して `git commit` → `git push` と PR の作成を行う。**main へマージすれば `deploy.yml` が自動で本番へデプロイする**（タグを打つ操作は不要。ADR 0051）。CI やデプロイ workflow の完了を待つ必要はない。
+6. **本番へ反映したら、リリース告知ツイートを投稿する** — `release-tweet` スキルを使い、今回マージした変更点から告知文を作成して X へ投稿する。`.env` に `X_ID`/`X_PASS` があれば標準スタイル（案2相当）の告知文1本を確認なしで自動投稿する（`.env` が無い場合は下書き提示まで）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照。
