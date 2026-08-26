@@ -71,3 +71,4 @@
 | [0058](0058-tool-page-static-guide.md) | ツールページに静的な解説セクションを置く | 承認 |
 | [0059](0059-auto-tag-on-main-push.md) | main への push でリリースタグを自動採番する | 承認 |
 | [0060](0060-sync-back-merge-on-cron-merge.md) | cron の自動取り込みでも main → develop の back-merge を起動する | 承認 |
+| [0061](0061-dependabot-target-main.md) | Dependabot の依存更新を main 直行にする | 承認 |

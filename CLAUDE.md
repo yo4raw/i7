@@ -137,9 +137,11 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 | `feat/` `fix/` `chore/` `docs/` `refactor/` `test/` `ci/` | 人手の作業 | `develop` | `develop` | squash |
 | `hotfix/` | 本番の緊急修正 | `main` | `main` | squash |
 | `auto/` | cron の自動取り込み | `main` | `main` | squash（自動） |
+| `dependabot/` | Dependabot の依存更新 | `main` | `main` | squash |
 
 - **通常の作業は `develop` から切って `develop` に PR を出す**。マージしても本番には出ない
 - **毎時のアセット自動取り込み（cron 4 本）は `main` 直行の例外**。マージ直後に `tag-release.yml` が自動採番タグ（PATCH）を打ち即デプロイされるため、`main` の不変条件は崩れない。新カード画像が 1 時間以内に本番へ出る即時性を維持するための例外
+- **Dependabot の依存更新も `main` 直行**（ADR 0061）。`.github/dependabot.yml` の `target-branch: main` で指定している。CI が通ったら `main` へマージし、そのままリリースされる（MINOR が上がる）。`develop` に溜めると PR 同士で `package-lock.json` が衝突し、リベースが必要になるため
 - **`main` への push は `sync-main-to-develop.yml` が `develop` へ自動 back-merge する**。これにより「`main` は常に `develop` の祖先」が保たれ、リリースが fast-forward で通る
 - **`release/*` ブランチは作らない**。`main` にブランチ保護は設定していない
 - リリース手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照
