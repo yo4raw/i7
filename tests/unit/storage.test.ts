@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { STORAGE_KEYS, loadJson, saveJson } from '../../src/lib/storage';
+import { STORAGE_KEYS, BACKUP_EXCLUDED_KEYS, loadJson, saveJson, onSave } from '../../src/lib/storage';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.restoreAllMocks());
@@ -42,5 +42,51 @@ describe('saveJson', () => {
       throw new Error('QuotaExceededError');
     });
     expect(() => saveJson('k', { a: 1 })).not.toThrow();
+  });
+});
+
+describe('onSave', () => {
+  it('保存に成功したキーを購読者へ通知する', () => {
+    const seen: string[] = [];
+    const unsubscribe = onSave((key) => seen.push(key));
+    saveJson('i7_card_counts', { '1': 2 });
+    expect(seen).toEqual(['i7_card_counts']);
+    unsubscribe();
+  });
+
+  it('購読解除すると通知が止まる', () => {
+    const seen: string[] = [];
+    onSave((key) => seen.push(key))();
+    saveJson('i7_card_counts', { '1': 2 });
+    expect(seen).toEqual([]);
+  });
+
+  it('保存が失敗したときは通知しない (書けていない変更を同期対象にしない)', () => {
+    const seen: string[] = [];
+    const unsubscribe = onSave((key) => seen.push(key));
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    saveJson('i7_card_counts', { '1': 2 });
+    expect(seen).toEqual([]);
+    unsubscribe();
+  });
+
+  it('購読者が例外を投げても保存処理を壊さない', () => {
+    const unsubscribe = onSave(() => { throw new Error('boom'); });
+    expect(() => saveJson('i7_card_counts', { '1': 2 })).not.toThrow();
+    expect(loadJson('i7_card_counts', {})).toEqual({ '1': 2 });
+    unsubscribe();
+  });
+});
+
+describe('BACKUP_EXCLUDED_KEYS', () => {
+  it('同期メタとベースラインだけを除外する', () => {
+    expect([...BACKUP_EXCLUDED_KEYS].toSorted()).toEqual(['i7_sync_baseline', 'i7_sync_meta']);
+  });
+
+  it('除外キーはすべて STORAGE_KEYS に存在する', () => {
+    const all = new Set<string>(Object.values(STORAGE_KEYS));
+    for (const key of BACKUP_EXCLUDED_KEYS) expect(all.has(key)).toBe(true);
   });
 });

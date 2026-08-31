@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { STORAGE_KEYS } from '../lib/storage';
+  import { STORAGE_KEYS, BACKUP_EXCLUDED_KEYS } from '../lib/storage';
   import ModalDialog from './ui/ModalDialog.svelte';
   import InlineAlert from './ui/InlineAlert.svelte';
 
@@ -27,6 +27,7 @@
   function exportData() {
     const data: Record<string, string | null> = {};
     for (const key of Object.values(STORAGE_KEYS)) {
+      if (BACKUP_EXCLUDED_KEYS.has(key)) continue;
       data[key] = localStorage.getItem(key);
     }
     const backup: Backup = {
@@ -87,7 +88,9 @@
     if (!ok) return;
 
     const backup = parsed as Backup;
-    const validKeys = new Set<string>(Object.values(STORAGE_KEYS));
+    const validKeys = new Set<string>(
+      Object.values(STORAGE_KEYS).filter((key) => !BACKUP_EXCLUDED_KEYS.has(key)),
+    );
     for (const [key, value] of Object.entries(backup.data)) {
       if (!validKeys.has(key)) continue;
       if (value === null) {
@@ -96,6 +99,12 @@
         localStorage.setItem(key, value);
       }
     }
+
+    // 同期層へ「ローカルが外部から書き換わった」ことを伝える。
+    // ベースラインが実態と合わなくなるため、SyncPanel 側で同期状態をリセットさせる。
+    // ここで sync 層を import しないのは、既存コンポーネントが同期層に依存しないため
+    // （同期層を削除しても FooterTools が壊れない）。
+    window.dispatchEvent(new CustomEvent('i7:backup-imported'));
 
     feedback = { message: 'インポートが完了しました。ページを再読み込みします。', tone: 'success' };
     // 完了表示を一瞬見せてから再読み込みする (即 reload すると何が起きたか伝わらない)
