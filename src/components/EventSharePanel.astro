@@ -1,5 +1,6 @@
 ---
 import EventShareImage from './EventShareImage.svelte';
+import { formatEventPeriod } from '../lib/data/eventPeriod';
 import { formatEffectSummary, type EventRow, type EventSpecialTier } from '../lib/data/fetchEventsCsv';
 import { type Card } from '../lib/data/fetchCardsJson';
 import { ATTR_BADGE_BG, SITE_NAME } from '../lib/constants';
@@ -67,7 +68,7 @@ const tiers: TierView[] = [
     <div class="mt-1 text-xs text-gray-300 space-x-2">
       <span>{event.eventtype}</span>
       <span>/</span>
-      <span>{event.start_date} 17:00 〜 {event.end_date} 17:00 (JST)</span>
+      <span>{formatEventPeriod(event.start_date, event.end_date)}</span>
     </div>
   </div>
 

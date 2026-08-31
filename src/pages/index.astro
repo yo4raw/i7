@@ -5,6 +5,7 @@ import CharacterColorHero from '../components/CharacterColorHero.svelte';
 import { fetchCardsJson } from '../lib/data/fetchCardsJson.ts';
 import { fetchSongsJson } from '../lib/data/fetchSongsJson.ts';
 import { fetchEventsCsv } from '../lib/data/fetchEventsCsv.ts';
+import { classifyEventStatus } from '../lib/data/eventPeriod.ts';
 import { RARITIES, RARITY_BADGE_CLASSES } from '../lib/constants.ts';
 import { PAGE_DESCRIPTIONS } from '../lib/seo.ts';
 
@@ -23,15 +24,11 @@ const rarityEntries = RARITIES
   .map((r) => [r, rarityCounts[r] ?? 0] as const)
   .filter(([, n]) => n > 0);
 
-const now = new Date();
+const now = Date.now();
 const sortedEvents = [...events].toSorted((a, b) => b.id - a.id);
-const liveEvents = sortedEvents.filter((ev) => {
-  const start = new Date(`${ev.start_date}T17:00:00+09:00`);
-  const end = new Date(`${ev.end_date}T17:00:00+09:00`);
-  return start <= now && now < end;
-});
+const liveEvents = sortedEvents.filter((ev) => classifyEventStatus(ev.start_date, ev.end_date, now) === 'live');
 const upcomingEvents = sortedEvents
-  .filter((ev) => new Date(`${ev.start_date}T17:00:00+09:00`) > now)
+  .filter((ev) => classifyEventStatus(ev.start_date, ev.end_date, now) === 'upcoming')
   .toSorted((a, b) => a.start_date.localeCompare(b.start_date))
   .slice(0, 1);
 

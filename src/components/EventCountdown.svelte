@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { classifyEventStatus, eventStartMs, eventEndMs, formatEventPeriod } from '../lib/data/eventPeriod';
+
   type EventItem = {
     id: number;
     eventname: string;
@@ -34,16 +36,15 @@
   }
 
   function status(ev: EventItem): { text: string; className: string; remain: string } {
-    const start = new Date(`${ev.start_date}T17:00:00+09:00`).getTime();
-    const end = new Date(`${ev.end_date}T17:00:00+09:00`).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end)) {
-      return { text: '—', className: 'text-gray-500 bg-gray-100', remain: '' };
+    const s = classifyEventStatus(ev.start_date, ev.end_date, now);
+    if (s === 'upcoming') {
+      const start = eventStartMs(ev.start_date);
+      return { text: '開催予定', className: 'text-blue-700 bg-blue-100', remain: start === null ? '' : `開始まで ${formatRemain(start - now)}` };
     }
-    if (now < start) {
-      return { text: '開催予定', className: 'text-blue-700 bg-blue-100', remain: `開始まで ${formatRemain(start - now)}` };
-    }
-    if (now < end) {
-      return { text: '実施中', className: 'text-red-700 bg-red-100', remain: formatRemain(end - now) };
+    if (s === 'live') {
+      const end = eventEndMs(ev.end_date);
+      // 終了未定の実施中イベントは残り時間を出せない
+      return { text: '実施中', className: 'text-red-700 bg-red-100', remain: end === null ? '' : formatRemain(end - now) };
     }
     return { text: '終了', className: 'text-gray-500 bg-gray-200', remain: '' };
   }
@@ -61,7 +62,7 @@
               {ev.eventname}
             </a>
             <div class="text-xs text-gray-500 mt-0.5">
-              {ev.eventtype} / {ev.start_date} 17:00 〜 {ev.end_date} 17:00 (JST)
+              {ev.eventtype} / {formatEventPeriod(ev.start_date, ev.end_date)}
             </div>
           </div>
           <div class="flex items-center gap-3 text-xs">

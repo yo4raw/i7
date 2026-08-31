@@ -72,3 +72,4 @@
 | [0059](0059-auto-tag-on-main-push.md) | main への push でリリースタグを自動採番する | 承認 |
 | [0060](0060-sync-back-merge-on-cron-merge.md) | cron の自動取り込みでも main → develop の back-merge を起動する | 承認 |
 | [0061](0061-dependabot-target-main.md) | Dependabot の依存更新を main 直行にする | 承認 |
+| [0062](0062-open-ended-event-is-live.md) | 終了日が未入力のイベントを実施中として扱う(期間判定を eventPeriod.ts に集約) | 承認 |

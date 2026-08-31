@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { formatEventEnd } from '../../../../lib/data/eventPeriod';
 import EventSharePanel from '../../../../components/EventSharePanel.astro';
 import { fetchEventsCsv, type EventRow } from '../../../../lib/data/fetchEventsCsv';
 import { fetchCardsJson, type Card } from '../../../../lib/data/fetchCardsJson';
@@ -44,7 +45,7 @@ const { event, goldCards, silverCards } = Astro.props as Props;
 const base = import.meta.env.BASE_URL;
 
 const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
-const description = `${event.eventname}（${event.eventtype}）の ${RARITY} 金特効・銀特効衣装まとめ（SNS共有用）。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
+const description = `${event.eventname}（${event.eventtype}）の ${RARITY} 金特効・銀特効衣装まとめ（SNS共有用）。${event.start_date}〜${formatEventEnd(event.end_date)}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
 const ogImageCard = goldCards[0] || silverCards[0];
 const ogImage = ogImageCard?.ID !== null && ogImageCard?.ID !== undefined ? cardThumbUrl(ogImageCard.ID) : undefined;
 
