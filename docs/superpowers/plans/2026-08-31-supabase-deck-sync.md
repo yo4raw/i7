@@ -2283,7 +2283,7 @@ localStorage 側とサーバ側の差異をデータ種別ごとに吸収する�
 - Produces:
   - `clampRowSet(rows: RowSet<number>, max: number): RowSet<number>`
   - `hasPendingLocalChanges(): boolean`
-  - `type Adapter<V>`、`ADAPTERS: readonly Adapter<unknown>[]`
+  - `type Adapter<V>`、`ADAPTERS: readonly Adapter<unknown>[]`、`findAdapter(kind): Adapter<unknown>`
   - `type KindPlan = { kind: BaselineKind; verdicts: MergeVerdict<unknown>[]; conflictKeys: string[]; serverRevs: number[] }`
   - `planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan`
 
@@ -2550,11 +2550,15 @@ const decksAdapter: Adapter<SyncedDeck> = {
   },
 };
 
-export const ADAPTERS: readonly Adapter<never>[] = [
+// V の異なるアダプタを 1 つの配列に入れるためのキャスト。`Map<string, V>` は V に対して
+// 不変なので、キャストなしでは要素を代入できない。
+// never ではなく unknown を使うこと: MergeVerdict<never> は value: never | null が
+// null に潰れ、「verdict は値を運ばない」という嘘の型になる。
+export const ADAPTERS: readonly Adapter<unknown>[] = [
   cardCountsAdapter, sharedBroachCountsAdapter, rabbitNotesAdapter, decksAdapter,
-] as unknown as readonly Adapter<never>[];
+] as unknown as readonly Adapter<unknown>[];
 
-export function findAdapter(kind: BaselineKind): Adapter<never> {
+export function findAdapter(kind: BaselineKind): Adapter<unknown> {
   const adapter = ADAPTERS.find((candidate) => candidate.kind === kind);
   /* v8 ignore next -- BaselineKind は ADAPTERS を網羅しており到達しない */
   if (!adapter) throw new Error(`unknown sync kind: ${kind}`);
@@ -2579,7 +2583,7 @@ export function hasPendingLocalChanges(): boolean {
 
 export type KindPlan = {
   kind: BaselineKind;
-  verdicts: MergeVerdict<never>[];
+  verdicts: MergeVerdict<unknown>[];
   conflictKeys: string[];
   serverRevs: number[];
 };
@@ -2604,7 +2608,7 @@ export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
   );
   return {
     kind: adapter.kind,
-    verdicts: verdicts as MergeVerdict<never>[],
+    verdicts: verdicts as MergeVerdict<unknown>[],
     conflictKeys: verdicts.filter((v) => v.kind === 'conflict').map((v) => v.key),
     serverRevs: adapter.serverRevs(pulled),
   };
@@ -3350,6 +3354,8 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
 **Files:**
 - Create: `src/components/SyncPanel.svelte`
 - Modify: `src/layouts/BaseLayout.astro`
+- Modify: `src/components/DeckList.svelte`（`i7:sync-applied` を購読して読み直す）
+- Modify: `src/components/RabbitNoteEditor.svelte`（同上）
 - Test: `tests/sync-panel.test.ts`
 
 **Interfaces:**
@@ -3542,12 +3548,14 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
       }
     };
 
-    // バックアップ復元でローカルが外部から書き換わった。ベースラインが実態と合わないため捨てる
+    // バックアップ復元でローカルが外部から書き換わった。ベースラインが実態と合わないため捨てる。
+    // ここで flush() しないこと: FooterTools はこのイベントの 800ms 後に location.reload() する。
+    // 即時同期を始めると初回リンクの確認ダイアログを出した直後に reload で破棄されうる。
+    // 同期は reload 後の mount に任せる（そこで hasPendingLocalChanges が true になる）。
     const onBackupImported = () => {
       resetSyncState();
       lastSyncedAt = null;
       pendingChanges = true;
-      if (phase !== 'anonymous') flush();
     };
 
     // beforeunload は発火が不安定なので visibilitychange を使う
@@ -3602,6 +3610,37 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
 ```
 
 環境変数が未設定なら `client` が `null` になり **何も描画されない**（現在と完全に同一のフッターになる）。
+
+### 5.1.1 取り込み後に画面を更新する
+
+所持衣装数と共通ブローチはアダプタの `writeLocal` がストアの `reloadFromStorage` /
+`reloadBroachCountsFromStorage` を呼ぶのでリアクティブに反映される。しかし **デッキ一覧と
+ラビットノートには対応するストアが無く**、`DeckList.svelte` と `RabbitNoteEditor.svelte` は
+mount 時の `$effect` でローカル変数にキャッシュしている。外部からの localStorage 書き込みには
+反応しないため、サーバから取り込んだ直後にその画面を開いていると **古い値を表示し続ける**。
+
+`sync()` が `report.adopted > 0` で終わったとき、`SyncPanel` から次を発火する:
+
+```ts
+      if (report.adopted > 0) window.dispatchEvent(new CustomEvent('i7:sync-applied'));
+```
+
+購読側は 2 コンポーネントに数行ずつ足す。`DeckList.svelte`:
+
+```svelte
+  onMount(() => {
+    // 同期でサーバの内容を取り込んだら読み直す。同期層が無ければ発火しないので、
+    // このリスナは同期層への依存にはならない（イベント名の文字列しか知らない）。
+    const reload = () => { decks = loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, []); };
+    window.addEventListener('i7:sync-applied', reload);
+    return () => window.removeEventListener('i7:sync-applied', reload);
+  });
+```
+
+`RabbitNoteEditor.svelte` も同じ形で `data = loadRabbitNotes()` を呼び直す。
+
+**ページ全体の reload では解決しない。** 利用者が編集中の画面を勝手に再読込するのは
+破壊的で、`FooterTools` のインポート後 reload（明示的な操作の直後）とは事情が違う。
 
 - [ ] **Step 2: `BaseLayout.astro` に島を追加する**
 
