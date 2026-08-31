@@ -79,6 +79,16 @@ describe('rowSetToSavedDecks', () => {
     const rows = savedDecksToRowSet([deck, older]);
     expect(rowSetToSavedDecks(rows).map((d) => d.id)).toEqual(['older', 'm9x2k1p']);
   });
+
+  it('サーバの空スロット (skill_level: null) は 0 に復元する', () => {
+    const deckRows = [{
+      user_id: 'u', id: 'd1', name: 'A', song_id: null,
+      created_at: '2026-08-31T00:00:00.000Z', updated_at: '2026-08-31T00:00:00.000Z',
+      deleted_at: null, rev: 1,
+    }];
+    const restored = rowSetToSavedDecks(deckRowsToRowSet(deckRows, []));
+    expect(restored[0].state.skillLevels).toEqual([0, 0, 0, 0, 0, 0]);
+  });
 });
 
 describe('deckRowsToRowSet', () => {

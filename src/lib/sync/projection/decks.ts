@@ -111,6 +111,7 @@ export function deckRowsToRowSet(
   for (const row of slotRows) {
     const slots = slotsByDeck.get(row.deck_id)
       ?? Array.from({ length: SLOT_COUNT }, (_, i) => emptySlot(i));
+    /* v8 ignore next -- deck_slots_slot_range の CHECK 制約により実データでは到達しない */
     if (row.slot_index >= 0 && row.slot_index < SLOT_COUNT) {
       slots[row.slot_index] = {
         slot_index: row.slot_index,
