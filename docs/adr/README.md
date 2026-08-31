@@ -74,3 +74,4 @@
 | [0061](0061-dependabot-target-main.md) | Dependabot の依存更新を main 直行にする | 承認 |
 | [0062](0062-open-ended-event-is-live.md) | 終了日が未入力のイベントを実施中として扱う(期間判定を eventPeriod.ts に集約) | 承認 |
 | [0063](0063-crawl-reachability.md) | クローラーの到達性を確保する(フッターのリンク集・lastmod・IndexNow) | 承認 |
+| [0064](0064-supabase-server-sync.md) | 端末間同期のため Supabase を導入する(完全静的サイト原則の部分的上書き) | 承認 |
