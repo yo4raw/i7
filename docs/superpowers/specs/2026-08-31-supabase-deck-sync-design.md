@@ -44,7 +44,9 @@
 | `src/lib/sync/diff.ts` | ベースラインと現在の行集合を比較し 追加 / 変更 / 削除 を返す（純関数） |
 | `src/lib/sync/baseline.ts` | 前回同期時の行集合の保持 |
 | `src/lib/sync/cursor.ts` | 同期カーソル管理 |
-| `src/lib/sync/syncEngine.ts` | pull / push のオーケストレーション。**client を引数で注入** |
+| `src/lib/sync/port.ts` | 同期に必要な操作だけを宣言した `SyncPort` インターフェース（型のみ） |
+| `src/lib/sync/supabasePort.ts` | `SyncPort` の supabase-js 実装。ここだけが PostgREST を知る |
+| `src/lib/sync/syncEngine.ts` | pull / push のオーケストレーション。**`SyncPort` を引数で注入** |
 | `src/components/SyncPanel.svelte` | フッターの同期 UI。OAuth コールバック処理も担う |
 | `src/pages/privacy/index.astro` | プライバシーポリシー（`/privacy/`、index 対象） |
 
@@ -56,10 +58,8 @@
 | `src/components/FooterTools.svelte` | インポート復元後に同期状態をリセット |
 | `src/components/ui/ModalDialog.svelte` | `choose`（3 択）を加算的に追加 |
 | `src/layouts/BaseLayout.astro` | `SyncPanel` の島を追加 |
-| `vitest.config.ts` | coverage exclude に `db/**` |
-| `astro.config.mjs` | sitemap にプライバシーポリシーを含める |
 
-`syncEngine.ts` が Supabase client を import せず注入で受け取ることが要点である。同期ロジック全体が Vitest で純粋にテストでき、既存のカバレッジ 95% ゲートを実 Supabase なしで満たせる。
+`syncEngine.ts` が Supabase client を import せず、`SyncPort` という狭いインターフェースを注入で受け取ることが要点である。同期ロジック全体が Vitest で純粋にテストでき、既存のカバレッジ 95% ゲートを実 Supabase なしで満たせる。
 
 ### 2.3 認証フロー
 
@@ -80,7 +80,7 @@ Supabase 側の Redirect URL 許可リストに本番 URL と `http://localhost:
 | 実行時クエリ | **supabase-js（PostgREST、JWT で RLS が効く）** |
 | 実行時の型 | Drizzle スキーマから `InferSelectModel` で導出（`import type` のみ） |
 
-TS のプロパティ名は列名と一致させ snake_case とする。`casing: 'snake_case'` は使わない。PostgREST のレスポンスは snake_case であり、camelCase にすると `InferSelectModel` の型と実際の値が食い違って変換層が増える。
+TS のプロパティ名は列名と一致させ snake_case とする。`casing: 'snake_case'` は使わない。**`timestamp` は必ず `mode: 'string'` を指定する** — 既定モードでは `InferSelectModel` が `Date` を返すが、実行時に PostgREST が返すのは ISO 文字列であり、型と実際の値が食い違う。PostgREST のレスポンスは snake_case であり、camelCase にすると `InferSelectModel` の型と実際の値が食い違って変換層が増える。
 
 ### 3.2 テーブル
 
@@ -89,7 +89,7 @@ TS のプロパティ名は列名と一致させ snake_case とする。`casing:
 import { sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
-  bigint, boolean, check, integer, pgPolicy, pgTable,
+  bigint, boolean, check, foreignKey, integer, pgPolicy, pgTable,
   primaryKey, smallint, text, timestamp, uuid,
 } from 'drizzle-orm/pg-core';
 import { authUid, authUsers, authenticatedRole } from 'drizzle-orm/supabase';
@@ -109,8 +109,8 @@ export const card_counts = pgTable('card_counts', {
   user_id: uuid('user_id').notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
   card_id: integer('card_id').notNull(),
   count: integer('count').notNull(),
-  rev: bigint('rev', { mode: 'number' }).notNull(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  rev: bigint('rev', { mode: 'number' }).notNull().default(0),
+  updated_at: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   primaryKey({ columns: [t.user_id, t.card_id] }),
   check('card_counts_count_range', sql`${t.count} >= 0`),
@@ -122,21 +122,29 @@ export const card_counts = pgTable('card_counts', {
 
 ```ts
 export const decks = pgTable('decks', {
-  id: uuid('id').primaryKey(),                    // 既存 SavedDeck.id をそのまま移行
+  // 既存の SavedDeck.id は Date.now().toString(36) (例 "m9x2k1p") で UUID ではない。
+  // id 単独を主キーにすると別ユーザー間で同一ミリ秒の衝突が起きるため、
+  // 既存 ID をそのまま text で持ち (user_id, id) の複合主キーとする。
   user_id: uuid('user_id').notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  id: text('id').notNull(),
   name: text('name').notNull(),
   song_id: integer('song_id'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  deleted_at: timestamp('deleted_at', { withTimezone: true }),   // tombstone
-  rev: bigint('rev', { mode: 'number' }).notNull(),
+  created_at: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull(),
+  updated_at: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  deleted_at: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),   // tombstone
+  rev: bigint('rev', { mode: 'number' }).notNull().default(0),
 }, (t) => [
+  primaryKey({ columns: [t.user_id, t.id] }),
+  check('decks_id_len', sql`char_length(${t.id}) between 1 and 64`),
   check('decks_name_len', sql`char_length(${t.name}) between 1 and 200`),
   ...ownerPolicies('decks', t.user_id),
 ]);
 
 export const deck_slots = pgTable('deck_slots', {
-  deck_id: uuid('deck_id').notNull().references(() => decks.id, { onDelete: 'cascade' }),
+  // user_id を自前で持たせる。これにより RLS が exists(...) のサブクエリではなく
+  // ownerPolicies (auth.uid() との単純比較) で済む。
+  user_id: uuid('user_id').notNull(),
+  deck_id: text('deck_id').notNull(),
   slot_index: smallint('slot_index').notNull(),
   card_id: integer('card_id'),
   trained: boolean('trained').notNull().default(false),
@@ -144,14 +152,14 @@ export const deck_slots = pgTable('deck_slots', {
   bonus_tier: text('bonus_tier'),
   shared_broach_ids: integer('shared_broach_ids').array().notNull().default([]),
 }, (t) => [
-  primaryKey({ columns: [t.deck_id, t.slot_index] }),
+  primaryKey({ columns: [t.user_id, t.deck_id, t.slot_index] }),
+  foreignKey({
+    columns: [t.user_id, t.deck_id],
+    foreignColumns: [decks.user_id, decks.id],
+    name: 'deck_slots_deck_fk',
+  }).onDelete('cascade'),
   check('deck_slots_slot_range', sql`${t.slot_index} between 0 and 5`),
-  // deck_slots は user_id を持たないので親の所有者を辿る
-  pgPolicy('deck_slots_all', {
-    for: 'all', to: authenticatedRole,
-    using: sql`exists (select 1 from ${decks} d where d.id = ${t.deck_id} and d.user_id = ${authUid})`,
-    withCheck: sql`exists (select 1 from ${decks} d where d.id = ${t.deck_id} and d.user_id = ${authUid})`,
-  }),
+  ...ownerPolicies('deck_slots', t.user_id),
 ]);
 ```
 
@@ -361,7 +369,7 @@ export function onSave(fn: SaveListener): () => void;   // 購読解除を返す
 
 正規化により、所持衣装という嗜好データが構造化された形でサーバに保管される。加えて `auth.users` に Google アカウントのメールアドレスと識別子が入る。
 
-プライバシーポリシーページ（`src/pages/privacy/index.astro` → `/privacy/`）を新設する。[ADR 0057](../../adr/0057-focus-indexable-pages.md) の `noindex` 対象には**せず**、index 対象として sitemap にも含める（法的ページは検索から到達できる必要がある）。
+プライバシーポリシーページ（`src/pages/privacy/index.astro` → `/privacy/`）を新設する。[ADR 0057](../../adr/0057-focus-indexable-pages.md) の `noindex` 対象には**せず**、index 対象とする。`astro.config.mjs` の sitemap `filter` は衣装詳細・イベント共有・個人データページのみを除外しているため、`/privacy/` は既定で sitemap に含まれ、設定変更は不要。
 
 記載事項: 取得する情報 / 保存されるデータ / 保存先とリージョン / 利用目的（端末間同期のみ）/ 第三者提供なし / 削除方法 / 問い合わせ先。
 
@@ -379,7 +387,7 @@ Supabase のリージョンは東京（ap-northeast-1）。レイテンシと、
 - `diff.ts` — 追加 / 変更 / 削除 / 無変更、削除が「0 の書き込み」になること
 - 3-way 判定 — 4.2 の 4 分岐 × データ種別
 - `cursor.ts` — `max(rev)` 方式で取りこぼしが出ないこと
-- `syncEngine.ts` — **フェイクの Supabase client（インメモリの擬似 PostgREST）を注入**し、競合・部分失敗・オフラインを再現
+- `syncEngine.ts` — **`SyncPort` のインメモリ実装を注入**し、競合・部分失敗・オフラインを再現。PostgREST の擬似実装は不要（`supabasePort.ts` 側に隔離されている）
 - **部分失敗時にベースラインが成功行のみ更新されること**（4.5 の禁止事項に対する回帰テスト）
 
 `db/**` は実行時に import されないため coverage exclude に追加する。
@@ -389,9 +397,10 @@ Supabase のリージョンは東京（ap-northeast-1）。レイテンシと、
 実 Supabase には接続せず、`page.route` で `**/rest/v1/**` と `**/auth/v1/**` を全スタブする。`test` / `expect` は `tests/helpers/fixtures.ts` から import する（[ADR 0055](../../adr/0055-e2e-hydration-fixture.md)、必須）。
 
 - 環境変数未設定時にフッターが従来通りであること
-- ログイン後の初回リンクの 3 択
-- 競合ダイアログの 3 択（Esc が「何もしない」であることを含む）
-- **オフライン時にスコア計算・所持登録が無傷で動くこと**（最重要の回帰）
+- 未ログイン時の表示と、既存のバックアップ UI が壊れていないこと
+- **Supabase を全遮断した状態でスコア計算・所持登録が無傷で動くこと**（最重要の回帰）
+
+**初回リンクと競合ダイアログの 3 択は E2E の対象外とする。** 実行には有効な Supabase セッションが必要で、セッションをスタブすると supabase-js の内部ストレージ形式に依存した脆いテストになる。この経路は `runSync` の単体テスト（`ConflictResolver` が `local` / `server` / 未解決を返す 3 系統）と、実 Supabase に対する手動確認でカバーする。
 
 ### 8.3 手動確認
 
