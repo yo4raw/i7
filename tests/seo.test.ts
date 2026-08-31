@@ -1,4 +1,5 @@
 import { test, expect } from './helpers/fixtures';
+import { readdirSync } from 'node:fs';
 import { fetchCardsJson } from '../src/lib/data/fetchCardsJson';
 
 const BASE = '';
@@ -127,5 +128,89 @@ test.describe('ツールページの静的な解説 (ADR 0058)', () => {
     const html = await res.text();
     expect(html).toContain('tool-guide-heading');
     expect(html).toContain('このツールについて');
+  });
+});
+
+test.describe('サイト内リンクの到達性', () => {
+  // グローバルナビ (HeaderNav.svelte) のドロップダウン内リンクは
+  // {#if openDropdown === ...} の内側にあり初期 HTML に出力されない。
+  // クローラーはドロップダウンを開かないため、フッターのリンク集が
+  // ツールページへ到達する唯一の静的な経路になっている。
+  const LINKED_PATHS = [
+    '/',
+    '/cards/',
+    '/songs/',
+    '/events/',
+    '/score-calc/',
+    '/score-calc/spec/',
+    '/score-calc/max-score-finder/',
+    '/card-compare/',
+    '/point-calc/',
+    '/about/',
+    '/releases/',
+  ];
+
+  /** JS 実行前の生 HTML からフッターのリンク集の href を取り出す */
+  async function footerHrefs(page: import('@playwright/test').Page, from: string): Promise<string[]> {
+    const html = await (await page.request.get(`${BASE}${from}`)).text();
+    const nav = html.match(/<nav[^>]*aria-label=["']?サイト内リンク["']?[^>]*>[\s\S]*?<\/nav>/)?.[0];
+    expect(nav, `${from} の静的 HTML にフッターのリンク集がある`).toBeTruthy();
+    return [...(nav ?? '').matchAll(/href=["']?([^"'\s>]+)/g)].map((m) => m[1]);
+  }
+
+  for (const from of ['/', '/cards/', '/events/']) {
+    test(`${from} のフッターから indexable な全ページへ静的にリンクしている`, async ({ page }) => {
+      const hrefs = await footerHrefs(page, from);
+      for (const path of LINKED_PATHS) {
+        expect(hrefs, `${from} から ${path} へリンクしていること`).toContain(path);
+      }
+    });
+  }
+
+  test('noindex のページはフッターのリンク集に含めない', async ({ page }) => {
+    // noindex ページへのリンクは検索評価の面で意味がなく、リンク先を薄める
+    const hrefs = await footerHrefs(page, '/');
+    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/']) {
+      expect(hrefs, `${path} は含めないこと`).not.toContain(path);
+    }
+  });
+});
+
+test.describe('sitemap の lastmod', () => {
+  test('全 URL に lastmod があり、ビルド日時の一律出力になっていない', async ({ page }) => {
+    const res = await page.request.get(`${BASE}/sitemap-0.xml`);
+    // @astrojs/sitemap はビルド時にしか生成しないため dev サーバー上では検証できない
+    test.skip(res.status() === 404, 'sitemap はビルド成果物のため dev サーバーでは検証できない');
+    expect(res.ok()).toBe(true);
+    const xml = await res.text();
+
+    const entries = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
+    expect(entries.length).toBeGreaterThan(0);
+
+    const lastmods = new Set<string>();
+    for (const entry of entries) {
+      const loc = entry.match(/<loc>([^<]*)<\/loc>/)?.[1];
+      const lastmod = entry.match(/<lastmod>([^<]*)<\/lastmod>/)?.[1];
+      expect(lastmod, `${loc} に lastmod があること`).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      lastmods.add(lastmod!);
+    }
+
+    // 全 URL が同じ値ならビルド日時を入れている。毎時ビルドで全ページが
+    // 毎回更新された扱いになり、嘘のシグナルとして lastmod 自体が無視される。
+    expect(lastmods.size, 'lastmod が全 URL で同一 = ビルド日時を出力している疑い').toBeGreaterThan(1);
+  });
+});
+
+test.describe('IndexNow (ADR 0063)', () => {
+  test('キーファイルが配信され、中身がファイル名と一致する', async ({ page }) => {
+    // 404 や中身の不一致だと所有証明が通らず通知が全て拒否されるが、
+    // デプロイ自体は成功したように見えるため気付けない。
+    const files = readdirSync('public').filter((f) => /^[0-9a-f]{32}\.txt$/.test(f));
+    expect(files, 'public/ の IndexNow キーファイルは 1 個であること').toHaveLength(1);
+    const key = files[0].replace(/\.txt$/, '');
+
+    const res = await page.request.get(`${BASE}/${files[0]}`);
+    expect(res.ok(), 'キーファイルが配信されること').toBe(true);
+    expect((await res.text()).trim()).toBe(key);
   });
 });

@@ -28,9 +28,11 @@ test.describe('ホームページ', () => {
   });
 
   test('追加機能（衣装比較・編成組合計算・共通ブローチ）のリンクカードがある', async ({ page }) => {
-    await expect(page.locator('a[href$="/card-compare/"]')).toBeVisible();
-    await expect(page.locator('a[href$="/score-calc/max-score-finder/"]')).toBeVisible();
-    await expect(page.locator('a[href$="/shared-broach/"]')).toBeVisible();
+    // 同じ href はフッターのサイト内リンク集 (ADR 0063) にも出るため、
+    // main 配下に絞らないと strict mode 違反になる。ここで見たいのは本文のリンクカード。
+    await expect(page.locator('main a[href$="/card-compare/"]')).toBeVisible();
+    await expect(page.locator('main a[href$="/score-calc/max-score-finder/"]')).toBeVisible();
+    await expect(page.locator('main a[href$="/shared-broach/"]')).toBeVisible();
   });
 
   test('衣装枚数と楽曲数が0より大きい', async ({ page }) => {
