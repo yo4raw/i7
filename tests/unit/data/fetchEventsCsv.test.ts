@@ -33,15 +33,28 @@ describe('fetchEventsCsv', () => {
     expect(e.gold.param_up).toBe(50);
   });
 
-  it('id<=0 / eventname 空 / 日付欠落の行を除外する', async () => {
+  it('id<=0 / eventname 空 / start_date 欠落の行を除外する', async () => {
     const csv =
       HEADER + '\n' +
       '0,無効,type,2026-06-01,2026-06-08,,,,,\n' +    // id=0
       '2,,type,2026-06-01,2026-06-08,,,,,\n' +         // eventname 空
+      '5,開始日なし,type,,2026-06-08,,,,,\n' +          // start_date 空
       '3,有効,type,2026-06-01,2026-06-08,,,,,\n';      // 有効
     setCsv(csv);
     const events = await fetchEventsCsv();
     expect(events.map((e) => e.id)).toEqual([3]);
+  });
+
+  it('end_date が未入力 (0000-00-00 / 空) の行は残す（終了未定＝実施中として扱うため）', async () => {
+    const csv =
+      HEADER + '\n' +
+      '6,終了未定,type,2026-07-07,0000-00-00,,,,,\n' +
+      '7,終了日空,type,2026-07-07,,,,,,\n';
+    setCsv(csv);
+    const events = await fetchEventsCsv();
+    expect(events.map((e) => e.id)).toEqual([6, 7]);
+    expect(events[0].end_date).toBe('0000-00-00');
+    expect(events[1].end_date).toBe('');
   });
 
   it('引用符のエスケープ("")を1つの引用符に戻す', async () => {

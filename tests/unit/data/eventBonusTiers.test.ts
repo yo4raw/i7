@@ -4,16 +4,16 @@ import { isEventLive, buildLiveTierMap, buildTierMapForEvent, type EventForBonus
 const T = (iso: string) => Date.parse(iso);
 
 describe('isEventLive (開催判定の境界値)', () => {
-  // 開催期間: 2026-06-01 00:00 JST 〜 2026-06-08 17:00 JST
+  // 開催期間: 2026-06-01 17:00 JST 〜 2026-06-08 17:00 JST
   const start = '2026-06-01';
   const end = '2026-06-08';
 
-  it('開始時刻ちょうど (00:00:00 JST) は開催中', () => {
-    expect(isEventLive(start, end, T('2026-06-01T00:00:00+09:00'))).toBe(true);
+  it('開始時刻ちょうど (17:00:00 JST) は開催中', () => {
+    expect(isEventLive(start, end, T('2026-06-01T17:00:00+09:00'))).toBe(true);
   });
 
   it('開始 1ms 前は開催前', () => {
-    expect(isEventLive(start, end, T('2026-06-01T00:00:00+09:00') - 1)).toBe(false);
+    expect(isEventLive(start, end, T('2026-06-01T17:00:00+09:00') - 1)).toBe(false);
   });
 
   it('終了時刻ちょうど (17:00:00 JST) は終了扱い (排他的境界)', () => {
@@ -22,6 +22,10 @@ describe('isEventLive (開催判定の境界値)', () => {
 
   it('終了 1ms 前は開催中', () => {
     expect(isEventLive(start, end, T('2026-06-08T17:00:00+09:00') - 1)).toBe(true);
+  });
+
+  it('終了日が未入力 (0000-00-00) で開始済みなら開催中', () => {
+    expect(isEventLive(start, '0000-00-00', T('2030-01-01T00:00:00+09:00'))).toBe(true);
   });
 });
 
@@ -55,6 +59,19 @@ describe('buildLiveTierMap (開催中イベントの特効ティアマップ)', 
   it('開催期間外のイベントは無視される', () => {
     const map = buildLiveTierMap([endedEvent], now);
     expect(map.size).toBe(0);
+  });
+
+  it('終了日が未入力の開始済みイベントも特効がマップされる', () => {
+    const openEnded: EventForBonus = {
+      id: 4,
+      start_date: '2026-06-01',
+      end_date: '0000-00-00',
+      gold: [500],
+      silver: [],
+      bronze: [],
+    };
+    const map = buildLiveTierMap([openEnded], now);
+    expect(map.get(500)).toBe('gold');
   });
 
   it('同一カードが複数イベントに該当する場合は上位ティアが優先される', () => {

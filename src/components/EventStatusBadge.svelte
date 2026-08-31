@@ -1,24 +1,18 @@
 <script lang="ts">
-  type Status = 'live' | 'upcoming' | 'past';
+  import { classifyEventStatus, eventStartMs, eventEndMs, type EventStatus } from '../lib/data/eventPeriod';
 
   type Props = {
-    startIso: string;
-    endIso: string;
+    start_date: string;
+    end_date: string;
   };
 
-  let { startIso, endIso }: Props = $props();
+  let { start_date, end_date }: Props = $props();
 
   let now = $state(Date.now());
 
-  const start = $derived(Date.parse(startIso));
-  const end = $derived(Date.parse(endIso));
-
-  const status: Status = $derived.by(() => {
-    if (Number.isNaN(start) || Number.isNaN(end)) return 'past';
-    if (now < start) return 'upcoming';
-    if (now >= end) return 'past';
-    return 'live';
-  });
+  const start = $derived(eventStartMs(start_date));
+  const end = $derived(eventEndMs(end_date));
+  const status: EventStatus = $derived(classifyEventStatus(start_date, end_date, now));
 
   $effect(() => {
     const interval = status === 'live' ? 1000 : 30000;
@@ -58,8 +52,9 @@
   );
 
   const remainText: string = $derived.by(() => {
-    if (status === 'live') return `残り ${formatRemaining(end - now)}`;
-    if (status === 'upcoming') return `開始まで ${formatShort(start - now)}`;
+    // 終了未定の実施中イベントは残り時間を出せない
+    if (status === 'live') return end === null ? '' : `残り ${formatRemaining(end - now)}`;
+    if (status === 'upcoming' && start !== null) return `開始まで ${formatShort(start - now)}`;
     return '';
   });
   const remainClass = $derived(status === 'live' ? 'text-red-600 font-medium' : 'text-gray-500');

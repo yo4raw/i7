@@ -133,7 +133,8 @@ export async function fetchEventsCsv(): Promise<EventRow[]> {
     gold: readTier(r, 1),
     silver: readTier(r, 2),
     bronze: readTier(r, 3),
-  })).filter(e => e.id > 0 && e.eventname && e.start_date && e.end_date);
+    // end_date は未入力（'' / '0000-00-00'）でも行を残す。終了未定＝実施中として扱うため（eventPeriod.ts）
+  })).filter(e => e.id > 0 && e.eventname && e.start_date);
 }
 
 /** EventRow をクライアントへ渡す特効ボーナス用の最小形に変換する（各ページで重複していた map を集約） */

@@ -1,3 +1,5 @@
+import { classifyEventStatus } from './eventPeriod';
+
 export type EventBonusTier = 'none' | 'bronze' | 'silver' | 'gold';
 
 export interface EventBonusTierDef {
@@ -40,9 +42,7 @@ export interface EventForBonus {
 export const TIER_RANK: Record<EventBonusTier, number> = { none: 0, bronze: 1, silver: 2, gold: 3 };
 
 export function isEventLive(start_date: string, end_date: string, now: number = Date.now()): boolean {
-  const s = Date.parse(`${start_date}T00:00:00+09:00`);
-  const e = Date.parse(`${end_date}T17:00:00+09:00`);
-  return now >= s && now < e;
+  return classifyEventStatus(start_date, end_date, now) === 'live';
 }
 
 /** 単一イベントの gold/silver/bronze を金>銀>銅優先でティアマップへ集約する（開催判定なし）。 */

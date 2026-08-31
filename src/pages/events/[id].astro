@@ -6,6 +6,7 @@ import { fetchEventsCsv, formatEffectSummary, type EventRow, type EventSpecialTi
 import { fetchCardsJson, type Card } from '../../lib/data/fetchCardsJson';
 import { cardThumbUrl } from '../../lib/ui';
 import { isHighScoreEvent } from '../../lib/data/eventBonusTiers';
+import { formatEventPeriod, formatEventEnd, eventEndMs } from '../../lib/data/eventPeriod';
 
 export async function getStaticPaths() {
   const [events, cards] = await Promise.all([
@@ -49,7 +50,7 @@ const isHighScore = isHighScoreEvent(event.eventtype);
 const base = import.meta.env.BASE_URL;
 
 const goldNames = goldCards.map(c => c.cardname).filter(Boolean).slice(0, 3).join('・');
-const ogDescription = `${event.eventname}（${event.eventtype}）の特効衣装・期間・ボーナス情報。${event.start_date}〜${event.end_date}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
+const ogDescription = `${event.eventname}（${event.eventtype}）の特効衣装・期間・ボーナス情報。${event.start_date}〜${formatEventEnd(event.end_date)}${goldNames ? ` 金特効: ${goldNames}` : ''}`;
 const ogImageCard = goldCards[0] || silverCards[0] || bronzeCards[0];
 const ogImage = ogImageCard?.ID !== null && ogImageCard?.ID !== undefined ? cardThumbUrl(ogImageCard.ID) : undefined;
 
@@ -65,7 +66,8 @@ const eventLd: Record<string, unknown> = {
   name: event.eventname,
   description: event.comment || ogDescription,
   startDate: `${event.start_date}T17:00:00+09:00`,
-  endDate: `${event.end_date}T17:00:00+09:00`,
+  // 終了日が未入力のイベントは endDate を出さない（schema.org/Event では任意）
+  ...(eventEndMs(event.end_date) === null ? {} : { endDate: `${event.end_date}T17:00:00+09:00` }),
   eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
   eventStatus: 'https://schema.org/EventScheduled',
   location: {
@@ -129,14 +131,14 @@ const tiers: TierView[] = [
     <div class="flex items-center gap-3 flex-wrap">
       <h1 class="text-2xl font-bold text-display">{event.eventname}</h1>
       <EventStatusBadge
-        startIso={`${event.start_date}T17:00:00+09:00`}
-        endIso={`${event.end_date}T17:00:00+09:00`}
+        start_date={event.start_date}
+        end_date={event.end_date}
         client:load
       />
     </div>
     <div class="mt-2 text-sm text-gray-600 space-y-0.5">
       <p>{event.eventtype}</p>
-      <p>{event.start_date} 17:00 〜 {event.end_date} 17:00 (JST)</p>
+      <p>{formatEventPeriod(event.start_date, event.end_date)}</p>
     </div>
     {event.comment && (
       <p class="mt-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded px-3 py-2">{event.comment}</p>

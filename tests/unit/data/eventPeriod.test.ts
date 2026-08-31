@@ -1,0 +1,99 @@
+import { describe, it, expect } from 'vitest';
+import {
+  classifyEventStatus,
+  eventStartMs,
+  eventEndMs,
+  isOpenEndedEvent,
+  formatEventEnd,
+  formatEventStart,
+  formatEventPeriod,
+} from '../../../src/lib/data/eventPeriod';
+
+const T = (iso: string) => Date.parse(iso);
+
+describe('eventStartMs / eventEndMs', () => {
+  it('日付を 17:00 JST として解釈する', () => {
+    expect(eventStartMs('2026-06-01')).toBe(T('2026-06-01T17:00:00+09:00'));
+    expect(eventEndMs('2026-06-08')).toBe(T('2026-06-08T17:00:00+09:00'));
+  });
+
+  it('前後の空白を許容する', () => {
+    expect(eventStartMs(' 2026-06-01 ')).toBe(T('2026-06-01T17:00:00+09:00'));
+  });
+
+  it.each(['', '   ', '0000-00-00', 'not-a-date'])('未入力・不正な日付 (%s) は null', (d) => {
+    expect(eventEndMs(d)).toBeNull();
+    expect(eventStartMs(d)).toBeNull();
+  });
+});
+
+describe('isOpenEndedEvent', () => {
+  it('終了日が未入力なら true', () => {
+    expect(isOpenEndedEvent('0000-00-00')).toBe(true);
+    expect(isOpenEndedEvent('')).toBe(true);
+  });
+
+  it('終了日が入っていれば false', () => {
+    expect(isOpenEndedEvent('2026-06-08')).toBe(false);
+  });
+});
+
+describe('classifyEventStatus', () => {
+  const start = '2026-06-01';
+  const end = '2026-06-08';
+
+  it('開始前は upcoming', () => {
+    expect(classifyEventStatus(start, end, T('2026-06-01T17:00:00+09:00') - 1)).toBe('upcoming');
+  });
+
+  it('開始時刻ちょうど (17:00 JST) は live', () => {
+    expect(classifyEventStatus(start, end, T('2026-06-01T17:00:00+09:00'))).toBe('live');
+  });
+
+  it('開始日の 17:00 より前（当日 0:00）はまだ upcoming', () => {
+    expect(classifyEventStatus(start, end, T('2026-06-01T00:00:00+09:00'))).toBe('upcoming');
+  });
+
+  it('期間中は live', () => {
+    expect(classifyEventStatus(start, end, T('2026-06-05T12:00:00+09:00'))).toBe('live');
+  });
+
+  it('終了時刻ちょうど (17:00 JST) は past（排他的境界）', () => {
+    expect(classifyEventStatus(start, end, T('2026-06-08T17:00:00+09:00'))).toBe('past');
+  });
+
+  it('終了 1ms 前は live', () => {
+    expect(classifyEventStatus(start, end, T('2026-06-08T17:00:00+09:00') - 1)).toBe('live');
+  });
+
+  it('終了日が未入力で開始済みなら live（終了未定の開催中）', () => {
+    expect(classifyEventStatus(start, '0000-00-00', T('2030-01-01T00:00:00+09:00'))).toBe('live');
+    expect(classifyEventStatus(start, '', T('2026-06-05T12:00:00+09:00'))).toBe('live');
+  });
+
+  it('終了日が未入力でも開始前なら upcoming', () => {
+    expect(classifyEventStatus(start, '0000-00-00', T('2026-05-01T00:00:00+09:00'))).toBe('upcoming');
+  });
+
+  it('開始日がパース不可なら past（判定不能）', () => {
+    expect(classifyEventStatus('0000-00-00', end, T('2026-06-05T12:00:00+09:00'))).toBe('past');
+    expect(classifyEventStatus('', '', T('2026-06-05T12:00:00+09:00'))).toBe('past');
+  });
+});
+
+describe('表示フォーマット', () => {
+  it('開始日時は「日付 17:00」', () => {
+    expect(formatEventStart('2026-06-01')).toBe('2026-06-01 17:00');
+  });
+
+  it('終了日時は「日付 17:00」、未入力なら「未定」', () => {
+    expect(formatEventEnd('2026-06-08')).toBe('2026-06-08 17:00');
+    expect(formatEventEnd('0000-00-00')).toBe('未定');
+    expect(formatEventEnd('')).toBe('未定');
+  });
+
+  it('期間表示は開始〜終了 (JST)', () => {
+    expect(formatEventPeriod('2026-06-01', '2026-06-08')).toBe('2026-06-01 17:00 〜 2026-06-08 17:00 (JST)');
+    expect(formatEventPeriod('2026-07-07', '0000-00-00')).toBe('2026-07-07 17:00 〜 未定 (JST)');
+  });
+});

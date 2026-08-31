@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { EventRow } from '../lib/data/fetchEventsCsv';
+  import { classifyEventStatus, eventStartMs, eventEndMs, formatEventEnd, EVENT_END_UNDETERMINED_LABEL, type EventStatus } from '../lib/data/eventPeriod';
 
   type Props = {
     events: EventRow[];
@@ -9,7 +10,7 @@
 
   let { events, eventTypes, base }: Props = $props();
 
-  type Status = 'live' | 'upcoming' | 'past';
+  type Status = EventStatus;
 
   let now = $state(Date.now());
   let text = $state('');
@@ -17,24 +18,11 @@
   let statusFilter = $state<Status | ''>('');
 
   $effect(() => {
-    const hasLive = events.some((ev) => {
-      const s = Date.parse(`${ev.start_date}T17:00:00+09:00`);
-      const e = Date.parse(`${ev.end_date}T17:00:00+09:00`);
-      return now >= s && now < e;
-    });
+    const hasLive = events.some((ev) => classifyEventStatus(ev.start_date, ev.end_date, now) === 'live');
     const interval = hasLive ? 1000 : 30000;
     const id = setInterval(() => { now = Date.now(); }, interval);
     return () => clearInterval(id);
   });
-
-  function classify(startIso: string, endIso: string): { status: Status; start: number; end: number } {
-    const start = Date.parse(startIso);
-    const end = Date.parse(endIso);
-    if (Number.isNaN(start) || Number.isNaN(end)) return { status: 'past', start: NaN, end: NaN };
-    if (now < start) return { status: 'upcoming', start, end };
-    if (now >= end) return { status: 'past', start, end };
-    return { status: 'live', start, end };
-  }
 
   function formatRemaining(ms: number): string {
     if (ms <= 0) return '';
@@ -62,17 +50,21 @@
 
   const enriched = $derived(
     events.map((ev) => {
-      const { status, start, end } = classify(`${ev.start_date}T17:00:00+09:00`, `${ev.end_date}T17:00:00+09:00`);
+      const status = classifyEventStatus(ev.start_date, ev.end_date, now);
+      const start = eventStartMs(ev.start_date);
+      const end = eventEndMs(ev.end_date);
       let remainText = '';
       let remainClass = '';
       if (status === 'live') {
-        remainText = formatRemaining(end - now);
+        // 終了未定の実施中イベントは残り時間を出せない
+        remainText = end === null ? '' : formatRemaining(end - now);
         remainClass = 'text-red-600 font-medium';
-      } else if (status === 'upcoming') {
+      } else if (status === 'upcoming' && start !== null) {
         remainText = `開始まで ${formatRemainingShort(start - now)}`;
         remainClass = 'text-gray-500';
       }
-      return { ev, status, remainText, remainClass };
+      const endShort = end === null ? EVENT_END_UNDETERMINED_LABEL : ev.end_date;
+      return { ev, status, remainText, remainClass, endShort, endLong: formatEventEnd(ev.end_date) };
     })
   );
 
@@ -169,7 +161,7 @@
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-100">
-      {#each filtered as { ev, status, remainText, remainClass } (ev.id)}
+      {#each filtered as { ev, status, remainText, remainClass, endShort } (ev.id)}
         <tr class={rowClass(status)}>
           <td class="px-3 py-2 align-top">
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold {badgeClass(status)}">{badgeText(status)}</span>
@@ -180,7 +172,7 @@
           <td class="px-3 py-2 font-medium"><a href={`${base}events/${ev.id}/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{ev.eventname}</a></td>
           <td class="px-3 py-2 text-xs text-gray-600">{ev.eventtype}</td>
           <td class="px-3 py-2 text-xs text-gray-700">{ev.start_date}</td>
-          <td class="px-3 py-2 text-xs text-gray-700">{ev.end_date}</td>
+          <td class="px-3 py-2 text-xs text-gray-700">{endShort}</td>
         </tr>
       {/each}
     </tbody>
@@ -188,7 +180,7 @@
 </div>
 
 <div class="md:hidden space-y-3">
-  {#each filtered as { ev, status, remainText, remainClass } (ev.id)}
+  {#each filtered as { ev, status, remainText, remainClass, endLong } (ev.id)}
     <div class="rounded-lg shadow p-3 bg-white {rowClass(status)}">
       <div class="flex items-start justify-between gap-2 mb-1">
         <a href={`${base}events/${ev.id}/`} class="font-medium text-sm flex-1 text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">{ev.eventname}</a>
@@ -201,7 +193,7 @@
       <p class="text-xs text-gray-700 mt-1">
         <span>{ev.start_date}</span>
         <span class="mx-1">〜</span>
-        <span>{ev.end_date} 17:00</span>
+        <span>{endLong}</span>
       </p>
     </div>
   {/each}
