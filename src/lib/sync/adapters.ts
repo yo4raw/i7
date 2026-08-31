@@ -113,11 +113,15 @@ const decksAdapter: Adapter<SyncedDeck> = {
   },
 };
 
-export const ADAPTERS: readonly Adapter<never>[] = [
+// V の異なるアダプタを 1 つの配列に入れるためのキャスト。`Map<string, V>` は V に対して
+// 不変なので、キャストなしでは要素を代入できない。
+// never ではなく unknown を使うこと: MergeVerdict<never> は value: never | null が
+// null に潰れ、「verdict は値を運ばない」という嘘の型になる。
+export const ADAPTERS: readonly Adapter<unknown>[] = [
   cardCountsAdapter, sharedBroachCountsAdapter, rabbitNotesAdapter, decksAdapter,
-] as unknown as readonly Adapter<never>[];
+] as unknown as readonly Adapter<unknown>[];
 
-export function findAdapter(kind: BaselineKind): Adapter<never> {
+export function findAdapter(kind: BaselineKind): Adapter<unknown> {
   const adapter = ADAPTERS.find((candidate) => candidate.kind === kind);
   /* v8 ignore next -- BaselineKind は ADAPTERS を網羅しており到達しない */
   if (!adapter) throw new Error(`unknown sync kind: ${kind}`);
@@ -133,7 +137,7 @@ export function findAdapter(kind: BaselineKind): Adapter<never> {
 export function hasPendingLocalChanges(): boolean {
   return ADAPTERS.some((adapter) =>
     hasChanges(diffRowSets(
-      loadBaselineRowSet<never>(adapter.kind),
+      loadBaselineRowSet<unknown>(adapter.kind),
       adapter.localRowSet(),
       adapter.equals,
     )),
@@ -142,7 +146,7 @@ export function hasPendingLocalChanges(): boolean {
 
 export type KindPlan = {
   kind: BaselineKind;
-  verdicts: MergeVerdict<never>[];
+  verdicts: MergeVerdict<unknown>[];
   conflictKeys: string[];
   serverRevs: number[];
 };
@@ -167,7 +171,7 @@ export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
   );
   return {
     kind: adapter.kind,
-    verdicts: verdicts as MergeVerdict<never>[],
+    verdicts: verdicts as MergeVerdict<unknown>[],
     conflictKeys: verdicts.filter((v) => v.kind === 'conflict').map((v) => v.key),
     serverRevs: adapter.serverRevs(pulled),
   };
