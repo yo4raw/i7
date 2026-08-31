@@ -17,6 +17,16 @@ describe('loadBaselineRowSet', () => {
     localStorage.setItem(STORAGE_KEYS.SYNC_BASELINE, '{壊れている');
     expect(loadBaselineRowSet('card_counts').size).toBe(0);
   });
+
+  it('バケットが配列でも空の行集合を返す (偽のキーを混入させない)', () => {
+    localStorage.setItem(STORAGE_KEYS.SYNC_BASELINE, JSON.stringify({ card_counts: [1, 2, 3] }));
+    expect(loadBaselineRowSet('card_counts').size).toBe(0);
+  });
+
+  it('保存値が配列でも空の行集合を返す', () => {
+    localStorage.setItem(STORAGE_KEYS.SYNC_BASELINE, JSON.stringify([1, 2, 3]));
+    expect(loadBaselineRowSet('card_counts').size).toBe(0);
+  });
 });
 
 describe('commitBaselineRow', () => {
@@ -57,8 +67,15 @@ describe('clearBaseline', () => {
   it('全 kind を空にする', () => {
     commitBaselineRow('card_counts', '5', 2);
     commitBaselineRow('decks', 'd1', { name: 'A' });
-    clearBaseline();
+    expect(clearBaseline()).toBe(true);
     expect(loadBaselineRowSet('card_counts').size).toBe(0);
     expect(loadBaselineRowSet('decks').size).toBe(0);
+  });
+
+  it('保存に失敗したら false を返す', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    expect(clearBaseline()).toBe(false);
   });
 });

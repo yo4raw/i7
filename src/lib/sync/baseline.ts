@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, loadJson, saveJson } from '../storage';
+import { STORAGE_KEYS, loadJson } from '../storage';
 import type { RowSet } from './rows';
 
 export type BaselineKind = 'card_counts' | 'shared_broach_counts' | 'rabbit_notes' | 'decks';
@@ -17,7 +17,7 @@ function load(): BaselineStore {
 /** 「最後にサーバと一致していると確認できた行集合」を読む */
 export function loadBaselineRowSet<V>(kind: BaselineKind): RowSet<V> {
   const bucket = load()[kind];
-  if (!bucket || typeof bucket !== 'object') return new Map();
+  if (!bucket || typeof bucket !== 'object' || Array.isArray(bucket)) return new Map();
   return new Map(Object.entries(bucket) as [string, V][]);
 }
 
@@ -28,6 +28,11 @@ export function loadBaselineRowSet<V>(kind: BaselineKind): RowSet<V> {
  * 行単位の API しか公開しないのは、一括更新を構造的に不可能にするため。
  * 部分失敗時に「サーバへの反映が確認できた行だけ」を進める必要があり、
  * 一括更新すると失敗した行まで同期済みとして扱ってしまう（ADR 0064 決定 6）。
+ *
+ * タブ間の競合は受容する。2 つのタブが同時に read-modify-write すると片方の行の
+ * commit が失われうるが、失われた行は次回の diff で未確認として再検出され、
+ * 冪等な re-push が 1 回余分に走るだけで済む。localStorage にロック機構は無く、
+ * 排他のために BroadcastChannel 等を導入するのは付加機能の範囲を超える。
  */
 export function commitBaselineRow(kind: BaselineKind, key: string, value: unknown): boolean {
   const store = load();
@@ -47,6 +52,21 @@ export function commitBaselineRow(kind: BaselineKind, key: string, value: unknow
   }
 }
 
-export function clearBaseline(): void {
-  saveJson(STORAGE_KEYS.SYNC_BASELINE, Object.fromEntries(KINDS.map((kind) => [kind, {}])));
+/**
+ * 全 kind を空にする。保存に失敗したら false を返す。
+ *
+ * `commitBaselineRow` と同じ「setItem 直呼び + 戻り値で成否を伝える」パターンを使う。
+ * `saveJson` に戻すと失敗が呼び出し側から見えなくなり、`reconcileUser` が
+ * 「ベースラインを捨てられなかったのに新しい userId を記録する」事故を起こしうる。
+ */
+export function clearBaseline(): boolean {
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.SYNC_BASELINE,
+      JSON.stringify(Object.fromEntries(KINDS.map((kind) => [kind, {}]))),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }

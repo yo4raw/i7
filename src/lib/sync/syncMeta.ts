@@ -37,10 +37,14 @@ export function nextCursorRev(current: number, appliedRevs: readonly number[]): 
 /**
  * ログイン中のユーザーとメタの userId を突き合わせる。
  * 不一致（別アカウントへの切替、初回）ならベースラインとカーソルを捨てて初回リンク扱いに戻す。
+ *
+ * ベースラインを捨てられなかった場合は新しい userId を記録せず null を返す。
+ * 記録してしまうと「別アカウントのベースラインを残したまま新しい userId を持つ」状態になり、
+ * 2 つのアカウントのデータが混ざる。
  */
-export function reconcileUser(meta: SyncMeta, userId: string): SyncMeta {
+export function reconcileUser(meta: SyncMeta, userId: string): SyncMeta | null {
   if (meta.userId === userId) return meta;
-  clearBaseline();
+  if (!clearBaseline()) return null;
   const next: SyncMeta = { userId, cursorRev: 0, lastSyncedAt: null };
   saveSyncMeta(next);
   return next;

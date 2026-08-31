@@ -4,6 +4,7 @@ import {
   loadSyncMeta, nextCursorRev, reconcileUser, resetSyncState, saveSyncMeta,
 } from '../../../src/lib/sync/syncMeta';
 import { commitBaselineRow, loadBaselineRowSet } from '../../../src/lib/sync/baseline';
+import { STORAGE_KEYS } from '../../../src/lib/storage';
 
 beforeEach(() => localStorage.clear());
 
@@ -19,6 +20,11 @@ describe('loadSyncMeta / saveSyncMeta', () => {
 
   it('不正な形なら初期値に落とす', () => {
     localStorage.setItem('i7_sync_meta', '"文字列"');
+    expect(loadSyncMeta()).toEqual({ userId: null, cursorRev: 0, lastSyncedAt: null });
+  });
+
+  it('保存値が配列なら初期値に落とす', () => {
+    localStorage.setItem(STORAGE_KEYS.SYNC_META, JSON.stringify([1, 2, 3]));
     expect(loadSyncMeta()).toEqual({ userId: null, cursorRev: 0, lastSyncedAt: null });
   });
 });
@@ -54,8 +60,24 @@ describe('reconcileUser', () => {
   it('初回 (userId が null) もベースラインを捨てて初回リンク扱いにする', () => {
     commitBaselineRow('card_counts', '5', 2);
     const next = reconcileUser(loadSyncMeta(), 'u1');
-    expect(next.cursorRev).toBe(0);
+    expect(next).not.toBeNull();
+    expect(next?.cursorRev).toBe(0);
     expect(loadBaselineRowSet('card_counts').size).toBe(0);
+  });
+
+  it('ベースラインを捨てられなければ null を返し userId を記録しない', () => {
+    saveSyncMeta({ userId: 'u1', cursorRev: 5, lastSyncedAt: 1 });
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function patched(key: string, value: string) {
+      if (key === STORAGE_KEYS.SYNC_BASELINE) throw new Error('QuotaExceededError');
+      return original.call(this, key, value);
+    };
+    try {
+      expect(reconcileUser(loadSyncMeta(), 'u2')).toBeNull();
+    } finally {
+      Storage.prototype.setItem = original;
+    }
+    expect(loadSyncMeta().userId).toBe('u1');
   });
 });
 
