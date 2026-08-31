@@ -1768,11 +1768,11 @@ git commit -m "feat(sync): saveJson の変更通知フックとバックアッ�
   - `type BaselineKind = 'card_counts' | 'shared_broach_counts' | 'rabbit_notes' | 'decks'`
   - `loadBaselineRowSet<V>(kind: BaselineKind): RowSet<V>`
   - `commitBaselineRow(kind: BaselineKind, key: string, value: unknown): boolean`
-  - `clearBaseline(): void`
+  - `clearBaseline(): boolean`
   - `type SyncMeta = { userId: string | null; cursorRev: number; lastSyncedAt: number | null }`
   - `loadSyncMeta()` / `saveSyncMeta(meta)` / `resetSyncState()`
   - `nextCursorRev(current: number, appliedRevs: readonly number[]): number`
-  - `reconcileUser(meta: SyncMeta, userId: string): SyncMeta`
+  - `reconcileUser(meta: SyncMeta, userId: string): SyncMeta | null`（`null` = 突き合わせに失敗。呼び出し側は同期を中止する）
 
 - [ ] **Step 1: 失敗するテストを書く**
 
@@ -3088,7 +3088,11 @@ export async function runSync(
   }
   if (userId === null) return { ...report, status: 'unauthenticated' };
 
+  // reconcileUser は「ベースラインを捨ててから新しい userId を記録する」2 段の書き込み。
+  // 前者だけ失敗すると別アカウントのベースラインを残したまま新しい userId を記録し、
+  // 2 つのアカウントのデータが混ざる。null が返ったら同期そのものを中止する。
   const meta = reconcileUser(loadSyncMeta(), userId);
+  if (meta === null) return { ...report, status: 'baseline-write-failed' };
 
   let pulled: PulledRows;
   try {
