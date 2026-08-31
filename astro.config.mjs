@@ -1,9 +1,51 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, statSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import compress from '@playform/compress';
 import sitemap from '@astrojs/sitemap';
 
 import svelte from '@astrojs/svelte';
+
+// sitemap の lastmod (ADR 0063)。
+// ビルド日時を入れると毎時ビルドで全 246 ページが毎回「更新された」ことになり、
+// 嘘のシグナルとして lastmod 自体が無視される。ページの内容を決めている
+// ソースファイルの git 最終コミット日を使う。
+const lastmodCache = new Map();
+
+function lastmodOf(file) {
+  if (lastmodCache.has(file)) return lastmodCache.get(file);
+  let iso = '';
+  try {
+    // --literal-pathspecs: `songs/[id].astro` の角括弧がパススペックの
+    // 文字クラスとして解釈されるのを防ぐ
+    iso = execFileSync('git', ['--literal-pathspecs', 'log', '-1', '--format=%cI', '--', file], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    // git が無い / 履歴が浅い環境ではファイルの更新時刻で代替する
+  }
+  if (!iso && existsSync(file)) iso = statSync(file).mtime.toISOString();
+  const value = iso || undefined;
+  lastmodCache.set(file, value);
+  return value;
+}
+
+/**
+ * URL の内容を決めているソースファイルを返す。
+ * 楽曲データは GViz のクライアントフェッチでビルド時に持たないため、
+ * 楽曲詳細の lastmod は「その静的 HTML が最後に変わった日」= テンプレートの更新日になる。
+ */
+function sourceOf(url) {
+  const path = new URL(url).pathname;
+  if (/^\/songs\/\d+\/$/.test(path)) return 'src/pages/songs/[id].astro';
+  if (/^\/events\/\d+\/$/.test(path)) return 'public/events/events.csv';
+  // ルーティングは `foo/index.astro` と `foo.astro` の両方を取りうる
+  const asIndex = `src/pages${path}index.astro`;
+  if (existsSync(asIndex)) return asIndex;
+  return `src/pages${path.replace(/\/$/, '')}.astro`;
+}
 
 export default defineConfig({
   site: 'https://i7.yo4raw.com',
@@ -24,16 +66,18 @@ export default defineConfig({
         && !/\/(mycard|decks|rabbit-note|shared-broach)\/?$/.test(page),
       serialize(item) {
         const url = item.url;
+        const lastmod = lastmodOf(sourceOf(url));
+        const entry = lastmod ? { ...item, lastmod } : { ...item };
         if (/\/songs\/\d+\/?$/.test(url)) {
-          return { ...item, changefreq: 'weekly', priority: 0.7 };
+          return { ...entry, changefreq: 'weekly', priority: 0.7 };
         }
         if (/\/events\/\d+\/?$/.test(url)) {
-          return { ...item, changefreq: 'weekly', priority: 0.8 };
+          return { ...entry, changefreq: 'weekly', priority: 0.8 };
         }
         if (url.replace(/\/$/, '').endsWith('yo4raw.com')) {
-          return { ...item, changefreq: 'daily', priority: 1.0 };
+          return { ...entry, changefreq: 'daily', priority: 1.0 };
         }
-        return { ...item, changefreq: 'weekly', priority: 0.6 };
+        return { ...entry, changefreq: 'weekly', priority: 0.6 };
       },
     }),
     // CSS は Vite 内蔵の cssMinify に任せ、@playform/compress では圧縮しない。

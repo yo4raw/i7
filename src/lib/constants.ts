@@ -103,3 +103,27 @@ export const CARD_THUMB_BASE_URL = `${BASE}/assets/th_cards`;
 export const SONG_IMAGE_BASE_URL = `${BASE}/assets/songs`;
 
 export const PAGE_SIZE = 100;
+
+/**
+ * フッターに置くサイト内リンク集。sitemap に載せている静的ページと 1:1 で対応させる。
+ *
+ * グローバルナビ (HeaderNav.svelte) のドロップダウン内リンクは
+ * `{#if openDropdown === ...}` の内側にあるため初期 HTML に出力されない。
+ * クローラーはドロップダウンを開かないので、このリンク集がツールページへ
+ * 到達する唯一の静的な経路になる (ADR 0063)。
+ *
+ * noindex のページ (`/mycard/` 等) は検索評価の面で意味がないため含めない。
+ */
+export const SITE_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: `${BASE}/`, label: 'ホーム' },
+  { href: `${BASE}/cards/`, label: '衣装一覧' },
+  { href: `${BASE}/songs/`, label: '楽曲一覧' },
+  { href: `${BASE}/events/`, label: 'イベント情報' },
+  { href: `${BASE}/score-calc/`, label: 'スコア計算' },
+  { href: `${BASE}/score-calc/spec/`, label: 'スコア計算 仕様解説' },
+  { href: `${BASE}/score-calc/max-score-finder/`, label: '編成組合計算' },
+  { href: `${BASE}/card-compare/`, label: '衣装比較' },
+  { href: `${BASE}/point-calc/`, label: 'ポイント芸計算' },
+  { href: `${BASE}/about/`, label: 'このサイトについて' },
+  { href: `${BASE}/releases/`, label: 'リリース履歴' },
+];
