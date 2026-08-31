@@ -1,0 +1,628 @@
+{
+  "id": "54178eab-4ced-4cdf-9da4-55d3b38d8e19",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.card_counts": {
+      "name": "card_counts",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "card_id": {
+          "name": "card_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rev": {
+          "name": "rev",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "card_counts_user_id_users_id_fk": {
+          "name": "card_counts_user_id_users_id_fk",
+          "tableFrom": "card_counts",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "card_counts_user_id_card_id_pk": {
+          "name": "card_counts_user_id_card_id_pk",
+          "columns": [
+            "user_id",
+            "card_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "card_counts_select": {
+          "name": "card_counts_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"card_counts\".\"user_id\" = (select auth.uid())"
+        },
+        "card_counts_insert": {
+          "name": "card_counts_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"card_counts\".\"user_id\" = (select auth.uid())"
+        },
+        "card_counts_update": {
+          "name": "card_counts_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"card_counts\".\"user_id\" = (select auth.uid())",
+          "withCheck": "\"card_counts\".\"user_id\" = (select auth.uid())"
+        },
+        "card_counts_delete": {
+          "name": "card_counts_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"card_counts\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {
+        "card_counts_count_range": {
+          "name": "card_counts_count_range",
+          "value": "\"card_counts\".\"count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.deck_slots": {
+      "name": "deck_slots",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deck_id": {
+          "name": "deck_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot_index": {
+          "name": "slot_index",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "card_id": {
+          "name": "card_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trained": {
+          "name": "trained",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "skill_level": {
+          "name": "skill_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bonus_tier": {
+          "name": "bonus_tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shared_broach_ids": {
+          "name": "shared_broach_ids",
+          "type": "integer[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "deck_slots_deck_fk": {
+          "name": "deck_slots_deck_fk",
+          "tableFrom": "deck_slots",
+          "tableTo": "decks",
+          "columnsFrom": [
+            "user_id",
+            "deck_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "deck_slots_user_id_deck_id_slot_index_pk": {
+          "name": "deck_slots_user_id_deck_id_slot_index_pk",
+          "columns": [
+            "user_id",
+            "deck_id",
+            "slot_index"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "deck_slots_select": {
+          "name": "deck_slots_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"deck_slots\".\"user_id\" = (select auth.uid())"
+        },
+        "deck_slots_insert": {
+          "name": "deck_slots_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"deck_slots\".\"user_id\" = (select auth.uid())"
+        },
+        "deck_slots_update": {
+          "name": "deck_slots_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"deck_slots\".\"user_id\" = (select auth.uid())",
+          "withCheck": "\"deck_slots\".\"user_id\" = (select auth.uid())"
+        },
+        "deck_slots_delete": {
+          "name": "deck_slots_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"deck_slots\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {
+        "deck_slots_slot_range": {
+          "name": "deck_slots_slot_range",
+          "value": "\"deck_slots\".\"slot_index\" between 0 and 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.decks": {
+      "name": "decks",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "song_id": {
+          "name": "song_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rev": {
+          "name": "rev",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "decks_user_id_users_id_fk": {
+          "name": "decks_user_id_users_id_fk",
+          "tableFrom": "decks",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "decks_user_id_id_pk": {
+          "name": "decks_user_id_id_pk",
+          "columns": [
+            "user_id",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "decks_select": {
+          "name": "decks_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"decks\".\"user_id\" = (select auth.uid())"
+        },
+        "decks_insert": {
+          "name": "decks_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"decks\".\"user_id\" = (select auth.uid())"
+        },
+        "decks_update": {
+          "name": "decks_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"decks\".\"user_id\" = (select auth.uid())",
+          "withCheck": "\"decks\".\"user_id\" = (select auth.uid())"
+        },
+        "decks_delete": {
+          "name": "decks_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"decks\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {
+        "decks_id_len": {
+          "name": "decks_id_len",
+          "value": "char_length(\"decks\".\"id\") between 1 and 64"
+        },
+        "decks_name_len": {
+          "name": "decks_name_len",
+          "value": "char_length(\"decks\".\"name\") between 1 and 200"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rabbit_notes": {
+      "name": "rabbit_notes",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "character": {
+          "name": "character",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shout": {
+          "name": "shout",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "beat": {
+          "name": "beat",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "melody": {
+          "name": "melody",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rev": {
+          "name": "rev",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rabbit_notes_user_id_users_id_fk": {
+          "name": "rabbit_notes_user_id_users_id_fk",
+          "tableFrom": "rabbit_notes",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "rabbit_notes_user_id_character_pk": {
+          "name": "rabbit_notes_user_id_character_pk",
+          "columns": [
+            "user_id",
+            "character"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "rabbit_notes_select": {
+          "name": "rabbit_notes_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"rabbit_notes\".\"user_id\" = (select auth.uid())"
+        },
+        "rabbit_notes_insert": {
+          "name": "rabbit_notes_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"rabbit_notes\".\"user_id\" = (select auth.uid())"
+        },
+        "rabbit_notes_update": {
+          "name": "rabbit_notes_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"rabbit_notes\".\"user_id\" = (select auth.uid())",
+          "withCheck": "\"rabbit_notes\".\"user_id\" = (select auth.uid())"
+        },
+        "rabbit_notes_delete": {
+          "name": "rabbit_notes_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"rabbit_notes\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {
+        "rabbit_notes_character_len": {
+          "name": "rabbit_notes_character_len",
+          "value": "char_length(\"rabbit_notes\".\"character\") between 1 and 40"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.shared_broach_counts": {
+      "name": "shared_broach_counts",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "broach_id": {
+          "name": "broach_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rev": {
+          "name": "rev",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "shared_broach_counts_user_id_users_id_fk": {
+          "name": "shared_broach_counts_user_id_users_id_fk",
+          "tableFrom": "shared_broach_counts",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "shared_broach_counts_user_id_broach_id_pk": {
+          "name": "shared_broach_counts_user_id_broach_id_pk",
+          "columns": [
+            "user_id",
+            "broach_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "shared_broach_counts_select": {
+          "name": "shared_broach_counts_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"shared_broach_counts\".\"user_id\" = (select auth.uid())"
+        },
+        "shared_broach_counts_insert": {
+          "name": "shared_broach_counts_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "authenticated"
+          ],
+          "withCheck": "\"shared_broach_counts\".\"user_id\" = (select auth.uid())"
+        },
+        "shared_broach_counts_update": {
+          "name": "shared_broach_counts_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"shared_broach_counts\".\"user_id\" = (select auth.uid())",
+          "withCheck": "\"shared_broach_counts\".\"user_id\" = (select auth.uid())"
+        },
+        "shared_broach_counts_delete": {
+          "name": "shared_broach_counts_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"shared_broach_counts\".\"user_id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {
+        "shared_broach_counts_count_range": {
+          "name": "shared_broach_counts_count_range",
+          "value": "\"shared_broach_counts\".\"count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
