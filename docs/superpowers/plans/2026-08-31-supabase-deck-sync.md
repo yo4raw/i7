@@ -395,6 +395,9 @@ describe('db/schema', () => {
     }
   });
 
+  // getTableConfig().policies が使えない drizzle-orm バージョンだった場合、
+  // このアサーションは削除してよい。ポリシー数の本来の担保は Step 6 の
+  // 生成 SQL 検査 (CREATE POLICY が 20 件) 側にある。
   it('全テーブルに RLS ポリシーが 4 本ある', () => {
     for (const table of TABLES) {
       const { policies } = getTableConfig(table);
@@ -493,11 +496,21 @@ create trigger decks_set_rev before insert or update on public.decks
 create function public.bump_deck_rev() returns trigger language plpgsql as $$
 declare target_user uuid; target_deck text;
 begin
-  target_user := coalesce(new.user_id, old.user_id);
-  target_deck := coalesce(new.deck_id, old.deck_id);
+  -- AFTER DELETE では NEW が未割当なので参照してはならない
+  -- （coalesce(new.x, old.x) は "record new is not assigned yet" エラーになる）
+  if TG_OP = 'DELETE' then
+    target_user := old.user_id;
+    target_deck := old.deck_id;
+  else
+    target_user := new.user_id;
+    target_deck := new.deck_id;
+  end if;
+
   update public.decks set updated_at = now()
    where user_id = target_user and id = target_deck;
-  return coalesce(new, old);
+
+  -- AFTER トリガーの戻り値は無視される
+  return null;
 end $$;
 --> statement-breakpoint
 
@@ -1086,6 +1099,9 @@ export type SyncedDeck = {
 };
 
 function nullableInt(value: unknown): number | null {
+  // null / undefined を先に弾くこと。Number(null) は 0 になるため、
+  // 空スロット (deckIds の null) が衣装 ID 0 として同期されてしまう
+  if (value === null || value === undefined) return null;
   const n = Math.floor(Number(value));
   return Number.isFinite(n) ? n : null;
 }
@@ -1225,6 +1241,7 @@ git commit -m "feat(sync): デッキのプロジェクションを追加する (
 
 **Interfaces:**
 - Consumes: `RowSet` (Task 3)
+- Consumed by: Task 11 の `hasPendingLocalChanges()`
 - Produces:
   - `type Diff<V> = { added: [string, V][]; changed: [string, V][]; removed: string[] }`
   - `diffRowSets<V>(baseline: RowSet<V>, current: RowSet<V>, equals: (a: V, b: V) => boolean): Diff<V>`
@@ -2265,6 +2282,7 @@ localStorage 側とサーバ側の差異をデータ種別ごとに吸収する�
 - Consumes: 全プロジェクション (Task 3-5)、`merge` (Task 7)、`baseline` (Task 9)、`SyncPort` (Task 10)
 - Produces:
   - `clampRowSet(rows: RowSet<number>, max: number): RowSet<number>`
+  - `hasPendingLocalChanges(): boolean`
   - `type Adapter<V>`、`ADAPTERS: readonly Adapter<unknown>[]`
   - `type KindPlan = { kind: BaselineKind; verdicts: MergeVerdict<unknown>[]; conflictKeys: string[]; serverRevs: number[] }`
   - `planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan`
@@ -2276,7 +2294,9 @@ localStorage 側とサーバ側の差異をデータ種別ごとに吸収する�
 ```ts
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ADAPTERS, clampRowSet, findAdapter, planKind } from '../../../src/lib/sync/adapters';
+import {
+  ADAPTERS, clampRowSet, findAdapter, hasPendingLocalChanges, planKind,
+} from '../../../src/lib/sync/adapters';
 import { commitBaselineRow } from '../../../src/lib/sync/baseline';
 import { STORAGE_KEYS, saveJson } from '../../../src/lib/storage';
 import type { PulledRows } from '../../../src/lib/sync/port';
@@ -2342,6 +2362,16 @@ describe('planKind (card_counts)', () => {
   });
 });
 
+describe('planKind — 差分プルの扱い（重要）', () => {
+  it('差分に現れない行は「未変更」と扱う（サーバ削除と誤認してローカルを消さない）', () => {
+    // 前回同期済みの状態: ローカルとベースラインが一致し、サーバからは差分が来ない
+    saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 2 });
+    commitBaselineRow('card_counts', '5', 2);
+    const plan = planKind(findAdapter('card_counts'), EMPTY_PULL);
+    expect(plan.verdicts).toEqual([{ kind: 'noop', key: '5', value: 2 }]);
+  });
+});
+
 describe('planKind (shared_broach_counts)', () => {
   it('ローカルもサーバも上限 10 に丸めるため、超過値で競合が起きない', () => {
     saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, { '1': 15 });
@@ -2352,6 +2382,23 @@ describe('planKind (shared_broach_counts)', () => {
     const plan = planKind(findAdapter('shared_broach_counts'), pulled);
     expect(plan.conflictKeys).toEqual([]);
     expect(plan.verdicts).toEqual([{ kind: 'noop', key: '1', value: 10 }]);
+  });
+});
+
+describe('hasPendingLocalChanges', () => {
+  it('ベースラインと一致していれば false', () => {
+    saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 2 });
+    commitBaselineRow('card_counts', '5', 2);
+    expect(hasPendingLocalChanges()).toBe(false);
+  });
+
+  it('ベースラインに無いローカル変更があれば true', () => {
+    saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 2 });
+    expect(hasPendingLocalChanges()).toBe(true);
+  });
+
+  it('何も無ければ false', () => {
+    expect(hasPendingLocalChanges()).toBe(false);
   });
 });
 
@@ -2393,6 +2440,7 @@ import { STORAGE_KEYS, loadJson, saveJson } from '../storage';
 import { MAX_BROACH_COUNT, reloadBroachCountsFromStorage } from '../stores/broachCounts.svelte';
 import { reloadFromStorage as reloadCardCounts } from '../stores/cardCounts.svelte';
 import { loadBaselineRowSet, type BaselineKind } from './baseline';
+import { diffRowSets, hasChanges } from './diff';
 import { mergeRowSets, type MergeVerdict } from './merge';
 import type { PulledRows, PushResult, SyncPort } from './port';
 import {
@@ -2513,6 +2561,22 @@ export function findAdapter(kind: BaselineKind): Adapter<never> {
   return adapter;
 }
 
+/**
+ * 同期を走らせずに「未同期のローカル変更があるか」を判定する。
+ *
+ * SyncPanel は mount 時にこれを見る。保存イベントだけに頼ると、
+ * オフラインで変更したあとリロードした場合に未同期であることが表示されない。
+ */
+export function hasPendingLocalChanges(): boolean {
+  return ADAPTERS.some((adapter) =>
+    hasChanges(diffRowSets(
+      loadBaselineRowSet(adapter.kind),
+      adapter.localRowSet(),
+      adapter.equals,
+    )),
+  );
+}
+
 export type KindPlan = {
   kind: BaselineKind;
   verdicts: MergeVerdict<never>[];
@@ -2522,10 +2586,20 @@ export type KindPlan = {
 
 /** ベースライン / ローカル / サーバの 3 値からデータ種別ごとの処分一覧を作る */
 export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
+  const baseline = loadBaselineRowSet<V>(adapter.kind);
+
+  // pull は rev > cursor の「差分」しか返さない。差分に現れない行を「サーバで削除された」と
+  // 解釈すると、2 回目の同期で前回同期した行が adopt(null) = ローカル削除になり
+  // 利用者のデータが消える。本設計では削除を行の欠落で表現していない
+  // （所持数系は 0 を保持、デッキは deleted_at）ので、差分に無い行は「未変更」で確定できる。
+  // したがってサーバ側の状態は「ベースライン ∪ 差分」として組む。
+  const server: RowSet<V> = new Map(baseline);
+  for (const [key, value] of adapter.serverRowSet(pulled)) server.set(key, value);
+
   const verdicts = mergeRowSets<V>(
-    loadBaselineRowSet<V>(adapter.kind),
+    baseline,
     adapter.localRowSet(),
-    adapter.serverRowSet(pulled),
+    server,
     adapter.equals,
   );
   return {
@@ -2540,7 +2614,7 @@ export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
 - [ ] **Step 4: テストが通ることを確認する**
 
 Run: `npx vitest run tests/unit/sync/adapters.test.ts`
-Expected: PASS（11 tests）
+Expected: PASS（14 tests）
 
 - [ ] **Step 5: 型チェックと lint を通す**
 
@@ -3287,6 +3361,7 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
   import ModalDialog from './ui/ModalDialog.svelte';
   import { STORAGE_KEYS, onSave } from '../lib/storage';
   import type { BaselineKind } from '../lib/sync/baseline';
+  import { hasPendingLocalChanges } from '../lib/sync/adapters';
   import { createSupabasePort } from '../lib/sync/supabasePort';
   import { getSupabaseClient } from '../lib/sync/supabaseClient';
   import { runSync, type ConflictResolver, type Resolution } from '../lib/sync/syncEngine';
@@ -3420,16 +3495,17 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
     if (!port) return;
     const ok = await dialog?.confirm({
       title: 'サーバのデータを削除しますか',
-      message: 'この端末のデータは残ります。サーバに保存された同期データだけを削除します。',
-      confirmLabel: '削除する',
+      message: 'この端末のデータは残ります。サーバに保存された同期データを削除し、ログアウトします。',
+      confirmLabel: '削除してログアウト',
       danger: true,
     });
     if (!ok) return;
     try {
       await port.deleteAll();
       resetSyncState();
-      lastSyncedAt = null;
-      pendingChanges = false;
+      // 削除後もログイン状態のままだと、次の同期でローカルのデータが
+      // そのまま再アップロードされ「削除したのに戻ってくる」ことになる
+      await signOut();
       error = null;
     } catch {
       error = '削除できませんでした';
@@ -3438,6 +3514,10 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
 
   onMount(() => {
     if (!client) return;
+
+    // 保存イベントだけに頼ると、オフラインで変更したあとリロードした場合に
+    // 未同期であることが表示されないため、mount 時にベースラインとの差分を見る
+    pendingChanges = hasPendingLocalChanges();
 
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       phase = session ? 'idle' : 'anonymous';
