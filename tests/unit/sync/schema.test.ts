@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { getTableColumns } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import {
   card_counts, deck_slots, decks, rabbit_notes, shared_broach_counts,
@@ -15,10 +16,8 @@ describe('db/schema', () => {
 
   it('TS のプロパティ名と列名が一致している (PostgREST のレスポンスと型を揃えるため)', () => {
     for (const table of TABLES) {
-      for (const column of getTableConfig(table).columns) {
-        expect(column.name).toBe(column.name.toLowerCase());
-        expect(column.name).not.toMatch(/[A-Z]/);
-      }
+      expect(Object.keys(getTableColumns(table)))
+        .toEqual(getTableConfig(table).columns.map((c) => c.name));
     }
   });
 

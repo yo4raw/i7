@@ -1,3 +1,12 @@
+-- 注意: このファイルは drizzle-kit generate --custom で作った手書き migration。
+-- sync_cursor テーブルと関数・トリガーはここにしか定義がなく drizzle/meta/ の
+-- スナップショットは関知していない。よって本プロジェクトで
+-- `drizzle-kit push` / `drizzle-kit pull` を実行してはならない。
+-- push はスナップショットに存在しない sync_cursor 等を「管理対象外」とみなし
+-- DROP を提案しうる。pull も同様にスナップショットとの差分から誤った操作を導く。
+-- migration の適用は `drizzle-kit generate` で出力した SQL ファイルを
+-- 手動で（例: `psql` や Supabase の SQL Editor で）流し込むこと。
+
 -- ユーザーごとの単調増加カウンタ。増分プルのカーソルに使う。
 -- updated_at による増分プルは端末時計とサーバ時計の混在で取りこぼすため採用しない。
 create table public.sync_cursor (
@@ -30,6 +39,24 @@ begin
   new.updated_at := now();
   return new;
 end $$;
+--> statement-breakpoint
+
+-- next_rev は security definer で RLS を迂回する。PostgREST は public スキーマの
+-- 全関数を RPC として公開するため、EXECUTE を PUBLIC に残すと未認証の呼び出し元が
+-- 任意ユーザーの sync_cursor を書けてしまう（かつ auth.users の FK エラーで
+-- ユーザーの存在を判別できる）。
+-- set_rev は security invoker のままだと呼び出し元権限で next_rev を呼ぶため、
+-- revoke だけでは全 insert が permission denied になる。両方を必ず行うこと。
+alter function public.set_rev() security definer;
+revoke execute on function public.next_rev(uuid) from public, anon, authenticated;
+--> statement-breakpoint
+
+-- security definer 関数はオブジェクト参照がスキーマ修飾されていても、
+-- 演算子・キャストの解決は search_path に従い、関数は migration を適用した
+-- 広い権限のロールが所有する。search_path を固定しないと Supabase の
+-- function_search_path_mutable linter が検出する問題になる。
+alter function public.next_rev(uuid) set search_path = public, pg_catalog;
+alter function public.set_rev() set search_path = public, pg_catalog;
 --> statement-breakpoint
 
 create trigger card_counts_set_rev before insert or update on public.card_counts
@@ -116,7 +143,9 @@ begin
     nullif(slot->>'skill_level', '')::smallint,
     nullif(slot->>'bonus_tier', ''),
     coalesce(
-      (select array_agg(value::integer) from jsonb_array_elements_text(slot->'shared_broach_ids')),
+      (select array_agg(e.value::integer order by e.ord)
+         from jsonb_array_elements_text(slot->'shared_broach_ids')
+              with ordinality as e(value, ord)),
       '{}'::integer[]
     )
   from jsonb_array_elements(payload->'slots') as slot;
