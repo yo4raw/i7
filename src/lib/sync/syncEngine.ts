@@ -188,11 +188,18 @@ export async function runSync(
     appliedRevs.push(...plan.serverRevs);
   }
 
-  saveSyncMeta({
-    userId,
-    cursorRev: nextCursorRev(meta.cursorRev, appliedRevs),
-    lastSyncedAt: Date.now(),
-  });
+  // 未解決の競合が 1 つでもあればカーソルを進めない。
+  //
+  // cursorRev はデータ種別を跨いだ単一の値なので、未解決の種別を飛ばしても
+  // 他の種別の rev で前進してしまう。すると未解決だった行が次回の
+  // pull(rev > cursor) に現れなくなり、「サーバ側は未変更」と解釈されて
+  // ローカルが一方的に push される。つまり利用者が「あとで」を選んだ競合が
+  // 二度と提示されないまま、別の端末の値を黙って上書きすることになる。
+  const cursorRev = report.unresolved.length === 0
+    ? nextCursorRev(meta.cursorRev, appliedRevs)
+    : meta.cursorRev;
+
+  saveSyncMeta({ userId, cursorRev, lastSyncedAt: Date.now() });
 
   return report;
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { runSync } from '../../../src/lib/sync/syncEngine';
+import { runSync, type ConflictResolver } from '../../../src/lib/sync/syncEngine';
 import { loadBaselineRowSet, commitBaselineRow } from '../../../src/lib/sync/baseline';
 import { loadSyncMeta, saveSyncMeta } from '../../../src/lib/sync/syncMeta';
 import { STORAGE_KEYS, loadJson, saveJson } from '../../../src/lib/storage';
@@ -164,6 +164,33 @@ describe('runSync — 競合', () => {
     const report = await runSync(port, noConflict);
     expect(report.unresolved).toEqual([]);
     expect(loadBaselineRowSet<number>('card_counts').get('5')).toBe(8);
+  });
+});
+
+describe('runSync — 未解決の競合はカーソルを進めない', () => {
+  it('未解決の競合は次回の同期でも再提示される', async () => {
+    seedSyncedDevice();
+    saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 9 });
+    commitBaselineRow('card_counts', '5', 2);
+    const { port, seedCardCount, seedRabbitNote, state } = createFakePort();
+    seedCardCount(5, 8);                                          // 競合する行
+    seedRabbitNote('七瀬陸', { shout: 1, beat: 2, melody: 3 });    // 適用される別種別の行
+
+    const asked: string[][] = [];
+    // oxlint-disable-next-line require-await -- ConflictResolver は Promise を返す契約のため async は必須
+    const recording: ConflictResolver = async (kinds) => {
+      asked.push([...kinds]);
+      return new Map();
+    };
+
+    await runSync(port, recording);
+    const second = await runSync(port, recording);
+
+    // 2 回目も競合として提示されること。カーソルが別種別の rev で前進すると
+    // 競合していた行が pull に現れなくなり、黙ってローカルが勝つ
+    expect(asked).toEqual([['card_counts'], ['card_counts']]);
+    expect(second.unresolved).toEqual(['card_counts']);
+    expect(state.cardCounts.get(5)?.count).toBe(8);
   });
 });
 
