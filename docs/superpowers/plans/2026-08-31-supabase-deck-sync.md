@@ -2773,11 +2773,23 @@ export function createFakePort(options: FakeOptions = {}) {
 import { describe, it, expect, beforeEach } from 'vitest';
 import { runSync } from '../../../src/lib/sync/syncEngine';
 import { loadBaselineRowSet, commitBaselineRow } from '../../../src/lib/sync/baseline';
-import { loadSyncMeta } from '../../../src/lib/sync/syncMeta';
+import { loadSyncMeta, saveSyncMeta } from '../../../src/lib/sync/syncMeta';
 import { STORAGE_KEYS, loadJson, saveJson } from '../../../src/lib/storage';
 import { createFakePort } from './fakePort';
 
 const noConflict = async () => new Map();
+
+/**
+ * 「この端末は既にこのアカウントで同期済み」という状態を作る。
+ *
+ * ベースラインを仕込むテストでは必ず呼ぶこと。呼ばないと runSync の最初の
+ * reconcileUser が「userId が null → 別アカウント」と判定してベースラインを
+ * 破棄するため、3 値のうちベースラインが常に null になり、
+ * 3-way マージを一度も検証しないテストになってしまう。
+ */
+function seedSyncedDevice(userId = 'user-1') {
+  saveSyncMeta({ userId, cursorRev: 0, lastSyncedAt: null });
+}
 
 beforeEach(() => localStorage.clear());
 
@@ -2844,6 +2856,7 @@ describe('runSync — adopt', () => {
 
 describe('runSync — 競合', () => {
   it('この端末を選ぶとローカルの値が push される', async () => {
+    seedSyncedDevice();
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 9 });
     commitBaselineRow('card_counts', '5', 2);
     const { port, seedCardCount, state } = createFakePort();
@@ -2855,6 +2868,7 @@ describe('runSync — 競合', () => {
   });
 
   it('別の端末を選ぶとサーバの値が取り込まれる', async () => {
+    seedSyncedDevice();
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 9 });
     commitBaselineRow('card_counts', '5', 2);
     const { port, seedCardCount } = createFakePort();
@@ -2866,6 +2880,7 @@ describe('runSync — 競合', () => {
   });
 
   it('解決されなかったデータ種別は一切触らない（次回また聞く）', async () => {
+    seedSyncedDevice();
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 9 });
     commitBaselineRow('card_counts', '5', 2);
     const { port, seedCardCount, state } = createFakePort();
@@ -2878,6 +2893,7 @@ describe('runSync — 競合', () => {
   });
 
   it('競合していないデータ種別は競合の解決を待たずに同期される', async () => {
+    seedSyncedDevice();
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 9 });
     commitBaselineRow('card_counts', '5', 2);
     saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, { '1': 4 });
@@ -2889,6 +2905,7 @@ describe('runSync — 競合', () => {
   });
 
   it('両方が同じ値に変わっていれば競合にせずベースラインだけ進める', async () => {
+    seedSyncedDevice();
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 8 });
     commitBaselineRow('card_counts', '5', 2);
     const { port, seedCardCount } = createFakePort();
