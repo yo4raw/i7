@@ -32,17 +32,32 @@
     readonly?: boolean;
   };
 
+  type ChooseOptions = {
+    title: string;
+    message?: string;
+    /** 主となる選択（例: この端末の内容を使う） */
+    primaryLabel: string;
+    /** 対になる選択（例: 別の端末の内容を使う） */
+    secondaryLabel: string;
+    /** 何もしないで閉じる選択。既定は「あとで」 */
+    dismissLabel?: string;
+  };
+
+  /** choose の戻り値。null は「何もしない」 */
+  type ChooseResult = 'primary' | 'secondary' | null;
+
   const uid = `modal-dialog-${++instanceSeq}`;
   const titleId = `${uid}-title`;
   const messageId = `${uid}-message`;
   const inputId = `${uid}-input`;
 
   let visible = $state(false);
-  let mode = $state<'confirm' | 'prompt'>('confirm');
-  let opts = $state<PromptOptions>({ title: '' });
+  let mode = $state<'confirm' | 'prompt' | 'choose'>('confirm');
+  let opts = $state<PromptOptions & Partial<ChooseOptions>>({ title: '' });
   let inputValue = $state('');
 
-  let resolve: ((value: boolean | string | null) => void) | null = null;
+  type DialogResult = boolean | string | ChooseResult;
+  let resolve: ((value: DialogResult) => void) | null = null;
   let returnFocusEl: HTMLElement | null = null;
 
   // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
@@ -59,7 +74,7 @@
   /** readonly は確定ボタンのみ (キャンセルの意味がない) */
   const showCancel = $derived(!opts.readonly);
 
-  async function show(nextMode: 'confirm' | 'prompt', nextOpts: PromptOptions) {
+  async function show(nextMode: 'confirm' | 'prompt' | 'choose', nextOpts: PromptOptions & Partial<ChooseOptions>) {
     mode = nextMode;
     opts = nextOpts;
     inputValue = nextOpts.value ?? '';
@@ -70,8 +85,8 @@
     if (nextMode === 'prompt') {
       inputEl?.focus();
       inputEl?.select();
-    } else if (nextOpts.danger) {
-      // 破壊的操作では Enter 連打で誤確定しないよう、まずキャンセルへ置く
+    } else if (nextMode === 'choose' || nextOpts.danger) {
+      // choose はどちらの選択肢もデータを失わせるため、まず「あとで」へ置く
       cancelEl?.focus();
     } else {
       confirmEl?.focus();
@@ -79,7 +94,7 @@
   }
 
   /** 保留中の Promise を解決し、ダイアログを閉じてフォーカスを開いた要素へ戻す */
-  function settle(value: boolean | string | null) {
+  function settle(value: DialogResult) {
     const pending = resolve;
     const target = returnFocusEl;
     resolve = null;
@@ -99,6 +114,7 @@
   function cancelPending() {
     const pending = resolve;
     resolve = null;
+    // choose は null が「何もしない」なので prompt と同じ扱いでよい
     pending?.(mode === 'confirm' ? false : null);
   }
 
@@ -109,7 +125,7 @@
   export function confirm(options: ConfirmOptions): Promise<boolean> {
     cancelPending();
     return new Promise<boolean>((res) => {
-      resolve = res as (value: boolean | string | null) => void;
+      resolve = res as (value: DialogResult) => void;
       void show('confirm', options);
     });
   }
@@ -121,8 +137,22 @@
   export function prompt(options: PromptOptions): Promise<string | null> {
     cancelPending();
     return new Promise<string | null>((res) => {
-      resolve = res as (value: boolean | string | null) => void;
+      resolve = res as (value: DialogResult) => void;
       void show('prompt', options);
+    });
+  }
+
+  /**
+   * 3 択のダイアログ。競合の解決に使う。
+   *
+   * Esc / バックドロップ / dismiss ボタンはすべて null に解決され、何も起きない。
+   * どちらの選択肢もデータを失わせるため、安全な逃げ道を必ず用意する必要がある。
+   */
+  export function choose(options: ChooseOptions): Promise<ChooseResult> {
+    cancelPending();
+    return new Promise<ChooseResult>((res) => {
+      resolve = res as (value: DialogResult) => void;
+      void show('choose', options as PromptOptions & ChooseOptions);
     });
   }
 
@@ -213,27 +243,53 @@
         />
       {/if}
 
-      <div class="mt-5 flex justify-end gap-2">
-        {#if showCancel}
+      <div class="mt-5 flex flex-wrap justify-end gap-2">
+        {#if mode === 'choose'}
           <button
             bind:this={cancelEl}
             type="button"
             class="rounded-control bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 pressable"
             onclick={onCancel}
           >
-            {cancelLabel}
+            {opts.dismissLabel ?? 'あとで'}
+          </button>
+          <button
+            type="button"
+            class="rounded-control border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 pressable"
+            onclick={() => settle('secondary')}
+          >
+            {opts.secondaryLabel}
+          </button>
+          <button
+            bind:this={confirmEl}
+            type="button"
+            class="rounded-control bg-chrome-ink px-4 py-2 text-sm font-bold text-white hover:bg-chrome-ink-soft pressable"
+            onclick={() => settle('primary')}
+          >
+            {opts.primaryLabel}
+          </button>
+        {:else}
+          {#if showCancel}
+            <button
+              bind:this={cancelEl}
+              type="button"
+              class="rounded-control bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 pressable"
+              onclick={onCancel}
+            >
+              {cancelLabel}
+            </button>
+          {/if}
+          <button
+            bind:this={confirmEl}
+            type="button"
+            class="rounded-control px-4 py-2 text-sm font-bold text-white pressable {opts.danger
+              ? 'bg-red-600 hover:bg-red-700'
+              : 'bg-chrome-ink hover:bg-chrome-ink-soft'}"
+            onclick={onConfirm}
+          >
+            {confirmLabel}
           </button>
         {/if}
-        <button
-          bind:this={confirmEl}
-          type="button"
-          class="rounded-control px-4 py-2 text-sm font-bold text-white pressable {opts.danger
-            ? 'bg-red-600 hover:bg-red-700'
-            : 'bg-chrome-ink hover:bg-chrome-ink-soft'}"
-          onclick={onConfirm}
-        >
-          {confirmLabel}
-        </button>
       </div>
     </div>
   </div>
