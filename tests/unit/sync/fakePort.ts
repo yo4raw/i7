@@ -106,5 +106,16 @@ export function createFakePort(options: FakeOptions = {}) {
     cardCounts.set(cardId, { count, rev: bump() });
   }
 
-  return { port, seedCardCount, state: { cardCounts, broachCounts, rabbitNotes, decks } };
+  function seedBroachCount(broachId: number, count: number): void {
+    broachCounts.set(broachId, { count, rev: bump() });
+  }
+
+  function seedRabbitNote(character: string, value: RabbitNoteValue): void {
+    rabbitNotes.set(character, { ...value, rev: bump() });
+  }
+
+  return {
+    port, seedCardCount, seedBroachCount, seedRabbitNote,
+    state: { cardCounts, broachCounts, rabbitNotes, decks },
+  };
 }

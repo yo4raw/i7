@@ -84,6 +84,25 @@ describe('runSync — adopt', () => {
   });
 });
 
+describe('runSync — 共通ブローチとラビットノートの取り込み', () => {
+  it('サーバの共通ブローチ所持数を取り込む', async () => {
+    const { port, seedBroachCount } = createFakePort();
+    seedBroachCount(1, 3);
+    const report = await runSync(port, noConflict);
+    expect(report.adopted).toBe(1);
+    expect(loadJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, {})).toEqual({ '1': 3 });
+  });
+
+  it('サーバのラビットノートを取り込む', async () => {
+    const { port, seedRabbitNote } = createFakePort();
+    seedRabbitNote('七瀬陸', { shout: 1, beat: 2, melody: 3 });
+    const report = await runSync(port, noConflict);
+    expect(report.adopted).toBe(1);
+    expect(loadJson(STORAGE_KEYS.RABBIT_NOTES, {}))
+      .toEqual({ 七瀬陸: { shout: 1, beat: 2, melody: 3 } });
+  });
+});
+
 describe('runSync — 競合', () => {
   it('この端末を選ぶとローカルの値が push される', async () => {
     seedSyncedDevice();
@@ -218,6 +237,18 @@ describe('runSync — デッキとラビットノートの push', () => {
     const report = await runSync(port, noConflict);
     expect(report.pushed).toBe(1);
     expect(state.rabbitNotes.get('七瀬陸')).toMatchObject({ shout: 1, beat: 2, melody: 3 });
+  });
+
+  it('所持数を 0 に戻して消えた衣装は 0 として push される（行を消さない）', async () => {
+    // cardCounts ストアの setCount は 0 のときキーを delete するため、
+    // 「所持数を 0 に戻す」というこのサイトで最も日常的な操作がこの経路を通る
+    seedSyncedDevice();
+    commitBaselineRow('card_counts', '5', 2);
+    saveJson(STORAGE_KEYS.CARD_COUNTS, {});
+    const { port, state } = createFakePort();
+    const report = await runSync(port, noConflict);
+    expect(report.pushed).toBe(1);
+    expect(state.cardCounts.get(5)?.count).toBe(0);
   });
 
   it('ローカルで消したラビットノートは 0 として push される（行を消さない）', async () => {
