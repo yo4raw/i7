@@ -1,4 +1,3 @@
-/* v8 ignore start -- PostgREST への実接続のみ。判定ロジックは syncEngine 側でテストしている */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SyncedDeck } from './projection/decks';
 import type { CountTable, PulledRows, PushResult, SyncPort } from './port';
@@ -8,9 +7,11 @@ const ID_COLUMN: Record<CountTable, 'card_id' | 'broach_id'> = {
   shared_broach_counts: 'broach_id',
 };
 
+/* v8 ignore start -- PostgREST への実接続のみ。判定ロジックは syncEngine 側でテストしている */
 function allFailed(keys: readonly string[], error: string): Map<string, PushResult> {
   return new Map(keys.map((key) => [key, { ok: false, error }]));
 }
+/* v8 ignore stop */
 
 /** PostgREST の Max rows（Supabase 既定 1000）より小さく取る */
 const PAGE_SIZE = 500;
@@ -66,10 +67,12 @@ async function fetchAllDeckSlots(
 }
 
 export function createSupabasePort(client: SupabaseClient): SyncPort {
+  /* v8 ignore start -- PostgREST への実接続のみ。判定ロジックは syncEngine 側でテストしている */
   async function currentUserId(): Promise<string | null> {
     const { data } = await client.auth.getUser();
     return data.user?.id ?? null;
   }
+  /* v8 ignore stop */
 
   return {
     getUserId: currentUserId,
@@ -98,6 +101,7 @@ export function createSupabasePort(client: SupabaseClient): SyncPort {
       };
     },
 
+    /* v8 ignore start -- PostgREST への実接続のみ。判定ロジックは syncEngine 側でテストしている */
     async pushCounts(table, rows) {
       if (rows.length === 0) return new Map();
       const keys = rows.map((row) => row.key);
@@ -172,6 +176,6 @@ export function createSupabasePort(client: SupabaseClient): SyncPort {
       const { error } = await client.rpc('delete_all_sync_data');
       if (error) throw new Error(error.message);
     },
+    /* v8 ignore stop */
   };
 }
-/* v8 ignore stop */
