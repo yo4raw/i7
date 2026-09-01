@@ -63,6 +63,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 - 各種マスターデータ（カード・楽曲・装備など）の JSON フェッチもクライアントサイドで行う
 - バックエンド API やサーバーサイドランタイムへの依存を導入してはならない
 - 例外: TypeScript 等の altJS 言語のビルド（コンパイル）のみサーバーサイド（ビルド時）に行ってよい。コンパイル後の JavaScript の実行はすべてクライアント端末上で行う
+- **例外（ADR 0064）**: 端末間同期のみ Supabase（Postgres + Auth + PostgREST）に依存する。ただし次の不変条件を満たすこと。**同期は純粋な付加機能であり、Supabase が落ちていても、環境変数が未設定でも、未ログインでも、全機能が localStorage のみで従来通り動作しなければならない。** 同期層（`src/lib/sync/` と `src/components/SyncPanel.svelte`）を丸ごと削除しても既存機能が無傷であること。既存コードが同期層を import してはならない（依存は同期層 → 既存の一方向のみ）
 
 ### Data Source
 
@@ -127,8 +128,12 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 | `i7_max_finder_event_id` | 編成組合計算画面で選択中の対象イベント |
 | `i7_card_list_view_mode` | 衣装一覧の表示モード |
 | `i7_point_calc_state` | ポイント芸計算画面の状態 |
+| `i7_sync_meta` | 同期メタ情報（**バックアップ対象外**） |
+| `i7_sync_baseline` | 同期のベースライン（**バックアップ対象外**） |
 
 `src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
+
+`i7_sync_meta` / `i7_sync_baseline` は `BACKUP_EXCLUDED_KEYS`（`src/lib/storage.ts`）でエクスポート対象から除外している。「この端末がどこまでサーバと一致しているか」を表す端末固有の状態であり、別端末のものを取り込むと同期エンジンが「同期済み」と誤認して未同期の変更を取りこぼすため（ADR 0064 決定 10）。**これが「新しいキーは必ず `STORAGE_KEYS` に追記する」ルールの唯一の例外**であり、新しいキーを足すときは原則どおりバックアップ対象に含めること。
 
 ### ブランチ戦略（Git Flow / ADR 0052）
 
@@ -149,6 +154,20 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 - **`main` への push は `sync-main-to-develop.yml` が `develop` へ自動 back-merge する**。これにより「`main` は常に `develop` の祖先」が保たれ、リリースが fast-forward で通る
 - **`release/*` ブランチは作らない**。`main` にブランチ保護は設定していない
 - リリース手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照
+
+### 端末間同期 / Supabase（ADR 0064）
+
+- **Drizzle はスキーマ・RLS ポリシー・migration 生成の単一情報源。実行時クエリには使わない。** ブラウザから Postgres へ直接接続すると DB 資格情報の埋め込みが必要で RLS も効かないため、実行時は supabase-js（PostgREST）を通す。`src/` からは `import type` のみで参照し、クライアントバンドルには含めない
+- スキーマは `db/schema.ts`、migration は `drizzle/`（commit 済み）
+- **migration の適用は手動** (`npx drizzle-kit migrate`)。`DATABASE_URL` はローカルの `.env` のみに置き、CI には渡さない。毎時 cron が `main` にマージする構成で DB スキーマを破壊しうる権限を CI に置かないため
+- `drizzle.config.ts` の `schemaFilter: ['public']` を外してはならない。Supabase 管理下の `auth` スキーマが管理対象になり、migration に破壊的変更が混入する
+- **`timestamp` は必ず `mode: 'string'`**。既定モードでは `InferSelectModel` が `Date` を返すが、PostgREST が返すのは ISO 文字列で型と実際の値が食い違う
+- TS のプロパティ名は列名と一致させ snake_case にする（`casing: 'snake_case'` は使わない）
+- 環境変数 `PUBLIC_SUPABASE_URL` / `PUBLIC_SUPABASE_PUBLISHABLE_KEY` は公開前提の値なので GitHub Actions では Secrets ではなく **Variables** に置く。未設定のビルドは失敗させず同期 UI を非表示にすること（Dependabot の PR は Variables を参照できない）
+- **ベースラインの更新は行単位に限る。** `commitBaselineRow` 以外の更新経路を作らないこと。部分失敗時の再送がこの粒度に依存している
+- **アカウント切替時、`reconcileUser`（`src/lib/sync/syncMeta.ts`）はベースラインを消せなかった場合 `SyncMeta` ではなく `null` を返す。** このとき `syncEngine` は同期を中断する（`status: 'baseline-write-failed'`）。ベースラインを消せないまま新しい `userId` を記録すると、旧アカウントのベースラインが新アカウントの `userId` と対になり、2 つのアカウントのデータが混ざる
+- **同期層からローカルへの書き戻しは `saveJson` ではなく `writeJsonSilently`（`src/lib/storage.ts`）を使う。** `saveJson` は書き込み失敗を握りつぶし `onSave` を発火させるが、`writeJsonSilently` は成否を真偽値で返し `onSave` を発火させない。発火させると同期層自身の書き込みが「未同期のローカル変更」として検知され、同期がまた同期を呼ぶループになりうる
+- **`cursorRev` はデータ種別を跨いだ単一の値であり、いずれかの種別に未解決の競合が残っている間はカーソルを進めない。** 進めてしまうと競合中の行が次回の pull で「サーバ側は未変更」に見え、利用者が「あとで」を選んだ競合が再提示されないまま別端末の値を黙って上書きする
 
 ### Deployment
 
