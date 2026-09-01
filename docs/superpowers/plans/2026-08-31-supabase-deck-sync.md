@@ -4208,7 +4208,7 @@ const breadcrumbs = [
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">端末間同期を使う場合</h2>
     <h3 class="text-sm font-bold text-gray-900 mt-4 mb-1">取得する情報</h3>
     <p class="text-sm text-gray-700">
-      Google アカウントでログインした場合、認証基盤から <strong>メールアドレス</strong> と <strong>アカウント識別子</strong> を取得します。パスワードを取得することはありません。
+      Google アカウントでログインした場合、認証基盤から <strong>メールアドレス</strong> と <strong>アカウント識別子</strong> を取得します。あわせて、Google 側の既定の設定により <strong>表示名</strong> と <strong>プロフィール画像の URL</strong> も認証基盤へ渡され、保存されます。当サイトはこれらを画面表示にも処理にも使用していません。パスワードを取得することはありません。
     </p>
     <h3 class="text-sm font-bold text-gray-900 mt-4 mb-1">保存されるデータ</h3>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
@@ -4226,7 +4226,10 @@ const breadcrumbs = [
     </p>
     <h3 class="text-sm font-bold text-gray-900 mt-4 mb-1">利用目的</h3>
     <p class="text-sm text-gray-700">
-      複数の端末で同じデータを利用できるようにするためにのみ使用します。広告配信・行動分析・第三者への提供は行いません。
+      複数の端末で同じデータを利用できるようにするために使用します。広告配信・行動分析・第三者への提供は行いません。
+    </p>
+    <p class="text-sm text-gray-700 mt-2">
+      将来、個人を特定しない集計（衣装の所持率統計など）やデッキの公開といった機能を追加する場合は、実施の前にこのページを更新してお知らせします。
     </p>
   </section>
 
@@ -4253,7 +4256,28 @@ const breadcrumbs = [
 
 > **`/about/` に連絡窓口の記載が無い場合は、このタスク内で `/about/` に窓口を追記すること。** 記載のない窓口へ誘導してはならない。
 
-- [ ] **Step 3: E2E テストを書く**
+- [ ] **Step 3: `/about/` の「プライバシー」節の矛盾を解消する**
+
+`src/pages/about/index.astro` の「プライバシー」節は「ユーザー入力は localStorage のみに保存され、
+サーバーへ送信されません」と**無条件に**書いている。端末間同期を使う利用者にはこれが偽になり、
+しかも新しい `/privacy/` は「お問い合わせ」から `/about/` へ読者を送るため、
+矛盾したページへ誘導することになる。次のように直す:
+
+```astro
+    <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
+      <li>所持衣装・デッキ・ラビットノート値などのユーザー入力は、既定ではブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
+      <li>フッターから Google アカウントでログインして端末間同期を使う場合に限り、一部のデータがサーバーに保存されます。詳しくは<a href={`${base}privacy/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">プライバシーポリシー</a>をご覧ください。</li>
+      <li>データのエクスポート・完全削除はブラウザの設定または各ページ上のクリア機能から行えます。</li>
+    </ul>
+```
+
+- [ ] **Step 4: ADR 0057 の一覧に `/privacy/` を追記する**
+
+ADR 0064 の「影響」節が要求しているが、どのタスクにも割り当てられていなかった。
+`docs/adr/0057-focus-indexable-pages.md` に、法的ページとして `/privacy/` を
+index 対象に含める旨を 1 行追記する。
+
+- [ ] **Step 5: E2E テストを書く**
 
 `tests/privacy.test.ts`:
 
@@ -4321,7 +4345,10 @@ name: Keep Supabase awake
 # publishable key しか使わないため CI に秘密情報は増えない。
 on:
   schedule:
-    - cron: '17 3 * * 1'
+    # 週 2 回にする。7 日の停止しきい値に対して週 1 回では余裕がゼロで、
+    # GitHub がスケジュール実行を遅延・破棄すると（負荷時に起こりうる）
+    # 1 回落ちただけで 14 日空き、この workflow の目的そのものが崩れる
+    - cron: '17 3 * * 1,4'
   workflow_dispatch:
 
 permissions:
@@ -4338,12 +4365,18 @@ jobs:
         shell: bash
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
-            echo "Supabase の Variables が未設定のためスキップします"
+            # このワークフローは schedule / workflow_dispatch でしか動かず、
+            # Variables は常に存在するはず。無いのは設定ミスなので、
+            # 緑のまま何もしない状態を Checks UI から見えるようにする
+            echo "::warning::Supabase の Variables が未設定のためスキップしました"
             exit 0
           fi
           # /auth/v1/settings は publishable key で叩ける軽量なエンドポイント。
           # /rest/v1/ のルートは secret key 専用なので使えない。
+          # タイムアウトを必ず付ける。停止済みプロジェクトは応答しないことがあり、
+          # 無指定だと GitHub のジョブ上限（既定 6 時間）まで張り付く
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            --connect-timeout 10 --max-time 30 \
             -H "apikey: $SUPABASE_KEY" \
             "$SUPABASE_URL/auth/v1/settings")
           echo "HTTP $STATUS"
