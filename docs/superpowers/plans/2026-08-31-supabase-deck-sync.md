@@ -4472,15 +4472,22 @@ Expected: ビルド成功。`http://localhost:4321/` と `http://localhost:4321/
 
 Dependabot の PR ではこの経路になる。
 
-```bash
-env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_PUBLISHABLE_KEY npx astro build
-```
-
-Expected: ビルド成功。生成された HTML に同期 UI が含まれないこと:
+**`env -u` では検証にならない。** シェルの環境変数を消しても Vite はローカルの
+（gitignore された）`.env` を読むため、変数は設定されたままになる。`.env` を一時的に
+退避してからビルドすること:
 
 ```bash
+mv .env .env.bak
+npx astro build
 grep -c 'sync-panel' dist/index.html    # 0 であること
+mv .env.bak .env                        # 必ず戻す
 ```
+
+（`PUBLIC_SUPABASE_URL= npm run dev` のように**空文字を代入**する形なら、シェルの値が
+`.env` より優先されるため dev サーバでの確認には使える。効かないのは `env -u` による
+「未定義化」の方。）
+
+Expected: ビルド成功、かつ `grep -c` が `0` を返すこと。
 
 - [ ] **Step 7: E2E を通す**
 
