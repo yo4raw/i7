@@ -172,6 +172,65 @@ describe('runSync — 部分失敗', () => {
   });
 });
 
+describe('runSync — デッキとラビットノートの push', () => {
+  it('ローカルのデッキがサーバへ push される', async () => {
+    saveJson(STORAGE_KEYS.SAVED_DECKS, [{
+      id: 'd1', name: 'テストデッキ', createdAt: 1000, updatedAt: 2000,
+      state: {
+        songId: 42, deckIds: [101, null, null, null, null, null],
+        bonusTiers: [], trained: [], sharedBroachs: [], skillLevels: [],
+      },
+    }]);
+    const { port, state } = createFakePort();
+    const report = await runSync(port, noConflict);
+    expect(report.status).toBe('ok');
+    expect(report.pushed).toBe(1);
+    expect(state.decks.get('d1')?.name).toBe('テストデッキ');
+    expect(state.decks.get('d1')?.deleted_at).toBeNull();
+    expect(state.decks.get('d1')?.slots[0].card_id).toBe(101);
+  });
+
+  it('ローカルで削除したデッキは tombstone として push される（行を消さない）', async () => {
+    seedSyncedDevice();
+    // 前回同期済み: ベースラインにはデッキがあるが、ローカルからは消えている
+    commitBaselineRow('decks', 'd1', {
+      name: 'A', song_id: null,
+      created_at: '2026-08-31T00:00:00.000Z', updated_at: '2026-08-31T00:00:00.000Z',
+      deleted_at: null,
+      slots: Array.from({ length: 6 }, (_, i) => ({
+        slot_index: i, card_id: null, trained: false,
+        skill_level: null, bonus_tier: null, shared_broach_ids: [],
+      })),
+    });
+    saveJson(STORAGE_KEYS.SAVED_DECKS, []);
+    const { port, state } = createFakePort();
+    const report = await runSync(port, noConflict);
+    expect(report.pushed).toBe(1);
+    // 行が消えるのではなく deleted_at が立つこと。行の欠落で削除を表すと
+    // 「まだ作っていない」と区別できなくなる
+    expect(state.decks.has('d1')).toBe(true);
+    expect(state.decks.get('d1')?.deleted_at).not.toBeNull();
+  });
+
+  it('ラビットノートがサーバへ push される', async () => {
+    saveJson(STORAGE_KEYS.RABBIT_NOTES, { 七瀬陸: { shout: 1, beat: 2, melody: 3 } });
+    const { port, state } = createFakePort();
+    const report = await runSync(port, noConflict);
+    expect(report.pushed).toBe(1);
+    expect(state.rabbitNotes.get('七瀬陸')).toMatchObject({ shout: 1, beat: 2, melody: 3 });
+  });
+
+  it('ローカルで消した所持数は 0 として push される（行を消さない）', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('shared_broach_counts', '1', 4);
+    saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, {});
+    const { port, state } = createFakePort();
+    const report = await runSync(port, noConflict);
+    expect(report.pushed).toBe(1);
+    expect(state.broachCounts.get(1)?.count).toBe(0);
+  });
+});
+
 describe('runSync — ベースラインが書けないとき', () => {
   it('同期を止めて baseline-write-failed を返す（勝手なマージに倒さない）', async () => {
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 2 });
