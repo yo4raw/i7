@@ -1,5 +1,5 @@
-import { loadRabbitNotes, saveRabbitNotes } from '../data/rabbitNote';
-import { STORAGE_KEYS, loadJson, saveJson } from '../storage';
+import { loadRabbitNotes } from '../data/rabbitNote';
+import { STORAGE_KEYS, loadJson, writeJsonSilently } from '../storage';
 import { MAX_BROACH_COUNT, reloadBroachCountsFromStorage } from '../stores/broachCounts.svelte';
 import { reloadFromStorage as reloadCardCounts } from '../stores/cardCounts.svelte';
 import { loadBaselineRowSet, type BaselineKind } from './baseline';
@@ -28,8 +28,8 @@ export type Adapter<V> = {
   kind: BaselineKind;
   /** localStorage の現在値 */
   localRowSet(): RowSet<V>;
-  /** localStorage へ書き戻す。関連する Svelte ストアの再読込もここで行う */
-  writeLocal(rows: RowSet<V>): void;
+  /** localStorage へ書き戻す。関連する Svelte ストアの再読込もここで行う。成否を返す */
+  writeLocal(rows: RowSet<V>): boolean;
   /** プル結果からサーバ側の行集合を作る */
   serverRowSet(pulled: PulledRows): RowSet<V>;
   /** カーソル更新に使う、プルで得た rev の一覧 */
@@ -37,20 +37,35 @@ export type Adapter<V> = {
   equals(a: V, b: V): boolean;
   /** null は削除を意味する（所持数系は 0、デッキは deleted_at） */
   push(port: SyncPort, entries: readonly [string, V | null][]): Promise<Map<string, PushResult>>;
+  /**
+   * ローカル表現が「その行が無い」と「ゼロ値」を区別できない種別のための補正。
+   *
+   * 所持数系は 0 のキーを localStorage から落とすため、削除した行は
+   * ローカルでは常に「無い」= null になる。一方サーバには 0 の行が残る。
+   * 補正しないと baseline=0 / local=null が永久に一致せず、push と adopt を
+   * 往復し続ける（周期 2 の無限ループ）。
+   *
+   * 引数はベースラインが持っている値。null を返すと「本当に無い」として扱われ、
+   * 通常の削除として push される。
+   */
+  absentLocalAs?: (other: V) => V | null;
 };
 
 const cardCountsAdapter: Adapter<number> = {
   kind: 'card_counts',
   localRowSet: () => countMapToRowSet(loadJson<CountMap>(STORAGE_KEYS.CARD_COUNTS, {})),
   writeLocal(rows) {
-    saveJson(STORAGE_KEYS.CARD_COUNTS, rowSetToCountMap(rows));
-    reloadCardCounts();
+    const ok = writeJsonSilently(STORAGE_KEYS.CARD_COUNTS, rowSetToCountMap(rows));
+    if (ok) reloadCardCounts();
+    return ok;
   },
   serverRowSet: (pulled) => countRowsToRowSet(pulled.card_counts, 'card_id'),
   serverRevs: (pulled) => pulled.card_counts.map((row) => row.rev),
   equals: (a, b) => a === b,
   push: (port, entries) =>
     port.pushCounts('card_counts', entries.map(([key, value]) => ({ key, count: value ?? 0 }))),
+  // rowSetToCountMap が 0 を落とすため、ローカルは 0 と不在を区別できない
+  absentLocalAs: () => 0,
 };
 
 const sharedBroachCountsAdapter: Adapter<number> = {
@@ -63,8 +78,12 @@ const sharedBroachCountsAdapter: Adapter<number> = {
       MAX_BROACH_COUNT,
     ),
   writeLocal(rows) {
-    saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, rowSetToCountMap(clampRowSet(rows, MAX_BROACH_COUNT)));
-    reloadBroachCountsFromStorage();
+    const ok = writeJsonSilently(
+      STORAGE_KEYS.SHARED_BROACH_COUNTS,
+      rowSetToCountMap(clampRowSet(rows, MAX_BROACH_COUNT)),
+    );
+    if (ok) reloadBroachCountsFromStorage();
+    return ok;
   },
   serverRowSet: (pulled) =>
     clampRowSet(countRowsToRowSet(pulled.shared_broach_counts, 'broach_id'), MAX_BROACH_COUNT),
@@ -75,6 +94,7 @@ const sharedBroachCountsAdapter: Adapter<number> = {
       'shared_broach_counts',
       entries.map(([key, value]) => ({ key, count: Math.min(value ?? 0, MAX_BROACH_COUNT) })),
     ),
+  absentLocalAs: () => 0,
 };
 
 const ZERO_NOTE: RabbitNoteValue = { shout: 0, beat: 0, melody: 0 };
@@ -82,18 +102,19 @@ const ZERO_NOTE: RabbitNoteValue = { shout: 0, beat: 0, melody: 0 };
 const rabbitNotesAdapter: Adapter<RabbitNoteValue> = {
   kind: 'rabbit_notes',
   localRowSet: () => rabbitMapToRowSet(loadRabbitNotes()),
-  writeLocal: (rows) => saveRabbitNotes(rowSetToRabbitMap(rows)),
+  writeLocal: (rows) => writeJsonSilently(STORAGE_KEYS.RABBIT_NOTES, rowSetToRabbitMap(rows)),
   serverRowSet: (pulled) => rabbitRowsToRowSet(pulled.rabbit_notes),
   serverRevs: (pulled) => pulled.rabbit_notes.map((row) => row.rev),
   equals: rabbitEquals,
   push: (port, entries) =>
     port.pushRabbitNotes(entries.map(([key, value]) => ({ key, value: value ?? ZERO_NOTE }))),
+  absentLocalAs: () => ZERO_NOTE,
 };
 
 const decksAdapter: Adapter<SyncedDeck> = {
   kind: 'decks',
   localRowSet: () => savedDecksToRowSet(loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, [])),
-  writeLocal: (rows) => saveJson(STORAGE_KEYS.SAVED_DECKS, rowSetToSavedDecks(rows)),
+  writeLocal: (rows) => writeJsonSilently(STORAGE_KEYS.SAVED_DECKS, rowSetToSavedDecks(rows)),
   serverRowSet: (pulled) => deckRowsToRowSet(pulled.decks, pulled.deck_slots),
   serverRevs: (pulled) => pulled.decks.map((row) => row.rev),
   equals: deckEquals,
@@ -111,6 +132,10 @@ const decksAdapter: Adapter<SyncedDeck> = {
     }
     return out;
   },
+  // tombstone 済みのデッキはローカルに現れない（rowSetToSavedDecks が飛ばす）ので、
+  // 相手が tombstone を持っているなら「ローカルに無い」は同じ状態を意味する。
+  // 相手が生きているデッキを持っているなら、本当に削除された（push すべき）
+  absentLocalAs: (other) => (other.deleted_at === null ? null : other),
 };
 
 // V の異なるアダプタを 1 つの配列に入れるためのキャスト。`Map<string, V>` は V に対して
@@ -163,12 +188,24 @@ export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
   const server: RowSet<V> = new Map(baseline);
   for (const [key, value] of adapter.serverRowSet(pulled)) server.set(key, value);
 
-  const verdicts = mergeRowSets<V>(
-    baseline,
-    adapter.localRowSet(),
-    server,
-    adapter.equals,
-  );
+  // ローカル表現がゼロ値を表せない種別では「ローカルに無い」をゼロ値へ補正する。
+  // これをしないと削除した行が baseline=0 / local=null で永久に一致せず、
+  // push と adopt を往復し続ける
+  const local = new Map(adapter.localRowSet());
+  if (adapter.absentLocalAs !== undefined) {
+    // **ベースラインにある行だけ**を対象にする。ベースラインに無い行は
+    // 「サーバで新しく作られ、この端末はまだ知らない行」であり、ローカルに無いのは
+    // 当然なので補正してはならない。補正すると初回の取り込みが
+    // 「ローカルが 0 に変えた vs サーバが値を入れた」= 競合と誤判定される
+    for (const [key, baseValue] of baseline) {
+      if (!local.has(key)) {
+        const substitute = adapter.absentLocalAs(baseValue);
+        if (substitute !== null) local.set(key, substitute);
+      }
+    }
+  }
+
+  const verdicts = mergeRowSets<V>(baseline, local, server, adapter.equals);
   return {
     kind: adapter.kind,
     verdicts: verdicts as MergeVerdict<unknown>[],

@@ -90,13 +90,21 @@ async function applyKind<V>(
     }
   }
 
-  if (outcome.adopted > 0 || adoptedKeys.length > 0) {
-    adapter.writeLocal(nextLocal);
-    for (const [key, value] of adoptedKeys) {
-      if (!commitBaselineRow(adapter.kind, key, value)) {
-        outcome.baselineOk = false;
-        return outcome;
-      }
+  // writeLocal はローカルの内容が実際に変わったときだけ呼ぶ。収束済みの noop 行
+  // （ベースラインだけ古い行）で呼ぶと、何も変わらないのにストアの再読込が走る。
+  // 失敗を無視してはならない: ベースラインだけ進むと、次の同期で古いローカルの値が
+  // 相手の新しい値を上書きする
+  if (outcome.adopted > 0 && !adapter.writeLocal(nextLocal)) {
+    outcome.baselineOk = false;
+    return outcome;
+  }
+
+  // ベースラインの確定は adopted の有無に関わらず行う。収束済みの noop 行は
+  // ローカルを変えないが、ベースラインは進めないと毎回 3 値比較の対象になり続ける
+  for (const [key, value] of adoptedKeys) {
+    if (!commitBaselineRow(adapter.kind, key, value)) {
+      outcome.baselineOk = false;
+      return outcome;
     }
   }
 
@@ -150,7 +158,15 @@ export async function runSync(
     return { ...report, status: 'error', error: describeError(error) };
   }
 
-  const plans = ADAPTERS.map((adapter) => planKind(adapter, pulled));
+  // localStorage が壊れているとプロジェクションが throw しうる
+  // （SAVED_DECKS が配列でない、createdAt が欠落しているなど。バックアップ復元後や
+  // 旧形式のレコードで起こる）。どのエラー経路でも「何も書かずに状態だけ返す」
+  let plans: KindPlan[];
+  try {
+    plans = ADAPTERS.map((adapter) => planKind(adapter, pulled));
+  } catch (error) {
+    return { ...report, status: 'error', error: describeError(error) };
+  }
   const conflicted = plans.filter((plan) => plan.conflictKeys.length > 0).map((plan) => plan.kind);
 
   let resolutions = new Map<BaselineKind, Resolution>();

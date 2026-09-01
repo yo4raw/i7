@@ -75,3 +75,22 @@ export function saveJson(key: string, value: unknown): void {
     }
   }
 }
+
+/**
+ * 通知せずに書き込み、成否を返す。同期層がサーバから取り込んだ内容を書き戻すのに使う。
+ *
+ * `saveJson` では 2 つ問題がある:
+ *   (a) 例外を飲むため書き込み失敗を検知できない。失敗を見逃すと「ベースラインは
+ *       取り込み済みなのにローカルは古い」状態になり、次の同期で古いローカルの値が
+ *       相手の新しい値を上書きする。
+ *   (b) `onSave` が発火し、同期層自身の書き込みが「未同期のローカル変更」として
+ *       扱われる。同期 → 保存通知 → 同期のループになりうる。
+ */
+export function writeJsonSilently(key: string, value: unknown): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}

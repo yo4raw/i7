@@ -152,12 +152,20 @@ function slotEquals(a: SyncedDeckSlot, b: SyncedDeckSlot): boolean {
 /**
  * updated_at はサーバが採番する値であり「内容」ではないので比較から除く。
  * ここに含めると、サーバから取り込んだ直後に必ず差分ありと判定されてしまう。
+ *
+ * created_at は**生文字列で比較してはならない**。クライアントは
+ * `new Date(ms).toISOString()`（`2026-08-31T00:00:00.000Z`）を送るが、
+ * Postgres は timestamptz を `2026-08-31T00:00:00+00:00` の形で返す。
+ * 文字列比較にすると全デッキが毎回「変更あり」と判定され永久に再 push される。
+ *
+ * deleted_at も同様に厳密比較しない。tombstone の時刻は利用者のデータではなく、
+ * push のたびに再スタンプされるため、「削除されているか」だけを比べる。
  */
 export function deckEquals(a: SyncedDeck, b: SyncedDeck): boolean {
   return a.name === b.name
     && a.song_id === b.song_id
-    && a.created_at === b.created_at
-    && a.deleted_at === b.deleted_at
+    && Date.parse(a.created_at) === Date.parse(b.created_at)
+    && (a.deleted_at === null) === (b.deleted_at === null)
     && a.slots.length === b.slots.length
     && a.slots.every((slot, i) => slotEquals(slot, b.slots[i]));
 }

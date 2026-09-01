@@ -12,6 +12,18 @@ type FakeOptions = {
   failPushKeys?: Set<string>;
 };
 
+/**
+ * Postgres が timestamptz を JSON へ描画する書式に寄せる。
+ *
+ * クライアントが送る `2026-08-31T00:00:00.000Z` は
+ * `2026-08-31T00:00:00+00:00` として返ってくる。フェイクがクライアントの文字列を
+ * そのまま返すと、生文字列比較に依存した実装（永久に再 push される）を
+ * テストで検出できない。
+ */
+function pgTimestamp(iso: string): string {
+  return new Date(iso).toISOString().replace(/\.\d{3}Z$/u, '+00:00');
+}
+
 export function createFakePort(options: FakeOptions = {}) {
   const userId = options.userId === undefined ? 'user-1' : options.userId;
   let rev = 0;
@@ -89,7 +101,18 @@ export function createFakePort(options: FakeOptions = {}) {
 
     async pushDeck(key, deck) {
       const outcome = result(key, bump());
-      if (outcome.ok) decks.set(key, { ...deck, rev: outcome.rev });
+      if (outcome.ok) {
+        const existing = decks.get(key);
+        decks.set(key, {
+          ...deck,
+          // 実 RPC の on conflict は created_at を更新しない。既存行があれば保持する
+          created_at: existing?.created_at ?? pgTimestamp(deck.created_at),
+          // updated_at はサーバ側が採番する
+          updated_at: pgTimestamp(new Date().toISOString()),
+          deleted_at: deck.deleted_at === null ? null : pgTimestamp(deck.deleted_at),
+          rev: outcome.rev,
+        });
+      }
       return outcome;
     },
 

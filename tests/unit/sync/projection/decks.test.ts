@@ -137,4 +137,22 @@ describe('deckEquals', () => {
     const b = { ...a, updated_at: '2030-01-01T00:00:00.000Z' };
     expect(deckEquals(a, b)).toBe(true);
   });
+
+  it('created_at は書式が違っても同時刻なら等しいとみなす (Postgres の描画差を吸収)', () => {
+    const a = savedDecksToRowSet([deck]).get('m9x2k1p')!;
+    const b = { ...a, created_at: new Date(Date.parse(a.created_at)).toISOString().replace('Z', '+00:00') };
+    expect(deckEquals(a, b)).toBe(true);
+  });
+
+  it('tombstone は時刻が違っても等しいとみなす (削除されているかだけを比べる)', () => {
+    const a = { ...savedDecksToRowSet([deck]).get('m9x2k1p')!, deleted_at: '2026-08-31T00:00:00.000Z' };
+    const b = { ...a, deleted_at: '2026-09-01T00:00:00.000Z' };
+    expect(deckEquals(a, b)).toBe(true);
+  });
+
+  it('片方だけが tombstone なら等しくない', () => {
+    const a = savedDecksToRowSet([deck]).get('m9x2k1p')!;
+    const b = { ...a, deleted_at: '2026-08-31T00:00:00.000Z' };
+    expect(deckEquals(a, b)).toBe(false);
+  });
 });

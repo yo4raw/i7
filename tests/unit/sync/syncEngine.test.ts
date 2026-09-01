@@ -301,6 +301,86 @@ describe('runSync — デッキとラビットノートの push', () => {
   });
 });
 
+describe('runSync — 削除が収束すること', () => {
+  it('所持衣装数の削除', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('card_counts', '5', 2);
+    saveJson(STORAGE_KEYS.CARD_COUNTS, {});
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    // 静止しないと push と adopt を永久に往復する（周期 2 の無限ループ）
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('共通ブローチ所持数の削除', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('shared_broach_counts', '1', 4);
+    saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, {});
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('ラビットノートの削除', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('rabbit_notes', '七瀬陸', { shout: 1, beat: 2, melody: 3 });
+    saveJson(STORAGE_KEYS.RABBIT_NOTES, {});
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('デッキの削除（tombstone が再スタンプされ続けない）', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('decks', 'd1', {
+      name: 'A', song_id: null,
+      created_at: '2026-08-31T00:00:00.000Z', updated_at: '2026-08-31T00:00:00.000Z',
+      deleted_at: null,
+      slots: Array.from({ length: 6 }, (_, i) => ({
+        slot_index: i, card_id: null, trained: false,
+        skill_level: null, bonus_tier: null, shared_broach_ids: [],
+      })),
+    });
+    saveJson(STORAGE_KEYS.SAVED_DECKS, []);
+    const { port, state } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    expect(state.decks.get('d1')?.deleted_at).not.toBeNull();
+    // デッキだけは tombstone が 1 往復する。1 回目は push でベースラインが空になり、
+    // 2 回目に tombstone を取り込んでベースラインへ入り、3 回目から静止する
+    const second = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 1]);
+    const third = await runSync(port, noConflict);
+    const fourth = await runSync(port, noConflict);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+    expect([fourth.pushed, fourth.adopted]).toEqual([0, 0]);
+  });
+
+  it('サーバが返す時刻書式が違ってもデッキは再 push されない', async () => {
+    saveJson(STORAGE_KEYS.SAVED_DECKS, [{
+      id: 'd1', name: 'A', createdAt: 1_780_000_000_000, updatedAt: 1_780_000_000_000,
+      state: {
+        songId: null, deckIds: [1, null, null, null, null, null],
+        bonusTiers: [], trained: [], sharedBroachs: [], skillLevels: [],
+      },
+    }]);
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+});
+
 describe('runSync — ベースラインが書けないとき', () => {
   it('同期を止めて baseline-write-failed を返す（勝手なマージに倒さない）', async () => {
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 2 });
