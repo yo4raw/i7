@@ -1,11 +1,14 @@
 name: Keep Supabase awake
 
 # 無料枠は 7 日間 API リクエストが無いとプロジェクトが自動停止する (ADR 0064)。
-# 利用者ゼロの期間に停止するのを防ぐため、週 1 回だけ軽いリクエストを送る。
+# 利用者ゼロの期間に停止するのを防ぐため、週 2 回軽いリクエストを送る。
 # publishable key しか使わないため CI に秘密情報は増えない。
 on:
   schedule:
-    - cron: '17 3 * * 1'
+    # 週 2 回にする。7 日の停止しきい値に対して週 1 回では余裕がゼロで、
+    # GitHub がスケジュール実行を遅延・破棄すると（負荷時に起こりうる）
+    # 1 回落ちただけで 14 日空き、この workflow の目的そのものが崩れる
+    - cron: '17 3 * * 1,4'
   workflow_dispatch:
 
 permissions:
@@ -22,12 +25,18 @@ jobs:
         shell: bash
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
-            echo "Supabase の Variables が未設定のためスキップします"
+            # このワークフローは schedule / workflow_dispatch でしか動かず、
+            # Variables は常に存在するはず。無いのは設定ミスなので、
+            # 緑のまま何もしない状態を Checks UI から見えるようにする
+            echo "::warning::Supabase の Variables が未設定のためスキップしました"
             exit 0
           fi
           # /auth/v1/settings は publishable key で叩ける軽量なエンドポイント。
           # /rest/v1/ のルートは secret key 専用なので使えない。
+          # タイムアウトを必ず付ける。停止済みプロジェクトは応答しないことがあり、
+          # 無指定だと GitHub のジョブ上限（既定 6 時間）まで張り付く
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            --connect-timeout 10 --max-time 30 \
             -H "apikey: $SUPABASE_KEY" \
             "$SUPABASE_URL/auth/v1/settings")
           echo "HTTP $STATUS"

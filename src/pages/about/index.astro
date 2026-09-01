@@ -113,7 +113,8 @@ const breadcrumbs = [
   <section class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">プライバシー</h2>
     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
-      <li>所持衣装・デッキ・ラビットノート値などのユーザー入力は、ブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
+      <li>所持衣装・デッキ・ラビットノート値などのユーザー入力は、既定ではブラウザの <code class="px-1 py-0.5 bg-gray-100 rounded">localStorage</code> のみに保存され、サーバーへ送信されません。</li>
+      <li>フッターから Google アカウントでログインして端末間同期を使う場合に限り、一部のデータがサーバーに保存されます。詳しくは<a href={`${base}privacy/`} class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">プライバシーポリシー</a>をご覧ください。</li>
       <li>データのエクスポート・完全削除はブラウザの設定または各ページ上のクリア機能から行えます。</li>
     </ul>
   </section>
