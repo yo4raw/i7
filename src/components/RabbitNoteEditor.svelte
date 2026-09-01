@@ -16,6 +16,8 @@
   let data = $state<RabbitNoteMap>({});
   let feedback = $state('');
   let feedbackVisible = $state(false);
+  /** 保存ボタンを押すまでは data はメモリ上のバッファ。立っている間は同期の取り込みで消さない */
+  let dirty = $state(false);
 
   $effect(() => {
     data = loadRabbitNotes();
@@ -25,6 +27,11 @@
   // src/lib/sync/ からは何も import しない（同期層を削除しても今日と同じ挙動になる）
   onMount(() => {
     const onSyncApplied = () => {
+      if (dirty) {
+        // 未保存の編集を背後の同期で黙って消さない。代わりに知らせる
+        showFeedback('別の端末の変更があります。保存すると上書きされます');
+        return;
+      }
       data = loadRabbitNotes();
     };
     window.addEventListener('i7:sync-applied', onSyncApplied);
@@ -38,6 +45,7 @@
   function setValue(member: string, attr: 'shout' | 'beat' | 'melody', val: number) {
     const entry = data[member] ?? { shout: 0, beat: 0, melody: 0 };
     data[member] = { ...entry, [attr]: val };
+    dirty = true;
   }
 
   function clean(map: RabbitNoteMap): RabbitNoteMap {
@@ -58,6 +66,7 @@
     const cleaned = clean(data);
     saveRabbitNotes(cleaned);
     data = cleaned;
+    dirty = false;
     showFeedback('保存しました');
   }
 
@@ -71,6 +80,7 @@
     if (!ok) return;
     saveRabbitNotes({});
     data = {};
+    dirty = false;
     showFeedback('クリアしました');
   }
 </script>

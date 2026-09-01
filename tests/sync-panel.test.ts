@@ -41,3 +41,13 @@ test('Supabase を全遮断してもスコア計算ページが開ける', async
   await page.goto('/score-calc/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
+
+test('同期の取り込み通知で未保存のラビットノート編集を消さない', async ({ page }) => {
+  await page.goto('/rabbit-note/');
+  const input = page.locator('input[type="number"]').first();
+  await input.fill('7');
+  await input.dispatchEvent('change');
+  // 背後の同期が取り込みを知らせても、保存前の入力は残ること
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('i7:sync-applied')));
+  await expect(input).toHaveValue('7');
+});
