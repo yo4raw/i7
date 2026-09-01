@@ -1044,6 +1044,26 @@ describe('deckEquals', () => {
     const b = { ...a, updated_at: '2030-01-01T00:00:00.000Z' };
     expect(deckEquals(a, b)).toBe(true);
   });
+
+  it('created_at は書式が違っても同時刻なら等しいとみなす (Postgres の描画差を吸収)', () => {
+    // クライアントは 2026-08-31T00:00:00.000Z を送るが Postgres は
+    // 2026-08-31T00:00:00+00:00 の形で返す。文字列比較だと永久に再 push される
+    const a = savedDecksToRowSet([deck]).get('m9x2k1p')!;
+    const b = { ...a, created_at: new Date(Date.parse(a.created_at)).toISOString().replace('Z', '+00:00') };
+    expect(deckEquals(a, b)).toBe(true);
+  });
+
+  it('tombstone は時刻が違っても等しいとみなす (削除されているかだけを比べる)', () => {
+    const a = { ...savedDecksToRowSet([deck]).get('m9x2k1p')!, deleted_at: '2026-08-31T00:00:00.000Z' };
+    const b = { ...a, deleted_at: '2026-09-01T00:00:00.000Z' };
+    expect(deckEquals(a, b)).toBe(true);
+  });
+
+  it('片方だけが tombstone なら等しくない', () => {
+    const a = savedDecksToRowSet([deck]).get('m9x2k1p')!;
+    const b = { ...a, deleted_at: '2026-08-31T00:00:00.000Z' };
+    expect(deckEquals(a, b)).toBe(false);
+  });
 });
 ```
 
@@ -1208,12 +1228,20 @@ function slotEquals(a: SyncedDeckSlot, b: SyncedDeckSlot): boolean {
 /**
  * updated_at はサーバが採番する値であり「内容」ではないので比較から除く。
  * ここに含めると、サーバから取り込んだ直後に必ず差分ありと判定されてしまう。
+ *
+ * created_at は**生文字列で比較してはならない**。クライアントは
+ * `new Date(ms).toISOString()`（`2026-08-31T00:00:00.000Z`）を送るが、
+ * Postgres は timestamptz を `2026-08-31T00:00:00+00:00` の形で返す。
+ * 文字列比較にすると全デッキが毎回「変更あり」と判定され永久に再 push される。
+ *
+ * deleted_at も同様に厳密比較しない。tombstone の時刻は利用者のデータではなく、
+ * push のたびに再スタンプされるため、「削除されているか」だけを比べる。
  */
 export function deckEquals(a: SyncedDeck, b: SyncedDeck): boolean {
   return a.name === b.name
     && a.song_id === b.song_id
-    && a.created_at === b.created_at
-    && a.deleted_at === b.deleted_at
+    && Date.parse(a.created_at) === Date.parse(b.created_at)
+    && (a.deleted_at === null) === (b.deleted_at === null)
     && a.slots.length === b.slots.length
     && a.slots.every((slot, i) => slotEquals(slot, b.slots[i]));
 }
@@ -1222,7 +1250,7 @@ export function deckEquals(a: SyncedDeck, b: SyncedDeck): boolean {
 - [ ] **Step 4: テストが通ることを確認する**
 
 Run: `npx vitest run tests/unit/sync/projection/decks.test.ts`
-Expected: PASS（12 tests）
+Expected: PASS（15 tests）
 
 - [ ] **Step 5: commit**
 
@@ -1694,6 +1722,25 @@ export function saveJson(key: string, value: unknown): void {
     } catch {
       // 購読側の例外で保存処理を壊さない
     }
+  }
+}
+
+/**
+ * 通知せずに書き込み、成否を返す。同期層がサーバから取り込んだ内容を書き戻すのに使う。
+ *
+ * `saveJson` では 2 つ問題がある:
+ *   (a) 例外を飲むため書き込み失敗を検知できない。失敗を見逃すと「ベースラインは
+ *       取り込み済みなのにローカルは古い」状態になり、次の同期で古いローカルの値が
+ *       相手の新しい値を上書きする。
+ *   (b) `onSave` が発火し、同期層自身の書き込みが「未同期のローカル変更」として
+ *       扱われる。同期 → 保存通知 → 同期のループになりうる。
+ */
+export function writeJsonSilently(key: string, value: unknown): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
   }
 }
 ```
@@ -2435,8 +2482,8 @@ Expected: FAIL（`Failed to resolve import`）
 - [ ] **Step 3: `adapters.ts` を実装する**
 
 ```ts
-import { loadRabbitNotes, saveRabbitNotes } from '../data/rabbitNote';
-import { STORAGE_KEYS, loadJson, saveJson } from '../storage';
+import { loadRabbitNotes } from '../data/rabbitNote';
+import { STORAGE_KEYS, loadJson, writeJsonSilently } from '../storage';
 import { MAX_BROACH_COUNT, reloadBroachCountsFromStorage } from '../stores/broachCounts.svelte';
 import { reloadFromStorage as reloadCardCounts } from '../stores/cardCounts.svelte';
 import { loadBaselineRowSet, type BaselineKind } from './baseline';
@@ -2465,8 +2512,23 @@ export type Adapter<V> = {
   kind: BaselineKind;
   /** localStorage の現在値 */
   localRowSet(): RowSet<V>;
-  /** localStorage へ書き戻す。関連する Svelte ストアの再読込もここで行う */
-  writeLocal(rows: RowSet<V>): void;
+  /**
+   * localStorage へ書き戻す。関連する Svelte ストアの再読込もここで行う。
+   * 書き込みに失敗したら false を返すこと（呼び出し側は同期を停止する）。
+   */
+  writeLocal(rows: RowSet<V>): boolean;
+  /**
+   * ローカル表現が「その行が無い」と「ゼロ値」を区別できない種別のための補正。
+   *
+   * 所持数系は 0 のキーを localStorage から落とすため、削除した行は
+   * ローカルでは常に「無い」= null になる。一方サーバには 0 の行が残る。
+   * 補正しないと baseline=0 / local=null が永久に一致せず、push と adopt を
+   * 往復し続ける（周期 2 の無限ループ）。
+   *
+   * 引数はベースラインまたはサーバが持っている値。null を返すと「本当に無い」
+   * として扱われ、通常の削除として push される。
+   */
+  absentLocalAs?: (other: V) => V | null;
   /** プル結果からサーバ側の行集合を作る */
   serverRowSet(pulled: PulledRows): RowSet<V>;
   /** カーソル更新に使う、プルで得た rev の一覧 */
@@ -2480,9 +2542,12 @@ const cardCountsAdapter: Adapter<number> = {
   kind: 'card_counts',
   localRowSet: () => countMapToRowSet(loadJson<CountMap>(STORAGE_KEYS.CARD_COUNTS, {})),
   writeLocal(rows) {
-    saveJson(STORAGE_KEYS.CARD_COUNTS, rowSetToCountMap(rows));
-    reloadCardCounts();
+    const ok = writeJsonSilently(STORAGE_KEYS.CARD_COUNTS, rowSetToCountMap(rows));
+    if (ok) reloadCardCounts();
+    return ok;
   },
+  // rowSetToCountMap が 0 を落とすため、ローカルは 0 と不在を区別できない
+  absentLocalAs: () => 0,
   serverRowSet: (pulled) => countRowsToRowSet(pulled.card_counts, 'card_id'),
   serverRevs: (pulled) => pulled.card_counts.map((row) => row.rev),
   equals: (a, b) => a === b,
@@ -2500,9 +2565,14 @@ const sharedBroachCountsAdapter: Adapter<number> = {
       MAX_BROACH_COUNT,
     ),
   writeLocal(rows) {
-    saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, rowSetToCountMap(clampRowSet(rows, MAX_BROACH_COUNT)));
-    reloadBroachCountsFromStorage();
+    const ok = writeJsonSilently(
+      STORAGE_KEYS.SHARED_BROACH_COUNTS,
+      rowSetToCountMap(clampRowSet(rows, MAX_BROACH_COUNT)),
+    );
+    if (ok) reloadBroachCountsFromStorage();
+    return ok;
   },
+  absentLocalAs: () => 0,
   serverRowSet: (pulled) =>
     clampRowSet(countRowsToRowSet(pulled.shared_broach_counts, 'broach_id'), MAX_BROACH_COUNT),
   serverRevs: (pulled) => pulled.shared_broach_counts.map((row) => row.rev),
@@ -2519,7 +2589,8 @@ const ZERO_NOTE: RabbitNoteValue = { shout: 0, beat: 0, melody: 0 };
 const rabbitNotesAdapter: Adapter<RabbitNoteValue> = {
   kind: 'rabbit_notes',
   localRowSet: () => rabbitMapToRowSet(loadRabbitNotes()),
-  writeLocal: (rows) => saveRabbitNotes(rowSetToRabbitMap(rows)),
+  writeLocal: (rows) => writeJsonSilently(STORAGE_KEYS.RABBIT_NOTES, rowSetToRabbitMap(rows)),
+  absentLocalAs: () => ZERO_NOTE,
   serverRowSet: (pulled) => rabbitRowsToRowSet(pulled.rabbit_notes),
   serverRevs: (pulled) => pulled.rabbit_notes.map((row) => row.rev),
   equals: rabbitEquals,
@@ -2530,7 +2601,11 @@ const rabbitNotesAdapter: Adapter<RabbitNoteValue> = {
 const decksAdapter: Adapter<SyncedDeck> = {
   kind: 'decks',
   localRowSet: () => savedDecksToRowSet(loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, [])),
-  writeLocal: (rows) => saveJson(STORAGE_KEYS.SAVED_DECKS, rowSetToSavedDecks(rows)),
+  writeLocal: (rows) => writeJsonSilently(STORAGE_KEYS.SAVED_DECKS, rowSetToSavedDecks(rows)),
+  // tombstone 済みのデッキはローカルに現れない（rowSetToSavedDecks が飛ばす）ので、
+  // 相手が tombstone を持っているなら「ローカルに無い」は同じ状態を意味する。
+  // 相手が生きているデッキを持っているなら、本当に削除された（push すべき）
+  absentLocalAs: (other) => (other.deleted_at === null ? null : other),
   serverRowSet: (pulled) => deckRowsToRowSet(pulled.decks, pulled.deck_slots),
   serverRevs: (pulled) => pulled.decks.map((row) => row.rev),
   equals: deckEquals,
@@ -2600,12 +2675,20 @@ export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
   const server: RowSet<V> = new Map(baseline);
   for (const [key, value] of adapter.serverRowSet(pulled)) server.set(key, value);
 
-  const verdicts = mergeRowSets<V>(
-    baseline,
-    adapter.localRowSet(),
-    server,
-    adapter.equals,
-  );
+  // ローカル表現がゼロ値を表せない種別では「ローカルに無い」をゼロ値へ補正する。
+  // これをしないと削除した行が baseline=0 / local=null で永久に一致せず、
+  // push と adopt を往復し続ける
+  const local = new Map(adapter.localRowSet());
+  if (adapter.absentLocalAs !== undefined) {
+    for (const [key, value] of server) {
+      if (!local.has(key)) {
+        const substitute = adapter.absentLocalAs(value);
+        if (substitute !== null) local.set(key, substitute);
+      }
+    }
+  }
+
+  const verdicts = mergeRowSets<V>(baseline, local, server, adapter.equals);
   return {
     kind: adapter.kind,
     verdicts: verdicts as MergeVerdict<unknown>[],
@@ -2665,6 +2748,18 @@ type FakeOptions = {
   /** このキーの push だけを失敗させる（部分失敗の再現） */
   failPushKeys?: Set<string>;
 };
+
+/**
+ * Postgres が timestamptz を JSON へ描画する書式に寄せる。
+ *
+ * クライアントが送る `2026-08-31T00:00:00.000Z` は
+ * `2026-08-31T00:00:00+00:00` として返ってくる。フェイクがクライアントの文字列を
+ * そのまま返すと、生文字列比較に依存した実装（永久に再 push される）を
+ * テストで検出できない。
+ */
+function pgTimestamp(iso: string): string {
+  return new Date(iso).toISOString().replace(/\.\d{3}Z$/u, '+00:00');
+}
 
 export function createFakePort(options: FakeOptions = {}) {
   const userId = options.userId === undefined ? 'user-1' : options.userId;
@@ -2743,7 +2838,18 @@ export function createFakePort(options: FakeOptions = {}) {
 
     async pushDeck(key, deck) {
       const outcome = result(key, bump());
-      if (outcome.ok) decks.set(key, { ...deck, rev: outcome.rev });
+      if (outcome.ok) {
+        const existing = decks.get(key);
+        decks.set(key, {
+          ...deck,
+          // 実 RPC の on conflict は created_at を更新しない。既存行があれば保持する
+          created_at: existing?.created_at ?? pgTimestamp(deck.created_at),
+          // updated_at はサーバ側が採番する
+          updated_at: pgTimestamp(new Date().toISOString()),
+          deleted_at: deck.deleted_at === null ? null : pgTimestamp(deck.deleted_at),
+          rev: outcome.rev,
+        });
+      }
       return outcome;
     },
 
@@ -3079,6 +3185,84 @@ describe('runSync — デッキとラビットノートの push', () => {
   });
 });
 
+describe('runSync — 削除が収束すること（2 回目以降は静止する）', () => {
+  it('所持衣装数の削除', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('card_counts', '5', 2);
+    saveJson(STORAGE_KEYS.CARD_COUNTS, {});
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    // 静止しないと push と adopt を永久に往復する（周期 2 の無限ループ）
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('共通ブローチ所持数の削除', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('shared_broach_counts', '1', 4);
+    saveJson(STORAGE_KEYS.SHARED_BROACH_COUNTS, {});
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('ラビットノートの削除', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('rabbit_notes', '七瀬陸', { shout: 1, beat: 2, melody: 3 });
+    saveJson(STORAGE_KEYS.RABBIT_NOTES, {});
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('デッキの削除（tombstone が再スタンプされ続けない）', async () => {
+    seedSyncedDevice();
+    commitBaselineRow('decks', 'd1', {
+      name: 'A', song_id: null,
+      created_at: '2026-08-31T00:00:00.000Z', updated_at: '2026-08-31T00:00:00.000Z',
+      deleted_at: null,
+      slots: Array.from({ length: 6 }, (_, i) => ({
+        slot_index: i, card_id: null, trained: false,
+        skill_level: null, bonus_tier: null, shared_broach_ids: [],
+      })),
+    });
+    saveJson(STORAGE_KEYS.SAVED_DECKS, []);
+    const { port, state } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    expect(state.decks.get('d1')?.deleted_at).not.toBeNull();
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+
+  it('サーバが返す時刻書式が違ってもデッキは再 push されない', async () => {
+    // クライアントは 2026-08-31T00:00:00.000Z を送るが Postgres は
+    // 2026-08-31T00:00:00+00:00 を返す。生文字列比較だと毎回再 push される
+    saveJson(STORAGE_KEYS.SAVED_DECKS, [{
+      id: 'd1', name: 'A', createdAt: 1_780_000_000_000, updatedAt: 1_780_000_000_000,
+      state: {
+        songId: null, deckIds: [1, null, null, null, null, null],
+        bonusTiers: [], trained: [], sharedBroachs: [], skillLevels: [],
+      },
+    }]);
+    const { port } = createFakePort();
+    expect((await runSync(port, noConflict)).pushed).toBe(1);
+    const second = await runSync(port, noConflict);
+    const third = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    expect([third.pushed, third.adopted]).toEqual([0, 0]);
+  });
+});
+
 describe('runSync — ベースラインが書けないとき', () => {
   it('同期を止めて baseline-write-failed を返す（勝手なマージに倒さない）', async () => {
     saveJson(STORAGE_KEYS.CARD_COUNTS, { '5': 2 });
@@ -3198,13 +3382,21 @@ async function applyKind<V>(
     }
   }
 
-  if (outcome.adopted > 0 || adoptedKeys.length > 0) {
-    adapter.writeLocal(nextLocal);
-    for (const [key, value] of adoptedKeys) {
-      if (!commitBaselineRow(adapter.kind, key, value)) {
-        outcome.baselineOk = false;
-        return outcome;
-      }
+  // writeLocal はローカルの内容が実際に変わったときだけ呼ぶ。収束済みの noop 行
+  // （ベースラインだけ古い行）で呼ぶと、何も変わらないのにストアの再読込が走る。
+  // 失敗を無視してはならない: ベースラインだけ進むと、次の同期で古いローカルの値が
+  // 相手の新しい値を上書きする
+  if (outcome.adopted > 0 && !adapter.writeLocal(nextLocal)) {
+    outcome.baselineOk = false;
+    return outcome;
+  }
+
+  // ベースラインの確定は adopted の有無に関わらず行う。収束済みの noop 行は
+  // ローカルを変えないが、ベースラインは進めないと毎回 3 値比較の対象になり続ける
+  for (const [key, value] of adoptedKeys) {
+    if (!commitBaselineRow(adapter.kind, key, value)) {
+      outcome.baselineOk = false;
+      return outcome;
     }
   }
 
@@ -3261,7 +3453,16 @@ export async function runSync(
     return { ...report, status: 'error', error: describeError(error) };
   }
 
-  const plans = ADAPTERS.map((adapter) => planKind(adapter, pulled));
+  // localStorage が壊れているとプロジェクションが throw しうる
+  // （SAVED_DECKS が配列でない、createdAt が欠落しているなど。バックアップ復元後や
+  // 旧形式のレコードで起こる）。どのエラー経路でも「何も書かずに状態だけ返す」
+  let plans: KindPlan[];
+  try {
+    plans = ADAPTERS.map((adapter) => planKind(adapter, pulled));
+  } catch (error) {
+    return { ...report, status: 'error', error: describeError(error) };
+  }
+
   const conflicted = plans.filter((plan) => plan.conflictKeys.length > 0).map((plan) => plan.kind);
 
   let resolutions = new Map<BaselineKind, Resolution>();
@@ -3319,7 +3520,7 @@ export async function runSync(
 - [ ] **Step 5: テストが通ることを確認する**
 
 Run: `npx vitest run tests/unit/sync/syncEngine.test.ts`
-Expected: PASS（23 tests）
+Expected: PASS（28 tests）
 
 - [ ] **Step 6: カバレッジを確認する**
 
