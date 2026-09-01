@@ -57,6 +57,12 @@ async function fetchAllDeckSlots(
       .from('deck_slots')
       .select('*')
       .in('deck_id', deckIds)
+      // deck_id と slot_index の両方で並べること。slot_index は 0-5 の 6 値しか取らないため、
+      // それだけでは順序が一意に決まらず、range() によるページングが不安定になる
+      // （ページごとに別クエリなので、同値内の並びが変われば行が飛ぶ）。
+      // 行が飛ぶとそのデッキは「スロットが空のデッキ」として届き、adopt されて
+      // 利用者のデッキが空になる。
+      .order('deck_id', { ascending: true })
       .order('slot_index', { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
