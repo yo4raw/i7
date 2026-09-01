@@ -1,0 +1,37 @@
+name: Keep Supabase awake
+
+# 無料枠は 7 日間 API リクエストが無いとプロジェクトが自動停止する (ADR 0064)。
+# 利用者ゼロの期間に停止するのを防ぐため、週 1 回だけ軽いリクエストを送る。
+# publishable key しか使わないため CI に秘密情報は増えない。
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase auth settings
+        env:
+          SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Supabase の Variables が未設定のためスキップします"
+            exit 0
+          fi
+          # /auth/v1/settings は publishable key で叩ける軽量なエンドポイント。
+          # /rest/v1/ のルートは secret key 専用なので使えない。
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "apikey: $SUPABASE_KEY" \
+            "$SUPABASE_URL/auth/v1/settings")
+          echo "HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Supabase が想定外の応答を返しました (HTTP $STATUS)"
+            exit 1
+          fi
