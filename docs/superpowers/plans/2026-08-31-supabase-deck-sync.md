@@ -2525,8 +2525,8 @@ export type Adapter<V> = {
    * 補正しないと baseline=0 / local=null が永久に一致せず、push と adopt を
    * 往復し続ける（周期 2 の無限ループ）。
    *
-   * 引数はベースラインまたはサーバが持っている値。null を返すと「本当に無い」
-   * として扱われ、通常の削除として push される。
+   * 引数はベースラインが持っている値。null を返すと「本当に無い」として扱われ、
+   * 通常の削除として push される。
    */
   absentLocalAs?: (other: V) => V | null;
   /** プル結果からサーバ側の行集合を作る */
@@ -2680,9 +2680,13 @@ export function planKind<V>(adapter: Adapter<V>, pulled: PulledRows): KindPlan {
   // push と adopt を往復し続ける
   const local = new Map(adapter.localRowSet());
   if (adapter.absentLocalAs !== undefined) {
-    for (const [key, value] of server) {
+    // **ベースラインにある行だけ**を対象にする。ベースラインに無い行は
+    // 「サーバで新しく作られ、この端末はまだ知らない行」であり、ローカルに無いのは
+    // 当然なので補正してはならない。補正すると初回の取り込みが
+    // 「ローカルが 0 に変えた vs サーバが値を入れた」= 競合と誤判定される
+    for (const [key, baseValue] of baseline) {
       if (!local.has(key)) {
-        const substitute = adapter.absentLocalAs(value);
+        const substitute = adapter.absentLocalAs(baseValue);
         if (substitute !== null) local.set(key, substitute);
       }
     }
@@ -3185,7 +3189,7 @@ describe('runSync — デッキとラビットノートの push', () => {
   });
 });
 
-describe('runSync — 削除が収束すること（2 回目以降は静止する）', () => {
+describe('runSync — 削除が収束すること', () => {
   it('所持衣装数の削除', async () => {
     seedSyncedDevice();
     commitBaselineRow('card_counts', '5', 2);
@@ -3238,10 +3242,14 @@ describe('runSync — 削除が収束すること（2 回目以降は静止す�
     const { port, state } = createFakePort();
     expect((await runSync(port, noConflict)).pushed).toBe(1);
     expect(state.decks.get('d1')?.deleted_at).not.toBeNull();
+    // デッキだけは tombstone が 1 往復する。1 回目は push でベースラインが空になり、
+    // 2 回目に tombstone を取り込んでベースラインへ入り、3 回目から静止する
     const second = await runSync(port, noConflict);
+    expect([second.pushed, second.adopted]).toEqual([0, 1]);
     const third = await runSync(port, noConflict);
-    expect([second.pushed, second.adopted]).toEqual([0, 0]);
+    const fourth = await runSync(port, noConflict);
     expect([third.pushed, third.adopted]).toEqual([0, 0]);
+    expect([fourth.pushed, fourth.adopted]).toEqual([0, 0]);
   });
 
   it('サーバが返す時刻書式が違ってもデッキは再 push されない', async () => {
