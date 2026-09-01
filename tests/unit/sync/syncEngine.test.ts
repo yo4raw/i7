@@ -220,6 +220,18 @@ describe('runSync — デッキとラビットノートの push', () => {
     expect(state.rabbitNotes.get('七瀬陸')).toMatchObject({ shout: 1, beat: 2, melody: 3 });
   });
 
+  it('ローカルで消したラビットノートは 0 として push される（行を消さない）', async () => {
+    // RabbitNoteEditor には全消去ボタン (saveRabbitNotes({})) があり、
+    // 0 のエントリを落として保存する経路もあるため、キーの消失は一級のユーザー操作
+    seedSyncedDevice();
+    commitBaselineRow('rabbit_notes', '七瀬陸', { shout: 1, beat: 2, melody: 3 });
+    saveJson(STORAGE_KEYS.RABBIT_NOTES, {});
+    const { port, state } = createFakePort();
+    const report = await runSync(port, noConflict);
+    expect(report.pushed).toBe(1);
+    expect(state.rabbitNotes.get('七瀬陸')).toMatchObject({ shout: 0, beat: 0, melody: 0 });
+  });
+
   it('ローカルで消した所持数は 0 として push される（行を消さない）', async () => {
     seedSyncedDevice();
     commitBaselineRow('shared_broach_counts', '1', 4);
