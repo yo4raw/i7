@@ -227,8 +227,7 @@
     if (!hasCards) { showDeckActionError('デッキに衣装を1枚以上セットしてください'); return; }
     deckActionError = null;
 
-    const existing = loadSavedDecks();
-    const defaultName = `デッキ ${existing.length + 1}`;
+    const defaultName = `デッキ ${loadSavedDecks().length + 1}`;
     const name = await dialog?.prompt({
       title: 'デッキ名を入力してください',
       value: defaultName,
@@ -238,6 +237,10 @@
     if (!name) return;
 
     const now = Date.now();
+    // ダイアログを開いている間に同期が書き込んでいる可能性があるため読み直す。
+    // 開く前の配列を書き戻すと、取り込んだ別端末のデッキを消し、
+    // さらに同期層がそれを tombstone としてサーバへ伝播させてしまう
+    const existing = loadSavedDecks();
     existing.push({ id: now.toString(36), name: name.trim() || defaultName, createdAt: now, updatedAt: now, state: buildStateObject() });
     writeSavedDecks(existing);
 

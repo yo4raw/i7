@@ -12,6 +12,59 @@ function allFailed(keys: readonly string[], error: string): Map<string, PushResu
   return new Map(keys.map((key) => [key, { ok: false, error }]));
 }
 
+/** PostgREST の Max rows（Supabase 既定 1000）より小さく取る */
+const PAGE_SIZE = 500;
+
+/**
+ * rev 昇順でページングしながら全行を取る。
+ *
+ * order を付けないと PostgREST が Max rows で任意の行を静かに切り捨て、
+ * カーソルが返却分の最大 rev まで進むため、落ちた行が二度と取得されなくなる。
+ */
+async function fetchAllByRev<T>(
+  client: SupabaseClient,
+  table: string,
+  cursorRev: number,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await client
+      .from(table)
+      .select('*')
+      .gt('rev', cursorRev)
+      .order('rev', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as T[];
+    out.push(...page);
+    if (page.length < PAGE_SIZE) return out;
+  }
+}
+
+/**
+ * deck_slots は自身の rev を持たない（親デッキの rev を使う）ため、対象デッキ ID で
+ * 絞り込んで全件取る。デッキ数が多いときに Max rows で切り捨てられないよう
+ * 同じくページングする。
+ */
+async function fetchAllDeckSlots(
+  client: SupabaseClient,
+  deckIds: readonly string[],
+): Promise<PulledRows['deck_slots']> {
+  const out: PulledRows['deck_slots'] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await client
+      .from('deck_slots')
+      .select('*')
+      .in('deck_id', deckIds)
+      .order('slot_index', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as PulledRows['deck_slots'];
+    out.push(...page);
+    if (page.length < PAGE_SIZE) return out;
+  }
+}
+
 export function createSupabasePort(client: SupabaseClient): SyncPort {
   async function currentUserId(): Promise<string | null> {
     const { data } = await client.auth.getUser();
@@ -22,29 +75,24 @@ export function createSupabasePort(client: SupabaseClient): SyncPort {
     getUserId: currentUserId,
 
     async pull(cursorRev) {
-      const [cards, broachs, notes, decks] = await Promise.all([
-        client.from('card_counts').select('*').gt('rev', cursorRev),
-        client.from('shared_broach_counts').select('*').gt('rev', cursorRev),
-        client.from('rabbit_notes').select('*').gt('rev', cursorRev),
-        client.from('decks').select('*').gt('rev', cursorRev),
+      const [cards, broachs, notes, deckRows] = await Promise.all([
+        fetchAllByRev<PulledRows['card_counts'][number]>(client, 'card_counts', cursorRev),
+        fetchAllByRev<PulledRows['shared_broach_counts'][number]>(
+          client, 'shared_broach_counts', cursorRev,
+        ),
+        fetchAllByRev<PulledRows['rabbit_notes'][number]>(client, 'rabbit_notes', cursorRev),
+        fetchAllByRev<PulledRows['decks'][number]>(client, 'decks', cursorRev),
       ]);
-      for (const result of [cards, broachs, notes, decks]) {
-        if (result.error) throw new Error(result.error.message);
-      }
 
-      const deckRows = (decks.data ?? []) as PulledRows['decks'];
       let slotRows: PulledRows['deck_slots'] = [];
       if (deckRows.length > 0) {
-        const slots = await client.from('deck_slots').select('*')
-          .in('deck_id', deckRows.map((deck) => deck.id));
-        if (slots.error) throw new Error(slots.error.message);
-        slotRows = (slots.data ?? []) as PulledRows['deck_slots'];
+        slotRows = await fetchAllDeckSlots(client, deckRows.map((deck) => deck.id));
       }
 
       return {
-        card_counts: (cards.data ?? []) as PulledRows['card_counts'],
-        shared_broach_counts: (broachs.data ?? []) as PulledRows['shared_broach_counts'],
-        rabbit_notes: (notes.data ?? []) as PulledRows['rabbit_notes'],
+        card_counts: cards,
+        shared_broach_counts: broachs,
+        rabbit_notes: notes,
         decks: deckRows,
         deck_slots: slotRows,
       };

@@ -82,6 +82,18 @@ describe('runSync — adopt', () => {
     await runSync(port, noConflict);
     expect(loadSyncMeta().cursorRev).toBeGreaterThanOrEqual(2);
   });
+
+  it('サーバの行数が 1 回のリクエスト上限を超えても全件取り込む', async () => {
+    const { port, seedCardCount } = createFakePort({ maxRowsPerRequest: 2 });
+    seedCardCount(1, 1);
+    seedCardCount(2, 1);
+    seedCardCount(3, 1);
+    seedCardCount(4, 1);
+    seedCardCount(5, 1);
+    await runSync(port, noConflict);
+    // 上限で切り捨てられた行が取り残されないこと
+    expect(Object.keys(loadJson(STORAGE_KEYS.CARD_COUNTS, {}))).toHaveLength(5);
+  });
 });
 
 describe('runSync — 共通ブローチとラビットノートの取り込み', () => {
