@@ -17,6 +17,12 @@ function same<V>(a: V | null, b: V | null, equals: (x: V, y: V) => boolean): boo
  *
  * 2 値では「自分が変えた」と「相手が変えた」を区別できないため、
  * ベースラインを基準点に置くのがこの設計の中核（ADR 0064 決定 6）。
+ *
+ * **契約**: 両方が変わって同じ値へ収束した場合の `noop` は、呼び出し側が持つ
+ * ベースラインとは異なる値を運びうる（B と L・S のいずれも一致しないケースがあるため）。
+ * 呼び出し側はこの `noop` をベースラインと突き合わせ、異なっていれば
+ * `commitBaselineRow` で確定すること。現状これを守っているのは
+ * `syncEngine.applyKind` だけで、新しい呼び出し元を足すときは必ず同じ突き合わせを行う。
  */
 export function mergeRow<V>(args: {
   key: string;

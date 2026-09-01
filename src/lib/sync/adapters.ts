@@ -160,13 +160,20 @@ export function findAdapter(kind: BaselineKind): Adapter<unknown> {
  * オフラインで変更したあとリロードした場合に未同期であることが表示されない。
  */
 export function hasPendingLocalChanges(): boolean {
-  return ADAPTERS.some((adapter) =>
-    hasChanges(diffRowSets(
-      loadBaselineRowSet<unknown>(adapter.kind),
-      adapter.localRowSet(),
-      adapter.equals,
-    )),
-  );
+  try {
+    return ADAPTERS.some((adapter) =>
+      hasChanges(diffRowSets(
+        loadBaselineRowSet<unknown>(adapter.kind),
+        adapter.localRowSet(),
+        adapter.equals,
+      )),
+    );
+  } catch {
+    // localStorage が壊れているとプロジェクションが throw しうる。
+    // 判定できないときは「未同期の変更あり」に倒す。実際の同期は runSync が
+    // 同じ例外を捕まえて status:'error' を返すので、そこで利用者に伝わる
+    return true;
+  }
 }
 
 export type KindPlan = {

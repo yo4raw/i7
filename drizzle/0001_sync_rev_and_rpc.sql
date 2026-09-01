@@ -4,8 +4,10 @@
 -- `drizzle-kit push` / `drizzle-kit pull` を実行してはならない。
 -- push はスナップショットに存在しない sync_cursor 等を「管理対象外」とみなし
 -- DROP を提案しうる。pull も同様にスナップショットとの差分から誤った操作を導く。
--- migration の適用は `drizzle-kit generate` で出力した SQL ファイルを
--- 手動で（例: `psql` や Supabase の SQL Editor で）流し込むこと。
+-- migration の適用は `npx drizzle-kit migrate` を使うこと（CLAUDE.md / ADR 0064 と一致させる）。
+-- psql や Supabase の SQL Editor で直接流し込むと drizzle の __drizzle_migrations
+-- 追跡テーブルを迂回し、後から `drizzle-kit migrate` を実行したときに
+-- "already exists" で失敗し手動修復が必要になる。
 
 -- ユーザーごとの単調増加カウンタ。増分プルのカーソルに使う。
 -- updated_at による増分プルは端末時計とサーバ時計の混在で取りこぼすため採用しない。
@@ -94,6 +96,9 @@ begin
 end $$;
 --> statement-breakpoint
 
+alter function public.bump_deck_rev() set search_path = public, pg_catalog;
+--> statement-breakpoint
+
 create trigger deck_slots_bump_deck after insert or update or delete on public.deck_slots
   for each row execute function public.bump_deck_rev();
 --> statement-breakpoint
@@ -155,6 +160,9 @@ begin
 end $$;
 --> statement-breakpoint
 
+alter function public.upsert_deck(jsonb) set search_path = public, pg_catalog;
+--> statement-breakpoint
+
 -- 同期データの全削除 (フッターの「サーバのデータを削除」)。
 -- auth.users の行は service_role が必要なため消せない (ADR 0064 決定 12)。
 create function public.delete_all_sync_data()
@@ -171,3 +179,6 @@ begin
   delete from public.shared_broach_counts where user_id = uid;
   delete from public.rabbit_notes where user_id = uid;
 end $$;
+--> statement-breakpoint
+
+alter function public.delete_all_sync_data() set search_path = public, pg_catalog;

@@ -6,9 +6,11 @@
   import { STORAGE_KEYS, onSave } from '../lib/storage';
   import type { BaselineKind } from '../lib/sync/baseline';
   import { hasPendingLocalChanges } from '../lib/sync/adapters';
+  import { readSyncEnv } from '../lib/sync/env';
   import { createSupabasePort } from '../lib/sync/supabasePort';
   import { getSupabaseClient } from '../lib/sync/supabaseClient';
   import { runSync, type ConflictResolver, type Resolution } from '../lib/sync/syncEngine';
+  import type { SyncPort } from '../lib/sync/port';
   import { loadSyncMeta, resetSyncState } from '../lib/sync/syncMeta';
 
   /** この 4 キーの変更だけが同期のトリガーになる */
@@ -30,15 +32,49 @@
   /** 所持数の連続増減で毎回リクエストが飛ぶのを防ぐ */
   const DEBOUNCE_MS = 3000;
 
-  // createClient は URL が壊れている（環境変数の誤設定）と同期的に throw する。
-  // フッターの島全体をクラッシュさせず、同期を諦めるだけに留める
-  let client: SupabaseClient | null = null;
-  try {
-    client = getSupabaseClient();
-  } catch {
-    client = null;
+  /**
+   * env が無ければテンプレートごと何も描画しない（不変条件）。
+   *
+   * `getSupabaseClient()` を呼ばずにここだけで判定すること。呼ぶと
+   * `@supabase/supabase-js`（gzip 約 148KB）の動的 import が静的解析上「常に到達しうる」
+   * 経路になり、未ログインの大多数の訪問者に配る対象から外せなくなる。
+   */
+  const envConfigured = readSyncEnv(import.meta.env as unknown as Record<string, string | undefined>) !== null;
+
+  /**
+   * Supabase のセッションが既にこの端末に保存されているか。
+   *
+   * セッションが無く、利用者もまだログインを押していない間は supabase-js を読み込まない
+   * （ログインボタンの描画だけならクライアントが要らない）。
+   */
+  function hasStoredSession(): boolean {
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key !== null && key.startsWith('sb-') && key.endsWith('-auth-token')) return true;
+      }
+    } catch {
+      // プライベートモード等
+    }
+    return false;
   }
-  const port = client ? createSupabasePort(client) : null;
+
+  let client: SupabaseClient | null = null;
+  let port: SyncPort | null = null;
+
+  /** supabase-js を初めて必要になった時点で読み込む。以降は getSupabaseClient のキャッシュを再利用する */
+  async function ensureClient(): Promise<SupabaseClient | null> {
+    if (client) return client;
+    // createClient は URL が壊れている（環境変数の誤設定）と throw しうる。
+    // フッターの島全体をクラッシュさせず、同期を諦めるだけに留める
+    try {
+      client = await getSupabaseClient();
+    } catch {
+      client = null;
+    }
+    if (client) port = createSupabasePort(client);
+    return client;
+  }
 
   // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
   let dialog: ModalDialog | undefined;
@@ -48,6 +84,8 @@
   let pendingChanges = $state(false);
   /** 利用者が「あとで」を選んだ競合が残っているか。立っている間は自動再同期しない */
   let unresolved = $state(false);
+  /** push が一部でも失敗しているか。立っている間は「同期済み」と言ってはならない */
+  let failed = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight = false;
 
@@ -55,6 +93,7 @@
     if (phase === 'authenticating') return 'ログイン中…';
     if (phase === 'syncing') return '同期中…';
     if (phase === 'anonymous') return null;
+    if (failed) return '一部を同期できませんでした';
     if (unresolved) return '未解決の競合があります';
     if (pendingChanges) return '未同期の変更あり';
     if (lastSyncedAt === null) return '同期待ち';
@@ -75,7 +114,7 @@
     for (const kind of kinds) {
       const answer = await dialog?.choose({
         title: `${KIND_LABELS[kind]}が両方の端末で変更されています`,
-        message: 'どちらの内容を残しますか。選ばなかった側は失われます。',
+        message: '重複している項目だけ、どちらを優先するか選んでください。片方にしかない項目は両方とも残ります。',
         primaryLabel: 'この端末の内容を使う',
         secondaryLabel: '別の端末の内容を使う',
       });
@@ -102,7 +141,10 @@
       if (report.status === 'ok') {
         lastSyncedAt = loadSyncMeta().lastSyncedAt;
         unresolved = report.unresolved.length > 0;
-        pendingChanges = unresolved;
+        // 送れなかった行があるなら「同期済み」と言ってはならない。
+        // 再スケジュールの対象にもする（未解決の競合とは別の理由で残っている）
+        failed = report.failed > 0;
+        pendingChanges = unresolved || failed;
       } else if (report.status === 'unauthenticated') {
         phase = 'anonymous';
       } else if (report.status === 'baseline-write-failed') {
@@ -135,10 +177,15 @@
   }
 
   async function signIn() {
-    if (!client) return;
     phase = 'authenticating';
     error = null;
-    const { error: authError } = await client.auth.signInWithOAuth({
+    const c = await ensureClient();
+    if (!c) {
+      phase = 'anonymous';
+      error = 'ログインを開始できませんでした';
+      return;
+    }
+    const { error: authError } = await c.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.href },
     });
@@ -156,12 +203,16 @@
     lastSyncedAt = null;
     pendingChanges = false;
     unresolved = false;
+    failed = false;
     // 直前の失敗表示を残したままログイン導線に戻さない
     error = null;
   }
 
   async function deleteServerData() {
     if (!port) return;
+    // deleteAll() と signOut() の間でデバウンスが発火すると、削除したデータを
+    // 初回リンクとして再アップロードしうるため、確認ダイアログを出す前に止めておく
+    clearTimeout(timer);
     const ok = await dialog?.confirm({
       title: 'サーバのデータを削除しますか',
       message: 'この端末のデータは残ります。サーバに保存された同期データを削除し、ログアウトします。',
@@ -184,22 +235,38 @@
   }
 
   onMount(() => {
-    if (!client) return;
+    if (!envConfigured) return;
 
     // 保存イベントだけに頼ると、オフラインで変更したあとリロードした場合に
     // 未同期であることが表示されないため、mount 時にベースラインとの差分を見る
     pendingChanges = hasPendingLocalChanges();
 
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      phase = session ? 'idle' : 'anonymous';
-      if (session) void sync();
-    });
+    let unsubscribeAuth: (() => void) | undefined;
+
+    async function attachClient(): Promise<void> {
+      const c = await ensureClient();
+      if (!c) return;
+      const { data } = c.auth.onAuthStateChange((_event, session) => {
+        phase = session ? 'idle' : 'anonymous';
+        if (session) void sync();
+      });
+      unsubscribeAuth = () => data.subscription.unsubscribe();
+    }
+
+    // ログイン済みの端末（セッションが localStorage にある）と OAuth から戻った直後
+    // （detectSessionInUrl が処理すべき ?code= がある）だけ、ここで supabase-js を読み込む。
+    // 未ログインの大多数の訪問者にはログインボタンだけ出し、クリックまで読み込まない
+    if (hasStoredSession() || window.location.search.includes('code=')) {
+      void attachClient();
+    }
 
     const unsubscribeSave = onSave((key) => {
       if (!SYNC_TARGET_KEYS.has(key)) return;
       pendingChanges = true;
-      // 利用者が何か保存したなら、競合をもう一度聞いてよい
+      // 利用者が何か保存したなら、競合をもう一度聞いてよいし、
+      // 前回の失敗表示も引きずらない
       unresolved = false;
+      failed = false;
       if (phase !== 'anonymous') scheduleSync();
     });
 
@@ -220,9 +287,11 @@
       pendingChanges = true;
     };
 
-    // beforeunload は発火が不安定なので visibilitychange を使う
+    // beforeunload は発火が不安定なので visibilitychange を使う。
+    // 未解決の競合が残っている間は意図的に再スケジュールしていないので、
+    // タブを離れるたびに競合ダイアログを開かせない
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden' && pendingChanges) flush();
+      if (document.visibilityState === 'hidden' && pendingChanges && !unresolved) flush();
     };
 
     window.addEventListener('storage', onStorage);
@@ -231,7 +300,7 @@
 
     return () => {
       clearTimeout(timer);
-      data.subscription.unsubscribe();
+      unsubscribeAuth?.();
       unsubscribeSave();
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('i7:backup-imported', onBackupImported);
@@ -240,7 +309,7 @@
   });
 </script>
 
-{#if client}
+{#if envConfigured}
   <span class="flex items-center gap-3" data-testid="sync-panel">
     {#if phase === 'anonymous'}
       <button

@@ -106,6 +106,13 @@ describe('hasPendingLocalChanges', () => {
   it('何も無ければ false', () => {
     expect(hasPendingLocalChanges()).toBe(false);
   });
+
+  it('プロジェクションが throw しても未同期あり (true) に倒す', () => {
+    // SAVED_DECKS が配列でない状態（バックアップ復元後の壊れ方の一種）。
+    // savedDecksToRowSet の for...of が「iterable ではない」で throw する
+    saveJson(STORAGE_KEYS.SAVED_DECKS, {});
+    expect(hasPendingLocalChanges()).toBe(true);
+  });
 });
 
 describe('adapter.writeLocal', () => {

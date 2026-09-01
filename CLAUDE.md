@@ -168,6 +168,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 - **アカウント切替時、`reconcileUser`（`src/lib/sync/syncMeta.ts`）はベースラインを消せなかった場合 `SyncMeta` ではなく `null` を返す。** このとき `syncEngine` は同期を中断する（`status: 'baseline-write-failed'`）。ベースラインを消せないまま新しい `userId` を記録すると、旧アカウントのベースラインが新アカウントの `userId` と対になり、2 つのアカウントのデータが混ざる
 - **同期層からローカルへの書き戻しは `saveJson` ではなく `writeJsonSilently`（`src/lib/storage.ts`）を使う。** `saveJson` は書き込み失敗を握りつぶし `onSave` を発火させるが、`writeJsonSilently` は成否を真偽値で返し `onSave` を発火させない。発火させると同期層自身の書き込みが「未同期のローカル変更」として検知され、同期がまた同期を呼ぶループになりうる
 - **`cursorRev` はデータ種別を跨いだ単一の値であり、いずれかの種別に未解決の競合が残っている間はカーソルを進めない。** 進めてしまうと競合中の行が次回の pull で「サーバ側は未変更」に見え、利用者が「あとで」を選んだ競合が再提示されないまま別端末の値を黙って上書きする
+- **`window` の DOM イベント 2 つが、同期層 → 既存コードの一方向依存を成立させている。** `i7:sync-applied`（同期層が発火。取り込みで localStorage が変わったことを画面に伝える。購読側の例: `DeckList.svelte` / `RabbitNoteEditor.svelte`）と `i7:backup-imported`（`FooterTools.svelte` が発火。バックアップ復元でローカルが外部から書き換わったことを同期層に伝え、ベースラインを破棄させる）。5 つ目のデータ種別を足す画面は `i7:sync-applied` を必ず購読すること。購読しないと、ダイアログ等で読み込んだ配列を `await` の後に書き戻す処理が、その間に同期が取り込んだ別端末の変更を消してしまう（本 ADR で実際に起きた不具合）
 
 ### Deployment
 

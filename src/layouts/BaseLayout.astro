@@ -185,7 +185,7 @@ try {
       <div class="text-xs text-gray-400 py-3 px-4 flex flex-wrap items-center justify-center gap-3">
         <a href={`${base}releases/`} class="hover:text-gray-600 hover:underline underline-offset-2">{version}</a>
         <FooterTools client:load />
-        <SyncPanel client:load />
+        <SyncPanel client:idle />
       </div>
     </footer>
   </body>
