@@ -3776,6 +3776,8 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
   let error = $state<string | null>(null);
   let lastSyncedAt = $state<number | null>(null);
   let pendingChanges = $state(false);
+  /** 利用者が「あとで」を選んだ競合が残っているか。立っている間は自動再同期しない */
+  let unresolved = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight = false;
 
@@ -3783,6 +3785,7 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
     if (phase === 'authenticating') return 'ログイン中…';
     if (phase === 'syncing') return '同期中…';
     if (phase === 'anonymous') return null;
+    if (unresolved) return '未解決の競合があります';
     if (pendingChanges) return '未同期の変更あり';
     if (lastSyncedAt === null) return '同期待ち';
     return `同期済み · ${relativeTime(lastSyncedAt)}`;
@@ -3822,7 +3825,8 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
       const report = await runSync(port, resolveConflicts);
       if (report.status === 'ok') {
         lastSyncedAt = loadSyncMeta().lastSyncedAt;
-        pendingChanges = report.unresolved.length > 0;
+        unresolved = report.unresolved.length > 0;
+        pendingChanges = unresolved;
       } else if (report.status === 'unauthenticated') {
         phase = 'anonymous';
       } else if (report.status === 'baseline-write-failed') {
@@ -3835,8 +3839,12 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
     } finally {
       inFlight = false;
       if (phase === 'syncing') phase = 'idle';
-      // デバウンス待ち中に走っていたら、完了後にもう一度評価する
-      if (pendingChanges && error === null) scheduleSync();
+      // デバウンス待ち中に走っていたら、完了後にもう一度評価する。
+      // ただし未解決の競合があるときは再スケジュールしない。競合が未解決だと
+      // pendingChanges が立ったままなので、そのまま再同期すると同じ確認ダイアログが
+      // 3 秒ごとに出続け、「あとで」という安全な逃げ道が逃げ道でなくなる。
+      // 再度聞くのは、利用者が何か保存したときか「今すぐ同期」を押したときだけ
+      if (pendingChanges && error === null && !unresolved) scheduleSync();
     }
   }
 
@@ -3871,6 +3879,9 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
     phase = 'anonymous';
     lastSyncedAt = null;
     pendingChanges = false;
+    unresolved = false;
+    // 直前の失敗表示を残したままログイン導線に戻さない
+    error = null;
   }
 
   async function deleteServerData() {
@@ -3882,16 +3893,18 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
       danger: true,
     });
     if (!ok) return;
+    // signOut を try の外に出す。中に入れると、削除は成功したのに signOut が失敗した場合に
+    // 「削除できませんでした」と誤った報告をしてしまう
     try {
       await port.deleteAll();
-      resetSyncState();
-      // 削除後もログイン状態のままだと、次の同期でローカルのデータが
-      // そのまま再アップロードされ「削除したのに戻ってくる」ことになる
-      await signOut();
-      error = null;
     } catch {
       error = '削除できませんでした';
+      return;
     }
+    resetSyncState();
+    // 削除後もログイン状態のままだと、次の同期でローカルのデータが
+    // そのまま再アップロードされ「削除したのに戻ってくる」ことになる
+    await signOut();
   }
 
   onMount(() => {
@@ -3909,6 +3922,8 @@ git commit -m "feat(ui): ModalDialog に 3 択の choose を追加する (ADR 00
     const unsubscribeSave = onSave((key) => {
       if (!SYNC_TARGET_KEYS.has(key)) return;
       pendingChanges = true;
+      // 利用者が何か保存したなら、競合をもう一度聞いてよい
+      unresolved = false;
       if (phase !== 'anonymous') scheduleSync();
     });
 
@@ -4009,7 +4024,38 @@ mount 時の `$effect` でローカル変数にキャッシュしている。外
   });
 ```
 
-`RabbitNoteEditor.svelte` も同じ形で `data = loadRabbitNotes()` を呼び直す。
+`RabbitNoteEditor.svelte` も同じ形だが、**未保存の編集を消さない条件を必ず付ける**。
+この画面の `data` は入力のたびに書き換わるメモリ上のバッファで、永続化されるのは
+「保存」ボタンを押したときだけ。無条件に読み直すと、利用者が入力途中の値を
+背後の同期が黙って消してしまう。
+
+```svelte
+  let dirty = $state(false);
+
+  function setValue(member: string, attr: 'shout' | 'beat' | 'melody', val: number) {
+    const entry = data[member] ?? { shout: 0, beat: 0, melody: 0 };
+    data[member] = { ...entry, [attr]: val };
+    dirty = true;
+  }
+
+  onMount(() => {
+    const onSyncApplied = () => {
+      if (dirty) {
+        // 未保存の編集を背後の同期で黙って消さない。代わりに知らせる
+        showFeedback('別の端末の変更があります。保存すると上書きされます');
+        return;
+      }
+      data = loadRabbitNotes();
+    };
+    window.addEventListener('i7:sync-applied', onSyncApplied);
+    return () => window.removeEventListener('i7:sync-applied', onSyncApplied);
+  });
+```
+
+`onSave` と `onClear` は保存後に `dirty = false` に戻すこと。
+
+`DeckList.svelte` にはこの配慮は不要。デッキは操作のたびに `writeDecks` が即座に
+永続化するため、未保存のバッファが存在しない。
 
 **ページ全体の reload では解決しない。** 利用者が編集中の画面を勝手に再読込するのは
 破壊的で、`FooterTools` のインポート後 reload（明示的な操作の直後）とは事情が違う。
