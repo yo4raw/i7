@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { Card } from '../lib/data/fetchCardsJson';
   import type { Song } from '../lib/data/fetchSongsJson';
   import { normalizeAttribute } from '../lib/score/types';
@@ -41,6 +42,16 @@
 
   $effect(() => {
     decks = loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, []);
+  });
+
+  // 同期層が別端末のデッキを取り込んだ通知。DOM イベント名の文字列だけを購読し、
+  // src/lib/sync/ からは何も import しない（同期層を削除しても今日と同じ挙動になる）
+  onMount(() => {
+    const onSyncApplied = () => {
+      decks = loadJson<SavedDeck[]>(STORAGE_KEYS.SAVED_DECKS, []);
+    };
+    window.addEventListener('i7:sync-applied', onSyncApplied);
+    return () => window.removeEventListener('i7:sync-applied', onSyncApplied);
   });
 
   function writeDecks(next: SavedDeck[]) {

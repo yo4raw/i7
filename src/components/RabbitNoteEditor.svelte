@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { CHARACTER_GROUPS, characterColor } from '../lib/constants';
   import { loadRabbitNotes, saveRabbitNotes, type RabbitNoteMap } from '../lib/data/rabbitNote';
   import ModalDialog from './ui/ModalDialog.svelte';
@@ -18,6 +19,16 @@
 
   $effect(() => {
     data = loadRabbitNotes();
+  });
+
+  // 同期層が別端末のラビットノートを取り込んだ通知。DOM イベント名の文字列だけを購読し、
+  // src/lib/sync/ からは何も import しない（同期層を削除しても今日と同じ挙動になる）
+  onMount(() => {
+    const onSyncApplied = () => {
+      data = loadRabbitNotes();
+    };
+    window.addEventListener('i7:sync-applied', onSyncApplied);
+    return () => window.removeEventListener('i7:sync-applied', onSyncApplied);
   });
 
   function getValue(member: string, attr: 'shout' | 'beat' | 'melody'): number {
