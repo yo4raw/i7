@@ -4472,20 +4472,19 @@ Expected: ビルド成功。`http://localhost:4321/` と `http://localhost:4321/
 
 Dependabot の PR ではこの経路になる。
 
-**`env -u` では検証にならない。** シェルの環境変数を消しても Vite はローカルの
-（gitignore された）`.env` を読むため、変数は設定されたままになる。`.env` を一時的に
-退避してからビルドすること:
+**`env -u` では検証にならない。** シェルの環境変数を「未定義化」しても Vite はローカルの
+（gitignore された）`.env` を読むため、変数は設定されたままビルドされる。
+代わりに**空文字を代入**する。シェル側の値が `.env` より優先され、`readSyncEnv` は
+空文字を未設定として扱う:
 
 ```bash
-mv .env .env.bak
-npx astro build
+PUBLIC_SUPABASE_URL= PUBLIC_SUPABASE_PUBLISHABLE_KEY= npx astro build
 grep -c 'sync-panel' dist/index.html    # 0 であること
-mv .env.bak .env                        # 必ず戻す
 ```
 
-（`PUBLIC_SUPABASE_URL= npm run dev` のように**空文字を代入**する形なら、シェルの値が
-`.env` より優先されるため dev サーバでの確認には使える。効かないのは `env -u` による
-「未定義化」の方。）
+**`.env` を退避する方法は採らないこと。** ビルドは 5 分以上かかり、
+タイムアウトなどでコマンドが中断されると `.env` が退避されたまま戻らない。
+実際にこの検証中に一度発生した。空文字の代入ならファイルを一切触らない。
 
 Expected: ビルド成功、かつ `grep -c` が `0` を返すこと。
 
