@@ -77,3 +77,4 @@
 | [0066](0066-gitmoji-commit-convention.md) | コミットメッセージを gitmoji に統一する(type/scope 廃止・commit-msg フックで検証) | 承認 |
 | [0067](0067-drop-beta-suffix.md) | サイト名から (β) を外す(PWA name / llms.txt / README も追随・SW_VERSION を上げる) | 承認 |
 | [0068](0068-dedupe-same-song.md) | 同一カテゴリ内の同名曲を 1 行に畳む(EXPERT+ 優先・filterValidSongs へ集約) | 承認 |
+| [0069](0069-ponytail-audit-cleanup.md) | over-engineering 監査に基づく削減(カバレッジゲートと GSAP は現状維持・cron 直 push は却下) | 承認 |
