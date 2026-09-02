@@ -73,11 +73,13 @@ Node v24.3.0 で実測したところ、型ストリップは拡張子なしの�
 
 ### PR 3: src のコード整理
 
-**残り時間フォーマッタ 4 実装を 1 本にする。** `EventStatusBadge.svelte`、`EventList.svelte`（2 本）、`EventCountdown.svelte` に、接頭辞の有無と精度だけが違う実装が散っている。`eventPeriod.ts` に `formatRemaining(ms, { prefix, unit })` を置く。`unit: 'second'` は残り時間の大きさに応じて「d日 h時間 m分 s秒」から「s秒」まで単位を落とす。`unit: 'minute'` は秒を切り捨て、「d日 h時間」「h時間 m分」「m分」の 3 形態を取る。`src/lib/**` に入るためテストを新規に書く。
+**残り時間フォーマッタ 5 実装を 1 本にする。** `EventStatusBadge.svelte`（2 本）、`EventList.svelte`（2 本）、`EventCountdown.svelte` に、接頭辞の有無と精度だけが違う実装が散っている。`eventPeriod.ts` に `formatDuration(ms, unit)` を置く。`unit: 'second'` は残り時間の大きさに応じて「d日 h時間 m分 s秒」から「s秒」まで単位を落とす。`unit: 'minute'` は秒を切り捨て、「d日 h時間」「h時間 m分」「m分」の 3 形態を取る。`src/lib/**` に入るためテストを新規に書く。
+
+**接頭辞は関数に持たせない。** 当初は `{ prefix }` オプションを検討したが、計画時に既存バグが見つかったため呼び出し側の責務に統一する。`EventCountdown.svelte:42` は接頭辞が埋め込まれた `formatRemain` の戻り値にさらに「開始まで 」を足しており、**「開始まで 残り 3日 2時間」** と二重に出ている。接頭辞を関数から外せばこの形は書けなくなり、統合と同時に構造的に直る。
 
 **所持数ストア 2 本を factory へ寄せる。** `cardCounts.svelte.ts` と `broachCounts.svelte.ts` は localStorage キーと上限値以外が同一で、各 45 行ある。`createCountStore(storageKey, max?)` を 1 つ置く。現行と同じく `$state` をクロージャに閉じ込め関数経由で読み書きする形を保ち、リアクティビティを維持する。
 
-**`CardListItem` を削除する。** `Card` の部分集合に `[key: string]: any` を足しただけで、型としての制約になっていない。参照している 6 ファイルを `Card` へ切り替える。
+**`CardListItem` を削除する。** `Card` の部分集合に `[key: string]: any` を足しただけで、型としての制約になっていない。参照している 5 コンポーネントを `Card` へ切り替える。
 
 **呼び出し側が一度も渡さない引数を削る。**
 
