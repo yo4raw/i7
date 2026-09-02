@@ -28,9 +28,9 @@
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { runPool, fetchPng } from './lib/util.mjs';
 
 const scriptDir = import.meta.dirname;
 const PROJECT_ROOT = join(scriptDir, '..');
@@ -43,9 +43,6 @@ const LOCAL_DIRS = {
   th: join(PROJECT_ROOT, 'public', 'assets', 'th_cards'),
   full: join(PROJECT_ROOT, 'public', 'assets', 'cards'),
 };
-
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const isPng = (buf) => buf.length >= 8 && buf.subarray(0, 8).equals(PNG_MAGIC);
 
 function parseArgs(argv) {
   const args = {
@@ -96,46 +93,12 @@ async function collectIds(args) {
   return Array.from(ids).toSorted((a, b) => Number(a) - Number(b));
 }
 
-async function fetchRemote(url, retries = 2) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return { status: res.status };
-      const buf = Buffer.from(await res.arrayBuffer());
-      return {
-        status: 200,
-        buf,
-        size: buf.length,
-        hash: createHash('sha256').update(buf).digest('hex'),
-        isPng: isPng(buf),
-      };
-    } catch (err) {
-      if (attempt === retries) return { status: 0, error: err.message };
-      await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); });
-    }
-  }
-}
-
-async function runPool(items, concurrency, worker) {
-  const results = Array.from({ length: items.length });
-  let cursor = 0;
-  const runners = Array.from({ length: concurrency }, async () => {
-    while (true) {
-      const i = cursor++;
-      if (i >= items.length) return;
-      results[i] = await worker(items[i], i);
-    }
-  });
-  await Promise.all(runners);
-  return results;
-}
-
 async function processOne(id, args, localDir, urlPrefix) {
   // ローカルは WebP、ソースは PNG。取得した PNG を WebP へ変換して上書きする。
   // フルカード (full) はロスレス、サムネ (th) は lossy q85。
   const localPath = join(localDir, `${id}.webp`);
   const url = `${urlPrefix}${id}.png`;
-  const remote = await fetchRemote(url);
+  const remote = await fetchPng(url);
 
   if (remote.status !== 200) {
     return { id, action: 'skip_remote_error', remoteStatus: remote.status };

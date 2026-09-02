@@ -23,6 +23,7 @@ import { readdir, stat, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { runPool } from './lib/util.mjs';
 
 // ---------- 引数パース ----------
 const args = process.argv.slice(2);
@@ -58,20 +59,6 @@ if (!lossless && (!Number.isFinite(quality) || quality < 1 || quality > 100)) {
 const log = (...m) => {
   if (!quiet) console.log(...m);
 };
-
-/** 並列実行を制限付きで実行 */
-async function parallelLimit(items, limit, worker) {
-  const results = [];
-  let idx = 0;
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (idx < items.length) {
-      const cur = idx++;
-      results[cur] = await worker(items[cur], cur);
-    }
-  });
-  await Promise.all(runners);
-  return results;
-}
 
 /**
  * 1 ファイルを変換。出力 webp を書き出してから元 PNG を削除する。
@@ -120,7 +107,7 @@ for (const dir of dirs) {
   const mode = lossless ? 'lossless' : `quality ${quality}`;
   log(`[${dir}] ${pngs.length} PNG → WebP (${mode})${dryRun ? ' [dry-run]' : ''}`);
 
-  const results = await parallelLimit(pngs, concurrency, convertOne);
+  const results = await runPool(pngs, concurrency, convertOne);
   const converted = results.filter((r) => r === 'converted').length;
   const reused = results.filter((r) => r === 'reused').length;
   const failed = results.filter((r) => r === 'failed').length;
