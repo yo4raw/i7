@@ -14,7 +14,7 @@
     "typecheck": "astro check --minimumSeverity warning",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "extract-fixtures": "tsx scripts/extract-test-fixtures.ts",
+    "extract-fixtures": "node scripts/extract-test-fixtures.ts",
     "extract-point-calc-golden": "node scripts/extract-point-calc-golden.mjs",
     "prepare": "husky"
   },
@@ -39,7 +39,6 @@
     "lint-staged": "17.0.8",
     "oxlint": "1.74.0",
     "sharp": "^0.35.3",
-    "tsx": "^4.23.0",
     "vitest": "^4.1.10"
   },
   "overrides": {

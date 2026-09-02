@@ -1,5 +1,5 @@
 import { SPREADSHEET_ID, fetchSheetAsJson } from './gviz.ts';
-import { CHARACTER_GROUPS } from '../constants';
+import { CHARACTER_GROUPS } from '../constants.ts';
 
 /** APスキル1レベル分のパラメータ */
 export interface ApSkillLevel {

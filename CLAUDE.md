@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run preview` は build 込みでビルド成果物をローカル配信する（`astro preview`）
 - `npm run test` (Playwright E2E) は preview サーバーを自動起動する
-- Node.js は `.nvmrc` で 22 を指定。ホスト環境で Node.js 22 を用意すること（`nvm use` 等）
+- Node.js は `.nvmrc` で 22 を指定。**22.18.0 以上**が必要（`scripts/*.ts` を型ストリップで直接実行するため）。ホスト環境で用意すること（`nvm use` 等）
 
 ### 日常の検証は `npm run dev` (HMR) を使う
 
