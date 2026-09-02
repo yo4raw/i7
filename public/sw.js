@@ -1,4 +1,4 @@
-// i7マネ部屋(β) Service Worker
+// i7マネ部屋 Service Worker
 // ホーム画面追加・オフライン閲覧用。Workbox なしの軽量実装。
 //
 // キャッシュ戦略:
@@ -11,7 +11,7 @@
 //
 // SW_VERSION を上げると古い static キャッシュをパージする。
 
-const SW_VERSION = 'v3';
+const SW_VERSION = 'v4';
 const STATIC_CACHE = `i7-static-${SW_VERSION}`;
 // PNG → WebP 移行に伴い旧画像キャッシュ (i7-images) を破棄させるためバージョンを付与。
 // 旧キャッシュは activate の「未知キャッシュ掃除」で削除される。
