@@ -150,6 +150,45 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 - **`release/*` ブランチは作らない**。`main` にブランチ保護は設定していない
 - リリース手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照
 
+### コミットメッセージ規約（gitmoji / ADR 0066）
+
+コミットの件名は **`<gitmoji> <日本語の説明>`** に統一する。Conventional Commits の `type(scope):` prefix は使わない。
+
+```
+✨ イベント詳細に対象楽曲セクションを追加する
+🐛 特効未選択時に曲の先頭グループが消えるのを直す
+📝 ADR 0065 イベント対象楽曲をイベント単位で管理する
+♻️ fetchSongsJson から旧 API を削除する
+```
+
+- 絵文字は Unicode 文字で書く（`:sparkles:` のショートコードは使わない）
+- 絵文字と説明は **半角スペース 1 個**で区切る
+- **PR タイトルにも同じ規約を適用する**。squash マージのため、履歴に残る件名は PR タイトル由来になる
+- 使える絵文字は [gitmoji 公式](https://gitmoji.dev/) の一覧。よく使うものは下表
+
+| 絵文字 | 用途 |
+| ------ | ---- |
+| ✨ | 新機能 |
+| 🐛 | バグ修正 |
+| 🚑️ | 本番の緊急修正 (hotfix) |
+| 📝 | ドキュメント・ADR |
+| ♻️ | リファクタリング |
+| ✅ | テストの追加・修正 |
+| 💄 | UI・スタイル |
+| ⚡️ | パフォーマンス改善 |
+| 🔧 | 設定ファイルの変更 |
+| 👷 | CI / GitHub Actions |
+| 🍱 | アセット (画像) の追加・更新 |
+| 🗃️ | マスターデータの更新 |
+| 🔥 | コード・ファイルの削除 |
+| 🚚 | ファイルの移動・リネーム |
+| ⬆️ | 依存の更新 |
+| 🩹 | 軽微な修正 |
+| 🔍️ | SEO |
+| 🔖 | リリースタグ |
+
+`.husky/commit-msg` が `scripts/check-commit-msg.mjs` を呼んで件名を検証し、違反時はコミットを中断する。`Merge` / `Revert` / `fixup!` / `squash!` / `amend!` と Dependabot の `Bump …` は検証の対象外（書式を選べないため）。上表を変更するときは同スクリプトの `COMMON_GITMOJIS` も揃えること。
+
 ### Deployment
 
 Cloudflare Workers (Static Assets) (`https://i7.yo4raw.com`) にデプロイ。リリース・デプロイの具体的な手順は `release` スキル（`.claude/skills/release/SKILL.md`）を参照。
@@ -283,6 +322,6 @@ Tailwind CSS v4 integrated via `@tailwindcss/vite` plugin (not the legacy `@astr
 2. Playwright MCP / chrome-devtools MCP で dev サーバー（`http://localhost:4321/`）にアクセスし、変更箇所の画面表示を確認する
 3. スクリーンショットを `tmp/` ディレクトリに保存し、ユーザーに提示して問題がないか確認を取る
 4. **本番ビルドでしか検出できない項目**（動的ルート全件生成・`@playform/compress` の圧縮後挙動・`BASE_URL` 解決など）に関わる変更の場合のみ、追加で `npm run preview` を実行して最終確認する
-5. ユーザーの確認が取れたら **`develop` から** 対応内容に応じたブランチを作成して `git commit` → `git push` し、**base を `develop` にして** PR を作成する。CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない
+5. ユーザーの確認が取れたら **`develop` から** 対応内容に応じたブランチを作成して `git commit` → `git push` し、**base を `develop` にして** PR を作成する。**コミットの件名と PR タイトルは gitmoji 規約（`<gitmoji> <日本語の説明>`、ADR 0066）に従う。**CI の結果を待たずリリースまで行う。リリースに伴う workflow を待つ必要はない
 6. リリースは `develop` を `main` へ fast-forward するだけでよい。**タグは `tag-release.yml` が自動採番する**（人手のリリースは MINOR、cron の自動取り込みは PATCH。ADR 0059）。手順の詳細は `release` スキル参照。本番の緊急修正だけは `main` から `hotfix/` を切って `main` に PR を出す
 7. **リリースごとに、リリース告知ツイートを作成する** — `release-tweet` スキルを使い、今回リリースした変更点から告知文を 3 案作成し、本文をプリフィルした X の intent リンクとして提示する。**投稿はユーザーが手動で行う**（スキルはブラウザ自動操作も認証情報による自動投稿も行わない）。詳細は `.claude/skills/release-tweet/SKILL.md` を参照

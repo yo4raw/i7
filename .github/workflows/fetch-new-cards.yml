@@ -164,10 +164,10 @@ jobs:
           add-paths: |
             public/assets/cards/*.webp
             public/assets/th_cards/*.webp
-          commit-message: "Add card images: ${{ steps.fetch.outputs.new_ids }}"
+          commit-message: "🍱 衣装画像を追加: ${{ steps.fetch.outputs.new_ids }}"
           branch: auto/add-cards-${{ github.run_id }}
           delete-branch: true
-          title: "Add card image(s): ${{ steps.fetch.outputs.downloaded_full }} full + ${{ steps.fetch.outputs.downloaded_th }} thumbnail"
+          title: "🍱 衣装画像を追加: フルサイズ ${{ steps.fetch.outputs.downloaded_full }} 件 + サムネイル ${{ steps.fetch.outputs.downloaded_th }} 件"
           body: |
             ## Summary
             Automatically fetched new card images (full-size and thumbnails) from the source server.
