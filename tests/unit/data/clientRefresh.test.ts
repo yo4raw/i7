@@ -51,7 +51,7 @@ describe('refreshData', () => {
       JSON.stringify({ data: [{ id: 1 }], ts: Date.now() - 10 * 60 * 1000 }),
     );
     const fetchFn = vi.fn(() => Promise.resolve([{ id: 2 }]));
-    await refreshData('broachs', fetchFn, vi.fn(), { maxAgeMs: 5 * 60 * 1000 });
+    await refreshData('broachs', fetchFn, vi.fn());
     expect(fetchFn).toHaveBeenCalled();
   });
 

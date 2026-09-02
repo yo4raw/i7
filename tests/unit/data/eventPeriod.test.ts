@@ -3,10 +3,9 @@ import {
   classifyEventStatus,
   eventStartMs,
   eventEndMs,
-  isOpenEndedEvent,
   formatEventEnd,
-  formatEventStart,
   formatEventPeriod,
+  formatDuration,
 } from '../../../src/lib/data/eventPeriod';
 
 const T = (iso: string) => Date.parse(iso);
@@ -24,17 +23,6 @@ describe('eventStartMs / eventEndMs', () => {
   it.each(['', '   ', '0000-00-00', 'not-a-date'])('未入力・不正な日付 (%s) は null', (d) => {
     expect(eventEndMs(d)).toBeNull();
     expect(eventStartMs(d)).toBeNull();
-  });
-});
-
-describe('isOpenEndedEvent', () => {
-  it('終了日が未入力なら true', () => {
-    expect(isOpenEndedEvent('0000-00-00')).toBe(true);
-    expect(isOpenEndedEvent('')).toBe(true);
-  });
-
-  it('終了日が入っていれば false', () => {
-    expect(isOpenEndedEvent('2026-06-08')).toBe(false);
   });
 });
 
@@ -82,10 +70,6 @@ describe('classifyEventStatus', () => {
 });
 
 describe('表示フォーマット', () => {
-  it('開始日時は「日付 17:00」', () => {
-    expect(formatEventStart('2026-06-01')).toBe('2026-06-01 17:00');
-  });
-
   it('終了日時は「日付 17:00」、未入力なら「未定」', () => {
     expect(formatEventEnd('2026-06-08')).toBe('2026-06-08 17:00');
     expect(formatEventEnd('0000-00-00')).toBe('未定');
@@ -95,5 +79,35 @@ describe('表示フォーマット', () => {
   it('期間表示は開始〜終了 (JST)', () => {
     expect(formatEventPeriod('2026-06-01', '2026-06-08')).toBe('2026-06-01 17:00 〜 2026-06-08 17:00 (JST)');
     expect(formatEventPeriod('2026-07-07', '0000-00-00')).toBe('2026-07-07 17:00 〜 未定 (JST)');
+  });
+});
+
+describe('formatDuration', () => {
+  const SEC = 1000;
+  const MIN = 60 * SEC;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+
+  it('0 以下は空文字', () => {
+    expect(formatDuration(0, 'second')).toBe('');
+    expect(formatDuration(-1, 'minute')).toBe('');
+  });
+
+  it("unit 'second' は残りの大きさで単位を落とす", () => {
+    expect(formatDuration(3 * DAY + 2 * HOUR + 4 * MIN + 5 * SEC, 'second')).toBe('3日 2時間 4分 5秒');
+    expect(formatDuration(2 * HOUR + 4 * MIN + 5 * SEC, 'second')).toBe('2時間 4分 5秒');
+    expect(formatDuration(4 * MIN + 5 * SEC, 'second')).toBe('4分 5秒');
+    expect(formatDuration(5 * SEC, 'second')).toBe('5秒');
+  });
+
+  it("unit 'minute' は秒を切り捨てて 3 形態を取る", () => {
+    expect(formatDuration(3 * DAY + 2 * HOUR + 4 * MIN + 59 * SEC, 'minute')).toBe('3日 2時間');
+    expect(formatDuration(2 * HOUR + 4 * MIN + 59 * SEC, 'minute')).toBe('2時間 4分');
+    expect(formatDuration(4 * MIN + 59 * SEC, 'minute')).toBe('4分');
+  });
+
+  it('接頭辞は付けない（呼び出し側の責務）', () => {
+    expect(formatDuration(5 * SEC, 'second')).not.toContain('残り');
+    expect(formatDuration(5 * MIN, 'minute')).not.toContain('残り');
   });
 });

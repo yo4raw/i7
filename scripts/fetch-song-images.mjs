@@ -9,7 +9,9 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import sharp from 'sharp';
+import { runPool } from './lib/util.mjs';
 
 // ---------- 定数 ----------
 const WIKI_API = 'https://idolish7.miraheze.org/w/api.php';
@@ -54,21 +56,6 @@ function chunk(arr, size) {
   return chunks;
 }
 
-/** 並列実行を制限付きで実行 */
-async function parallelLimit(tasks, limit) {
-  const results = [];
-  const executing = new Set();
-  for (const task of tasks) {
-    const p = task().then((r) => { executing.delete(p); return r; });
-    executing.add(p);
-    results.push(p);
-    if (executing.size >= limit) {
-      await Promise.race(executing);
-    }
-  }
-  return Promise.all(results);
-}
-
 /** fetch + リトライ (1回) */
 async function fetchWithRetry(url, opts = {}, retries = 1) {
   for (let i = 0; i <= retries; i++) {
@@ -79,7 +66,7 @@ async function fetchWithRetry(url, opts = {}, retries = 1) {
     } catch (e) {
       if (i === retries) throw e;
     }
-    await new Promise((r) => { setTimeout(r, 1000); });
+    await sleep(1000);
   }
 }
 
@@ -162,7 +149,7 @@ async function fetchAllWikitext(pageNames) {
     const batchResult = await fetchWikitextBatch(batch);
     for (const [k, v] of batchResult) allData.set(k, v);
     // レート制限対策
-    if (i < batches.length - 1) await new Promise((r) => { setTimeout(r, 500); });
+    if (i < batches.length - 1) await sleep(500);
   }
   console.log(`\n  → ${allData.size} ページのwikitext取得完了`);
   return allData; // Map<pageName, {japanese, translation, image}>
@@ -322,7 +309,7 @@ async function fetchImageUrls(imageFilenames) {
         }
       }
     }
-    if (i < batches.length - 1) await new Promise((r) => { setTimeout(r, 500); });
+    if (i < batches.length - 1) await sleep(500);
   }
 
   console.log(`\n  → ${urlMap.size} 画像URLエントリ`);
@@ -391,7 +378,7 @@ async function downloadImages(mapped, urlMap) {
     }
   });
 
-  await parallelLimit(tasks, CONCURRENCY);
+  await runPool(tasks, CONCURRENCY, (task) => task());
   console.log(`\n  → 完了: ダウンロード=${downloaded}, スキップ=${skipped}, 失敗=${failed}`);
 }
 

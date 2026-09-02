@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CardListItem } from '../lib/cardListData';
+  import type { Card } from '../lib/data/fetchCardsJson';
   import { allCounts, reloadFromStorage } from '../lib/stores/cardCounts.svelte';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
@@ -7,7 +7,7 @@
   import CardMobileCard from './cards/CardMobileCard.svelte';
 
   type Props = {
-    cards: CardListItem[];
+    cards: Card[];
     base: string;
     thumbUrl: string;
   };
@@ -30,7 +30,7 @@
   $effect(() => {
     reloadFromStorage();
     refreshData('cards', fetchCardsJson, (fresh) => {
-      cards = fresh as CardListItem[];
+      cards = fresh as Card[];
     });
   });
 </script>

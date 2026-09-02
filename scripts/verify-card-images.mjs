@@ -26,8 +26,10 @@
  */
 
 import { readdir, stat, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { parseArgs } from 'node:util';
+import { runPool, fetchPng } from './lib/util.mjs';
 
 const scriptDir = import.meta.dirname;
 const PROJECT_ROOT = join(scriptDir, '..');
@@ -41,30 +43,42 @@ const LOCAL_DIRS = {
   full: join(PROJECT_ROOT, 'public', 'assets', 'cards'),
 };
 
-function parseArgs(argv) {
-  const args = { type: 'th', concurrency: 10, hash: false, quiet: false };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--type') args.type = argv[++i];
-    else if (a === '--hash') args.hash = true;
-    else if (a === '--concurrency') args.concurrency = Number(argv[++i]);
-    else if (a === '--ids') args.ids = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
-    else if (a === '--limit') args.limit = Number(argv[++i]);
-    else if (a === '--out') args.out = argv[++i];
-    else if (a === '--quiet') args.quiet = true;
-    else if (a === '--help' || a === '-h') {
-      console.log(getHelpText());
-      process.exit(0);
-    } else {
-      console.error(`Unknown option: ${a}`);
-      process.exit(1);
-    }
-  }
-  if (!SOURCE_URLS[args.type]) {
-    console.error(`Invalid --type: ${args.type} (must be 'th' or 'full')`);
+function parseCliArgs() {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        type: { type: 'string', default: 'th' },
+        hash: { type: 'boolean', default: false },
+        concurrency: { type: 'string', default: '10' },
+        ids: { type: 'string' },
+        limit: { type: 'string' },
+        out: { type: 'string' },
+        quiet: { type: 'boolean', default: false },
+        help: { type: 'boolean', short: 'h', default: false },
+      },
+    }));
+  } catch (e) {
+    console.error(e.message);
     process.exit(1);
   }
-  return args;
+  if (values.help) {
+    console.log(getHelpText());
+    process.exit(0);
+  }
+  if (!SOURCE_URLS[values.type]) {
+    console.error(`Invalid --type: ${values.type} (must be 'th' or 'full')`);
+    process.exit(1);
+  }
+  return {
+    type: values.type,
+    hash: values.hash,
+    quiet: values.quiet,
+    concurrency: Number(values.concurrency),
+    ids: values.ids ? values.ids.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
+    limit: values.limit === undefined ? undefined : Number(values.limit),
+    out: values.out,
+  };
 }
 
 function getHelpText() {
@@ -101,51 +115,9 @@ async function headRemote(url, retries = 2) {
       };
     } catch (err) {
       if (attempt === retries) return { status: 0, error: err.message };
-      await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); });
+      await sleep(500 * (attempt + 1));
     }
   }
-}
-
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-function isPng(buf) {
-  return buf.length >= 8 && buf.subarray(0, 8).equals(PNG_MAGIC);
-}
-
-async function getRemote(url, retries = 2) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        return { status: res.status };
-      }
-      const buf = Buffer.from(await res.arrayBuffer());
-      return {
-        status: 200,
-        size: buf.length,
-        hash: createHash('sha256').update(buf).digest('hex'),
-        etag: res.headers.get('etag') ?? null,
-        isPng: isPng(buf),
-      };
-    } catch (err) {
-      if (attempt === retries) return { status: 0, error: err.message };
-      await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); });
-    }
-  }
-}
-
-async function runPool(items, concurrency, worker) {
-  const results = Array.from({ length: items.length });
-  let cursor = 0;
-  const runners = Array.from({ length: concurrency }, async () => {
-    while (true) {
-      const i = cursor++;
-      if (i >= items.length) return;
-      results[i] = await worker(items[i], i);
-    }
-  });
-  await Promise.all(runners);
-  return results;
 }
 
 // ローカルは WebP、ソースは PNG のためバイト/サイズの一致比較は成立しない。
@@ -163,7 +135,7 @@ async function verifyOne(id, args, localDir, urlPrefix) {
 
   if (args.hash) {
     // GET でソース PNG 本体を取得し、実体が PNG であることまで確認する。
-    const remote = await getRemote(url);
+    const remote = await fetchPng(url);
     if (remote.status !== 200) {
       return { id, status: 'remote_error', remoteStatus: remote.status, localSize };
     }
@@ -181,7 +153,7 @@ async function verifyOne(id, args, localDir, urlPrefix) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseCliArgs();
   const localDir = LOCAL_DIRS[args.type];
   const urlPrefix = SOURCE_URLS[args.type];
 

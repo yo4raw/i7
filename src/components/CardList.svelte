@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CardListItem } from '../lib/cardListData';
+  import type { Card } from '../lib/data/fetchCardsJson';
   import { CHARACTER_GROUPS, RARITIES, ATTRIBUTES } from '../lib/constants';
   import { chipActiveStyle } from '../lib/characterChipStyle';
   import { buildLiveTierMap, type EventForBonus } from '../lib/data/eventBonusTiers';
@@ -15,7 +15,7 @@
   type ViewMode = 'list' | 'tile';
 
   type Props = {
-    cards: CardListItem[];
+    cards: Card[];
     events: EventForBonus[];
     base: string;
     thumbUrl: string;
@@ -25,7 +25,7 @@
 
   let { cards: initialCards, events, base, thumbUrl, pageSize = 100, skillTypes }: Props = $props();
 
-  let allCards = $state<CardListItem[]>(initialCards);
+  let allCards = $state<Card[]>(initialCards);
   const tierMap = $derived(buildLiveTierMap(events));
   const hasAnyLive = $derived(tierMap.size > 0);
 
@@ -202,7 +202,7 @@
     window.addEventListener('scroll', onScroll, { passive: true });
 
     refreshData('cards', fetchCardsJson, (fresh) => {
-      allCards = fresh as CardListItem[];
+      allCards = fresh as Card[];
     });
 
     return () => {
