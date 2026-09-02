@@ -16,7 +16,7 @@
     "lint:fix": "oxlint --fix",
     "extract-fixtures": "node scripts/extract-test-fixtures.ts",
     "extract-point-calc-golden": "node scripts/extract-point-calc-golden.mjs",
-    "prepare": "husky"
+    "prepare": "git config core.hooksPath .husky"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
@@ -34,17 +34,12 @@
     "@playform/compress": "0.2.3",
     "@playwright/test": "^1.62.1",
     "@vitest/coverage-v8": "^4.1.10",
-    "husky": "9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "17.0.8",
     "oxlint": "1.74.0",
     "sharp": "^0.35.3",
     "vitest": "^4.1.10"
   },
   "overrides": {
     "vite": "^8"
-  },
-  "lint-staged": {
-    "*.{ts,js,mjs,cjs,astro,svelte}": "oxlint"
   }
 }
