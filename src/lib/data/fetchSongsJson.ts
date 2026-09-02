@@ -1,5 +1,5 @@
 import { SPREADSHEET_ID, extractCellValue, fetchSheetRaw, type GVizCell } from './gviz.ts';
-import eventSongsConfig from '../../data/event-songs.json';
+import eventSongsConfig from '../../data/event-songs.json' with { type: 'json' };
 
 export interface SongNoteGroup {
   shout_white: number; //shout属性値 * 0.025

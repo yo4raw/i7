@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ローカルでのビルド・プレビュー・テストはすべて **ホスト環境で直接 npm scripts** を実行する。Docker は使用しない。コマンド一覧は `package.json` の `scripts` を参照。
 
-- `npm run preview` は build 込みで本番配信を再現する（`serve dist -l 4321`）
+- `npm run preview` は build 込みでビルド成果物をローカル配信する（`astro preview`）
 - `npm run test` (Playwright E2E) は preview サーバーを自動起動する
-- Node.js は `.nvmrc` で 22 を指定。ホスト環境で Node.js 22 を用意すること（`nvm use` 等）
+- Node.js は `.nvmrc` で 22 を指定。**22.18.0 以上**が必要（`scripts/*.ts` を型ストリップで直接実行するため）。ホスト環境で用意すること（`nvm use` 等）
 
 ### 日常の検証は `npm run dev` (HMR) を使う
 
@@ -29,7 +29,7 @@ UI の見た目確認・スタイル調整・クライアントサイド JS の�
 
 ### `npm run build` / `npm run preview` が必要なケース
 
-以下は HMR では確認できないので、従来通り `npm run preview`（= build + `serve`）で検証する:
+以下は HMR では確認できないので、従来通り `npm run preview`（= build + `astro preview`）で検証する:
 
 - `@playform/compress` による圧縮後の HTML / JS / CSS / 画像サイズの確認
 - `getStaticPaths()` 経由で生成される動的ルート全件 (衣装詳細 2,800 件超 / 楽曲詳細 / イベント詳細など) のビルド成否
@@ -100,8 +100,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 
 | ワークフロー | スケジュール | 内容 |
 |-------------|------------|------|
-| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め。PNG 取得後 WebP へ変換 |
-| `fetch-gap-cards.yml` | 毎時 00 分 (UTC) | カード ID ギャップの補完。PNG 取得後 WebP へ変換 |
+| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャンと、既存 ID 範囲のギャップ埋め。PNG 取得後 WebP へ変換 |
 | `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
 | `fetch-new-songs.yml` | 毎時 00 分 (UTC) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得し WebP へ変換 |
 
