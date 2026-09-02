@@ -75,3 +75,4 @@
 | [0062](0062-open-ended-event-is-live.md) | 終了日が未入力のイベントを実施中として扱う(期間判定を eventPeriod.ts に集約) | 承認 |
 | [0063](0063-crawl-reachability.md) | クローラーの到達性を確保する(フッターのリンク集・lastmod・IndexNow) | 承認 |
 | [0066](0066-gitmoji-commit-convention.md) | コミットメッセージを gitmoji に統一する(type/scope 廃止・commit-msg フックで検証) | 承認 |
+| [0067](0067-drop-beta-suffix.md) | サイト名から (β) を外す(PWA name / llms.txt / README も追随・SW_VERSION を上げる) | 承認 |
