@@ -87,12 +87,9 @@ export async function refreshData<T>(
   key: DataKey,
   fetchFn: () => Promise<T[]>,
   onUpdate: (freshData: T[]) => void,
-  options?: { maxAgeMs?: number },
 ): Promise<void> {
-  const maxAgeMs = options?.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
-
   // キャッシュチェック
-  const cached = readCache<T>(key, maxAgeMs);
+  const cached = readCache<T>(key, DEFAULT_MAX_AGE_MS);
   if (cached) {
     onUpdate(cached);
     return;

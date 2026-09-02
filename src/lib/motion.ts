@@ -11,13 +11,15 @@ export function prefersReducedMotion(): boolean {
 }
 
 interface MaterialOptions {
-  /** イントロは 180ms / アウトロは 120ms 以下 (閉操作をブロックしないため。ADR 0046) */
-  duration?: number;
   /** materialize の初期スケール */
   scaleFrom?: number;
-  /** materialize の初期ぼかし量 (px) */
-  blurFrom?: number;
 }
+
+/** イントロ 180ms / アウトロ 120ms。閉操作をブロックしない上限 (ADR 0046) */
+const IN_DURATION = 180;
+const OUT_DURATION = 120;
+/** materialize の初期ぼかし量 (px) */
+const BLUR_FROM = 3;
 
 /**
  * マテリアルが「現れる」トランジション。scale + fade + blur を同時に動かし、
@@ -27,18 +29,18 @@ interface MaterialOptions {
  */
 export function materialIn(
   _node: Element,
-  { duration = 180, scaleFrom = 0.94, blurFrom = 3 }: MaterialOptions = {},
+  { scaleFrom = 0.94 }: MaterialOptions = {},
 ): TransitionConfig {
   if (prefersReducedMotion()) {
     return { duration: 120, css: (t) => `opacity: ${t}` };
   }
   return {
-    duration,
+    duration: IN_DURATION,
     easing: cubicOut,
     css: (t, u) => `
       opacity: ${t};
       transform: scale(${scaleFrom + (1 - scaleFrom) * t});
-      filter: blur(${blurFrom * u}px);
+      filter: blur(${BLUR_FROM * u}px);
     `,
   };
 }
@@ -48,13 +50,13 @@ export function materialIn(
  */
 export function materialOut(
   _node: Element,
-  { duration = 120, scaleFrom = 0.96 }: MaterialOptions = {},
+  { scaleFrom = 0.96 }: MaterialOptions = {},
 ): TransitionConfig {
   if (prefersReducedMotion()) {
     return { duration: 100, css: (t) => `opacity: ${t}` };
   }
   return {
-    duration,
+    duration: OUT_DURATION,
     easing: cubicOut,
     css: (t) => `
       opacity: ${t};
