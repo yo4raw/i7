@@ -5,7 +5,6 @@
 
 <script lang="ts">
   import { tick } from 'svelte';
-  import { fade } from 'svelte/transition';
   import { materialIn, materialOut } from '../../lib/motion';
 
   type ConfirmOptions = {
@@ -43,10 +42,9 @@
   let inputValue = $state('');
 
   let resolve: ((value: boolean | string | null) => void) | null = null;
-  let returnFocusEl: HTMLElement | null = null;
 
   // oxlint-disable-next-line no-unassigned-vars -- Svelte の bind:this 代入を静的解析できず誤検知
-  let panelEl: HTMLDivElement | undefined;
+  let dialogEl: HTMLDialogElement | undefined;
   // oxlint-disable-next-line no-unassigned-vars -- 同上
   let inputEl: HTMLInputElement | undefined;
   // oxlint-disable-next-line no-unassigned-vars -- 同上
@@ -63,10 +61,14 @@
     mode = nextMode;
     opts = nextOpts;
     inputValue = nextOpts.value ?? '';
-    returnFocusEl = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     visible = true;
 
     await tick();
+    // showModal がフォーカストラップ・背景の inert 化・Esc・フォーカス復帰を標準で担う (ADR 0048 追記)
+    dialogEl?.showModal();
+
+    // 初期フォーカスは明示する。<dialog> の既定 (最初の focusable) は
+    // danger 時にキャンセルへ置きたい要件と一致しないため
     if (nextMode === 'prompt') {
       inputEl?.focus();
       inputEl?.select();
@@ -78,18 +80,13 @@
     }
   }
 
-  /** 保留中の Promise を解決し、ダイアログを閉じてフォーカスを開いた要素へ戻す */
+  /** 保留中の Promise を解決し、ダイアログを閉じる。フォーカス復帰は close() の標準挙動に任せる */
   function settle(value: boolean | string | null) {
     const pending = resolve;
-    const target = returnFocusEl;
     resolve = null;
-    returnFocusEl = null;
+    dialogEl?.close();
     visible = false;
-    if (!pending) return;
-    pending(value);
-    // DOM 更新後に戻す。パネル内の要素がフォーカスを持ったまま外れると
-    // ブラウザが body へリセットするため、同期的に focus() しても上書きされる
-    void tick().then(() => target?.focus());
+    pending?.(value);
   }
 
   /**
@@ -138,34 +135,20 @@
     settle(mode === 'confirm' ? false : null);
   }
 
-  const FOCUSABLE =
-    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  /** Esc は <dialog> の cancel イベントで届く。既定の即時 close を止めて settle に通す */
+  function onNativeCancel(event: Event) {
+    event.preventDefault();
+    onCancel();
+  }
 
-  /** Esc で閉じ、Tab はパネル内に閉じ込める (自前実装の代わりの依存を増やさないため) */
-  function onKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onCancel();
-      return;
-    }
-    if (event.key !== 'Tab' || !panelEl) return;
+  /** close が settle 以外の経路で起きた場合の保険 */
+  function onNativeClose() {
+    if (resolve) onCancel();
+  }
 
-    const focusable = [...panelEl.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-      (el) => el.offsetParent !== null,
-    );
-    const first = focusable[0];
-    const last = focusable.at(-1);
-    if (!first || !last) return;
-
-    const active = document.activeElement;
-
-    if (event.shiftKey && (active === first || !panelEl.contains(active))) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
+  /** 背景クリックで閉じる。<dialog> 自身が背景も含む矩形なので、標的が dialog 本体なら背景 */
+  function onBackdropClick(event: MouseEvent) {
+    if (event.target === dialogEl) onCancel();
   }
 
   function onInputKeydown(event: KeyboardEvent) {
@@ -176,65 +159,76 @@
   }
 </script>
 
-<svelte:window onkeydown={visible ? onKeydown : undefined} />
-
 {#if visible}
-  <div class="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4" data-testid="modal-dialog">
-    <!-- スクリムは blur を持たない: 全画面の backdrop-filter を opacity フェードさせると
-         合成コストが跳ね上がるため (Baseline UI) -->
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="absolute inset-0 bg-black/40" onclick={onCancel} transition:fade={{ duration: 150 }}></div>
-    <div
-      bind:this={panelEl}
-      class="surface-card relative w-full max-w-sm p-5 shadow-overlay"
-      role={opts.danger ? 'alertdialog' : 'dialog'}
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={opts.message ? messageId : undefined}
-      in:materialIn
-      out:materialOut
-    >
-      <h2 id={titleId} class="text-base font-bold text-gray-900 text-pretty">{opts.title}</h2>
-      {#if opts.message}
-        <p id={messageId} class="mt-2 text-sm text-gray-600 whitespace-pre-line text-pretty">{opts.message}</p>
-      {/if}
+  <dialog
+    bind:this={dialogEl}
+    class="modal-dialog surface-card w-full max-w-sm shadow-overlay"
+    role={opts.danger ? 'alertdialog' : undefined}
+    aria-modal="true"
+    aria-labelledby={titleId}
+    aria-describedby={opts.message ? messageId : undefined}
+    oncancel={onNativeCancel}
+    onclose={onNativeClose}
+    onclick={onBackdropClick}
+    data-testid="modal-dialog"
+    in:materialIn
+    out:materialOut
+  >
+    <h2 id={titleId} class="text-base font-bold text-gray-900 text-pretty">{opts.title}</h2>
+    {#if opts.message}
+      <p id={messageId} class="mt-2 text-sm text-gray-600 whitespace-pre-line text-pretty">{opts.message}</p>
+    {/if}
 
-      {#if mode === 'prompt'}
-        <input
-          bind:this={inputEl}
-          bind:value={inputValue}
-          id={inputId}
-          type="text"
-          readonly={opts.readonly}
-          placeholder={opts.placeholder}
-          aria-label={opts.title}
-          class="mt-3 w-full rounded-control border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
-          onkeydown={onInputKeydown}
-        />
-      {/if}
+    {#if mode === 'prompt'}
+      <input
+        bind:this={inputEl}
+        bind:value={inputValue}
+        id={inputId}
+        type="text"
+        readonly={opts.readonly}
+        placeholder={opts.placeholder}
+        aria-label={opts.title}
+        class="mt-3 w-full rounded-control border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-chrome-ink"
+        onkeydown={onInputKeydown}
+      />
+    {/if}
 
-      <div class="mt-5 flex justify-end gap-2">
-        {#if showCancel}
-          <button
-            bind:this={cancelEl}
-            type="button"
-            class="rounded-control bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 pressable"
-            onclick={onCancel}
-          >
-            {cancelLabel}
-          </button>
-        {/if}
+    <div class="mt-5 flex justify-end gap-2">
+      {#if showCancel}
         <button
-          bind:this={confirmEl}
+          bind:this={cancelEl}
           type="button"
-          class="rounded-control px-4 py-2 text-sm font-bold text-white pressable {opts.danger
-            ? 'bg-red-600 hover:bg-red-700'
-            : 'bg-chrome-ink hover:bg-chrome-ink-soft'}"
-          onclick={onConfirm}
+          class="rounded-control bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 pressable"
+          onclick={onCancel}
         >
-          {confirmLabel}
+          {cancelLabel}
         </button>
-      </div>
+      {/if}
+      <button
+        bind:this={confirmEl}
+        type="button"
+        class="rounded-control px-4 py-2 text-sm font-bold text-white pressable {opts.danger
+          ? 'bg-red-600 hover:bg-red-700'
+          : 'bg-chrome-ink hover:bg-chrome-ink-soft'}"
+        onclick={onConfirm}
+      >
+        {confirmLabel}
+      </button>
     </div>
-  </div>
+  </dialog>
 {/if}
+
+<style>
+  /* ブラウザ既定の枠と余白を消し、中央へ置く。surface-card の背景は utility 側が持つ */
+  .modal-dialog {
+    border: none;
+    padding: 1.25rem;
+    margin: auto;
+  }
+
+  /* スクリムは blur を持たない: 全画面の backdrop-filter を opacity フェードさせると
+     合成コストが跳ね上がるため (Baseline UI) */
+  .modal-dialog::backdrop {
+    background: rgb(0 0 0 / 0.4);
+  }
+</style>

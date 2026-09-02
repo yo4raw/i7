@@ -51,6 +51,39 @@ ADR 0046（マテリアル 3 層・モーション方針）と ADR 0047（3 チ�
 - ブラウザモーダルはページの JS 実行をブロックし、Playwright / MCP によるブラウザ自動化を停止させる
 - `alert()` はどの操作に対する結果なのかを伝えられない（Baseline UI「エラーは操作箇所の近くに出す」）
 
+## 追記（2026-09-02）: ネイティブ `<dialog>` へ移行した
+
+本 ADR の時点では代替案として React 系のコンポーネントプリミティブのみを検討しており、ネイティブ `<dialog>` + `showModal()` を検討していなかった。
+
+`showModal()` は、本 ADR が「ライブラリが吸収してくれるエッジケース」として未対応と記した**背景要素の無効化**（top layer 化による inert 相当）を、依存を増やさずに標準機能で提供する。あわせてフォーカストラップ・Esc・フォーカス復帰・スクリムも標準化されるため、自前実装を削除した。
+
+削除したもの:
+
+- `FOCUSABLE` 定数と `onKeydown` の Tab 巡回処理
+- `<svelte:window onkeydown>` による Esc 監視（`<dialog>` の `cancel` イベントへ）
+- スクリム用の `<div class="absolute inset-0 bg-black/40">`（`::backdrop` へ）
+- `returnFocusEl` と `tick().then(target.focus())` によるフォーカス復帰
+
+実測で確認した挙動:
+
+| 項目 | 結果 |
+|------|------|
+| モダリティ | `:modal` が true、`::backdrop` の背景色が適用される |
+| 背景の無効化 | 背景ボタンの座標に `elementFromPoint` してもその要素に当たらない（クリック不能） |
+| フォーカス復帰 | Esc で閉じたあと `document.activeElement` が開いたボタンへ戻る |
+| 支援技術への露出 | `role=dialog` として解決でき、アクセシブルネームは `aria-labelledby` 由来 |
+| `danger: true` | `role=alertdialog`、初期フォーカスはキャンセル側 |
+
+維持したもの:
+
+- `{#if}` による条件描画と `materialIn` / `materialOut`（ADR 0046 のモーション規約）
+- `aria-modal="true"` の明示。`showModal()` が暗黙に modal 性を伝えるため冗長だが、本 ADR が要件として挙げているため対応を残した
+- 初期フォーカスの明示指定。`danger: true` でキャンセル側へ置く要件は `<dialog>` の既定（最初の focusable）と一致しない
+
+**トレードオフ**: Tab の巡回に `<body>` を経由する 1 ステップが入る（入力欄 → キャンセル → 確定 → `<body>` → 入力欄）。これは `showModal()` の標準的な折り返し挙動で、Chrome / Safari / Firefox 共通。自前実装は `preventDefault()` でこの 1 ステップを消していた。実測では**背景ページのコンテンツへフォーカスが到達しない**ことを 8 回の Tab 全ステップで確認しており、本 ADR の「Tab をパネル内に閉じ込める」要件は満たす。1 ステップを消すために巡回処理を自前で持ち直す価値はないと判断した。
+
+決定は [ADR 0069](0069-ponytail-audit-cleanup.md) の一部。
+
 ## 検討した代替案
 
 ### アクセシブルなコンポーネントプリミティブ（Base UI / React Aria / Radix）を導入する
