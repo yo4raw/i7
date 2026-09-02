@@ -28,9 +28,10 @@
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { parseArgs } from 'node:util';
+import { runPool, fetchPng } from './lib/util.mjs';
 
 const scriptDir = import.meta.dirname;
 const PROJECT_ROOT = join(scriptDir, '..');
@@ -44,42 +45,44 @@ const LOCAL_DIRS = {
   full: join(PROJECT_ROOT, 'public', 'assets', 'cards'),
 };
 
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const isPng = (buf) => buf.length >= 8 && buf.subarray(0, 8).equals(PNG_MAGIC);
-
-function parseArgs(argv) {
-  const args = {
-    type: 'th',
-    concurrency: 10,
-    minRemoteSize: 5000,
-    force: false,
-    dryRun: false,
-    quiet: false,
-    ids: [],
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--type') args.type = argv[++i];
-    else if (a === '--from') args.from = argv[++i];
-    else if (a === '--ids') args.ids.push(...argv[++i].split(',').map((s) => s.trim()).filter(Boolean));
-    else if (a === '--min-remote-size') args.minRemoteSize = Number(argv[++i]);
-    else if (a === '--force') args.force = true;
-    else if (a === '--dry-run') args.dryRun = true;
-    else if (a === '--concurrency') args.concurrency = Number(argv[++i]);
-    else if (a === '--quiet') args.quiet = true;
-    else if (a === '--help' || a === '-h') {
-      console.log('See file header for usage.');
-      process.exit(0);
-    } else {
-      console.error(`Unknown option: ${a}`);
-      process.exit(1);
-    }
-  }
-  if (!SOURCE_URLS[args.type]) {
-    console.error(`Invalid --type: ${args.type}`);
+function parseCliArgs() {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        type: { type: 'string', default: 'th' },
+        from: { type: 'string' },
+        ids: { type: 'string', multiple: true, default: [] },
+        'min-remote-size': { type: 'string', default: '5000' },
+        force: { type: 'boolean', default: false },
+        'dry-run': { type: 'boolean', default: false },
+        concurrency: { type: 'string', default: '10' },
+        quiet: { type: 'boolean', default: false },
+        help: { type: 'boolean', short: 'h', default: false },
+      },
+    }));
+  } catch (e) {
+    console.error(e.message);
     process.exit(1);
   }
-  return args;
+  if (values.help) {
+    console.log('See file header for usage.');
+    process.exit(0);
+  }
+  if (!SOURCE_URLS[values.type]) {
+    console.error(`Invalid --type: ${values.type}`);
+    process.exit(1);
+  }
+  return {
+    type: values.type,
+    from: values.from,
+    ids: values.ids.flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+    minRemoteSize: Number(values['min-remote-size']),
+    force: values.force,
+    dryRun: values['dry-run'],
+    concurrency: Number(values.concurrency),
+    quiet: values.quiet,
+  };
 }
 
 async function collectIds(args) {
@@ -96,46 +99,12 @@ async function collectIds(args) {
   return Array.from(ids).toSorted((a, b) => Number(a) - Number(b));
 }
 
-async function fetchRemote(url, retries = 2) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return { status: res.status };
-      const buf = Buffer.from(await res.arrayBuffer());
-      return {
-        status: 200,
-        buf,
-        size: buf.length,
-        hash: createHash('sha256').update(buf).digest('hex'),
-        isPng: isPng(buf),
-      };
-    } catch (err) {
-      if (attempt === retries) return { status: 0, error: err.message };
-      await new Promise((r) => { setTimeout(r, 500 * (attempt + 1)); });
-    }
-  }
-}
-
-async function runPool(items, concurrency, worker) {
-  const results = Array.from({ length: items.length });
-  let cursor = 0;
-  const runners = Array.from({ length: concurrency }, async () => {
-    while (true) {
-      const i = cursor++;
-      if (i >= items.length) return;
-      results[i] = await worker(items[i], i);
-    }
-  });
-  await Promise.all(runners);
-  return results;
-}
-
 async function processOne(id, args, localDir, urlPrefix) {
   // ローカルは WebP、ソースは PNG。取得した PNG を WebP へ変換して上書きする。
   // フルカード (full) はロスレス、サムネ (th) は lossy q85。
   const localPath = join(localDir, `${id}.webp`);
   const url = `${urlPrefix}${id}.png`;
-  const remote = await fetchRemote(url);
+  const remote = await fetchPng(url);
 
   if (remote.status !== 200) {
     return { id, action: 'skip_remote_error', remoteStatus: remote.status };
@@ -160,7 +129,7 @@ async function processOne(id, args, localDir, urlPrefix) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseCliArgs();
   const localDir = LOCAL_DIRS[args.type];
   const urlPrefix = SOURCE_URLS[args.type];
 
