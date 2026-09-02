@@ -100,8 +100,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 
 | ワークフロー | スケジュール | 内容 |
 |-------------|------------|------|
-| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め。PNG 取得後 WebP へ変換 |
-| `fetch-gap-cards.yml` | 毎時 00 分 (UTC) | カード ID ギャップの補完。PNG 取得後 WebP へ変換 |
+| `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャンと、既存 ID 範囲のギャップ埋め。PNG 取得後 WebP へ変換 |
 | `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
 | `fetch-new-songs.yml` | 毎時 00 分 (UTC) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得し WebP へ変換 |
 
