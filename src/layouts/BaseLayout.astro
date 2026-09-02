@@ -4,6 +4,7 @@ import '../styles/global.css';
 import { SITE_NAME, SITE_LINKS } from '../lib/constants.ts';
 import HeaderNav from '../components/HeaderNav.svelte';
 import FooterTools from '../components/FooterTools.svelte';
+import SyncPanel from '../components/SyncPanel.svelte';
 import JsonLd from '../components/seo/JsonLd.astro';
 
 interface Breadcrumb {
@@ -181,9 +182,10 @@ try {
           ))}
         </ul>
       </nav>
-      <div class="text-xs text-gray-400 py-3 px-4 flex items-center justify-center gap-3">
+      <div class="text-xs text-gray-400 py-3 px-4 flex flex-wrap items-center justify-center gap-3">
         <a href={`${base}releases/`} class="hover:text-gray-600 hover:underline underline-offset-2">{version}</a>
         <FooterTools client:load />
+        <SyncPanel client:idle />
       </div>
     </footer>
   </body>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { CHARACTER_GROUPS, characterColor } from '../lib/constants';
   import { loadRabbitNotes, saveRabbitNotes, type RabbitNoteMap } from '../lib/data/rabbitNote';
   import ModalDialog from './ui/ModalDialog.svelte';
@@ -15,9 +16,26 @@
   let data = $state<RabbitNoteMap>({});
   let feedback = $state('');
   let feedbackVisible = $state(false);
+  /** 保存ボタンを押すまでは data はメモリ上のバッファ。立っている間は同期の取り込みで消さない */
+  let dirty = $state(false);
 
   $effect(() => {
     data = loadRabbitNotes();
+  });
+
+  // 同期層が別端末のラビットノートを取り込んだ通知。DOM イベント名の文字列だけを購読し、
+  // src/lib/sync/ からは何も import しない（同期層を削除しても今日と同じ挙動になる）
+  onMount(() => {
+    const onSyncApplied = () => {
+      if (dirty) {
+        // 未保存の編集を背後の同期で黙って消さない。代わりに知らせる
+        showFeedback('別の端末の変更があります。保存すると上書きされます');
+        return;
+      }
+      data = loadRabbitNotes();
+    };
+    window.addEventListener('i7:sync-applied', onSyncApplied);
+    return () => window.removeEventListener('i7:sync-applied', onSyncApplied);
   });
 
   function getValue(member: string, attr: 'shout' | 'beat' | 'melody'): number {
@@ -27,6 +45,7 @@
   function setValue(member: string, attr: 'shout' | 'beat' | 'melody', val: number) {
     const entry = data[member] ?? { shout: 0, beat: 0, melody: 0 };
     data[member] = { ...entry, [attr]: val };
+    dirty = true;
   }
 
   function clean(map: RabbitNoteMap): RabbitNoteMap {
@@ -47,6 +66,7 @@
     const cleaned = clean(data);
     saveRabbitNotes(cleaned);
     data = cleaned;
+    dirty = false;
     showFeedback('保存しました');
   }
 
@@ -60,6 +80,7 @@
     if (!ok) return;
     saveRabbitNotes({});
     data = {};
+    dirty = false;
     showFeedback('クリアしました');
   }
 </script>
