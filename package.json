@@ -37,7 +37,7 @@
     "jsdom": "^29.1.1",
     "oxlint": "1.74.0",
     "sharp": "^0.35.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "vite": "^8"
