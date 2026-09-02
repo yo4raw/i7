@@ -128,11 +128,51 @@ function convertRow(cells: (GVizCell | null)[]): Song {
   return obj as unknown as Song;
 }
 
+/** 難易度の優先順位（大きいほど優先）。未知・未入力は 0 として最下位に置く */
+const DIFFICULTY_RANK: Record<string, number> = {
+  'EXPERT+': 5,
+  EXPERT: 4,
+  HARD: 3,
+  NORMAL: 2,
+  EASY: 1,
+};
+
+function difficultyRank(difficulty: string | null): number {
+  return difficulty === null ? 0 : (DIFFICULTY_RANK[difficulty] ?? 0);
+}
+
 /**
- * 有効な楽曲データのみに絞り込む（カテゴリ・アーティスト・ノーツ数がすべて存在するもの）
+ * 同一カテゴリ内の同名曲を 1 行に畳む（ADR 0068）。
+ *
+ * マスターデータは「1 曲 = 1 行（イベント楽曲の EXPERT+ 譜面）」で運用されているが、
+ * 同じ曲が別の難易度でもう一度登録されると、一覧・曲選択に同名の行が 2 つ並んでしまう。
+ * 難易度の高い行（= EXPERT+）を残し、同順位なら先に現れた行を残す。
+ */
+export function dedupeSameSong(songs: Song[]): Song[] {
+  const indexByKey = new Map<string, number>();
+  const result: Song[] = [];
+
+  for (const song of songs) {
+    // カテゴリと曲名は区切り文字を含まない前提が置けないため NUL で連結する
+    const key = `${song.category}\0${song.song_name}`;
+    const found = indexByKey.get(key);
+    if (found === undefined) {
+      indexByKey.set(key, result.length);
+      result.push(song);
+    } else if (difficultyRank(song.difficulty) > difficultyRank(result[found].difficulty)) {
+      result[found] = song;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 有効な楽曲データのみに絞り込む（カテゴリ・アーティスト・ノーツ数がすべて存在するもの）。
+ * あわせて同一カテゴリ内の同名曲を 1 行に畳む。
  */
 export function filterValidSongs(songs: Song[]): Song[] {
-  return songs.filter(s => s.category && s.artist && s.notes_count);
+  return dedupeSameSong(songs.filter(s => s.category && s.artist && s.notes_count));
 }
 
 /**
