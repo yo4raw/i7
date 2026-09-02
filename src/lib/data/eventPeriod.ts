@@ -68,3 +68,29 @@ export function formatEventStart(start_date: string): string {
 export function formatEventPeriod(start_date: string, end_date: string): string {
   return `${formatEventStart(start_date)} 〜 ${formatEventEnd(end_date)} (JST)`;
 }
+
+/** 残り時間の表示精度。'second' は秒まで、'minute' は分までを出す */
+export type DurationUnit = 'second' | 'minute';
+
+/**
+ * ミリ秒を残り時間の文字列にする。0 以下なら空文字。
+ * 「残り 」「開始まで 」などの接頭辞は付けない。呼び出し側で付けること
+ * （関数側に持たせると接頭辞が二重に付く書き方を許してしまうため）。
+ */
+export function formatDuration(ms: number, unit: DurationUnit): string {
+  if (ms <= 0) return '';
+  const totalSec = Math.floor(ms / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  if (unit === 'minute') {
+    if (d > 0) return `${d}日 ${h}時間`;
+    if (h > 0) return `${h}時間 ${m}分`;
+    return `${m}分`;
+  }
+  const s = totalSec % 60;
+  if (d > 0) return `${d}日 ${h}時間 ${m}分 ${s}秒`;
+  if (h > 0) return `${h}時間 ${m}分 ${s}秒`;
+  if (m > 0) return `${m}分 ${s}秒`;
+  return `${s}秒`;
+}

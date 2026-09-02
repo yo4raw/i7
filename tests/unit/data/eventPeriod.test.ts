@@ -7,6 +7,7 @@ import {
   formatEventEnd,
   formatEventStart,
   formatEventPeriod,
+  formatDuration,
 } from '../../../src/lib/data/eventPeriod';
 
 const T = (iso: string) => Date.parse(iso);
@@ -95,5 +96,35 @@ describe('表示フォーマット', () => {
   it('期間表示は開始〜終了 (JST)', () => {
     expect(formatEventPeriod('2026-06-01', '2026-06-08')).toBe('2026-06-01 17:00 〜 2026-06-08 17:00 (JST)');
     expect(formatEventPeriod('2026-07-07', '0000-00-00')).toBe('2026-07-07 17:00 〜 未定 (JST)');
+  });
+});
+
+describe('formatDuration', () => {
+  const SEC = 1000;
+  const MIN = 60 * SEC;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+
+  it('0 以下は空文字', () => {
+    expect(formatDuration(0, 'second')).toBe('');
+    expect(formatDuration(-1, 'minute')).toBe('');
+  });
+
+  it("unit 'second' は残りの大きさで単位を落とす", () => {
+    expect(formatDuration(3 * DAY + 2 * HOUR + 4 * MIN + 5 * SEC, 'second')).toBe('3日 2時間 4分 5秒');
+    expect(formatDuration(2 * HOUR + 4 * MIN + 5 * SEC, 'second')).toBe('2時間 4分 5秒');
+    expect(formatDuration(4 * MIN + 5 * SEC, 'second')).toBe('4分 5秒');
+    expect(formatDuration(5 * SEC, 'second')).toBe('5秒');
+  });
+
+  it("unit 'minute' は秒を切り捨てて 3 形態を取る", () => {
+    expect(formatDuration(3 * DAY + 2 * HOUR + 4 * MIN + 59 * SEC, 'minute')).toBe('3日 2時間');
+    expect(formatDuration(2 * HOUR + 4 * MIN + 59 * SEC, 'minute')).toBe('2時間 4分');
+    expect(formatDuration(4 * MIN + 59 * SEC, 'minute')).toBe('4分');
+  });
+
+  it('接頭辞は付けない（呼び出し側の責務）', () => {
+    expect(formatDuration(5 * SEC, 'second')).not.toContain('残り');
+    expect(formatDuration(5 * MIN, 'minute')).not.toContain('残り');
   });
 });
