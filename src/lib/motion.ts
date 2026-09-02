@@ -3,9 +3,9 @@ import type { TransitionConfig } from 'svelte/transition';
 
 /**
  * ユーザーがモーション低減を要求しているか (prefers-reduced-motion: reduce)。
- * SSR (ビルド時) では false を返す。
+ * SSR (ビルド時) では false を返す。materialIn / materialOut からのみ使う。
  */
-export function prefersReducedMotion(): boolean {
+function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

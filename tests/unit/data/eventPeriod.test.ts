@@ -3,9 +3,7 @@ import {
   classifyEventStatus,
   eventStartMs,
   eventEndMs,
-  isOpenEndedEvent,
   formatEventEnd,
-  formatEventStart,
   formatEventPeriod,
   formatDuration,
 } from '../../../src/lib/data/eventPeriod';
@@ -25,17 +23,6 @@ describe('eventStartMs / eventEndMs', () => {
   it.each(['', '   ', '0000-00-00', 'not-a-date'])('未入力・不正な日付 (%s) は null', (d) => {
     expect(eventEndMs(d)).toBeNull();
     expect(eventStartMs(d)).toBeNull();
-  });
-});
-
-describe('isOpenEndedEvent', () => {
-  it('終了日が未入力なら true', () => {
-    expect(isOpenEndedEvent('0000-00-00')).toBe(true);
-    expect(isOpenEndedEvent('')).toBe(true);
-  });
-
-  it('終了日が入っていれば false', () => {
-    expect(isOpenEndedEvent('2026-06-08')).toBe(false);
   });
 });
 
@@ -83,10 +70,6 @@ describe('classifyEventStatus', () => {
 });
 
 describe('表示フォーマット', () => {
-  it('開始日時は「日付 17:00」', () => {
-    expect(formatEventStart('2026-06-01')).toBe('2026-06-01 17:00');
-  });
-
   it('終了日時は「日付 17:00」、未入力なら「未定」', () => {
     expect(formatEventEnd('2026-06-08')).toBe('2026-06-08 17:00');
     expect(formatEventEnd('0000-00-00')).toBe('未定');

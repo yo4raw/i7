@@ -30,11 +30,6 @@ export function eventEndMs(end_date: string): number | null {
   return parseEventDate(end_date);
 }
 
-/** 終了日が未入力かどうか（= 開始済みなら実施中として扱う）。 */
-export function isOpenEndedEvent(end_date: string): boolean {
-  return eventEndMs(end_date) === null;
-}
-
 /**
  * イベントの開催状態を判定する。
  * 開始日がパース不可な行は判定不能なため `past` に倒す（従来挙動を踏襲）。
@@ -59,8 +54,8 @@ export function formatEventEnd(end_date: string): string {
     : `${end_date.trim()} 17:00`;
 }
 
-/** 開始日時の表示。 */
-export function formatEventStart(start_date: string): string {
+/** 開始日時の表示。formatEventPeriod からのみ使う */
+function formatEventStart(start_date: string): string {
   return `${(start_date || '').trim()} 17:00`;
 }
 
