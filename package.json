@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "npm run build && npx serve dist -l 4321",
+    "preview": "astro build && astro preview --port 4321",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:unit": "vitest run",
@@ -38,7 +38,6 @@
     "jsdom": "^29.1.1",
     "lint-staged": "17.0.8",
     "oxlint": "1.74.0",
-    "serve": "^14.2.6",
     "sharp": "^0.35.3",
     "tsx": "^4.23.0",
     "vitest": "^4.1.10"
