@@ -7,6 +7,12 @@ updates:
     target-branch: main
     schedule:
       interval: weekly
+    ignore:
+      # TypeScript のメジャー更新は保留する（ADR 0070）。
+      # @astrojs/check と @astrojs/svelte が typescript@^5 || ^6 しか受け付けず、
+      # 上げると npm ci が ERESOLVE で失敗する。対応後に本項目を外して上げる。
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     target-branch: main
