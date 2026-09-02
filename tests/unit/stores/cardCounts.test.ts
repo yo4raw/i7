@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  getCount, setCount, deltaCount, allCounts, totalOwned, ownedIdSet, reloadFromStorage,
+  getCount, setCount, deltaCount, allCounts, totalOwned, reloadFromStorage,
 } from '../../../src/lib/stores/cardCounts.svelte';
 import { STORAGE_KEYS } from '../../../src/lib/storage';
 
@@ -55,12 +55,6 @@ describe('集計系', () => {
     setCount(1, 5);
     setCount(2, 3);
     expect(totalOwned()).toBe(8);
-  });
-
-  it('ownedIdSet は所持数>0 のキー集合（文字列）', () => {
-    setCount(1, 2);
-    setCount(2, 1);
-    expect(ownedIdSet()).toEqual(new Set(['1', '2']));
   });
 });
 

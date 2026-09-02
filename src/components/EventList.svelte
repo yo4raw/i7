@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EventRow } from '../lib/data/fetchEventsCsv';
-  import { classifyEventStatus, eventStartMs, eventEndMs, formatEventEnd, EVENT_END_UNDETERMINED_LABEL, type EventStatus } from '../lib/data/eventPeriod';
+  import { classifyEventStatus, eventStartMs, eventEndMs, formatDuration, formatEventEnd, EVENT_END_UNDETERMINED_LABEL, type EventStatus } from '../lib/data/eventPeriod';
 
   type Props = {
     events: EventRow[];
@@ -24,30 +24,6 @@
     return () => clearInterval(id);
   });
 
-  function formatRemaining(ms: number): string {
-    if (ms <= 0) return '';
-    const totalSec = Math.floor(ms / 1000);
-    const d = Math.floor(totalSec / 86400);
-    const h = Math.floor((totalSec % 86400) / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (d > 0) return `残り ${d}日 ${h}時間 ${m}分 ${s}秒`;
-    if (h > 0) return `残り ${h}時間 ${m}分 ${s}秒`;
-    if (m > 0) return `残り ${m}分 ${s}秒`;
-    return `残り ${s}秒`;
-  }
-
-  function formatRemainingShort(ms: number): string {
-    if (ms <= 0) return '';
-    const totalSec = Math.floor(ms / 1000);
-    const d = Math.floor(totalSec / 86400);
-    const h = Math.floor((totalSec % 86400) / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    if (d > 0) return `${d}日 ${h}時間`;
-    if (h > 0) return `${h}時間 ${m}分`;
-    return `${m}分`;
-  }
-
   const enriched = $derived(
     events.map((ev) => {
       const status = classifyEventStatus(ev.start_date, ev.end_date, now);
@@ -57,10 +33,10 @@
       let remainClass = '';
       if (status === 'live') {
         // 終了未定の実施中イベントは残り時間を出せない
-        remainText = end === null ? '' : formatRemaining(end - now);
+        remainText = end === null ? '' : `残り ${formatDuration(end - now, 'second')}`;
         remainClass = 'text-red-600 font-medium';
       } else if (status === 'upcoming' && start !== null) {
-        remainText = `開始まで ${formatRemainingShort(start - now)}`;
+        remainText = `開始まで ${formatDuration(start - now, 'minute')}`;
         remainClass = 'text-gray-500';
       }
       const endShort = end === null ? EVENT_END_UNDETERMINED_LABEL : ev.end_date;

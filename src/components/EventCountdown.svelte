@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { classifyEventStatus, eventStartMs, eventEndMs, formatEventPeriod } from '../lib/data/eventPeriod';
+  import { classifyEventStatus, eventStartMs, eventEndMs, formatDuration, formatEventPeriod } from '../lib/data/eventPeriod';
 
   type EventItem = {
     id: number;
@@ -24,27 +24,16 @@
     return () => clearInterval(id);
   });
 
-  function formatRemain(ms: number): string {
-    if (ms <= 0) return '';
-    const totalMin = Math.floor(ms / 60000);
-    const d = Math.floor(totalMin / (60 * 24));
-    const h = Math.floor((totalMin % (60 * 24)) / 60);
-    const m = totalMin % 60;
-    if (d > 0) return `残り ${d}日 ${h}時間`;
-    if (h > 0) return `残り ${h}時間 ${m}分`;
-    return `残り ${m}分`;
-  }
-
   function status(ev: EventItem): { text: string; className: string; remain: string } {
     const s = classifyEventStatus(ev.start_date, ev.end_date, now);
     if (s === 'upcoming') {
       const start = eventStartMs(ev.start_date);
-      return { text: '開催予定', className: 'text-blue-700 bg-blue-100', remain: start === null ? '' : `開始まで ${formatRemain(start - now)}` };
+      return { text: '開催予定', className: 'text-blue-700 bg-blue-100', remain: start === null ? '' : `開始まで ${formatDuration(start - now, 'minute')}` };
     }
     if (s === 'live') {
       const end = eventEndMs(ev.end_date);
       // 終了未定の実施中イベントは残り時間を出せない
-      return { text: '実施中', className: 'text-red-700 bg-red-100', remain: end === null ? '' : formatRemain(end - now) };
+      return { text: '実施中', className: 'text-red-700 bg-red-100', remain: end === null ? '' : `残り ${formatDuration(end - now, 'minute')}` };
     }
     return { text: '終了', className: 'text-gray-500 bg-gray-200', remain: '' };
   }

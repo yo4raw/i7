@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CardListItem } from '../../lib/cardListData';
+  import type { Card } from '../../lib/data/fetchCardsJson';
   import { ATTR_HEX, characterColor } from '../../lib/constants';
   import { EVENT_BONUS_TIERS, type EventBonusTier } from '../../lib/data/eventBonusTiers';
   import CountInput from './CountInput.svelte';
@@ -7,7 +7,7 @@
   import AttributeBadge from '../ui/AttributeBadge.svelte';
 
   type Props = {
-    card: CardListItem;
+    card: Card;
     base: string;
     thumbUrl: string;
     bonusTier?: EventBonusTier;

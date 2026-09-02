@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { classifyEventStatus, eventStartMs, eventEndMs, type EventStatus } from '../lib/data/eventPeriod';
+  import { classifyEventStatus, eventStartMs, eventEndMs, formatDuration, type EventStatus } from '../lib/data/eventPeriod';
 
   type Props = {
     start_date: string;
@@ -20,30 +20,6 @@
     return () => clearInterval(id);
   });
 
-  function formatRemaining(ms: number): string {
-    if (ms <= 0) return '';
-    const t = Math.floor(ms / 1000);
-    const d = Math.floor(t / 86400);
-    const h = Math.floor((t % 86400) / 3600);
-    const m = Math.floor((t % 3600) / 60);
-    const s = t % 60;
-    if (d > 0) return `${d}日 ${h}時間 ${m}分 ${s}秒`;
-    if (h > 0) return `${h}時間 ${m}分 ${s}秒`;
-    if (m > 0) return `${m}分 ${s}秒`;
-    return `${s}秒`;
-  }
-
-  function formatShort(ms: number): string {
-    if (ms <= 0) return '';
-    const t = Math.floor(ms / 1000);
-    const d = Math.floor(t / 86400);
-    const h = Math.floor((t % 86400) / 3600);
-    const m = Math.floor((t % 3600) / 60);
-    if (d > 0) return `${d}日 ${h}時間`;
-    if (h > 0) return `${h}時間 ${m}分`;
-    return `${m}分`;
-  }
-
   const label = $derived(status === 'live' ? '実施中' : status === 'upcoming' ? '開催予定' : '終了');
   const badgeClass = $derived(
     status === 'live' ? 'text-white bg-red-600'
@@ -53,8 +29,8 @@
 
   const remainText: string = $derived.by(() => {
     // 終了未定の実施中イベントは残り時間を出せない
-    if (status === 'live') return end === null ? '' : `残り ${formatRemaining(end - now)}`;
-    if (status === 'upcoming' && start !== null) return `開始まで ${formatShort(start - now)}`;
+    if (status === 'live') return end === null ? '' : `残り ${formatDuration(end - now, 'second')}`;
+    if (status === 'upcoming' && start !== null) return `開始まで ${formatDuration(start - now, 'minute')}`;
     return '';
   });
   const remainClass = $derived(status === 'live' ? 'text-red-600 font-medium' : 'text-gray-500');

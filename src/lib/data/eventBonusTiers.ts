@@ -27,9 +27,6 @@ export const BONUS_LABEL: Record<EventBonusTier, string> =
 export const BONUS_CLASS: Record<EventBonusTier, string> =
   Object.fromEntries(EVENT_BONUS_TIERS.map(t => [t.key, t.labelClass])) as Record<EventBonusTier, string>;
 
-export const ALL_SELECT_CLASSES: string[] =
-  EVENT_BONUS_TIERS.flatMap(t => t.selectClasses);
-
 export interface EventForBonus {
   id: number;
   start_date: string;
