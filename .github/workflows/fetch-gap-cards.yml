@@ -117,10 +117,10 @@ jobs:
           # base の既定値は「checkout されたブランチ」。default branch 変更の影響を受けないよう明示する
           base: main
           add-paths: public/assets/cards/*.webp
-          commit-message: "Add gap card images: ${{ steps.fetch.outputs.new_ids }}"
+          commit-message: "🍱 欠番の衣装画像を追加: ${{ steps.fetch.outputs.new_ids }}"
           branch: auto/add-gap-cards-${{ github.run_id }}
           delete-branch: true
-          title: "Fill ${{ steps.fetch.outputs.downloaded }} gap card image(s)"
+          title: "🍱 欠番の衣装画像を ${{ steps.fetch.outputs.downloaded }} 件補完"
           body: |
             ## Summary
             Automatically fetched gap card images by scanning from max ID down to 1.

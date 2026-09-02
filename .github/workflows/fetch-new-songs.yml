@@ -59,10 +59,10 @@ jobs:
           # base の既定値は「checkout されたブランチ」。default branch 変更の影響を受けないよう明示する
           base: main
           add-paths: public/assets/songs/
-          commit-message: "Add song images: ${{ steps.fetch.outputs.new_ids }}"
+          commit-message: "🍱 楽曲ジャケット画像を追加: ${{ steps.fetch.outputs.new_ids }}"
           branch: auto/add-songs-${{ github.run_id }}
           delete-branch: true
-          title: "Add song image(s): ${{ steps.fetch.outputs.downloaded }} file(s)"
+          title: "🍱 楽曲ジャケット画像を追加: ${{ steps.fetch.outputs.downloaded }} 件"
           body: |
             ## Summary
             Automatically fetched new song cover images from IDOLiSH7 Wiki.
