@@ -23,29 +23,33 @@ import { readdir, stat, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { parseArgs } from 'node:util';
 import { runPool } from './lib/util.mjs';
 
 // ---------- 引数パース ----------
-const args = process.argv.slice(2);
-const dirs = [];
-let lossless = false;
-let quality = 85;
-let concurrency = 8;
-let dryRun = false;
-let quiet = false;
-
-for (let i = 0; i < args.length; i++) {
-  const a = args[i];
-  if (a === '--lossless') lossless = true;
-  else if (a === '--quality') quality = Number(args[++i]);
-  else if (a === '--concurrency') concurrency = Number(args[++i]);
-  else if (a === '--dry-run') dryRun = true;
-  else if (a === '--quiet') quiet = true;
-  else if (a.startsWith('--')) {
-    console.error(`Unknown option: ${a}`);
-    process.exit(1);
-  } else dirs.push(a);
+let values, positionals;
+try {
+  ({ values, positionals } = parseArgs({
+    options: {
+      lossless: { type: 'boolean', default: false },
+      quality: { type: 'string', default: '85' },
+      concurrency: { type: 'string', default: '8' },
+      'dry-run': { type: 'boolean', default: false },
+      quiet: { type: 'boolean', default: false },
+    },
+    allowPositionals: true,
+  }));
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
 }
+
+const dirs = positionals;
+const lossless = values.lossless;
+const quality = Number(values.quality);
+const concurrency = Number(values.concurrency);
+const dryRun = values['dry-run'];
+const quiet = values.quiet;
 
 if (dirs.length === 0) {
   console.error('Usage: node scripts/png-to-webp.mjs <dir> [--lossless | --quality <n>] [--concurrency <n>] [--dry-run] [--quiet]');

@@ -28,6 +28,7 @@
 import { readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { parseArgs } from 'node:util';
 import { runPool, fetchPng } from './lib/util.mjs';
 
 const scriptDir = import.meta.dirname;
@@ -42,30 +43,42 @@ const LOCAL_DIRS = {
   full: join(PROJECT_ROOT, 'public', 'assets', 'cards'),
 };
 
-function parseArgs(argv) {
-  const args = { type: 'th', concurrency: 10, hash: false, quiet: false };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--type') args.type = argv[++i];
-    else if (a === '--hash') args.hash = true;
-    else if (a === '--concurrency') args.concurrency = Number(argv[++i]);
-    else if (a === '--ids') args.ids = argv[++i].split(',').map((s) => s.trim()).filter(Boolean);
-    else if (a === '--limit') args.limit = Number(argv[++i]);
-    else if (a === '--out') args.out = argv[++i];
-    else if (a === '--quiet') args.quiet = true;
-    else if (a === '--help' || a === '-h') {
-      console.log(getHelpText());
-      process.exit(0);
-    } else {
-      console.error(`Unknown option: ${a}`);
-      process.exit(1);
-    }
-  }
-  if (!SOURCE_URLS[args.type]) {
-    console.error(`Invalid --type: ${args.type} (must be 'th' or 'full')`);
+function parseCliArgs() {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        type: { type: 'string', default: 'th' },
+        hash: { type: 'boolean', default: false },
+        concurrency: { type: 'string', default: '10' },
+        ids: { type: 'string' },
+        limit: { type: 'string' },
+        out: { type: 'string' },
+        quiet: { type: 'boolean', default: false },
+        help: { type: 'boolean', short: 'h', default: false },
+      },
+    }));
+  } catch (e) {
+    console.error(e.message);
     process.exit(1);
   }
-  return args;
+  if (values.help) {
+    console.log(getHelpText());
+    process.exit(0);
+  }
+  if (!SOURCE_URLS[values.type]) {
+    console.error(`Invalid --type: ${values.type} (must be 'th' or 'full')`);
+    process.exit(1);
+  }
+  return {
+    type: values.type,
+    hash: values.hash,
+    quiet: values.quiet,
+    concurrency: Number(values.concurrency),
+    ids: values.ids ? values.ids.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
+    limit: values.limit === undefined ? undefined : Number(values.limit),
+    out: values.out,
+  };
 }
 
 function getHelpText() {
@@ -140,7 +153,7 @@ async function verifyOne(id, args, localDir, urlPrefix) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseCliArgs();
   const localDir = LOCAL_DIRS[args.type];
   const urlPrefix = SOURCE_URLS[args.type];
 

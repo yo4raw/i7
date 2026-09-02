@@ -30,6 +30,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { parseArgs } from 'node:util';
 import { runPool, fetchPng } from './lib/util.mjs';
 
 const scriptDir = import.meta.dirname;
@@ -44,39 +45,44 @@ const LOCAL_DIRS = {
   full: join(PROJECT_ROOT, 'public', 'assets', 'cards'),
 };
 
-function parseArgs(argv) {
-  const args = {
-    type: 'th',
-    concurrency: 10,
-    minRemoteSize: 5000,
-    force: false,
-    dryRun: false,
-    quiet: false,
-    ids: [],
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--type') args.type = argv[++i];
-    else if (a === '--from') args.from = argv[++i];
-    else if (a === '--ids') args.ids.push(...argv[++i].split(',').map((s) => s.trim()).filter(Boolean));
-    else if (a === '--min-remote-size') args.minRemoteSize = Number(argv[++i]);
-    else if (a === '--force') args.force = true;
-    else if (a === '--dry-run') args.dryRun = true;
-    else if (a === '--concurrency') args.concurrency = Number(argv[++i]);
-    else if (a === '--quiet') args.quiet = true;
-    else if (a === '--help' || a === '-h') {
-      console.log('See file header for usage.');
-      process.exit(0);
-    } else {
-      console.error(`Unknown option: ${a}`);
-      process.exit(1);
-    }
-  }
-  if (!SOURCE_URLS[args.type]) {
-    console.error(`Invalid --type: ${args.type}`);
+function parseCliArgs() {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      options: {
+        type: { type: 'string', default: 'th' },
+        from: { type: 'string' },
+        ids: { type: 'string', multiple: true, default: [] },
+        'min-remote-size': { type: 'string', default: '5000' },
+        force: { type: 'boolean', default: false },
+        'dry-run': { type: 'boolean', default: false },
+        concurrency: { type: 'string', default: '10' },
+        quiet: { type: 'boolean', default: false },
+        help: { type: 'boolean', short: 'h', default: false },
+      },
+    }));
+  } catch (e) {
+    console.error(e.message);
     process.exit(1);
   }
-  return args;
+  if (values.help) {
+    console.log('See file header for usage.');
+    process.exit(0);
+  }
+  if (!SOURCE_URLS[values.type]) {
+    console.error(`Invalid --type: ${values.type}`);
+    process.exit(1);
+  }
+  return {
+    type: values.type,
+    from: values.from,
+    ids: values.ids.flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+    minRemoteSize: Number(values['min-remote-size']),
+    force: values.force,
+    dryRun: values['dry-run'],
+    concurrency: Number(values.concurrency),
+    quiet: values.quiet,
+  };
 }
 
 async function collectIds(args) {
@@ -123,7 +129,7 @@ async function processOne(id, args, localDir, urlPrefix) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseCliArgs();
   const localDir = LOCAL_DIRS[args.type];
   const urlPrefix = SOURCE_URLS[args.type];
 
