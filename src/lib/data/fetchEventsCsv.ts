@@ -27,7 +27,11 @@ export interface EventRow {
   bronze: EventSpecialTier;
 }
 
-function parseCsv(text: string): string[][] {
+/**
+ * RFC4180 相当の CSV パーサ。Google の export はダブルクォートと改行を含む。
+ * 空行の選別はしない（行位置をそのまま保つ必要がある呼び出し元があるため）。
+ */
+export function parseCsv(text: string): string[][] {
   const src = text.replace(/^\uFEFF/, '');
   const rows: string[][] = [];
   let cur = '';
@@ -66,6 +70,11 @@ function parseCsv(text: string): string[][] {
     row.push(cur);
     rows.push(row);
   }
+  return rows;
+}
+
+/** 空行（1 列だけで中身が無い行）を落とす。CSV の解釈ではなくデータ行の選別なので呼び出し側に置く */
+function dropBlankRows(rows: string[][]): string[][] {
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''));
 }
 
@@ -93,7 +102,7 @@ function toNum(s: string): number {
 export async function fetchEventsCsv(): Promise<EventRow[]> {
   const csvPath = path.resolve(process.cwd(), 'public/events/events.csv');
   const text = await readFile(csvPath, 'utf-8');
-  const rows = parseCsv(text);
+  const rows = dropBlankRows(parseCsv(text));
   if (rows.length < 2) return [];
 
   const header = rows[0];

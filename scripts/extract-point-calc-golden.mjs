@@ -12,6 +12,7 @@
  */
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { parseCsv } from '../src/lib/data/fetchEventsCsv.ts';
 
 const SPREADSHEET_ID = '1hVilwOeLHvrkqburgdbAypQSj1p58VFZYwBjKRais08';
 
@@ -57,28 +58,6 @@ const ERROR_REASON = new Map(KNOWN_SHEET_ERRORS.map(e => [e.key, e.reason]));
 
 const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'EXPERT'];
 const PLAY_MODES = ['放置', 'オート', 'FC', 'PC'];
-
-/** RFC4180 相当の CSV パーサ（Google の export はダブルクォート＋改行を含む） */
-function parseCsv(text) {
-  const src = text.replace(/^﻿/, '');
-  const rows = [];
-  let row = [];
-  let cur = '';
-  let inQuote = false;
-  for (let i = 0; i < src.length; i++) {
-    const c = src[i];
-    if (inQuote) {
-      if (c === '"') {
-        if (src[i + 1] === '"') { cur += '"'; i++; } else { inQuote = false; }
-      } else { cur += c; }
-    } else if (c === '"') { inQuote = true; }
-    else if (c === ',') { row.push(cur); cur = ''; }
-    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
-    else if (c !== '\r') { cur += c; }
-  }
-  if (cur !== '' || row.length > 0) { row.push(cur); rows.push(row); }
-  return rows;
-}
 
 /** 0 始まりの列番号を A1 記法の列名にする */
 function colName(index) {
