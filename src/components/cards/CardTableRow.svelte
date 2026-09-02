@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { CardListItem } from '../../lib/cardListData';
   import type { Card } from '../../lib/data/fetchCardsJson';
   import { formatSkillEffectMax } from '../../lib/score/skillFormatter';
   import { ATTR_BG, ATTR_BG_HOVER, ATTR_HEX, characterColor } from '../../lib/constants';
@@ -10,7 +9,7 @@
   import AttributeBadge from '../ui/AttributeBadge.svelte';
 
   type Props = {
-    card: CardListItem;
+    card: Card;
     base: string;
     thumbUrl: string;
     bonusTier?: EventBonusTier;
