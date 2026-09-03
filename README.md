@@ -1,9 +1,9 @@
 # i7マネ部屋
 
-[![CI](https://github.com/yo4raw/i7/actions/workflows/ci.yml/badge.svg)](https://github.com/yo4raw/i7/actions/workflows/ci.yml)
+[![CI](https://github.com/yo4raw/i7/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/yo4raw/i7/actions/workflows/ci.yml)
 [![Deploy](https://github.com/yo4raw/i7/actions/workflows/deploy.yml/badge.svg)](https://github.com/yo4raw/i7/actions/workflows/deploy.yml)
 [![release](https://img.shields.io/github/v/tag/yo4raw/i7?label=release)](https://github.com/yo4raw/i7/releases/latest)
-[![last commit](https://img.shields.io/github/last-commit/yo4raw/i7)](https://github.com/yo4raw/i7/commits/main)
+[![last commit](https://img.shields.io/github/last-commit/yo4raw/i7/main)](https://github.com/yo4raw/i7/commits/main)
 [![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/yo4raw/i7?utm_source=oss&utm_medium=github&utm_campaign=yo4raw%2Fi7&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
 
 アイドリッシュセブン（IDOLiSH7）の衣装・楽曲データベースサイトです。
