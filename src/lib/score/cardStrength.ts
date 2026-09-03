@@ -116,9 +116,10 @@ export function calcCardStrengthAppeal(
   const cardBroachs = allBroachs.filter((br) => br.card_id === card.cardID);
   for (const br of cardBroachs) {
     if (br.id === null) continue;
-    // 比較はベストケース前提のため、種類7（全属性編成）は常に発動扱いにする
+    // 比較はベストケース前提のため、種類7（全属性編成）と種類4（グループ限定）は常に発動扱いにする
     const resolved = resolveDeckBroachs(
-      deck, cardBroachs, song, [br.id, null, null, null, null, null], { assumeAllAttributes: true },
+      deck, cardBroachs, song, [br.id, null, null, null, null, null],
+      { assumeAllAttributes: true, assumeSameGroup: true },
     );
     const broachScoreBonus = calcBroachScoreBonus(resolved);
     let aS = s, aB = b, aM = m;

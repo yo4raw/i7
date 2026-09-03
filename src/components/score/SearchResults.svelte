@@ -6,7 +6,7 @@
   import type { FixedBroach } from '../../lib/data/fetchFixedBroachsJson';
   import { normalizeAttribute } from '../../lib/score/types';
   import { computeTeam } from '../../lib/score/engine';
-  import type { SearchResult } from '../../lib/score/maxScoreFinder';
+  import { FINDER_BROACH_OPTIONS, type SearchResult } from '../../lib/score/maxScoreFinder';
   import { resolveDeckBroachs } from '../../lib/score/broachResolver';
   import { BONUS_LABEL, BONUS_CLASS } from '../../lib/data/eventBonusTiers';
   import { SHARED_BROACHS } from '../../lib/data/sharedBroachs';
@@ -69,11 +69,21 @@
     const tiers = buildTiersFromDeck(deck);
     const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
     const trained: boolean[] = [true, true, true, true, true, true];
-    const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, result.best.sharedBroachIds ?? [[], [], [], [], [], []], skillLevels, loadRabbitNotes());
-    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong);
+    const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, result.best.sharedBroachIds ?? [[], [], [], [], [], []], skillLevels, loadRabbitNotes(), FINDER_BROACH_OPTIONS);
+    const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong, undefined, FINDER_BROACH_OPTIONS);
     return { team, deck, resolvedBroachs };
   });
   const bestTeam = $derived(bestContext?.team ?? null);
+
+  /** グループ限定（種類4）の固有ブローチを発動扱いで加算しているか (ADR 0072) */
+  const hasAssumedGroupBroach = $derived.by(() => {
+    for (const broachs of bestContext?.resolvedBroachs.values() ?? []) {
+      for (const rb of broachs) {
+        if (rb.active && rb.broach.broach_type === 4) return true;
+      }
+    }
+    return false;
+  });
 
   function sharedBroachName(id: number): string {
     return SHARED_BROACHS.find((sb) => sb.id === id)?.name ?? `#${id}`;
@@ -92,7 +102,9 @@
     const baseLabel = br.condition
       ? `${br.condition}${statStr ? ' ' + statStr : ''}`
       : statStr || `ブローチ#${br.id ?? '?'}`;
-    return br.broach_type === 5 && rb.active && mult > 1 ? `${baseLabel}（${mult}枚）` : baseLabel;
+    if (br.broach_type === 5 && rb.active && mult > 1) return `${baseLabel}（${mult}枚）`;
+    if (br.broach_type === 4 && rb.active) return `${baseLabel}（同グループ編成が前提）`;
+    return baseLabel;
   }
 </script>
 
@@ -150,6 +162,11 @@
 
   <section class="surface-card p-4">
     <h2 class="text-sm font-bold text-gray-700 mb-3">🧾 衣装詳細</h2>
+    {#if hasAssumedGroupBroach}
+      <p class="text-[11px] text-amber-600 mb-3">
+        グループ限定の固有ブローチは、同グループ編成でなくても発動したものとして加算しています。実際のゲームではセンターとメンバー4枚がすべて同じグループのときだけ発動するため、この編成ではスコアが表示値に届かないことがあります。
+      </p>
+    {/if}
     <div class="overflow-x-auto">
       <table class="w-full text-xs">
         <thead>

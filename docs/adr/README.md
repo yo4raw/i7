@@ -80,3 +80,4 @@
 | [0069](0069-ponytail-audit-cleanup.md) | over-engineering 監査に基づく削減(カバレッジゲートと GSAP は現状維持・cron 直 push は却下) | 承認 |
 | [0070](0070-hold-typescript-major.md) | TypeScript のメジャー更新を上流の対応まで保留する(Astro の peer 依存が ^5 \|\| ^6 のみ) | 承認 |
 | [0071](0071-user-facing-wording-single-source.md) | ユーザー可視テキストの表記を CLAUDE.md の表で一元管理する(ToolGuide の共通化と用語集の追加は見送り) | 承認 |
+| [0072](0072-assume-same-group-broach.md) | グループ限定の固有ブローチを衣装比較・編成組合計算では発動扱いで加算する(注意書きを画面と解説に併記) | 承認 |
