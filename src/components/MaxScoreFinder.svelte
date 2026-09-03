@@ -30,6 +30,7 @@
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import { fetchSongsJson, filterValidSongs, firstEventSongId } from '../lib/data/fetchSongsJson';
   import SongSelect from './SongSelect.svelte';
+  import { attrDonutSvg } from '../lib/donutChart';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
@@ -123,6 +124,12 @@
   });
 
   const selectedSong = $derived(selectedSongId !== null && selectedSongId !== undefined ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
+  const songChartSvg = $derived(selectedSong
+    ? attrDonutSvg(
+        selectedSong.shout_ratio || 0, selectedSong.beat_ratio || 0, selectedSong.melody_ratio || 0,
+        { sizeClass: 'size-10 flex-shrink-0' },
+      )
+    : '');
 
   // 初期選択曲: イベント対象楽曲の先頭。無ければ未選択のまま
   $effect(() => {
@@ -282,7 +289,10 @@
 
 <section class="surface-card p-4 mb-4">
   <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
-  <SongSelect id="song-select" songs={allSongs} bind:value={selectedSongId} />
+  <div class="flex items-center gap-2">
+    <SongSelect id="song-select" songs={allSongs} bind:value={selectedSongId} />
+    {#if selectedSong}{@html songChartSvg}{/if}
+  </div>
   {#if selectedSong}
     <div class="mt-3 text-xs text-gray-600">
       <div class="flex flex-wrap gap-3">
