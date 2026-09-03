@@ -373,7 +373,7 @@
     </div>
     <label class="flex items-center gap-2">
       <input type="checkbox" bind:checked={scoreUpAssist} class="rounded" />
-      <span class="text-xs">SCOREUPアシスト（+12%）</span>
+      <span class="text-xs">SCOREUPアシスト（属性値 ×1.2）</span>
     </label>
     <label class="flex items-center gap-2 text-xs">
       <span>SCOREUPバッジ</span>
@@ -392,7 +392,7 @@
     </label>
     <label class="flex items-center gap-2 text-xs">
       <input type="checkbox" id="opt-use-owned-broachs" bind:checked={useOwnedBroachs} class="rounded" />
-      <span><b>所持共通ブローチを割り当てる</b> — 登録した共通ブローチを所持数の範囲でセンター + メンバー4枠に自動割当します。フレンド枠は全種から推奨ブローチを割当（OFF はブローチなしで探索）</span>
+      <span><b>所持共通ブローチを割り当てる</b> — 登録した共通ブローチを所持数の範囲でセンター + メンバー4枠に自動で割り当てます。フレンド枠は全種から推奨ブローチを割り当てます（OFF はブローチなしで探索）</span>
     </label>
     {#if useOwnedBroachs && ownedBroachTotal === 0}
       <p class="text-[11px] text-amber-600 pl-6">共通ブローチが未登録のため、ブローチなしで探索します。<a class="underline" href={`${base}shared-broach/`}>共通ブローチ登録ページ</a>で所持数を登録してください。</p>

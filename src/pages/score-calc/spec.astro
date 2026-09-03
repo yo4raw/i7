@@ -183,7 +183,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   </div>
   <p class="text-xs text-gray-500 mb-6 text-pretty">
     本ページは当サイトのスコア計算に実装されているロジック全体を、計算の流れ順に図で解説するものです。
-    数値例はすべて下記のデモ編成 × 楽曲「{songName}」({notesCount}ノーツ / {songDuration}秒) をビルド時に実際の計算エンジンへ通して生成しています。
+    数値例はすべて、下記のデモ編成 × 楽曲「{songName}」({notesCount}ノーツ / {songDuration}秒) をビルド時に実際の計算エンジンへ通して生成したものです。
     有志による計測・推定値を含むため、ゲーム内の挙動と完全に一致することを保証するものではありません。
   </p>
 
@@ -194,7 +194,11 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
       <li><a href="#team" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">チーム属性値</a></li>
       <li><a href="#note" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">1ノーツの素点とライト倍率</a></li>
       <li><a href="#scoreup" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">スコアアップスキル</a></li>
-      <li><a href="#shrink" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">判定縮小スキル</a></li>
+      <li>
+        <a href="#shrink" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">判定縮小スキル</a>
+        <span class="text-gray-400"> / </span>
+        <a href="#shrink-vs-scoreup" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">縮小 vs スコアアップ</a>
+      </li>
       <li><a href="#final" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">最終補正（バッジ・ブローチ）</a></li>
       <li><a href="#stats" class="text-gray-900 underline underline-offset-2 decoration-gray-400 hover:decoration-gray-900">理論値・期待値・シミュレーション</a></li>
     </ol>
@@ -204,9 +208,9 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
   <section id="overview" class="surface-card p-6 mb-6">
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">0. スコア計算の全体像とデモ編成</h2>
     <p class="text-sm text-gray-700 mb-4">
-      リザルトのスコアは <strong>チーム属性値</strong> を土台に、ノーツ 1 個ずつの<strong>素点</strong>を積み、
-      そこへ<strong>スコアアップスキル</strong>と<strong>判定縮小スキル</strong>の上乗せ、最後に
-      <strong>バッジ・ブローチの最終補正</strong>が掛かって決まります。以下の 6 段階を章ごとに拡大して見ていきます。
+      リザルトのスコアは次の順で決まります。まず <strong>チーム属性値</strong> を土台に、ノーツ 1 個ずつの<strong>素点</strong>を積みます。
+      そこへ<strong>スコアアップスキル</strong>と<strong>判定縮小スキル</strong>のぶんを上乗せし、最後に
+      <strong>バッジ・ブローチの最終補正</strong>を掛けます。以下の 6 段階を章ごとに拡大します。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-6">
       <Fragment set:html={pipelineOverviewSvg()} />
@@ -299,7 +303,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     </div>
     <p class="text-sm text-gray-700 mb-3">
       デモ編成でサビ光 (×3.0) 区間の Melody 色ノーツを 1 個叩いた場合の計算がこちら。
-      乗算のたびに小数点以下が切り捨てられる（⌊ ⌋）のがポイントです。
+      乗算のたびに小数点以下が切り捨てられます（⌊ ⌋）。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={noteStepsSvg} />
@@ -335,8 +339,8 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <p class="text-sm text-gray-700 mb-4">
       スコアアップスキルは<strong>発動するたびに固定値をそのまま加算</strong>するスキルです。
       発動タイミングの数え方で 2 種類あります:
-      <strong>ノート型</strong>（コンボ / Perfect）は「◯ノーツごと」、<strong>タイマー型</strong>は「◯秒ごと」に
-      発動判定が走り、確率（per）を引けば +value 点です。
+      <strong>ノート型</strong>（コンボ / Perfect）は「◯ノーツごと」に、<strong>タイマー型</strong>は「◯秒ごと」に発動判定が走ります。
+      判定で確率（per）を引ければ +value 点です。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-4">
       <Fragment set:html={scoreUpSvg} />
@@ -410,13 +414,13 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <div class="mb-4 p-3 bg-orange-50 border border-orange-200 rounded text-xs text-orange-900">
       <strong>キューイング仕様</strong>: 複数の縮小スキルが同時刻に重複発動することはなく、
       先行スキルが終わってから後続スキルが連続発動します。そのためカバー時間は時間軸上で
-      <strong>重ならず単純加算</strong>でき（曲全体を超えた分のみ切り捨て）、後述の 100% キャップの根拠になります。
+      <strong>重ならず単純に足し合わせられます</strong>（曲全体を超えた分だけ切り捨て）。これが後述する 100% キャップの根拠です。
     </div>
 
     <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-1. インタラクティブに試す</h3>
     <p class="text-sm text-gray-700 mb-3">
       スライダーでノーツ数 / 確率 / 秒数を変え、「＋衣装追加」で縮小の枚数を増やし、
-      「別の試行」でシードを変えられます。発動回数・カバー時間がどう変わるか確認してみてください。
+      「別の試行」でシードを変えることもできます。発動回数とカバー時間がどう動くかを確認できます。
     </p>
     <ShrinkPlayground client:only="svelte" />
 
@@ -438,7 +442,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
       各縮小スキルの「最大カバー秒数」を単純合算して曲の長さで割ったものがカバー率です。
       デモ編成は {shrinkSlots.map((s, i) => `${s.name} ${shrinkCoverSeconds[i]}秒`).join(' + ')} =
       {shrinkCoverSeconds.reduce((a, b) => a + b, 0)}秒 で曲の長さ {songDuration}秒 を大きく超えるため、
-      <strong>100% でキャップ</strong>されます（超過分は無駄になる = 縮小の積みすぎは効率が落ちる、の根拠）。
+      <strong>100% でキャップ</strong>されます（超過分は捨てられます。縮小を積みすぎると効率が落ちるのは、これが理由です）。
       さらに実際には発動確率 per（{shrinkSlots.map(s => `${s.per}%`).join(' / ')}）があるため、
       発動ムラを織り込んだ<strong>期待カバー率は {expectedCoverageRatePct}%</strong> になります（下段バー）。
     </p>
@@ -462,7 +466,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
       <Fragment set:html={accBar(3)} />
     </div>
 
-    <h3 class="text-base font-bold text-gray-800 mb-2 mt-6">4-5. スコアアタックでの位置づけ — 縮小 vs スコアアップ</h3>
+    <h3 id="shrink-vs-scoreup" class="text-base font-bold text-gray-800 mb-2 mt-6">4-5. スコアアタックでの位置づけ — 縮小 vs スコアアップ</h3>
     <div class="mb-4 p-3 bg-orange-50 border border-orange-200 rounded text-xs text-orange-900">
       <strong>スコアアタックの基本戦略</strong>: 判定縮小はスコアアップより 1 枚あたりの得点寄与が大きく、
       チーム属性値が高いほど寄与が伸びます。まず縮小でカバー率 100% 以上を確保し
@@ -490,7 +494,7 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
         <p>実装: <code class="px-1 bg-white rounded">calcShrinkCoverage()</code> / <code class="px-1 bg-white rounded">runOnce()</code> (src/lib/score/simulation.ts)、<code class="px-1 bg-white rounded">computeShrinkExclusion()</code> (src/lib/score/shrinkExclusion.ts)</p>
         <ul class="list-disc pl-5 space-y-1">
           <li>先頭除外 <code class="px-1 bg-white rounded">excludeHead = max(notes_20 サイズ, デッキ内縮小 count の最小値)</code>。タイマー型はノート換算 <code class="px-1 bg-white rounded">floor((count / songDuration) × notesCount)</code> で比較</li>
-          <li>カード別カバー秒 <code class="px-1 bg-white rounded">floor((対象ノーツ数 / count) × value)</code>（タイマー型は分母 songDuration）。<strong>衣装単位で 1 回だけ floor</strong>（spec §6-6 H39）</li>
+          <li>衣装別カバー秒 <code class="px-1 bg-white rounded">floor((対象ノーツ数 / count) × value)</code>（タイマー型は分母 songDuration）。<strong>衣装単位で 1 回だけ floor</strong>（spec §6-6 H39）</li>
           <li>実効秒数 <code class="px-1 bg-white rounded">effectiveSeconds = songDuration − 先頭除外の秒換算</code>。内部カバー率は effectiveSeconds で 100% キャップ、表示用 raw は超過可</li>
           <li>期待値スコアは <code class="px-1 bg-white rounded">(rateᵢ − 1)</code> をスキルごとに加重した期待カバー率を使用し、構造的到達可能秒数でキャップ（ADR 0036）</li>
           <li>上乗せの基準スコア（eligibleBaseScore）は excluded ノーツを除いた素点合計。アシスト ON 時は <code class="px-1 bg-white rounded">floor(eligibleBaseScore / 1.2)</code> でアシスト分を剥離してから縮小倍率を掛ける（spec §6-5 BN22）</li>
@@ -509,8 +513,8 @@ const skillSummary = (s: (typeof demo.slots)[number]): string => {
     <h2 class="text-lg font-bold text-display text-gray-900 mb-3">5. 最終補正（バッジ・ブローチ）</h2>
     <p class="text-sm text-gray-700 mb-4">
       ライブ終了時スコア（素点 + スコアアップ + 縮小）に、最後の 2 つの補正が掛かります。
-      <strong>SCOREUP バッジ</strong>はスコア全体への倍率（例: {badgeRate}% なら ×1.{badgeRate}）、
-      <strong>ブローチのスコア直接加算</strong>（種類 9 の固有ブローチ）は倍率の外側でのフラット加算です。
+      <strong>SCOREUP バッジ</strong>はスコア全体に掛かる倍率です（例: {badgeRate}% なら ×1.{badgeRate}）。
+      <strong>ブローチのスコア直接加算</strong>（種類 9 の固有ブローチ）は、その倍率の外側で足されるフラット加算です。
       このデモ編成に種類 9 のブローチはないため +0 ですが、持っている編成では最後に足されます。
     </p>
     <div class="overflow-x-auto -mx-2 px-2 mb-4">

@@ -162,7 +162,7 @@
             <th class="text-right py-1 px-1 text-blue-500">Melody</th>
             <th class="text-left py-1 px-1">スキル</th>
             <th class="text-left py-1 px-1">効果</th>
-            <th class="text-left py-1 px-1">固定ブローチ</th>
+            <th class="text-left py-1 px-1">固有ブローチ</th>
             {#if result.best.sharedBroachIds}
               <th class="text-left py-1 px-1">共通ブローチ</th>
             {/if}
@@ -259,7 +259,7 @@
           <tr class="border-t"><td class="text-gray-500 py-1">ライブ終了時スコア</td><td class="text-right py-1">{result.best.liveEndScore.toLocaleString()}</td></tr>
         {/if}
         {#if bestTeam && bestTeam.broachScoreBonus > 0}
-          <tr><td class="text-gray-500 py-1">固定ブローチ スコア加算</td><td class="text-right py-1">+{bestTeam.broachScoreBonus.toLocaleString()}</td></tr>
+          <tr><td class="text-gray-500 py-1">固有ブローチ スコア加算</td><td class="text-right py-1">+{bestTeam.broachScoreBonus.toLocaleString()}</td></tr>
         {/if}
         <tr><td class="text-gray-500 py-1 font-bold">最終リザルト</td><td class="text-right py-1 font-bold">{result.best.score.toLocaleString()}</td></tr>
       </tbody>
