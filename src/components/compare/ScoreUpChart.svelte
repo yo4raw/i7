@@ -47,9 +47,9 @@
             <!-- 上乗せ: スキル最大値 − スキル期待値（発動率による目減り分） -->
             <span class="block w-full bg-amber-200 rounded-t-sm" style={`height:${px(entry.skillMax) - px(entry.skillExpected)}px`}></span>
             <!-- 実体: スキル期待値 -->
-            <span class="block w-full bg-amber-400" style={`height:${px(entry.skillExpected)}px`}></span>
+            <span class="block w-full bg-amber-500" style={`height:${px(entry.skillExpected)}px`}></span>
             <!-- 属性値由来スコア -->
-            <span class="block w-full bg-chrome-ink-soft" style={`height:${px(entry.baseScore)}px`}></span>
+            <span class="block w-full bg-gray-300" style={`height:${px(entry.baseScore)}px`}></span>
           </span>
           <img
             src={cardThumbUrl(entry.card.ID ?? '')}
@@ -72,8 +72,8 @@
     </div>
   </div>
   <div class="flex flex-wrap items-center gap-4 px-3 pb-3 text-[11px] text-gray-600">
-    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-chrome-ink-soft"></span>属性値由来スコア</span>
-    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>スキル期待値</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-gray-300"></span>属性値由来スコア</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500"></span>スキル期待値</span>
     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-200"></span>最大との差（発動率による目減り）</span>
     <span class="text-gray-400">サムネ枠色 = 属性 / タップで詳細比較（最大4枚）</span>
   </div>

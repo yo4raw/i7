@@ -5,12 +5,12 @@ import { formatEffectSummary, type EventSpecialTier } from '../../../src/lib/dat
 describe('bonusBadgeHtml', () => {
   it('tier が gold ならバッジ HTML（selectClasses と短縮ラベルを含む）', () => {
     const html = bonusBadgeHtml('gold');
-    expect(html).toContain('bg-yellow-100');
+    expect(html).toContain('bg-yellow-400');
     expect(html).toContain('>金</span>');
   });
 
   it('tier が bronze / silver でもそれぞれの色クラスを含む', () => {
-    expect(bonusBadgeHtml('bronze')).toContain('bg-amber-100');
+    expect(bonusBadgeHtml('bronze')).toContain('bg-[#FDF2E9]');
     expect(bonusBadgeHtml('silver')).toContain('bg-gray-200');
   });
 
