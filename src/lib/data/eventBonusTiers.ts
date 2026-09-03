@@ -13,9 +13,9 @@ export interface EventBonusTierDef {
 
 export const EVENT_BONUS_TIERS: EventBonusTierDef[] = [
   { key: 'none',   multiplier: 1.0, optionLabel: '特効なし', shortLabel: '-',  labelClass: 'text-gray-400',             selectClasses: [] },
-  { key: 'bronze', multiplier: 2.0, optionLabel: '銅特効(100%)',   shortLabel: '銅', labelClass: 'text-amber-700 font-bold',  selectClasses: ['bg-amber-100', 'text-amber-800', 'border-amber-400'] },
+  { key: 'bronze', multiplier: 2.0, optionLabel: '銅特効(100%)',   shortLabel: '銅', labelClass: 'text-[#A25E2E] font-bold', selectClasses: ['bg-[#FDF2E9]', 'text-[#7A4520]', 'border-[#B06A3B]'] },
   { key: 'silver', multiplier: 2.2, optionLabel: '銀特効(120%)',   shortLabel: '銀', labelClass: 'text-gray-500 font-bold',   selectClasses: ['bg-gray-200', 'text-gray-700', 'border-gray-400'] },
-  { key: 'gold',   multiplier: 2.4, optionLabel: '金特効(140%)',   shortLabel: '金', labelClass: 'text-yellow-600 font-bold', selectClasses: ['bg-yellow-100', 'text-yellow-800', 'border-yellow-400'] },
+  { key: 'gold',   multiplier: 2.4, optionLabel: '金特効(140%)',   shortLabel: '金', labelClass: 'text-yellow-700 font-bold', selectClasses: ['bg-yellow-400', 'text-yellow-950', 'border-yellow-500'] },
 ];
 
 export const EVENT_BONUS_MULTIPLIER: Record<EventBonusTier, number> =

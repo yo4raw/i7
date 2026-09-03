@@ -71,11 +71,11 @@
               <!-- 上乗せ: 最大カバー率 − 期待カバー率（発動率による目減り分） -->
               <span class="block w-full bg-amber-200" style={`height:${px(mr) - px(er)}px`}></span>
               <!-- 実体: 期待カバー率 -->
-              <span class="block w-full bg-amber-400 rounded-t-sm" style={`height:${px(er)}px`}></span>
+              <span class="block w-full bg-amber-500 rounded-t-sm" style={`height:${px(er)}px`}></span>
             </span>
             <!-- 右: 属性値由来スコアバー（表示中の最大を 100% とした相対高さ） -->
             <span class="relative flex flex-col justify-end w-4">
-              <span class="block w-full bg-chrome-ink-soft rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
+              <span class="block w-full bg-gray-300 rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
             </span>
           </span>
           <button
@@ -107,6 +107,6 @@
     </div>
   </div>
   <div class="px-3 pb-3 text-[11px] text-gray-400">
-    各列に2本の棒。左（オレンジ）= カバー率（曲全体に対する縮小秒数の割合。濃い = 期待カバー率／薄い = 最大との差。▲ は 100% 超）。右（紫）= 選択曲での属性値由来スコア（表示中の最大を 100% とした相対高さ、多色拮抗曲の参考値）。並び順: {sortKey === 'attr' ? '属性値由来スコア' : sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順
+    各列に2本の棒。左（オレンジ）= カバー率（曲全体に対する縮小秒数の割合。濃い = 期待カバー率／薄い = 最大との差。▲ は 100% 超）。右（グレー）= 選択曲での属性値由来スコア（表示中の最大を 100% とした相対高さ、多色拮抗曲の参考値）。並び順: {sortKey === 'attr' ? '属性値由来スコア' : sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順
   </div>
 {/if}
