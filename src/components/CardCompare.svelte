@@ -8,6 +8,7 @@
   import type { FixedBroach } from '../lib/data/fetchFixedBroachsJson';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { refreshData } from '../lib/data/clientRefresh';
+  import { attrDonutSvg } from '../lib/donutChart';
   import {
     buildTierMapForEvent, EVENT_BONUS_MULTIPLIER, isHighScoreEvent, isEventLive,
     type EventBonusTier, type EventForBonus,
@@ -83,6 +84,12 @@
   });
 
   const selectedSong = $derived(allSongsState.find((s) => s.id === selectedSongId) ?? null);
+  const songChartSvg = $derived(selectedSong
+    ? attrDonutSvg(
+        selectedSong.shout_ratio || 0, selectedSong.beat_ratio || 0, selectedSong.melody_ratio || 0,
+        { sizeClass: 'size-10 flex-shrink-0' },
+      )
+    : '');
   const urCards = $derived(allCardsState.filter((c) => c.rarity === 'UR'));
   const visibleCards = $derived(urCards.filter((c) => !ownedOnly || ownedIds.has(String(c.ID))));
 
@@ -152,6 +159,7 @@
       class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-chrome-ink"
       placeholder={null}
     />
+    {#if selectedSong}{@html songChartSvg}{/if}
   </label>
   <label class="flex items-center gap-1.5 cursor-pointer">
     <input type="checkbox" bind:checked={ownedOnly} disabled={!hasOwned} class="accent-chrome-ink" />
