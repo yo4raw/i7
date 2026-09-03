@@ -1,0 +1,45 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CompareSharePanel from '../../components/CompareSharePanel.svelte';
+import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
+import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
+import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
+import { fetchEventsCsv, toEventForBonus } from '../../lib/data/fetchEventsCsv.ts';
+
+const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
+  fetchCardsJson(),
+  fetchSongsJson(),
+  fetchFixedBroachsJson(),
+  fetchEventsCsv(),
+]);
+
+const allSongs = filterValidSongs(allSongsRaw);
+const eventsForBonus = allEvents.map((e) => toEventForBonus(e));
+const base = import.meta.env.BASE_URL;
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: '衣装比較', url: `${base}card-compare/` },
+  { name: 'SNS共有', url: `${base}card-compare/share/` },
+];
+---
+
+<BaseLayout
+  noindex
+  title="衣装比較 SNS共有"
+  description="選んだ楽曲でスコアアップ・判定縮小それぞれの上位10着をまとめた画像を作成できます（SNS共有用）。"
+  breadcrumbs={breadcrumbs}
+>
+  <h1 class="text-2xl font-bold text-display mb-1">衣装比較 SNS共有</h1>
+  <p class="text-xs text-gray-500 mb-4">
+    楽曲と特効イベントを選ぶと、UR 全着からスコアアップ・判定縮小それぞれの上位10着を1枚のパネルにまとめます。
+    画像をダウンロードして SNS に貼ってください。<a href={`${base}card-compare/`} class="underline">衣装比較</a>と同じ計算です。
+  </p>
+
+  <CompareSharePanel
+    cards={allCards}
+    songs={allSongs}
+    broachs={allBroachs}
+    events={eventsForBonus}
+    client:only="svelte"
+  />
+</BaseLayout>

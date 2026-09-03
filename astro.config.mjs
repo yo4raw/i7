@@ -63,6 +63,7 @@ export default defineConfig({
       filter: (page) =>
         !/\/cards\/\d+\/?$/.test(page)
         && !/\/events\/\d+\/share\//.test(page)
+        && !/\/card-compare\/share\/?$/.test(page)
         && !/\/(mycard|decks|rabbit-note|shared-broach)\/?$/.test(page),
       serialize(item) {
         const url = item.url;
