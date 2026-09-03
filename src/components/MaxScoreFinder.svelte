@@ -30,7 +30,7 @@
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
   import { fetchSongsJson, filterValidSongs, firstEventSongId } from '../lib/data/fetchSongsJson';
   import SongSelect from './SongSelect.svelte';
-  import { attrDonutSvg } from '../lib/donutChart';
+  import SongAttrRatio from './SongAttrRatio.svelte';
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
@@ -124,12 +124,6 @@
   });
 
   const selectedSong = $derived(selectedSongId !== null && selectedSongId !== undefined ? allSongs.find((s) => s.id === selectedSongId) ?? null : null);
-  const songChartSvg = $derived(selectedSong
-    ? attrDonutSvg(
-        selectedSong.shout_ratio || 0, selectedSong.beat_ratio || 0, selectedSong.melody_ratio || 0,
-        { sizeClass: 'size-10 flex-shrink-0' },
-      )
-    : '');
 
   // 初期選択曲: イベント対象楽曲の先頭。無ければ未選択のまま
   $effect(() => {
@@ -289,9 +283,9 @@
 
 <section class="surface-card p-4 mb-4">
   <label for="song-select" class="block text-xs font-bold text-gray-700 mb-2">🎵 楽曲</label>
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-2 flex-wrap">
     <SongSelect id="song-select" songs={allSongs} bind:value={selectedSongId} />
-    {#if selectedSong}{@html songChartSvg}{/if}
+    {#if selectedSong}<SongAttrRatio song={selectedSong} />{/if}
   </div>
   {#if selectedSong}
     <div class="mt-3 text-xs text-gray-600">
@@ -299,10 +293,6 @@
         <span><b>{selectedSong.song_name}</b></span>
         <span class="text-gray-400">|</span>
         <span>{selectedSong.difficulty || '-'} / {selectedSong.duration || '?'}秒 / {(selectedSong.notes_count || 0).toLocaleString()}ノーツ</span>
-        <span class="text-gray-400">|</span>
-        <span style="color:{ATTR_HEX.Shout}">Shout {Math.round((selectedSong.shout_ratio || 0) * 100)}%</span>
-        <span style="color:{ATTR_HEX.Beat}">Beat {Math.round((selectedSong.beat_ratio || 0) * 100)}%</span>
-        <span style="color:{ATTR_HEX.Melody}">Melody {Math.round((selectedSong.melody_ratio || 0) * 100)}%</span>
       </div>
     </div>
   {/if}
