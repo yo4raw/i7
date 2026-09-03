@@ -6,13 +6,20 @@
 
   type Props = {
     entries: CardStrengthEntry[];
-    selectedIds: number[];
+    /** 詳細比較に選択中の衣装 ID。compact では渡さない */
+    selectedIds?: number[];
     tierOf: (entry: CardStrengthEntry) => EventBonusTier;
-    onToggle: (entry: CardStrengthEntry) => void;
+    /** サムネタップで詳細比較へ追加・削除する。compact では渡さない */
+    onToggle?: (entry: CardStrengthEntry) => void;
     sortKey: ShrinkSortKey;
     songDuration: number;
+    /**
+     * 共有画像向けの表示。横スクロールとタップ選択を無効化し、サムネを大きくする。
+     * 列幅に収まらないカバー秒数の併記は省く。Top10 が共有パネルの固定幅 1024px に収まる。
+     */
+    compact?: boolean;
   };
-  let { entries, selectedIds, tierOf, onToggle, sortKey, songDuration }: Props = $props();
+  let { entries, selectedIds = [], tierOf, onToggle, sortKey, songDuration, compact = false }: Props = $props();
 
   const CHART_HEIGHT = 150;
 
@@ -51,20 +58,20 @@
 {#if entries.length === 0}
   <p class="text-sm text-gray-500 py-10 text-center">対象の衣装がありません</p>
 {:else}
-  <div class="overflow-x-auto">
-    <div class="flex items-start gap-3 px-3 pt-5 pb-3 min-w-max">
+  <div class={compact ? '' : 'overflow-x-auto'}>
+    <div class="flex items-start px-3 pt-5 pb-3 {compact ? 'gap-1 justify-center' : 'gap-3 min-w-max'}">
       {#each entries as entry (entry.card.ID)}
         {@const selected = entry.card.ID != null && selectedIds.includes(entry.card.ID)}
         {@const mr = maxRate(entry)}
         {@const er = expRate(entry)}
         {@const overflow = mr > 1}
-        <div class="flex flex-col items-center w-20 shrink-0" data-testid="shrink-col">
+        <div class="flex flex-col items-center shrink-0 {compact ? 'w-24' : 'w-20'}" data-testid="shrink-col">
           <span class="text-[11px] font-bold text-gray-700">
             {#if sortKey === 'attr'}{formatScore(entry.baseScore)}{:else}{pct(sortKey === 'max' ? mr : er)}{/if}
           </span>
           <span class="flex items-end justify-center gap-0.5" style={`height:${CHART_HEIGHT}px`}>
             <!-- 左: カバー率バー（2段積み） -->
-            <span class="relative flex flex-col justify-end w-4">
+            <span class="relative flex flex-col justify-end {compact ? 'w-6' : 'w-4'}">
               {#if overflow}
                 <span class="absolute -top-0.5 inset-x-0 text-center text-[9px] leading-none text-amber-600">▲</span>
               {/if}
@@ -74,29 +81,30 @@
               <span class="block w-full bg-amber-500 rounded-t-sm" style={`height:${px(er)}px`}></span>
             </span>
             <!-- 右: 属性値由来スコアバー（表示中の最大を 100% とした相対高さ） -->
-            <span class="relative flex flex-col justify-end w-4">
+            <span class="relative flex flex-col justify-end {compact ? 'w-6' : 'w-4'}">
               <span class="block w-full bg-gray-300 rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
             </span>
           </span>
           <button
             type="button"
-            class="flex flex-col items-center cursor-pointer mt-1.5"
+            disabled={compact}
+            class="flex flex-col items-center mt-1.5 {compact ? 'w-full' : 'cursor-pointer'}"
             title={entry.card.cardname}
-            onclick={() => onToggle(entry)}
+            onclick={() => onToggle?.(entry)}
           >
             <img
               src={cardThumbUrl(entry.card.ID ?? '')}
               alt={entry.card.cardname || ''}
               loading="lazy"
-              class="size-12 rounded border-[3px] object-cover"
+              class="rounded border-[3px] object-cover {compact ? 'size-20' : 'size-12'}"
               class:ring-2={selected}
               class:ring-chrome-ink={selected}
               class:ring-offset-1={selected}
               style={`border-color:${ATTR_HEX[entry.attribute]}`}
             />
-            <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center">
-              最大 {pct(mr)} ({sec(entry.maxCoverSec)}s)<br />
-              期待 {pct(er)} ({sec(entry.expectedCoverSec)}s)<br />
+            <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
+              最大 {pct(mr)}{compact ? '' : ` (${sec(entry.maxCoverSec)}s)`}<br />
+              期待 {pct(er)}{compact ? '' : ` (${sec(entry.expectedCoverSec)}s)`}<br />
               {condLabel(entry)} / {entry.skill?.per ?? 0}%<br />
               属性 {formatScore(entry.baseScore)}
             </span>
@@ -107,6 +115,10 @@
     </div>
   </div>
   <div class="px-3 pb-3 text-[11px] text-gray-400">
-    各列に2本の棒。左（オレンジ）= カバー率（曲全体に対する縮小秒数の割合。濃い = 期待カバー率／薄い = 最大との差。▲ は 100% 超）。右（グレー）= 選択曲での属性値由来スコア（表示中の最大を 100% とした相対高さ、多色拮抗曲の参考値）。並び順: {sortKey === 'attr' ? '属性値由来スコア' : sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順
+    {#if compact}
+      各列に2本の棒。左（オレンジ）= カバー率（濃い = 期待／薄い = 最大との差。▲ は 100% 超）。右（グレー）= 属性値由来スコア（表示中の最大を 100% とした相対高さ）
+    {:else}
+      各列に2本の棒。左（オレンジ）= カバー率（曲全体に対する縮小秒数の割合。濃い = 期待カバー率／薄い = 最大との差。▲ は 100% 超）。右（グレー）= 選択曲での属性値由来スコア（表示中の最大を 100% とした相対高さ、多色拮抗曲の参考値）。並び順: {sortKey === 'attr' ? '属性値由来スコア' : sortKey === 'max' ? '最大カバー率' : '期待カバー率'}の降順
+    {/if}
   </div>
 {/if}

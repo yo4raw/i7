@@ -25,7 +25,10 @@ const breadcrumbs = [
 ---
 
 <BaseLayout title="衣装比較" description={PAGE_DESCRIPTIONS.cardCompare} breadcrumbs={breadcrumbs}>
-  <h1 class="text-2xl font-bold text-display mb-1">衣装比較</h1>
+  <div class="flex items-baseline justify-between gap-3 flex-wrap mb-1">
+    <h1 class="text-2xl font-bold text-display">衣装比較</h1>
+    <a href={`${base}card-compare/share/`} class="text-sm underline">この結果を画像で共有</a>
+  </div>
   <p class="text-xs text-gray-500 mb-4">
     UR 限定 / 全ノーツ Perfect 前提 / センタースキル除外 / 固有ブローチ装備込み。
     スコアアップ系は期待スコアの積み上げ順、判定縮小系は属性値由来スコア順で並びます（判定縮小系はカバー率でも並び替えできます）。

@@ -68,7 +68,7 @@ test.describe('インデックス対象の絞り込み (ADR 0057)', () => {
   });
 
   test('個人データページと共有ページも noindex になる', async ({ page }) => {
-    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/']) {
+    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/', '/card-compare/share/']) {
       await page.goto(`${BASE}${path}`);
       await expect(page.locator('meta[name="robots"]'), `${path} は noindex であること`)
         .toHaveAttribute('content', 'noindex,follow');
@@ -93,7 +93,7 @@ test.describe('インデックス対象の絞り込み (ADR 0057)', () => {
     // noindex にしたページを sitemap に載せると矛盾したシグナルになる
     expect(xml).not.toMatch(/<loc>[^<]*\/cards\/\d+\/<\/loc>/);
     expect(xml).not.toMatch(/<loc>[^<]*\/events\/\d+\/share\//);
-    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/']) {
+    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/', '/card-compare/share/']) {
       expect(xml, `${path} は sitemap から外れていること`).not.toContain(`<loc>https://i7.yo4raw.com${path}</loc>`);
     }
 
@@ -170,7 +170,7 @@ test.describe('サイト内リンクの到達性', () => {
   test('noindex のページはフッターのリンク集に含めない', async ({ page }) => {
     // noindex ページへのリンクは検索評価の面で意味がなく、リンク先を薄める
     const hrefs = await footerHrefs(page, '/');
-    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/']) {
+    for (const path of ['/mycard/', '/decks/', '/rabbit-note/', '/shared-broach/', '/card-compare/share/']) {
       expect(hrefs, `${path} は含めないこと`).not.toContain(path);
     }
   });
