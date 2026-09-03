@@ -146,3 +146,29 @@ describe('resolveDeckBroachs: assumeAllAttributes オプション (衣装比較�
     expect((resolved.get(0) ?? [])[0].active).toBe(false);
   });
 });
+
+describe('resolveDeckBroachs: assumeSameGroup オプション (衣装比較・編成組合計算の種類4発動 / ADR 0072)', () => {
+  it('未指定なら別グループを含むデッキで種類4は未発動', () => {
+    const b = makeBroach({ broach_type: 4, group: 'NON_EXISTENT_GROUP', beat: 500 });
+    const resolved = resolveDeckBroachs(deck, [b], song);
+    expect((resolved.get(0) ?? [])[0].active).toBe(false);
+  });
+
+  it('assumeSameGroup:true なら別グループを含むデッキでも種類4が発動', () => {
+    const b = makeBroach({ broach_type: 4, group: 'NON_EXISTENT_GROUP', beat: 500 });
+    const resolved = resolveDeckBroachs(deck, [b], song, undefined, { assumeSameGroup: true });
+    expect((resolved.get(0) ?? [])[0].active).toBe(true);
+  });
+
+  it('assumeSameGroup:true でも group が null の種類4は未発動', () => {
+    const b = makeBroach({ broach_type: 4, group: null, beat: 500 });
+    const resolved = resolveDeckBroachs(deck, [b], song, undefined, { assumeSameGroup: true });
+    expect((resolved.get(0) ?? [])[0].active).toBe(false);
+  });
+
+  it('assumeSameGroup:true でも種類7(全属性編成)など他種別の条件判定は変わらない', () => {
+    const b = makeBroach({ broach_type: 7, shout: 600, beat: 600, melody: 600, limit: 2 });
+    const resolved = resolveDeckBroachs(deck, [b], song, undefined, { assumeSameGroup: true });
+    expect((resolved.get(0) ?? [])[0].active).toBe(false);
+  });
+});

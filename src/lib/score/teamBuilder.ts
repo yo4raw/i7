@@ -14,7 +14,7 @@ import {
   CENTER_SKILL_RATES, DEFAULT_CENTER_SKILL_RATE,
 } from './constants';
 import { EVENT_BONUS_MULTIPLIER, type EventBonusTier } from '../data/eventBonusTiers';
-import { resolveDeckBroachs, calcBroachScoreBonus } from './broachResolver';
+import { resolveDeckBroachs, calcBroachScoreBonus, type ResolveBroachOptions } from './broachResolver';
 import { broachCapacity } from './broachAssignment';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
 import { SHARED_BROACHS } from '../data/sharedBroachs';
@@ -105,6 +105,7 @@ export function computeTeam(
   sharedBroachSelections?: number[][],
   skillLevels?: (1 | 2 | 3 | 4 | 5)[],
   rabbitNotes?: RabbitNoteMap,
+  broachOptions?: ResolveBroachOptions,
 ): ComputedTeam {
   const cards: DeckCard[] = [];
 
@@ -116,7 +117,7 @@ export function computeTeam(
   let broachMelodyTotal = 0;
 
   // ブローチ条件判定（デッキ全体）
-  const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, song, selectedBroachIds);
+  const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, song, selectedBroachIds, broachOptions);
   const broachScoreBonus = calcBroachScoreBonus(resolvedBroachs);
 
   // 条件付き共有ブローチ用: デッキ内の属性別カード枚数をカウント

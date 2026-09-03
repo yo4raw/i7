@@ -65,6 +65,13 @@ export interface ResolveBroachOptions {
    * ベストケース前提の比較で種類7を加算するために使う。スコア計算・編成組合計算では使わない。
    */
   assumeAllAttributes?: boolean;
+  /**
+   * 種類4（グループ限定）の条件を、デッキのグループ構成に依らず常に成立とみなす。
+   * 衣装比較・編成組合計算専用（ADR 0072）。実プレイでは自枠5枚を同一グループで揃えたときのみ
+   * 発動するため、ベストケース前提で加算する画面では利用側で注意書きを併記すること。
+   * スコア計算では使わない。
+   */
+  assumeSameGroup?: boolean;
 }
 
 /** 個別ブローチの条件判定（デッキ内上限以外） */
@@ -73,6 +80,7 @@ function checkBroachCondition(
   deck: (Card | null)[],
   song: Pick<Song, 'song_name'>,
   assumeAllAttributes: boolean,
+  assumeSameGroup: boolean,
 ): boolean {
   const type = broach.broach_type;
 
@@ -81,7 +89,7 @@ function checkBroachCondition(
       return true;
 
     case BROACH_TYPE.GROUP:
-      return broach.group !== null && hasNoOtherGroup(deck, broach.group);
+      return broach.group !== null && (assumeSameGroup || hasNoOtherGroup(deck, broach.group));
 
     case BROACH_TYPE.IDOL_ATTR_COUNT: {
       if (!broach.idol || !broach.attribute) return false;
@@ -136,6 +144,7 @@ export function resolveDeckBroachs(
   options?: ResolveBroachOptions,
 ): Map<number, ResolvedBroach[]> {
   const assumeAllAttributes = options?.assumeAllAttributes ?? false;
+  const assumeSameGroup = options?.assumeSameGroup ?? false;
   const result = new Map<number, ResolvedBroach[]>();
 
   // Phase 1: 各カードのブローチを条件判定（上限以外）
@@ -160,7 +169,7 @@ export function resolveDeckBroachs(
       }
     }
     for (const broach of cardBroachs) {
-      const conditionMet = checkBroachCondition(broach, deck, song, assumeAllAttributes);
+      const conditionMet = checkBroachCondition(broach, deck, song, assumeAllAttributes, assumeSameGroup);
       pending.push({ slotIndex: i, broach, conditionMet });
     }
   }

@@ -248,6 +248,11 @@
       songDuration={selectedSong.duration || 0}
     />
   {/if}
+  {#if selectedSong}
+    <p class="text-[11px] text-amber-600 px-3 pb-3">
+      グループ限定・全属性編成が条件の固有ブローチは、条件を満たしたものとして加算しています。実際のゲームでは編成しだいで発動しません。前提は衣装を選ぶと詳細パネルの「ブローチ前提」欄に表示されます。
+    </p>
+  {/if}
 </div>
 
 {#if selectedEntries.length > 0}

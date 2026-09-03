@@ -20,6 +20,7 @@ import {
   flattenNotes,
 } from './engine';
 import { assignBroachs, calcAttrWeights, type AttrWeights } from './broachAssignment';
+import type { ResolveBroachOptions } from './broachResolver';
 
 /** デッキ6枠中の判定縮小スキル持ちの最低枚数 (shrinkPairOnly 有効時) */
 export const SHRINK_MIN = 2;
@@ -393,6 +394,9 @@ export interface ChunkResult {
 const SEARCH_SKILL_LEVELS: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
 const SEARCH_TRAINED: boolean[] = [true, true, true, true, true, true];
 const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
+// グループ限定の固有ブローチ（種類4）は同グループ編成でなくても発動扱いで加算する (ADR 0072)。
+// 結果表示 (SearchResults.svelte) も同じオプションで解決すること。
+export const FINDER_BROACH_OPTIONS: ResolveBroachOptions = { assumeSameGroup: true };
 
 export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRecord {
   const { input } = ctx;
@@ -405,7 +409,7 @@ export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRec
   }
   const team = computeTeam(
     deck, input.broachs, input.song, tiers, SEARCH_TRAINED, undefined,
-    shared, SEARCH_SKILL_LEVELS, input.rabbitNotes
+    shared, SEARCH_SKILL_LEVELS, input.rabbitNotes, FINDER_BROACH_OPTIONS
   );
   const exclusion = computeShrinkExclusion(team, ctx.groupSizes);
   const notes = flattenNotes(input.song, FLATTEN_SEED, exclusion);
