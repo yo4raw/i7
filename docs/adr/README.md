@@ -85,3 +85,4 @@
 | [0074](0074-card-compare-share-page.md) | 衣装比較の結果を画像で共有するページを追加する(イベント配下ではなく /card-compare/share/・既存チャートに compact を追加) | 承認 |
 | [0075](0075-external-fetch-retry-policy.md) | cron ワークフローの外部フェッチにリトライを組み込む(curl --retry と util.mjs の fetchRetry・連絡先入り User-Agent) | 承認 |
 | [0076](0076-song-fetch-cron-every-6-hours.md) | 楽曲画像の取り込み cron を 6 時間おきに減らす(Miraheze が GitHub Actions の IP 帯を 403 で弾くため・ボット認証や手動運用は見送り) | 承認 |
+| [0077](0077-score-calc-event-select.md) | スコア計算で対象イベントを選んで特効を反映する(ハイスコアイベントのみ・切替時は配置済みスロットの段階を上書き・保存先は既存のスコア計算状態) | 承認 |

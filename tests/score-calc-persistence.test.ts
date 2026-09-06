@@ -1,5 +1,9 @@
 import { test, expect } from './helpers/fixtures';
 import { type Page } from '@playwright/test';
+import { fetchEventsCsv } from '../src/lib/data/fetchEventsCsv';
+import { fetchCardsJson } from '../src/lib/data/fetchCardsJson';
+import { isHighScoreEvent } from '../src/lib/data/eventBonusTiers';
+import { classifyEventStatus } from '../src/lib/data/eventPeriod';
 
 const BASE = '';
 
@@ -82,5 +86,51 @@ test.describe('スコア計算ページ 永続化フロー', () => {
     );
     await expect(fresh.locator('[data-slot-btn="0"] img').first()).toBeVisible({ timeout: 15000 });
     await freshContext.close();
+  });
+});
+
+/** 終了済みハイスコアイベントと、その金特効のうちカードデータに存在する衣装 ID を 1 組選ぶ */
+async function pickPastEventWithGold() {
+  const [events, cards] = await Promise.all([fetchEventsCsv(), fetchCardsJson()]);
+  const cardIds = new Set(cards.map((c) => c.ID));
+  for (const e of events.toSorted((a, b) => b.start_date.localeCompare(a.start_date))) {
+    if (!isHighScoreEvent(e.eventtype) || classifyEventStatus(e.start_date, e.end_date) !== 'past') continue;
+    const goldId = e.gold.cardIds.find((id) => cardIds.has(id));
+    if (goldId !== undefined) return { eventId: e.id, goldId };
+  }
+  throw new Error('終了済みハイスコアイベントの金特効衣装が見つかりません');
+}
+
+/** 対象イベントを選び、センターに金特効衣装を置く */
+async function placeGoldCard(page: Page, eventId: number, goldId: number) {
+  await page.getByLabel('対象イベント').selectOption(String(eventId));
+  await page.locator('[data-slot-btn="0"]').click();
+  await page.locator('#modal-owned-only').uncheck();
+  await page.locator(`[data-pick-card="${goldId}"]`).click();
+  await expect(page.locator('#card-picker-modal')).toBeHidden();
+}
+
+test.describe('スコア計算ページ 対象イベントの特効反映', () => {
+  test('選んだイベントの金特効衣装を置くとスロットの特効段階が金になる', async ({ page }) => {
+    const { eventId, goldId } = await pickPastEventWithGold();
+    await page.goto(`${BASE}/score-calc/`);
+    await placeGoldCard(page, eventId, goldId);
+    await expect(page.locator('[data-bonus-slot="0"]')).toHaveValue('gold');
+  });
+
+  test('対象イベントを切り替えると配置済みスロットの特効段階が選び直される', async ({ page }) => {
+    const { eventId, goldId } = await pickPastEventWithGold();
+    await page.goto(`${BASE}/score-calc/`);
+    await placeGoldCard(page, eventId, goldId);
+    await page.getByLabel('対象イベント').selectOption('');
+    await expect(page.locator('[data-bonus-slot="0"]')).toHaveValue('none');
+  });
+
+  test('選んだ対象イベントがリロード後も復元される', async ({ page }) => {
+    const { eventId, goldId } = await pickPastEventWithGold();
+    await page.goto(`${BASE}/score-calc/`);
+    await placeGoldCard(page, eventId, goldId);
+    await page.reload();
+    await expect(page.getByLabel('対象イベント')).toHaveValue(String(eventId));
   });
 });

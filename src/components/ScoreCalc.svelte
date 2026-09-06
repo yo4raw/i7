@@ -4,7 +4,7 @@
   import { fetchSongsJson, filterValidSongs, firstEventSongId, SONG_NOTE_GROUP_KEYS, type Song } from '../lib/data/fetchSongsJson';
   import SongSelect from './SongSelect.svelte';
   import { fetchFixedBroachsJson, type FixedBroach } from '../lib/data/fetchFixedBroachsJson';
-  import { buildLiveTierMap, type EventBonusTier, type EventForBonus } from '../lib/data/eventBonusTiers';
+  import { buildTierMapForEvent, isEventLive, isHighScoreEvent, type EventBonusTier, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { attrDonutSvg } from '../lib/donutChart';
   import { ATTR_HEX } from '../lib/constants';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
@@ -24,7 +24,8 @@
   import DeckSkillDistribution from './score/DeckSkillDistribution.svelte';
   import ModalDialog from './ui/ModalDialog.svelte';
   import InlineAlert from './ui/InlineAlert.svelte';
-  type Props = { cards: Card[]; songs: Song[]; broachs: FixedBroach[]; events: EventForBonus[]; base: string };
+  type ScoreEvent = EventForBonus & { eventname: string; eventtype: string };
+  type Props = { cards: Card[]; songs: Song[]; broachs: FixedBroach[]; events: ScoreEvent[]; base: string };
 
   let { cards: initialCards, songs: initialSongs, broachs: initialBroachs, events: initialEvents, base }: Props = $props();
 
@@ -49,9 +50,23 @@
   // oxlint-disable-next-line no-unassigned-vars -- Svelte bind:this={picker} 代入 (l.394) を静的解析できず誤検知
   let picker: CardPickerModal | undefined;
 
-  const defaultTierMap = buildLiveTierMap(initialEvents);
+  // 対象イベント: ハイスコアライブイベントを新しい順に。開催中があれば既定選択、なければ特効なし
+  const highScoreEvents = initialEvents
+    .filter((ev) => isHighScoreEvent(ev.eventtype))
+    .toSorted((a, b) => b.start_date.localeCompare(a.start_date));
+  let selectedEventId = $state<number | null>(
+    highScoreEvents.find((ev) => isEventLive(ev.start_date, ev.end_date))?.id ?? null,
+  );
+  const selectedEvent = $derived(highScoreEvents.find((ev) => ev.id === selectedEventId) ?? null);
+  const tierMap = $derived(selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>());
   function defaultTierFor(card: Card | null): EventBonusTier {
-    return card?.ID !== null && card?.ID !== undefined ? (defaultTierMap.get(card.ID) ?? 'none') : 'none';
+    return card?.ID !== null && card?.ID !== undefined ? (tierMap.get(card.ID) ?? 'none') : 'none';
+  }
+  /** イベント切替: 配置済みスロットの特効段階も選び直したイベントで上書きする */
+  function handleEventChange(id: number | null) {
+    selectedEventId = id;
+    for (let i = 0; i < 6; i++) deckState.bonusTiers[i] = defaultTierFor(deckState.cards[i]);
+    saveState();
   }
 
   // 楽曲サマリー表示用の派生値
@@ -105,6 +120,7 @@
   function buildStateObject() {
     return {
       songId: selectedSong?.id ?? null,
+      eventId: selectedEventId,
       deckIds: deckState.cards.map(c => c?.ID ?? null),
       bonusTiers: [...deckState.bonusTiers],
       trained: [...deckState.trained],
@@ -117,6 +133,10 @@
   }
 
   function applyState(state: any) {
+    // eventId 未保存（旧データ・共有 URL）は選択を変えない。一覧にない ID は特効なし扱い
+    if (state.eventId !== undefined) {
+      selectedEventId = highScoreEvents.some((ev) => ev.id === state.eventId) ? state.eventId : null;
+    }
     if (state.songId !== null && state.songId !== undefined) {
       const song = allSongsState.find(s => s.id === state.songId);
       if (song) selectedSong = song;
@@ -332,6 +352,26 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- 対象イベント（特効段階の自動反映元） -->
+  <section class="surface-card p-4 mb-4">
+    <h2 class="text-sm font-bold text-gray-700 mb-2">📅 対象イベント</h2>
+    <label class="flex items-center gap-2 text-xs text-gray-600">
+      <span class="shrink-0">イベント</span>
+      <select
+        aria-label="対象イベント"
+        class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white max-w-72 focus:outline-none focus:ring-2 focus:ring-chrome-ink"
+        value={selectedEventId === null ? '' : String(selectedEventId)}
+        onchange={(e) => { const v = e.currentTarget.value; handleEventChange(v === '' ? null : Number(v)); }}
+      >
+        <option value="">特効なし（イベントを選ばない）</option>
+        {#each highScoreEvents as ev (ev.id)}
+          <option value={String(ev.id)}>{isEventLive(ev.start_date, ev.end_date) ? '【開催中】' : ''}{ev.eventname}（{ev.start_date}〜）</option>
+        {/each}
+      </select>
+    </label>
+    <p class="text-[11px] text-gray-400 mt-2">衣装を置くと選んだイベントの特効段階（金/銀/銅）がスロットに入ります。イベントを切り替えると配置済みのスロットも選び直されます。スロットごとに手で変えることもできます。</p>
   </section>
 
   <!-- 共通ブローチ スコア寄与 TOP10 -->
