@@ -30,8 +30,10 @@ jobs:
           DEST="public/events/events.csv"
           TMP="$(mktemp)"
 
+          # 接続タイムアウト・接続拒否・HTTP 408/429/5xx は 10 秒おきに最大 3 回再試行する（ADR 0075）
           HTTP_CODE=$(curl -sS -X POST \
             --connect-timeout 10 --max-time 60 \
+            --retry 3 --retry-delay 10 --retry-connrefused \
             --data 'db=event&code=utf8' \
             -o "$TMP" -w "%{http_code}" \
             'https://i7.step-on-dream.net/admin/download.php' || true)
