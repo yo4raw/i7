@@ -1,4 +1,4 @@
-import { CHROME_INK, characterColor } from './constants';
+import { CHARACTER_GROUPS, CHROME_INK, characterColor } from './constants';
 
 /**
  * キャラクターフィルタチップの選択時スタイル計算 (ADR 0047)。
@@ -40,3 +40,9 @@ export function chipActiveStyle(name: string): string {
   const textColor = CHIP_TEXT_OVERRIDE[name] ?? CHROME_INK;
   return `background-color:${hex};border-color:${hex};color:${textColor}`;
 }
+
+/** キャラクターフィルタチップのグループ行定義。衣装一覧・編成組合計算で共用する (ADR 0079) */
+export const CHARACTER_CHIP_GROUPS = CHARACTER_GROUPS.map((g) => ({
+  name: g.name,
+  options: g.members.map((m) => ({ value: m, label: m, activeStyle: chipActiveStyle(m) })),
+}));

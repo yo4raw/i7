@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Card } from '../lib/data/fetchCardsJson';
-  import { CHARACTER_GROUPS, RARITIES, ATTRIBUTES } from '../lib/constants';
-  import { chipActiveStyle } from '../lib/characterChipStyle';
+  import { RARITIES, ATTRIBUTES } from '../lib/constants';
+  import { CHARACTER_CHIP_GROUPS } from '../lib/characterChipStyle';
   import { buildLiveTierMap, type EventForBonus } from '../lib/data/eventBonusTiers';
   import { refreshData } from '../lib/data/clientRefresh';
   import { fetchCardsJson } from '../lib/data/fetchCardsJson';
@@ -94,12 +94,6 @@
     { value: 'silver', label: '銀特効' },
     { value: 'bronze', label: '銅特効' },
   ];
-  // キャラ色チップの選択時スタイル (ADR 0047)。計算ロジックと判断根拠は characterChipStyle.ts 側に集約
-  // （tests/unit/characterChipStyle.test.ts で全16色の実効コントラストを検証している）
-  const characterGroups = CHARACTER_GROUPS.map((g) => ({
-    name: g.name,
-    options: g.members.map((m) => ({ value: m, label: m, activeStyle: chipActiveStyle(m) })),
-  }));
   const skillOptions = $derived(skillTypes.map((s) => ({ value: s, label: s })));
 
   function updateUrlParams() {
@@ -285,7 +279,7 @@
   <div class="space-y-2">
     <CardFilterChips
       label="キャラクター"
-      groups={characterGroups}
+      groups={CHARACTER_CHIP_GROUPS}
       selected={characterSet}
       onChange={(next) => (characterSet = next)}
       collapsible

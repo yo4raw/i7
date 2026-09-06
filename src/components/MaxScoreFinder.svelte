@@ -24,6 +24,8 @@
   import SearchResults from './score/SearchResults.svelte';
   import ModalDialog from './ui/ModalDialog.svelte';
   import InlineAlert from './ui/InlineAlert.svelte';
+  import CardFilterChips from './cards/CardFilterChips.svelte';
+  import { CHARACTER_CHIP_GROUPS } from '../lib/characterChipStyle';
   import { formatElapsed } from '../lib/ui';
   import { loadRabbitNotes } from '../lib/data/rabbitNote';
   import { refreshData } from '../lib/data/clientRefresh';
@@ -70,6 +72,8 @@
   let ownedOnly = $state(false);
   let shrinkPairOnly = $state(false);
   let useOwnedBroachs = $state(false);
+  /** 算出対象キャラクター。空なら全キャラクター (ADR 0079) */
+  let characterSet = $state(new Set<string>());
   const ownedBroachTotal = $derived(totalOwnedBroachs());
 
   let now = $state(Date.now());
@@ -138,7 +142,8 @@
   const currentCandidates = $derived.by(() => {
     if (!selectedEvent) return [] as Card[];
     const goldSilverIds = new Set<number>([...selectedEvent.gold, ...selectedEvent.silver]);
-    return allCards.filter((c) => c.rarity === 'UR' && c.ID !== null && c.ID !== undefined && goldSilverIds.has(c.ID));
+    return allCards.filter((c) => c.rarity === 'UR' && c.ID !== null && c.ID !== undefined && goldSilverIds.has(c.ID)
+      && (characterSet.size === 0 || characterSet.has(c.name ?? '')));
   });
 
   const goldCandidates = $derived(currentCandidates.filter((c) => currentTierMap.get(c.ID!) === 'gold'));
@@ -196,6 +201,7 @@
   );
   const searchDisabledReason = $derived(
     !selectedSong ? '楽曲を選択してください'
+      : currentCandidates.length === 0 && characterSet.size > 0 ? '選択したキャラクターに金/銀特効 UR 衣装がありません'
       : currentCandidates.length === 0 ? '選択中イベントに金/銀特効 UR 衣装がありません'
       : ownedOnly && ownedCandidates.length === 0 ? '所持している金/銀特効 UR 衣装がありません'
       : ownedOnly && comboCount === 0 && !shrinkPairOnly ? '所持枚数の合計が 5 枚（センター+メンバー4枚分）に満たないため組合せがありません'
@@ -320,6 +326,15 @@
           {/each}
         </select>
       </label>
+      <div class="mb-2">
+        <CardFilterChips
+          label="算出対象キャラクター"
+          groups={CHARACTER_CHIP_GROUPS}
+          selected={characterSet}
+          onChange={(next) => (characterSet = next)}
+          collapsible
+        />
+      </div>
       <div class="mb-2">
         <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-400 mr-1">金特効</span>
         <b>{goldCandidates.length}</b> 枚{#if ownedOnly}<span class="text-gray-400 text-[10px]">（所持 {ownedGoldCount}）</span>{/if}

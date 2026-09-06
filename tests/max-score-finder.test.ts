@@ -64,4 +64,24 @@ test.describe('編成組合計算ページ', () => {
     // 同じコンポーネントの同一レンダリングで出るが、10 件分の描画が挟まるため既定 5 秒には頼らない
     await expect(page.getByRole('heading', { name: /上位候補 TOP 10/ })).toBeVisible({ timeout: 30_000 });
   });
+
+  test('算出対象キャラクターをグループで絞ると候補枚数が減る', async ({ page }) => {
+    await page.goto(`${BASE}/score-calc/max-score-finder/`);
+    await page.waitForFunction(
+      () => document.querySelectorAll('#song-select option').length > 1,
+      undefined,
+      { timeout: 20000 },
+    );
+    const total = page.getByText(/候補合計/);
+    const countOf = async () => Number((await total.textContent())!.match(/候補合計\s*(\d+)/)![1]);
+    const before = await countOf();
+    expect(before).toBeGreaterThan(0);
+
+    // 折りたたみを開き、グループ一括チップで Re:vale を選ぶ（メンバー 2 名が同時に選択状態になる）
+    await page.locator('summary').filter({ hasText: '算出対象キャラクター' }).click();
+    await page.getByRole('button', { name: 'Re:vale', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^✓ 百$/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /^✓ 千$/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(await countOf()).toBeLessThan(before);
+  });
 });
