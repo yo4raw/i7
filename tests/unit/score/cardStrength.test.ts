@@ -160,6 +160,11 @@ describe('判定縮小系', () => {
     expect(classifyCard(makeCard({ ap_skill_type: null }))).toBe('scoreUp');
   });
 
+  it('classifyCard はタイマー型縮小を比較対象外 (excluded) にする (ADR 0078)', () => {
+    expect(classifyCard(shrinkCard({ ap_skill_type: '判定縮小（タイマー）' }))).toBe('excluded');
+    expect(classifyCard(shrinkCard({ ap_skill_type: '判定縮小（Perfect）' }))).toBe('shrink');
+  });
+
   it('縮小はスキル期待値 0・カバー秒数を算出（最大/期待）', () => {
     const entry = buildCardStrengthEntry(shrinkCard(), [], makeSong());
     expect(entry.skillExpected).toBe(0);

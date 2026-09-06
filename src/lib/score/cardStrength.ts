@@ -57,11 +57,16 @@ export type ShrinkSortKey = 'attr' | 'max' | 'expected';
 /** スコアアップタブのソートキー: 期待スコア合計 / 最大スコア合計 */
 export type ScoreUpSortKey = 'expected' | 'max';
 
-export type CompareGroup = 'scoreUp' | 'shrink';
+/** excluded = 比較対象外（どのタブにも出さない） */
+export type CompareGroup = 'scoreUp' | 'shrink' | 'excluded';
 
-/** スキル種別の比較グループ判定。縮小系以外（判定補助・スキルなし含む）は scoreUp 扱い */
+/**
+ * スキル種別の比較グループ判定。縮小系以外（判定補助・スキルなし含む）は scoreUp 扱い。
+ * 判定縮小（タイマー）は発動回数が極端に少なく Perfect / コンボ型と比較にならないため対象外 (ADR 0078)
+ */
 export function classifyCard(card: Card): CompareGroup {
   const t = card.ap_skill_type;
+  if (t === SKILL_TYPE.SHRINK_TIMER) return 'excluded';
   if (t && (t === SKILL_TYPE.SHRINK || t.startsWith(SKILL_TYPE.SHRINK_PREFIX))) return 'shrink';
   return 'scoreUp';
 }
