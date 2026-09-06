@@ -2,7 +2,9 @@ name: Fetch new song images
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    # 6 時間おき（UTC 0/6/12/18 時 = JST 9/15/21/3 時）。新曲の追加は稀で毎時回す必要がなく、
+    # Miraheze が GitHub Actions の IP 帯を 403 で弾いている間の失敗 run を減らす（ADR 0076）
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:

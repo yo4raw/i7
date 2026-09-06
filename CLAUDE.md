@@ -102,7 +102,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 |-------------|------------|------|
 | `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャンと、既存 ID 範囲のギャップ埋め。PNG 取得後 WebP へ変換 |
 | `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
-| `fetch-new-songs.yml` | 毎時 00 分 (UTC) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得し WebP へ変換 |
+| `fetch-new-songs.yml` | 6 時間おき (UTC 0/6/12/18 時、ADR 0076) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得し WebP へ変換 |
 
 楽曲ジャケット画像は `public/assets/songs/` に配置される（`SONG_IMAGE_BASE_URL` 経由で参照）。Wiki クローラー本体は `scripts/fetch-song-images.mjs`。外部フェッチは `scripts/lib/util.mjs` の `fetchRetry`（指数バックオフ + 連絡先入り User-Agent、非 2xx / 非 JSON も再試行）と `curl --retry` で run 内リトライする（ADR 0075）。
 
