@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import sharp from 'sharp';
-import { runPool } from './lib/util.mjs';
+import { fetchRetry, runPool } from './lib/util.mjs';
 
 // ---------- 定数 ----------
 const WIKI_API = 'https://idolish7.miraheze.org/w/api.php';
@@ -56,20 +56,6 @@ function chunk(arr, size) {
   return chunks;
 }
 
-/** fetch + リトライ (1回) */
-async function fetchWithRetry(url, opts = {}, retries = 1) {
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const res = await fetch(url, opts);
-      if (res.ok) return res;
-      if (i === retries) return res;
-    } catch (e) {
-      if (i === retries) throw e;
-    }
-    await sleep(1000);
-  }
-}
-
 // ---------- Step 1: Wiki 楽曲一覧取得 (Cargo API) ----------
 
 async function fetchWikiSongPages() {
@@ -81,8 +67,7 @@ async function fetchWikiSongPages() {
     limit: '500',
     format: 'json',
   });
-  const res = await fetchWithRetry(`${WIKI_API}?${params}`);
-  const data = await res.json();
+  const data = await fetchRetry(`${WIKI_API}?${params}`, { json: true });
   // ユニークなページ名のみ取得
   const pages = new Map();
   for (const entry of data.cargoquery) {
@@ -126,8 +111,7 @@ async function fetchWikitextBatch(pageNames) {
     rvslots: 'main',
     format: 'json',
   });
-  const res = await fetchWithRetry(`${WIKI_API}?${params}`);
-  const data = await res.json();
+  const data = await fetchRetry(`${WIKI_API}?${params}`, { json: true });
   const result = new Map();
   if (!data.query?.pages) return result;
   for (const page of Object.values(data.query.pages)) {
@@ -160,7 +144,7 @@ async function fetchAllWikitext(pageNames) {
 async function fetchGSheetSongs() {
   console.log('[3/6] Google Spreadsheetから楽曲データを取得中...');
   const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${SONGS_GID}&tq=${encodeURIComponent('SELECT A,D')}`;
-  const res = await fetchWithRetry(url);
+  const res = await fetchRetry(url);
   const text = await res.text();
   // JSONP ラッパーを除去
   const jsonStr = text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
@@ -284,8 +268,7 @@ async function fetchImageUrls(imageFilenames) {
       iiprop: 'url',
       format: 'json',
     });
-    const res = await fetchWithRetry(`${WIKI_API}?${params}`);
-    const data = await res.json();
+    const data = await fetchRetry(`${WIKI_API}?${params}`, { json: true });
 
     // MediaWiki の正規化マッピング (元の名前 → 正規化名) を構築
     const normalizedMap = new Map();
@@ -351,12 +334,7 @@ async function downloadImages(mapped, urlMap) {
       if (downloadedImages.has(entry.image)) {
         buffer = downloadedImages.get(entry.image);
       } else {
-        const res = await fetchWithRetry(url);
-        if (!res.ok) {
-          console.log(`  ✗ HTTP ${res.status}: ID=${entry.id} (${url})`);
-          failed++;
-          return;
-        }
+        const res = await fetchRetry(url);
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.startsWith('image/')) {
           console.log(`  ✗ 非画像: ID=${entry.id} (${contentType})`);

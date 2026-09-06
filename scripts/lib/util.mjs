@@ -52,3 +52,50 @@ export async function fetchPng(url, retries = 2) {
     }
   }
 }
+
+/** MediaWiki API の作法に沿った連絡先入り User-Agent。空や `node` のままだと Miraheze が 403 の HTML を返す */
+export const USER_AGENT = 'i7-song-fetcher/1.0 (+https://github.com/yo4raw/i7)';
+
+const RETRY_COUNT = 3;
+const RETRY_BASE_DELAY_MS = 2000;
+const BODY_HEAD_CHARS = 200;
+
+/** 失敗した応答を「HTTP 403 text/html: <!DOCTYPE html> ...」の形に要約する */
+function describeResponse(res, body) {
+  const head = body.slice(0, BODY_HEAD_CHARS).replaceAll(/\s+/g, ' ').trim();
+  return `HTTP ${res.status} ${res.headers.get('content-type') ?? '(no content-type)'}: ${head}`;
+}
+
+/**
+ * リトライ付き fetch（ADR 0075）。
+ * ネットワーク例外・非 2xx・（json 指定時）JSON でない本文をすべて失敗とみなし、
+ * 2 秒 → 4 秒 → 8 秒の指数バックオフで最大 3 回再試行する。
+ * 使い切ったら最後の失敗理由（HTTP ステータス・Content-Type・本文先頭 200 字）を含む Error を投げる。
+ * `fetchPng` とは契約が異なる（こちらは失敗で例外、fetchPng はステータスを返す）ので統合しない。
+ * @param {string} url
+ * @param {{ json?: boolean }} [opts] json=true なら本文を JSON.parse した結果を返す。省略時は ok な Response を返す
+ */
+export async function fetchRetry(url, { json = false } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
+    if (attempt > 0) await sleep(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+      if (!res.ok) {
+        throw new Error(describeResponse(res, await res.text().catch(() => '')));
+      }
+      if (!json) return res;
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`JSON でない応答: ${describeResponse(res, text)}`);
+      }
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw new Error(`${RETRY_COUNT + 1} 回試行しても取得できません: ${url}\n  ${lastError.message}`, {
+    cause: lastError,
+  });
+}
