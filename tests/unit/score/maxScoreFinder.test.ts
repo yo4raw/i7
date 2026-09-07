@@ -138,18 +138,19 @@ describe('createSearchContext', () => {
 });
 
 describe('countCombos', () => {
-  it('通常モード: multichoose(N,2) × multichoose(N,4)', () => {
-    const ctx = createSearchContext(buildInput());
-    expect(countCombos(ctx)).toBe(multichoose(7, 2) * multichoose(7, 4)); // 28 × 210 = 5880
+  it('通常モード: センター属性の重複を除いた件数で、旧上限 multichoose(N,2) × multichoose(N,4) を下回る (ADR 0080)', () => {
+    const input = buildInput();
+    const n = countCombos(createSearchContext(input));
+    expect(n).toBe(enumerateAll(input).count);
+    expect(n).toBeLessThan(multichoose(7, 2) * multichoose(7, 4)); // 旧: 28 × 210 = 5880
   });
 
-  it('縮小2枚以上条件: s2 ごとのペア数 × k=max(0,2−s2)..4 のメンバー組合せ総和', () => {
-    const ctx = createSearchContext(buildInput({ shrinkPairOnly: true }));
-    // S=3, T=4。k = メンバー4枠中の縮小枚数:
-    //   s2=0: H(4,2)=10 ペア × Σ_{k=2..4} H(3,k)×H(4,4−k) = (6×10 + 10×4 + 15×1) = 115 → 1150
-    //   s2=1: 3×4=12 ペア × Σ_{k=1..4} = (3×20 + 6×10 + 10×4 + 15×1) = 175 → 2100
-    //   s2=2: H(3,2)=6 ペア × Σ_{k=0..4} = (1×35 + 3×20 + 6×10 + 10×4 + 15×1) = 210 → 1260
-    expect(countCombos(ctx)).toBe(1150 + 2100 + 1260); // 4510
+  it('縮小2枚以上条件: 列挙数と一致し、重複排除前の 4510 を下回る (ADR 0080)', () => {
+    const input = buildInput({ shrinkPairOnly: true });
+    const n = countCombos(createSearchContext(input));
+    expect(n).toBe(enumerateAll(input).count);
+    // 重複排除前 (S=3, T=4): 非縮小ペア 1150 + 混合ペア 2100 + 縮小ペア 1260 = 4510
+    expect(n).toBeLessThan(4510);
   });
 
   it('所持衣装検索: センターごとの上限付き 4-多重集合 × フレンド候補数', () => {

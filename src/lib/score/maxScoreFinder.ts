@@ -44,9 +44,11 @@ export function multichoose(n: number, k: number): number {
   return binomial(n + k - 1, k);
 }
 
-// 各カード i の出現上限を limits[i] とした k-多重集合の総数
-// = ∏(1 + x + ... + x^{limits[i]}) における x^k の係数
-export function countMultisetsWithLimits(limits: number[], k: number): number {
+/**
+ * 各カード i の出現上限を limits[i] とした j-多重集合の総数を j = 0..k で返す
+ * (= ∏(1 + x + ... + x^{limits[i]}) の x^j の係数)
+ */
+export function multisetPolynomial(limits: number[], k: number): number[] {
   let poly: number[] = [1];
   for (const lim of limits) {
     const newLen = Math.min(poly.length + lim, k + 1);
@@ -58,7 +60,13 @@ export function countMultisetsWithLimits(limits: number[], k: number): number {
     }
     poly = next;
   }
-  return poly[k] ?? 0;
+  while (poly.length <= k) poly.push(0);
+  return poly;
+}
+
+/** 各カード i の出現上限を limits[i] とした k-多重集合の総数 */
+export function countMultisetsWithLimits(limits: number[], k: number): number {
+  return multisetPolynomial(limits, k)[k];
 }
 
 /**
@@ -127,6 +135,14 @@ export interface SearchContext {
   attrWeights: AttrWeights;
   /** ブローチ割当用: 固有ブローチ持ちカード判定 */
   hasFixedBroach: (card: Card) => boolean;
+  /** 候補配列上の位置 (正規形判定用。所持候補・縮小/非縮小の部分配列も候補配列の順序を保つ) */
+  posByCard: Map<Card, number>;
+  /**
+   * センター/フレンドの入替対称を探索で使うか (ADR 0080)。
+   * ラビットノートはスロット 0-4 だけに加算され、所持共通ブローチ割当もフレンド枠だけ規則が違うため、
+   * どちらかが有効なら非対称。所持衣装検索はプール自体が非対称なので常に false
+   */
+  friendSymmetric: boolean;
 }
 
 export function createSearchContext(input: SearchInput): SearchContext {
@@ -135,6 +151,10 @@ export function createSearchContext(input: SearchInput): SearchContext {
   for (const c of owned) ownedLimit.set(c.ID!, input.ownedCounts[String(c.ID)] ?? 0);
   const notes = flattenNotes(input.song, FLATTEN_SEED);
   const fixedIds = new Set(input.broachs.map((b) => b.card_id));
+  const hasRabbitNote = input.candidates.some((c) => {
+    const rn = input.rabbitNotes[c.name ?? ''];
+    return !!rn && !!(rn.shout || rn.beat || rn.melody);
+  });
   return {
     input,
     candidates: input.candidates,
@@ -147,85 +167,125 @@ export function createSearchContext(input: SearchInput): SearchContext {
     notesCount: input.song.notes_count || notes.length,
     attrWeights: calcAttrWeights(notes),
     hasFixedBroach: (c) => c.cardID !== null && fixedIds.has(c.cardID),
+    posByCard: new Map(input.candidates.map((c, i) => [c, i])),
+    friendSymmetric: !input.ownedOnly && !input.useOwnedBroachs && !hasRabbitNote,
   };
 }
 
+/** 属性 × 縮小有無で分けた候補のクラス (数え上げ用) */
+interface CardClass {
+  attr: string | null;
+  shrink: boolean;
+  cards: Card[];
+}
+
+function classify(cards: Card[]): CardClass[] {
+  const map = new Map<string, CardClass>();
+  for (const c of cards) {
+    const shrink = isShrinkCard(c);
+    const key = `${c.attribute}|${shrink}`;
+    let cls = map.get(key);
+    if (!cls) {
+      cls = { attr: c.attribute, shrink, cards: [] };
+      map.set(key, cls);
+    }
+    cls.cards.push(c);
+  }
+  return [...map.values()];
+}
+
+/** クラスごとの枚数配分 v から、属性ごとの枚数と縮小枚数を集計する */
+function tally(classes: CardClass[], v: number[]): { byAttr: Map<string | null, number>; shrink: number } {
+  const byAttr = new Map<string | null, number>();
+  let shrink = 0;
+  classes.forEach((cls, i) => {
+    if (v[i] === 0) return;
+    byAttr.set(cls.attr, (byAttr.get(cls.attr) ?? 0) + v[i]);
+    if (cls.shrink) shrink += v[i];
+  });
+  return { byAttr, shrink };
+}
+
 /**
- * 評価対象の組合せ総数。
- * ownedOnly 時: 各 owned カードを center に置いた時の「残り所持枚数で 4-多重集合」の総和 × フレンド候補数。
- * ownedOnly=false 時: (center, friend) は UR/UR で対称、(member1..4) は多重集合
- *   → multichoose(N,2) × multichoose(N,4)。
- * shrinkPairOnly 時: 縮小持ち / それ以外に分割し、6枠合計で SHRINK_MIN 枚以上に
- *   なる組合せを数える。
+ * 各クラスから v[i] 枚ずつ、合計 k 枚選ぶ全ての配分 v について Σ ∏ coefs[i][v[i]] × weight(v)。
+ * coefs[i][j] = クラス i から j 枚の多重集合を作る通り数
+ */
+function sumOverSplits(coefs: number[][], k: number, weight: (v: number[]) => number): number {
+  const v: number[] = Array.from({ length: coefs.length }, () => 0);
+  const rec = (i: number, rest: number, prod: number): number => {
+    if (i === coefs.length) return rest === 0 ? prod * weight(v) : 0;
+    let sum = 0;
+    for (let j = 0; j <= rest; j++) {
+      const c = coefs[i][j] ?? 0;
+      if (c === 0) continue;
+      v[i] = j;
+      sum += rec(i + 1, rest - j, prod * c);
+    }
+    return sum;
+  };
+  return rec(0, k, 1);
+}
+
+/** 上限なしのクラス (n 枚) から j 枚の多重集合を作る通り数 (j = 0..k) */
+function unlimitedPolynomial(n: number, k: number): number[] {
+  return Array.from({ length: k + 1 }, (_, j) => (j === 0 ? 1 : multichoose(n, j)));
+}
+
+/**
+ * 評価対象の組合せ総数 (= 正規形として実際に評価するデッキ数。ADR 0080)。
+ * 同じ 6 枚でセンターの属性が同じ編成は 1 回だけ数える。
+ * - 対称時 (friendSymmetric): 6 枚の多重集合 × 実現できる {センター属性, フレンド属性} の組数
+ * - 非対称時: スロット 0-4 の 5 枚多重集合 × センター属性の種類数 × フレンドプール
+ * - 所持衣装検索: 上と同じ数え方で、5 枚多重集合を所持枚数の上限内に制限する
+ * shrinkPairOnly 時はフレンドプールを縮小枚数で絞る (所持衣装検索は 1 枚以下でも縮小フレンドで評価し、除外はしない)。
  */
 export function countCombos(ctx: SearchContext): number {
   const { input } = ctx;
-  if (input.ownedOnly) {
-    if (ctx.owned.length === 0 || ctx.candidates.length === 0) return 0;
-    if (!input.shrinkPairOnly) {
-      const limits = ctx.owned.map((c) => ctx.ownedLimit.get(c.ID!) ?? 0);
-      let centerSum = 0;
-      for (let ci = 0; ci < ctx.owned.length; ci++) {
-        const adjusted = limits.slice();
-        adjusted[ci] -= 1;
-        centerSum += countMultisetsWithLimits(adjusted, 4);
-      }
-      return centerSum * ctx.candidates.length;
-    }
-    // 縮小2枚以上条件 (所持衣装検索): スロット0-4 の縮小枚数が SHRINK_MIN 以上なら全フレンド、
-    // 1 枚以下は縮小フレンドのみを組合せる（除外はしない）
-    let total = 0;
-    for (let ci = 0; ci < ctx.owned.length; ci++) {
-      const center = ctx.owned[ci];
-      const cs = isShrinkCard(center) ? 1 : 0;
-      const shrinkLimits: number[] = [];
-      const nonShrinkLimits: number[] = [];
-      for (const c of ctx.owned) {
-        let lim = ctx.ownedLimit.get(c.ID!) ?? 0;
-        if (c === center) lim -= 1;
-        (isShrinkCard(c) ? shrinkLimits : nonShrinkLimits).push(lim);
-      }
-      for (let j = 0; j <= 4; j++) {
-        const own5 = cs + j; // スロット0-4 の縮小枚数
-        const friendPool = own5 >= SHRINK_MIN ? ctx.candidates.length : ctx.shrink.length;
-        if (friendPool < 1) continue;
-        total += countMultisetsWithLimits(shrinkLimits, j)
-          * countMultisetsWithLimits(nonShrinkLimits, 4 - j)
-          * friendPool;
-      }
-    }
-    return total;
-  }
-  if (ctx.candidates.length === 0) return 0;
-  if (!input.shrinkPairOnly) {
-    return multichoose(ctx.candidates.length, 2) * multichoose(ctx.candidates.length, 4);
-  }
-  // 縮小2枚以上条件: (center, friend) ペア内の縮小枚数 s2 ごとに、
-  // メンバー4枠の縮小枚数 k を max(0, SHRINK_MIN−s2) 〜 4 の範囲で総和する
+  const N = ctx.candidates.length;
   const S = ctx.shrink.length;
-  const T = ctx.nonShrink.length;
-  let total = 0;
-  for (let s2 = 0; s2 <= 2; s2++) {
-    const pairs = s2 === 0 ? multichoose(T, 2) : s2 === 1 ? S * T : multichoose(S, 2);
-    if (pairs === 0) continue;
-    for (let k = Math.max(0, SHRINK_MIN - s2); k <= 4; k++) {
-      total += pairs * multichoose(S, k) * multichoose(T, 4 - k);
-    }
+  if (N === 0) return 0;
+  const friendPool = (shrink5: number): number => {
+    if (!input.shrinkPairOnly || shrink5 >= SHRINK_MIN) return N;
+    return input.ownedOnly || shrink5 === SHRINK_MIN - 1 ? S : 0;
+  };
+  const centersTimesFriends = (classes: CardClass[]) => (v: number[]) => {
+    const t = tally(classes, v);
+    return t.byAttr.size * friendPool(t.shrink);
+  };
+  if (input.ownedOnly) {
+    if (ctx.owned.length === 0) return 0;
+    const classes = classify(ctx.owned);
+    const coefs = classes.map((cls) => multisetPolynomial(cls.cards.map((c) => ctx.ownedLimit.get(c.ID!) ?? 0), 5));
+    return sumOverSplits(coefs, 5, centersTimesFriends(classes));
   }
-  return total;
+  const classes = classify(ctx.candidates);
+  if (ctx.friendSymmetric) {
+    const coefs = classes.map((cls) => unlimitedPolynomial(cls.cards.length, 6));
+    return sumOverSplits(coefs, 6, (v) => {
+      const t = tally(classes, v);
+      if (input.shrinkPairOnly && t.shrink < SHRINK_MIN) return 0;
+      // 異なる属性の組 + 同属性で 2 枚以上ある属性
+      const present = t.byAttr.size;
+      let doubled = 0;
+      for (const n of t.byAttr.values()) if (n >= 2) doubled++;
+      return (present * (present - 1)) / 2 + doubled;
+    });
+  }
+  const coefs = classes.map((cls) => unlimitedPolynomial(cls.cards.length, 5));
+  return sumOverSplits(coefs, 5, centersTimesFriends(classes));
 }
 
 /**
  * チャンク = Worker に渡す作業単位。
- * - pair: 通常モード。(center, friend) 多重集合ペア 1 つ (centerIdx ≤ friendIdx)
- * - shrinkPair: 縮小2枚以上条件。s2 = ペア内の縮小枚数 (0/1/2)。s2=0 は非縮小内ペア (aIdx ≤ bIdx)、
- *   s2=1 は (縮小 aIdx, 非縮小 bIdx) の直積、s2=2 は縮小内ペア (aIdx ≤ bIdx)。
- *   メンバー4枠の縮小枚数は max(0, SHRINK_MIN−s2)〜4 を列挙する
+ * - pair: 通常モード。(center, friend) ペア 1 つ (対称時は centerIdx ≤ friendIdx、非対称時は順序付き)
+ * - shrinkPair: 縮小2枚以上条件。センター / フレンドをそれぞれ縮小 (S) か非縮小 (T) のプールから取る。
+ *   対称時は同プール内のペアを aIdx ≤ bIdx に絞り (T,S) は列挙しない。非対称時は 4 組すべてを順序付きで列挙する。
+ *   メンバー4枠の縮小枚数は max(0, SHRINK_MIN−ペア内の縮小枚数)〜4 を列挙する
  * - center: 所持衣装検索。owned[centerIdx] をセンターに固定
  */
 export type ChunkDescriptor =
   | { kind: 'pair'; centerIdx: number; friendIdx: number }
-  | { kind: 'shrinkPair'; s2: 0 | 1 | 2; aIdx: number; bIdx: number }
+  | { kind: 'shrinkPair'; centerShrink: boolean; friendShrink: boolean; aIdx: number; bIdx: number }
   | { kind: 'center'; centerIdx: number };
 
 export function* generateChunks(ctx: SearchContext): Generator<ChunkDescriptor> {
@@ -234,16 +294,49 @@ export function* generateChunks(ctx: SearchContext): Generator<ChunkDescriptor> 
     for (let ci = 0; ci < ctx.owned.length; ci++) yield { kind: 'center', centerIdx: ci };
     return;
   }
+  const sym = ctx.friendSymmetric;
   if (input.shrinkPairOnly) {
     const S = ctx.shrink.length;
     const T = ctx.nonShrink.length;
-    for (let a = 0; a < T; a++) for (let b = a; b < T; b++) yield { kind: 'shrinkPair', s2: 0, aIdx: a, bIdx: b };
-    for (let a = 0; a < S; a++) for (let b = 0; b < T; b++) yield { kind: 'shrinkPair', s2: 1, aIdx: a, bIdx: b };
-    for (let a = 0; a < S; a++) for (let b = a; b < S; b++) yield { kind: 'shrinkPair', s2: 2, aIdx: a, bIdx: b };
+    const roles: [boolean, boolean][] = sym
+      ? [[false, false], [true, false], [true, true]]
+      : [[false, false], [true, false], [false, true], [true, true]];
+    for (const [centerShrink, friendShrink] of roles) {
+      const A = centerShrink ? S : T;
+      const B = friendShrink ? S : T;
+      for (let a = 0; a < A; a++) {
+        for (let b = sym && centerShrink === friendShrink ? a : 0; b < B; b++) {
+          yield { kind: 'shrinkPair', centerShrink, friendShrink, aIdx: a, bIdx: b };
+        }
+      }
+    }
     return;
   }
   const N = ctx.candidates.length;
-  for (let c = 0; c < N; c++) for (let f = c; f < N; f++) yield { kind: 'pair', centerIdx: c, friendIdx: f };
+  for (let c = 0; c < N; c++) {
+    for (let f = sym ? c : 0; f < N; f++) yield { kind: 'pair', centerIdx: c, friendIdx: f };
+  }
+}
+
+/**
+ * 正規形判定 (ADR 0080): センターは同属性の中で候補配列上の位置が最小の衣装に限る。
+ * 入替対称を使うときはフレンドにも同じ規則を適用する。
+ * 同じ 6 枚 (所持衣装検索ではスロット 0-4 の 5 枚) でセンターの属性が同じ編成はスコアが一致するため、
+ * 正規形だけを評価すれば同値な編成を 1 回ずつ評価したことになる
+ */
+function isCanonical(ctx: SearchContext, deck: Card[]): boolean {
+  const pos = ctx.posByCard;
+  const center = deck[0];
+  const centerPos = pos.get(center)!;
+  const friend = ctx.friendSymmetric ? deck[5] : null;
+  const friendPos = friend ? pos.get(friend)! : -1;
+  for (let i = 1; i <= 4; i++) {
+    const m = deck[i];
+    const p = pos.get(m)!;
+    if (m.attribute === center.attribute && p < centerPos) return false;
+    if (friend && m.attribute === friend.attribute && p < friendPos) return false;
+  }
+  return true;
 }
 
 /**
@@ -256,7 +349,6 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
   const deck: Card[] = Array.from({ length: 6 });
 
   if (chunk.kind === 'pair') {
-    // (center, friend) は UR/UR でセンタースキルレートが等しく team 値が入れ替え対称
     deck[0] = ctx.candidates[chunk.centerIdx];
     deck[5] = ctx.candidates[chunk.friendIdx];
     for (const m of multisetIndices(ctx.candidates.length, 4)) {
@@ -264,6 +356,7 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
       deck[2] = ctx.candidates[m[1]];
       deck[3] = ctx.candidates[m[2]];
       deck[4] = ctx.candidates[m[3]];
+      if (!isCanonical(ctx, deck)) continue;
       yield deck;
     }
     return;
@@ -272,24 +365,17 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
   if (chunk.kind === 'shrinkPair') {
     const S = ctx.shrink;
     const T = ctx.nonShrink;
-    if (chunk.s2 === 0) {
-      deck[0] = T[chunk.aIdx];
-      deck[5] = T[chunk.bIdx];
-    } else if (chunk.s2 === 1) {
-      deck[0] = S[chunk.aIdx];
-      deck[5] = T[chunk.bIdx];
-    } else {
-      deck[0] = S[chunk.aIdx];
-      deck[5] = S[chunk.bIdx];
-    }
+    deck[0] = (chunk.centerShrink ? S : T)[chunk.aIdx];
+    deck[5] = (chunk.friendShrink ? S : T)[chunk.bIdx];
     // メンバー4枠中の縮小枚数 k を、6枠合計が SHRINK_MIN 以上になる範囲でループ
     // (縮小候補が k 枚に満たない場合は多重集合の列挙が空になるだけ)
-    const kMin = Math.max(0, SHRINK_MIN - chunk.s2);
+    const kMin = Math.max(0, SHRINK_MIN - (chunk.centerShrink ? 1 : 0) - (chunk.friendShrink ? 1 : 0));
     for (let k = kMin; k <= 4; k++) {
       for (const sm of multisetIndicesOrEmpty(S.length, k)) {
         for (const nm of multisetIndicesOrEmpty(T.length, 4 - k)) {
           for (let i = 0; i < k; i++) deck[1 + i] = S[sm[i]];
           for (let i = 0; i < 4 - k; i++) deck[1 + k + i] = T[nm[i]];
+          if (!isCanonical(ctx, deck)) continue;
           yield deck;
         }
       }
@@ -319,6 +405,7 @@ export function* enumerateChunkDecks(ctx: SearchContext, chunk: ChunkDescriptor)
       if (n > (ctx.ownedLimit.get(id) ?? 0)) { valid = false; break; }
     }
     if (!valid) continue;
+    if (!isCanonical(ctx, deck)) continue;
 
     // 縮小2枚以上条件: スロット0-4 の縮小が SHRINK_MIN 以上なら全フレンド、
     // 1 枚以下は縮小フレンドのみ（組合せ自体は除外しない）
