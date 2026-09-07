@@ -82,13 +82,16 @@ describe('countCombos: 縮小フレンドプール枯渇・ペア0 のスキッ�
     expect(countCombos(ctx)).toBe(0);
   });
 
-  it('非縮小0枚の候補: s2=0/s2=1 の pairs が 0 になり continue で skip される (L208)', () => {
-    // 縮小のみ T=0 → s2=0 の multichoose(T,2)=H(0,2)=0、s2=1 の S*T=0 が 0 になり L208 で skip。
-    // s2=2 も members の multichoose(0,0)=0 のため最終的に総数は 0 になる。
+  it('非縮小0枚の候補: 縮小ペア × 縮小メンバーだけが数えられ、列挙数と一致する', () => {
+    // 縮小のみ T=0 → 非縮小を含むペア・メンバーの通り数は 0。縮小 4 枚のメンバーだけが残る
+    // (旧実装は multichoose(0,0) を 0 と数えて総数 0 にしていたが、列挙は 90 デッキを yield していた)
     const ctx = createSearchContext(buildInput({ candidates: shrinkUr, shrinkPairOnly: true }));
     expect(ctx.nonShrink.length).toBe(0);
     expect(ctx.shrink.length).toBe(3);
-    expect(countCombos(ctx)).toBe(0);
+    let enumerated = 0;
+    for (const chunk of generateChunks(ctx)) for (const _ of enumerateChunkDecks(ctx, chunk)) enumerated++;
+    expect(enumerated).toBeGreaterThan(0);
+    expect(countCombos(ctx)).toBe(enumerated);
   });
 });
 
