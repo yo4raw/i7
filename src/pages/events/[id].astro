@@ -4,15 +4,21 @@ import EventStatusBadge from '../../components/EventStatusBadge.svelte';
 import EventBonusCardGrid from '../../components/EventBonusCardGrid.svelte';
 import { fetchEventsCsv, formatEffectSummary, type EventRow, type EventSpecialTier } from '../../lib/data/fetchEventsCsv';
 import { fetchCardsJson, type Card } from '../../lib/data/fetchCardsJson';
-import { cardThumbUrl } from '../../lib/ui';
+import { fetchSongsJson, filterValidSongs, getEventSongIds, type Song } from '../../lib/data/fetchSongsJson';
+import { cardThumbUrl, songImageUrl, starsText } from '../../lib/ui';
 import { isHighScoreEvent } from '../../lib/data/eventBonusTiers';
 import { formatEventPeriod, formatEventEnd, eventEndMs } from '../../lib/data/eventPeriod';
 
 export async function getStaticPaths() {
-  const [events, cards] = await Promise.all([
+  const [events, cards, songs] = await Promise.all([
     fetchEventsCsv(),
     fetchCardsJson(),
+    fetchSongsJson().then(filterValidSongs),
   ]);
+  const songMap = new Map<number, Song>();
+  for (const s of songs as Song[]) {
+    if (s.id !== null) songMap.set(s.id, s);
+  }
   const cardMap = new Map<number, Card>();
   for (const c of cards as Card[]) {
     if (c.ID !== null) cardMap.set(c.ID, c);
@@ -33,6 +39,9 @@ export async function getStaticPaths() {
         goldCards: pickTier(ev.gold.cardIds),
         silverCards: pickTier(ev.silver.cardIds),
         bronzeCards: pickTier(ev.bronze.cardIds),
+        songs: getEventSongIds(ev.id)
+          .map(id => songMap.get(id))
+          .filter((s): s is Song => !!s),
       },
     };
   });
@@ -43,9 +52,10 @@ interface Props {
   goldCards: Card[];
   silverCards: Card[];
   bronzeCards: Card[];
+  songs: Song[];
 }
 
-const { event, goldCards, silverCards, bronzeCards } = Astro.props as Props;
+const { event, goldCards, silverCards, bronzeCards, songs } = Astro.props as Props;
 const isHighScore = isHighScoreEvent(event.eventtype);
 const base = import.meta.env.BASE_URL;
 
@@ -175,5 +185,39 @@ const tiers: TierView[] = [
       />
     </section>
   ))}
+
+  {songs.length > 0 && (
+    <section class="mb-6 surface-card p-4" data-testid="event-songs">
+      <h2 class="text-lg font-bold text-display mb-3">対象楽曲</h2>
+      <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {songs.map(song => (
+          <li>
+            <a
+              href={`${base}songs/${song.id}/`}
+              class="pressable block rounded-card border border-gray-200 overflow-hidden hover:border-gray-400"
+            >
+              <img
+                src={songImageUrl(song.id!)}
+                alt={song.song_name || ''}
+                width="200"
+                height="200"
+                loading="lazy"
+                class="w-full aspect-square object-cover bg-gray-100"
+              />
+              <div class="p-2">
+                <p class="text-sm font-medium text-gray-900 line-clamp-2">{song.song_name}</p>
+                <p class="mt-0.5 text-xs text-gray-600 tabular-nums">
+                  {song.difficulty} {starsText(song.stars)}
+                </p>
+                <p class="text-xs text-gray-600 tabular-nums">
+                  {song.duration ?? '?'}秒 / {song.notes_count ?? '?'}ノーツ
+                </p>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
 
 </BaseLayout>
