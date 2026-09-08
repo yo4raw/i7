@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { formatEventEnd } from '../../../../lib/data/eventPeriod';
+import EventSongSharePanel from '../../../../components/EventSongSharePanel.astro';
+import { fetchEventsCsv, type EventRow } from '../../../../lib/data/fetchEventsCsv';
+import { fetchSongsJson, filterValidSongs, getEventSongIds, type Song } from '../../../../lib/data/fetchSongsJson';
+import { songImageUrl } from '../../../../lib/ui';
+
+export async function getStaticPaths() {
+  const [events, songs] = await Promise.all([
+    fetchEventsCsv(),
+    fetchSongsJson().then(filterValidSongs),
+  ]);
+  const songMap = new Map<number, Song>();
+  for (const s of songs as Song[]) {
+    if (s.id !== null) songMap.set(s.id, s);
+  }
+
+  return (events as EventRow[])
+    .map(ev => ({
+      ev,
+      songs: getEventSongIds(ev.id)
+        .map(id => songMap.get(id))
+        .filter((s): s is Song => !!s),
+    }))
+    .filter(({ songs: list }) => list.length > 0)
+    .map(({ ev, songs: list }) => ({
+      params: { id: String(ev.id) },
+      props: { event: ev, songs: list },
+    }));
+}
+
+interface Props {
+  event: EventRow;
+  songs: Song[];
+}
+
+const { event, songs } = Astro.props as Props;
+const base = import.meta.env.BASE_URL;
+
+const songNames = songs.map(s => s.song_name).filter(Boolean).slice(0, 3).join('・');
+const description = `${event.eventname}（${event.eventtype}）の対象楽曲まとめ（SNS共有用）。ノーツ数・属性比率・共通ブローチのスコア寄与つき。${event.start_date}〜${formatEventEnd(event.end_date)}${songNames ? ` 対象楽曲: ${songNames}` : ''}`;
+const firstSongId = songs[0]?.id;
+const ogImage = typeof firstSongId === 'number' ? songImageUrl(firstSongId) : undefined;
+
+// ダウンロード画像のファイル名（拡張子なし）。ファイル名に使えない文字を除去
+const safeName = event.eventname.replaceAll(/[\\/:*?"<>|]/g, '').replaceAll(/\s+/g, '_');
+const shareFilename = `${event.id}_${safeName}_対象楽曲`;
+
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'イベント情報', url: `${base}events/` },
+  { name: event.eventname, url: `${base}events/${event.id}/` },
+  { name: 'SNS共有 (対象楽曲)', url: `${base}events/${event.id}/share/songs/` },
+];
+---
+
+<BaseLayout
+  noindex
+  title={`${event.eventname} 対象楽曲`}
+  description={description}
+  image={ogImage}
+  ogType="article"
+  breadcrumbs={breadcrumbs}
+>
+  <EventSongSharePanel event={event} songs={songs} shareFilename={shareFilename} />
+</BaseLayout>
