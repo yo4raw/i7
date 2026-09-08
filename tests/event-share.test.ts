@@ -1,6 +1,7 @@
 import { test, expect } from './helpers/fixtures';
 import { fetchEventsCsv } from '../src/lib/data/fetchEventsCsv';
 import { fetchCardsJson, type Card } from '../src/lib/data/fetchCardsJson';
+import { fetchSongsJson, filterValidSongs, getEventSongIds } from '../src/lib/data/fetchSongsJson';
 
 const BASE = '';
 /** 1 枚あたりの掲載数（横 8 × 縦 2）。EventSharePanel.astro と揃える */
@@ -65,6 +66,61 @@ test.describe('イベント SNS 共有 (UR)', () => {
     await page.getByRole('button', { name: /画像をダウンロード/ }).click();
 
     await expect(() => expect(downloads.length).toBe(expectedPanels)).toPass({ timeout: 120_000 });
+    for (const [i, name] of downloads.entries()) {
+      expect(name).toBe(`${downloads[0].replace(/_\d+\.png$/, '')}_${i + 1}.png`);
+    }
+  });
+});
+
+test.describe('イベント SNS 共有 (対象楽曲)', () => {
+  let songEventId = 0;
+  let songCount = 0;
+  let shortestCount = 0;
+
+  test.beforeAll(async () => {
+    const [events, songs] = await Promise.all([
+      fetchEventsCsv(),
+      fetchSongsJson().then(filterValidSongs),
+    ]);
+    const songIds = new Set(songs.map((s) => s.id));
+    const target = events
+      .map((ev) => ({ ev, count: getEventSongIds(ev.id).filter((id) => songIds.has(id)).length }))
+      .filter((x) => x.count > 0)
+      .toSorted((a, b) => b.count - a.count)[0];
+    if (!target) throw new Error('対象楽曲が登録されたイベントが event-songs.json にありません');
+
+    songEventId = target.ev.id;
+    songCount = target.count;
+
+    const durations = getEventSongIds(target.ev.id)
+      .map((id) => songs.find((s) => s.id === id)?.duration)
+      .filter((d): d is number => typeof d === 'number' && d > 0);
+    const min = Math.min(...durations);
+    shortestCount = durations.filter((d) => d === min).length;
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/events/${songEventId}/share/songs/`);
+  });
+
+  test('1 曲 1 枚のパネルになる', async ({ page }) => {
+    await expect(page.locator('[id^="share-panel-"]')).toHaveCount(songCount);
+  });
+
+  test('最短の曲にだけ「最短曲」バッジが付く', async ({ page }) => {
+    expect(shortestCount).toBeGreaterThan(0);
+    await expect(page.getByText('最短曲')).toHaveCount(shortestCount);
+    expect(shortestCount).toBeLessThan(songCount);
+  });
+
+  test('ダウンロードボタンで曲数ぶんの PNG が保存される', async ({ page }) => {
+    test.slow(); // modern-screenshot で複数枚を書き出すため時間がかかる
+    const downloads: string[] = [];
+    page.on('download', (d) => downloads.push(d.suggestedFilename()));
+
+    await page.getByRole('button', { name: /画像をダウンロード/ }).click();
+
+    await expect(() => expect(downloads.length).toBe(songCount)).toPass({ timeout: 120_000 });
     for (const [i, name] of downloads.entries()) {
       expect(name).toBe(`${downloads[0].replace(/_\d+\.png$/, '')}_${i + 1}.png`);
     }
