@@ -118,3 +118,23 @@ test.describe('イベント詳細 ハイスコアUR限定', () => {
     }
   });
 });
+
+test.describe('イベント詳細 特効パネルの折りたたみ', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`${BASE}/events/${eventId}/`);
+  });
+
+  test('既定は開いており、見出しをクリックすると衣装グリッドが畳まれる', async ({ page }) => {
+    const gold = page.locator('section', { hasText: '金特効' }).first();
+    const badge = gold.getByTestId('skill-badge').first();
+    await expect(badge).toBeVisible();
+
+    await gold.locator('summary').click();
+    await expect(badge).toBeHidden();
+    // 畳んでもサマリー（対象/所持枚数）は読める
+    await expect(gold.getByText(/対象 \d+ 枚 ・ 所持 \d+ 枚/)).toBeVisible();
+
+    await gold.locator('summary').click();
+    await expect(badge).toBeVisible();
+  });
+});
