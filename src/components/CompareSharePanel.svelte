@@ -157,7 +157,8 @@
   {:else}
     <div class="bg-chrome-ink text-white px-4 py-3">
       <div class="flex items-baseline justify-between gap-2 flex-wrap">
-        <h2 class="text-lg font-bold leading-snug">
+        <!-- whitespace-nowrap: modern-screenshot が幅を小数 3 桁に丸めて固定するため、見出しが 1 行ぶんの高さのまま折り返して下の行に重なる。折り返し自体を禁止する -->
+        <h2 class="text-lg font-bold leading-snug whitespace-nowrap">
           {selectedSong.song_name}
           <span class="ml-2 text-sm font-semibold text-gray-300">{selectedSong.difficulty || ''}</span>
         </h2>
@@ -178,7 +179,7 @@
 
     <section class="pt-3">
       <div class="flex items-center gap-2 px-3">
-        <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold bg-chrome-ink text-white">スコアアップ Top{TOP_N}</span>
+        <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold whitespace-nowrap bg-chrome-ink text-white">スコアアップ Top{TOP_N}</span>
         <span class="text-xs text-gray-500">期待スコア合計の降順</span>
       </div>
       <ScoreUpChart entries={topScoreUp} {tierOf} sortKey={SCORE_UP_SORT} compact />
@@ -186,7 +187,7 @@
 
     <section class="pt-2 border-t border-gray-200">
       <div class="flex items-center gap-2 px-3 pt-2">
-        <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold bg-chrome-ink text-white">判定縮小 Top{TOP_N}</span>
+        <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold whitespace-nowrap bg-chrome-ink text-white">判定縮小 Top{TOP_N}</span>
         <span class="text-xs text-gray-500">属性値由来スコアの降順</span>
       </div>
       <ShrinkChart entries={topShrink} {tierOf} sortKey={SHRINK_SORT} songDuration={selectedSong.duration || 0} compact />
