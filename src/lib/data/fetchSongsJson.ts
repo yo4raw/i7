@@ -176,14 +176,14 @@ export function filterValidSongs(songs: Song[]): Song[] {
 }
 
 /**
- * `src/data/event-songs.json` の eventSongIds（配列順を維持）。
- * 曲選択ドロップダウンで「イベント対象楽曲」グループとして先頭に出す。
+ * `src/data/event-songs.json` の byEvent[eventId]（配列順を維持）。
+ * eventId 省略時は currentEventId のイベント（曲選択ドロップダウンの先頭グループ用）。
+ * 未登録のイベントは空配列。
  */
-export function getEventSongIds(): number[] {
-  /* v8 ignore next 3 -- event-songs.json の eventSongIds は実 config で常に配列のため : [] へ到達しない */
-  return Array.isArray(eventSongsConfig.eventSongIds)
-    ? (eventSongsConfig.eventSongIds as number[])
-    : [];
+export function getEventSongIds(eventId?: number): number[] {
+  const byEvent = eventSongsConfig.byEvent as Record<string, number[] | undefined>;
+  const ids = byEvent[String(eventId ?? eventSongsConfig.currentEventId)];
+  return Array.isArray(ids) ? ids : [];
 }
 
 /**

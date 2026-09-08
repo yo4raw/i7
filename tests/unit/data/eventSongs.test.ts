@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { Song } from '../../../src/lib/data/fetchSongsJson';
 import { firstEventSongId, getEventSongIds } from '../../../src/lib/data/fetchSongsJson';
+import EVENT_SONGS from '../../../src/data/event-songs.json' with { type: 'json' };
 
 /** id だけ持つ最小の Song を作る（firstEventSongId は id しか参照しない） */
 const song = (id: number): Song => ({ id } as Song);
@@ -31,5 +32,15 @@ describe('firstEventSongId', () => {
 
   it('空配列なら null', () => {
     expect(firstEventSongId([])).toBeNull();
+  });
+});
+
+describe('getEventSongIds(eventId)', () => {
+  it('登録済みイベントの ID を config 順で返す', () => {
+    expect(getEventSongIds(EVENT_SONGS.currentEventId)).toEqual(getEventSongIds());
+  });
+
+  it('未登録のイベントは空配列', () => {
+    expect(getEventSongIds(-1)).toEqual([]);
   });
 });
