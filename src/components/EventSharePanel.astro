@@ -26,7 +26,6 @@ interface TierView {
   cards: Card[];
   tier: EventSpecialTier;
   headerClass: string;
-  badgeClass: string;
 }
 
 const tiers: TierView[] = [
@@ -36,7 +35,6 @@ const tiers: TierView[] = [
     cards: goldCards,
     tier: event.gold,
     headerClass: 'bg-yellow-400 text-yellow-950',
-    badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-400',
   },
   {
     key: 'silver',
@@ -44,75 +42,100 @@ const tiers: TierView[] = [
     cards: silverCards,
     tier: event.silver,
     headerClass: 'bg-gray-300 text-gray-800',
-    badgeClass: 'bg-gray-200 text-gray-700 border-gray-400',
   },
 ];
+
+// 1 枚あたり横 8 × 縦 2 の 16 着。特効の段階をまたがないよう段階ごとに分割する
+const COLUMNS = 8;
+const ROWS = 2;
+const PER_IMAGE = COLUMNS * ROWS;
+
+interface PanelView {
+  id: string;
+  /** ダウンロードファイル名に付ける連番サフィックス */
+  suffix: string;
+  tier: TierView;
+  cards: Card[];
+  /** 同じ段階が複数枚にまたがるときの「2/3」表示。1 枚に収まるなら空 */
+  pageLabel: string;
+}
+
+const panels: PanelView[] = tiers
+  .filter(t => t.cards.length > 0)
+  .flatMap(t => {
+    const total = Math.ceil(t.cards.length / PER_IMAGE);
+    return Array.from({ length: total }, (_, i) => ({
+      tier: t,
+      cards: t.cards.slice(i * PER_IMAGE, (i + 1) * PER_IMAGE),
+      pageLabel: total > 1 ? `${i + 1}/${total}` : '',
+    }));
+  })
+  .map((p, i) => ({ ...p, id: `share-panel-${i}`, suffix: `_${i + 1}` }));
 ---
 
 <div class="mb-3 flex items-center justify-between gap-3 flex-wrap max-w-3xl">
   <p class="text-sm text-gray-600">
-    下の枠をスクリーンショット、または右のボタンで画像保存して SNS でシェアできます（{rarity} の特効衣装まとめ）。
+    下の枠をスクリーンショット、または右のボタンで画像保存して SNS でシェアできます（{rarity} の特効衣装まとめ）。1 枚に {PER_IMAGE} 着（横 {COLUMNS} × 縦 {ROWS}）ずつ、全 {panels.length} 枚に分けて保存します。
   </p>
-  <EventShareImage filename={shareFilename} client:load />
+  <EventShareImage
+    filename={shareFilename}
+    panels={panels.map(p => ({ id: p.id, suffix: p.suffix }))}
+    client:load
+  />
 </div>
 
 <!-- スクショ対象パネル（端末によらず同じダウンロード画像になるよう幅固定。狭い画面では横スクロール） -->
-<div class="overflow-x-auto pb-2">
-<div id="share-panel" class="w-[640px] shrink-0 rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
-  <!-- ヘッダー帯 -->
-  <div class="bg-chrome-ink text-white px-4 py-3">
-    <div class="flex items-baseline justify-between gap-2 flex-wrap">
-      <h1 class="text-lg sm:text-xl font-bold leading-snug">{event.eventname}<span class="ml-2 text-sm font-semibold text-gray-300">{rarity} 特効衣装</span></h1>
-      <span class="text-xs font-semibold text-gray-300 whitespace-nowrap">{SITE_NAME}</span>
-    </div>
-    <div class="mt-1 text-xs text-gray-300 space-x-2">
-      <span>{event.eventtype}</span>
-      <span>/</span>
-      <span>{formatEventPeriod(event.start_date, event.end_date)}</span>
-    </div>
-  </div>
+<div class="overflow-x-auto pb-2 space-y-4">
+  {panels.map(panel => (
+    <div id={panel.id} class="w-[880px] shrink-0 rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
+      <!-- ヘッダー帯 -->
+      <div class="bg-chrome-ink text-white px-4 py-3">
+        <div class="flex items-baseline justify-between gap-2 flex-wrap">
+          <h1 class="text-lg sm:text-xl font-bold leading-snug">{event.eventname}<span class="ml-2 text-sm font-semibold text-gray-300">{rarity} 特効衣装</span></h1>
+          <span class="text-xs font-semibold text-gray-300 whitespace-nowrap">{SITE_NAME}</span>
+        </div>
+        <div class="mt-1 text-xs text-gray-300 space-x-2">
+          <span>{event.eventtype}</span>
+          <span>/</span>
+          <span>{formatEventPeriod(event.start_date, event.end_date)}</span>
+        </div>
+      </div>
 
-  <div class="p-3 sm:p-4 space-y-5">
-    {tiers.map(t => (
-      <section>
+      <div class="p-3 sm:p-4">
         <div class="flex items-center gap-2 flex-wrap mb-2">
-          <span class={`inline-block px-3 py-0.5 rounded-full text-sm font-bold ${t.headerClass}`}>{t.label}</span>
-          <span class="text-xs text-gray-500">{t.cards.length} 着</span>
-          {formatEffectSummary(t.tier) && (
-            <span class="text-xs text-gray-600">{formatEffectSummary(t.tier)}</span>
+          <span class={`inline-block px-3 py-0.5 rounded-full text-sm font-bold ${panel.tier.headerClass}`}>{panel.tier.label}</span>
+          <span class="text-xs text-gray-500">{panel.tier.cards.length} 着</span>
+          {panel.pageLabel && <span class="text-xs font-semibold text-gray-600">{panel.pageLabel}</span>}
+          {formatEffectSummary(panel.tier.tier) && (
+            <span class="text-xs text-gray-600">{formatEffectSummary(panel.tier.tier)}</span>
           )}
         </div>
 
-        {t.cards.length === 0 ? (
-          <p class="text-sm text-gray-400">対象衣装なし</p>
-        ) : (
-          <div class="grid grid-cols-6 gap-px">
-            {t.cards.map(card => {
-              const attr = card.attribute || '';
-              const attrBg = ATTR_BADGE_BG[attr] || 'bg-gray-400';
-              const skill = formatSkillBadge(card.ap_skill_type);
-              return (
-                <div class="flex flex-col min-w-0">
-                  <div class="text-[10px] leading-tight text-center text-gray-700 truncate px-0.5 py-0.5">{card.cardname || '-'}</div>
-                  <div class="relative">
-                    <img
-                      src={cardThumbUrl(card.ID!)}
-                      alt={card.cardname || ''}
-                      class="w-full h-auto block"
-                      width="200"
-                      height="300"
-                    />
-                    {attr && <span class={`absolute top-0.5 left-0.5 px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
-                  </div>
-                  <div class={`flex-1 flex items-center justify-center text-[10px] leading-tight text-center font-bold px-0.5 py-1 ${skill.isShrink ? 'bg-pink-500 text-white' : 'bg-gray-50 text-gray-800'}`}>{skill.label}</div>
-                  <div class="text-[10px] leading-tight text-center font-bold bg-yellow-300 text-yellow-950 px-0.5 py-0.5">{card.ap_skill_req || '-'}</div>
+        <div class="grid grid-cols-8 gap-px">
+          {panel.cards.map(card => {
+            const attr = card.attribute || '';
+            const attrBg = ATTR_BADGE_BG[attr] || 'bg-gray-400';
+            const skill = formatSkillBadge(card.ap_skill_type);
+            return (
+              <div class="flex flex-col min-w-0">
+                <div class="text-[10px] leading-tight text-center text-gray-700 truncate px-0.5 py-0.5">{card.cardname || '-'}</div>
+                <div class="relative">
+                  <img
+                    src={cardThumbUrl(card.ID!)}
+                    alt={card.cardname || ''}
+                    class="w-full h-auto block"
+                    width="200"
+                    height="300"
+                  />
+                  {attr && <span class={`absolute top-0.5 left-0.5 px-1 py-0.5 text-[9px] font-bold text-white rounded ${attrBg}`}>{attr}</span>}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    ))}
-  </div>
-</div>
+                <div class={`flex-1 flex items-center justify-center text-[10px] leading-tight text-center font-bold px-0.5 py-1 ${skill.isShrink ? 'bg-pink-500 text-white' : 'bg-gray-50 text-gray-800'}`}>{skill.label}</div>
+                <div class="text-[10px] leading-tight text-center font-bold bg-yellow-300 text-yellow-950 px-0.5 py-0.5">{card.ap_skill_req || '-'}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  ))}
 </div>
