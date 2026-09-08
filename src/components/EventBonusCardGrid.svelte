@@ -30,10 +30,14 @@
   const owned = $derived(cards.reduce((sum, c) => sum + getCount(c.ID), 0));
 </script>
 
-<div class="flex items-center justify-between gap-2 flex-wrap mb-3">
+<details class="group" open>
+<summary class="flex items-center justify-between gap-2 flex-wrap cursor-pointer select-none group-open:mb-3">
   <span class={`inline-block px-3 py-1 rounded text-sm font-bold border ${badgeClass}`}>{label}</span>
-  <span class="text-xs text-gray-500">対象 {cards.length} 枚 ・ 所持 {owned} 枚</span>
-</div>
+  <span class="flex items-center gap-2">
+    <span class="text-xs text-gray-500">対象 {cards.length} 枚 ・ 所持 {owned} 枚</span>
+    <svg class="size-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+  </span>
+</summary>
 
 {#if effectSummary}
   <p class="text-sm text-gray-700 mb-2">{effectSummary}</p>
@@ -97,3 +101,4 @@
     {/each}
   </div>
 {/if}
+</details>
