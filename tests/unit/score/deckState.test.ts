@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, DECK_SIZE } from '../../../src/lib/score/deckState';
+import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, defaultSkillLevelFor, DECK_SIZE } from '../../../src/lib/score/deckState';
 import { allBroachs, findCardById, findBroachsByCardId } from '../../fixtures';
 
 /** 10th Anniversary 四葉環 (UR、固有ブローチあり) */
@@ -64,5 +64,21 @@ describe('deckState (デッキ編成状態の操作)', () => {
     expect(s.sharedBroachs[0]).toEqual([]);
     // 既存 modal-clear ハンドラはスキルLv をリセットしないため、維持される
     expect(s.skillLevels[0]).toBe(3);
+  });
+});
+
+describe('defaultSkillLevelFor (所持 Lv からスロット既定 Lv を決める)', () => {
+  it('未所持（空配列）は 5', () => {
+    expect(defaultSkillLevelFor([], 0)).toBe(5);
+  });
+
+  it('1 枚目は先頭（最高 Lv）、2 枚目は次の Lv', () => {
+    expect(defaultSkillLevelFor([4, 2], 0)).toBe(4);
+    expect(defaultSkillLevelFor([4, 2], 1)).toBe(2);
+  });
+
+  it('所持枚数を超えた分は 5', () => {
+    expect(defaultSkillLevelFor([3], 1)).toBe(5);
+    expect(defaultSkillLevelFor([3], -1)).toBe(5);
   });
 });

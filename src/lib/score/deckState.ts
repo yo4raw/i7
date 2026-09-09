@@ -60,3 +60,11 @@ export function clearSlot(state: DeckState, slotIndex: number): void {
   state.trained[slotIndex] = true;
   state.sharedBroachs[slotIndex] = [];
 }
+
+/**
+ * 所持 Lv（降順）からスロットの既定 Lv を決める。
+ * 同じ衣装が他スロットに alreadyUsed 枚あれば、その次の 1 枚の Lv。範囲外・未所持は 5
+ */
+export function defaultSkillLevelFor(levels: SkillLevel[], alreadyUsed: number): SkillLevel {
+  return levels[alreadyUsed] ?? 5;
+}
