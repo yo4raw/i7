@@ -70,6 +70,21 @@ test.describe('イベント SNS 共有 (UR)', () => {
       expect(name).toBe(`${downloads[0].replace(/_\d+\.png$/, '')}_${i + 1}.png`);
     }
   });
+
+  test('保存形式を JPG にすると拡張子が .jpg になり、選択が保持される', async ({ page }) => {
+    test.slow();
+    const downloads: string[] = [];
+    page.on('download', (d) => downloads.push(d.suggestedFilename()));
+
+    await page.getByLabel('画像の保存形式').selectOption('jpg');
+    await page.getByRole('button', { name: /画像をダウンロード/ }).click();
+
+    await expect(() => expect(downloads.length).toBe(expectedPanels)).toPass({ timeout: 120_000 });
+    for (const name of downloads) expect(name).toMatch(/\.jpg$/);
+
+    await page.reload();
+    await expect(page.getByLabel('画像の保存形式')).toHaveValue('jpg');
+  });
 });
 
 test.describe('イベント SNS 共有 (対象楽曲)', () => {
