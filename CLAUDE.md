@@ -126,6 +126,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 | `i7_max_finder_event_id` | 編成組合計算画面で選択中の対象イベント |
 | `i7_card_list_view_mode` | 衣装一覧の表示モード |
 | `i7_point_calc_state` | ポイント芸計算画面の状態 |
+| `i7_share_image_format` | 共有画像の保存形式（PNG / JPG / WebP） |
 
 `src/components/FooterTools.svelte` がフッターから上記をまとめて JSON でエクスポート/インポートする UI を提供する（バックアップ形式: `{ schema: "i7-backup", version: 1, exportedAt, data }`）。新しい localStorage キーを追加する際は必ず `STORAGE_KEYS` に追記すること（バックアップ対象に含めるため）。
 

@@ -8,6 +8,7 @@
   import { attrDonutSvg } from '../lib/donutChart';
   import { ATTR_HEX } from '../lib/constants';
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
+  import { SHARE_IMAGE_FORMATS, downloadDataUrl, loadShareImageFormat, renderShareImage, saveShareImageFormat, type ShareImageFormat } from '../lib/shareImage';
   import { refreshData } from '../lib/data/clientRefresh';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
   import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, defaultSkillLevelFor, SLOT_LABELS } from '../lib/score/deckState';
@@ -97,6 +98,8 @@
   let deckSaved = $state(false);
   let shareCopied = $state(false);
   let imageBusy = $state(false);
+  let imageFormat = $state<ShareImageFormat>('png');
+  $effect(() => { imageFormat = loadShareImageFormat(); });
 
   /** デッキ操作ボタン群の直下に出すエラー。ネイティブ alert() の置き換え */
   let deckActionError = $state<string | null>(null);
@@ -220,7 +223,7 @@
     }
   }
 
-  // 編成＋スコアを PNG 画像として保存（data-noshot を付けた操作ボタン類は除外）
+  // 編成＋スコアを画像として保存（data-noshot を付けた操作ボタン類は除外）
   async function shareDeckImage() {
     if (imageBusy) return;
     if (isDeckEmpty(buildStateObject())) { showDeckActionError('編成が空です。楽曲や衣装を選んでから画像化してください。'); return; }
@@ -229,24 +232,19 @@
     deckActionError = null;
     imageBusy = true;
     try {
-      const { domToPng } = await import('modern-screenshot');
-      const dataUrl = await domToPng(node, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        filter: (n: Node) => !(n instanceof HTMLElement && Object.hasOwn(n.dataset, "noshot")),
-      });
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `i7-score-${selectedSong?.song_name ?? 'deck'}.png`;
-      document.body.append(a);
-      a.click();
-      a.remove();
+      const dataUrl = await renderShareImage(node, imageFormat, (n: Node) => !(n instanceof HTMLElement && Object.hasOwn(n.dataset, "noshot")));
+      downloadDataUrl(dataUrl, `i7-score-${selectedSong?.song_name ?? 'deck'}`, imageFormat);
     } catch (e) {
       console.error(e);
       showDeckActionError('画像の生成に失敗しました。時間をおいて再度お試しください。');
     } finally {
       imageBusy = false;
     }
+  }
+
+  function onImageFormatChange(e: Event) {
+    imageFormat = (e.currentTarget as HTMLSelectElement).value as ShareImageFormat;
+    saveShareImageFormat(imageFormat);
   }
 
   type SavedDeck = { id: string; name: string; createdAt: number; updatedAt: number; state: ReturnType<typeof buildStateObject> };
@@ -438,6 +436,9 @@
           <button id="btn-save-deck" type="button" class="text-xs px-2 py-1 {deckSaved ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-chrome-ink text-white hover:bg-chrome-ink-soft'} rounded transition-colors" onclick={saveDeck}>{deckSaved ? '保存しました' : '保存'}</button>
           <button id="btn-load-deck" type="button" class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors" onclick={showLoadDropdown}>読込</button>
           <button id="btn-share-url" type="button" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors" aria-label="編成シェア URL をコピー" disabled={shareCopied} onclick={shareDeckUrl}>{shareCopied ? '✅ コピーしました' : '🔗 URLコピー'}</button>
+          <select id="share-image-format" aria-label="画像の保存形式" class="text-xs px-1 py-1 border border-gray-300 rounded bg-white text-gray-700 disabled:opacity-60" value={imageFormat} onchange={onImageFormatChange} disabled={imageBusy}>
+            {#each SHARE_IMAGE_FORMATS as f (f.value)}<option value={f.value}>{f.label}</option>{/each}
+          </select>
           <button id="btn-share-image" type="button" class="text-xs px-2 py-1 bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-colors disabled:opacity-60" aria-label="編成とスコアを画像で保存" disabled={imageBusy} onclick={shareDeckImage}>{imageBusy ? '生成中…' : '📷 画像'}</button>
           <div id="load-deck-dropdown" class="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-control shadow-overlay z-(--z-overlay) max-h-60 overflow-y-auto" class:hidden={loadDeckItems === null}>
             {#if loadDeckItems !== null}

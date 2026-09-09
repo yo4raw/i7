@@ -1,5 +1,6 @@
 <script lang="ts">
   import InlineAlert from './ui/InlineAlert.svelte';
+  import { SHARE_IMAGE_FORMATS, downloadDataUrl, loadShareImageFormat, renderShareImage, saveShareImageFormat, type ShareImageFormat } from '../lib/shareImage';
 
   interface Props {
     /** 拡張子なしのダウンロードファイル名 */
@@ -17,6 +18,13 @@
   let busy = $state(false);
   let done = $state(0);
   let error = $state<string | null>(null);
+  let format = $state<ShareImageFormat>('png');
+  $effect(() => { format = loadShareImageFormat(); });
+
+  function onFormatChange(e: Event) {
+    format = (e.currentTarget as HTMLSelectElement).value as ShareImageFormat;
+    saveShareImageFormat(format);
+  }
 
   async function download() {
     if (busy) return;
@@ -24,17 +32,10 @@
     done = 0;
     error = null;
     try {
-      const { domToPng } = await import('modern-screenshot');
       for (const target of targets) {
         const node = document.querySelector(`#${target.id}`);
         if (!node) continue;
-        const dataUrl = await domToPng(node, { scale: 2, backgroundColor: '#ffffff' });
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `${filename}${target.suffix}.png`;
-        document.body.append(a);
-        a.click();
-        a.remove();
+        downloadDataUrl(await renderShareImage(node, format), `${filename}${target.suffix}`, format);
         done++;
         // 連続ダウンロードをブラウザが取りこぼさないよう間隔を空ける
         if (done < targets.length) await new Promise(resolve => { setTimeout(resolve, 400); });
@@ -49,6 +50,18 @@
 </script>
 
 <span class="inline-flex flex-col items-start gap-1">
+<span class="inline-flex items-center gap-2">
+<select
+  aria-label="画像の保存形式"
+  value={format}
+  onchange={onFormatChange}
+  disabled={busy}
+  class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-700 disabled:opacity-60"
+>
+  {#each SHARE_IMAGE_FORMATS as f (f.value)}
+    <option value={f.value}>{f.label}</option>
+  {/each}
+</select>
 <button
   type="button"
   onclick={download}
@@ -70,5 +83,6 @@
     画像をダウンロード{#if targets.length > 1}（{targets.length} 枚）{/if}
   {/if}
 </button>
+</span>
 <InlineAlert message={error} />
 </span>
