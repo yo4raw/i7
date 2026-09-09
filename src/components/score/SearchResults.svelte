@@ -218,7 +218,7 @@
                     {dc.melody_max.toLocaleString()}{#if dc.broachMelody > 0}<div class="text-[9px] text-purple-600">+{dc.broachMelody.toLocaleString()}</div>{/if}
                   </td>
                   <td class="py-1 px-1">{card.ap_skill_type || '-'}</td>
-                  <td class="py-1 px-1">{skillEffect}</td>
+                  <td class="py-1 px-1"><span class="font-medium">Lv{bestSkillLevels[i]}</span> {skillEffect}</td>
                   <td class="py-1 px-1">
                     {#if slotBroachs.length === 0}
                       <span class="text-[10px] text-gray-300">—</span>
