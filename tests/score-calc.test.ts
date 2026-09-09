@@ -100,6 +100,12 @@ test.describe('スコア計算ページ', () => {
     await page.locator('[data-pick-card]').nth(1).click();
     await expect(page.locator('select[data-skill-slot="1"]')).toHaveValue('5');
 
+    // フレンド枠に同じ所持 Lv3 の衣装を置いても Lv5 のまま（フレンドは借りる衣装のため所持 Lv を使わない）
+    await page.locator('[data-slot-btn="5"]').click();
+    await page.locator(`[data-pick-card="${cardId}"]`).first().waitFor({ timeout: 15000 });
+    await page.locator(`[data-pick-card="${cardId}"]`).first().click();
+    await expect(page.locator('select[data-skill-slot="5"]')).toHaveValue('5');
+
     await page.evaluate(() => localStorage.clear());
   });
 });

@@ -116,9 +116,14 @@
   }
   function handlePick(slot: number, card: Card) {
     setCard(deckState, slot, card, defaultTierFor(card), allBroachsState);
-    // 所持 Lv（降順）から既定 Lv を決める。同じ衣装が他スロットに k 枚あれば k+1 枚目の Lv
-    const alreadyUsed = deckState.cards.filter((c, i) => i !== slot && c?.ID === card.ID).length;
-    deckState.skillLevels[slot] = defaultSkillLevelFor(sortedLevels(card.ID, getCount(card.ID)), alreadyUsed);
+    if (slot === 5) {
+      // フレンド枠は借りる衣装なので所持 Lv を使わず 5 に戻す
+      deckState.skillLevels[5] = 5;
+    } else {
+      // 所持 Lv（降順）から既定 Lv を決める。同じ衣装がスロット 0-4 の他枠に k 枚あれば k+1 枚目の Lv
+      const alreadyUsed = deckState.cards.filter((c, i) => i !== slot && i < 5 && c?.ID === card.ID).length;
+      deckState.skillLevels[slot] = defaultSkillLevelFor(sortedLevels(card.ID, getCount(card.ID)), alreadyUsed);
+    }
     saveState();
   }
   function handleClear(slot: number) { clearSlot(deckState, slot); saveState(); }
