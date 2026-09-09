@@ -43,7 +43,7 @@
 
 - 所持数が 1 以上のとき、± 行の下に枚数分の `<select>`（選択肢 1〜5）を横並び・折り返し可で表示する
 - 各セレクトの `aria-label` は「スキルレベル（n 枚目）」。表示ラベルは「Lv」
-- 一覧の表（`CardTableRow`）・タイル（`CardTileCard`）・モバイル（`CardMobileCard`）は同じ部品を使うため、変更はこの 1 ファイル。表の所持数列（`w-28`）が足りなければ広げる
+- 一覧の表（`CardTableRow`）・タイル（`CardTileCard`）・モバイル（`CardMobileCard`）・イベント詳細の特効パネル（`EventBonusCardGrid`）は同じ部品を使うため、変更はこの 1 ファイル。表の所持数列（`w-28`）が足りなければ広げる
 - 行クリックで詳細へ遷移する既存の伝播停止（`stopPropagation`）をセレクトにも付ける
 - 衣装詳細・衣装比較・衣装ピッカーの表示は変えない
 
@@ -51,6 +51,7 @@
 
 - `handlePick(slot, card)` で `setCard` の後に、スロットの既定 Lv を決める
   - `sortedLevels(card.ID, getCount(card.ID))` を取り、他スロットに同じ衣装が既に k 枚あれば k 番目（0 起点）の Lv を使う。添字が範囲外・未所持なら 5
+- フレンド枠（スロット 5）は借りる衣装なので所持 Lv を使わず、置いたとき Lv5 に戻す。`alreadyUsed` の数え上げもスロット 0〜4 に限る
 - スロットの Lv セレクトは残し、手動変更は従来どおり
 - 保存デッキ・共有 URL・`i7_score_calc_state` の形式は変えない（スロット Lv は既に保存対象）
 
@@ -78,6 +79,7 @@
 ### 解説文
 
 - `src/pages/score-calc/max-score-finder/index.astro` の「スキルレベルは全て Lv5 / 特訓済み前提」と ToolGuide の説明を、「特訓済み前提。スキルレベルは既定 Lv5、『所持衣装で検索』ON のときは衣装一覧で登録したスキル Lv で評価」に改める（ADR 0058: 仕様を変えたら解説も直す）
+- スコア計算ページ（`src/pages/score-calc/index.astro`）の「編成を組む」の説明にも所持 Lv が既定になる旨を追記する
 
 ## 5. テスト
 

@@ -817,7 +817,7 @@ Expected: エラー 0、全 pass
 dev サーバー起動状態で:
 
 ```bash
-npx playwright test tests/card-list.test.ts tests/mycard.test.ts tests/score-calc.test.ts tests/score-calc-persistence.test.ts tests/max-score-finder.test.ts
+npx playwright test tests/card-skill-levels.test.ts tests/score-calc.test.ts tests/score-calc-persistence.test.ts tests/max-score-finder.test.ts
 ```
 
 Expected: 全 pass（`mycard.test.ts` は Task 3 で復元した `data-count-input` を使う）
@@ -846,7 +846,7 @@ gh pr create --base develop --title "✨ 所持衣装のスキル Lv を保存�
 
 ## 確認
 - [ ] `npm run typecheck` / `npm run lint` / `npm run test:unit`
-- [ ] E2E: card-list / mycard / score-calc / score-calc-persistence / max-score-finder
+- [ ] E2E: card-skill-levels / score-calc / score-calc-persistence / max-score-finder
 EOF
 )"
 ```
