@@ -36,6 +36,8 @@
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   import { allCounts, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
   import { allBroachCounts, reloadBroachCountsFromStorage, totalOwnedBroachs } from '../lib/stores/broachCounts.svelte';
+  import { sortedLevels, reloadSkillLevelsFromStorage } from '../lib/stores/cardSkillLevels.svelte';
+  import type { SkillLevel } from '../lib/score/deckState';
 
   type LiveEvent = EventForBonus & { eventname: string; eventtype: string };
 
@@ -109,6 +111,7 @@
     refreshData('songs', async () => filterValidSongs(await fetchSongsJson()), (fresh) => { allSongs = fresh as Song[]; });
     refreshData('broachs', fetchFixedBroachsJson, (fresh) => { allBroachs = fresh as FixedBroach[]; });
     reloadCardCounts();
+    reloadSkillLevelsFromStorage();
     reloadBroachCountsFromStorage();
   });
 
@@ -169,8 +172,12 @@
       if (c.ID !== null && c.ID !== undefined) tierByCardId[String(c.ID)] = currentTierMap.get(c.ID) ?? 'none';
     }
     const ownedCounts: Record<string, number> = {};
+    const ownedSkillLevels: Record<string, SkillLevel[]> = {};
     for (const c of ownedCandidates) {
-      if (c.ID !== null && c.ID !== undefined) ownedCounts[String(c.ID)] = ownedCountOf(c);
+      if (c.ID === null || c.ID === undefined) continue;
+      const n = ownedCountOf(c);
+      ownedCounts[String(c.ID)] = n;
+      ownedSkillLevels[String(c.ID)] = sortedLevels(c.ID, n);
     }
     return $state.snapshot({
       evalMode,
@@ -179,6 +186,7 @@
       scoreOptions: { scoreUpAssist, scoreUpBadgeRate },
       candidates: currentCandidates,
       ownedCounts,
+      ownedSkillLevels,
       song: selectedSong,
       broachs: allBroachs,
       tierByCardId,

@@ -9,6 +9,7 @@ import { SKILL_TYPE } from '../data/fetchCardsJson';
 import type { Song } from '../data/fetchSongsJson';
 import type { FixedBroach } from '../data/fetchFixedBroachsJson';
 import type { ScoreOptions } from './types';
+import type { SkillLevel } from './deckState';
 import type { EventBonusTier } from '../data/eventBonusTiers';
 import type { RabbitNoteMap } from '../data/rabbitNote';
 import {
@@ -118,6 +119,8 @@ export interface SearchInput {
   useOwnedBroachs: boolean;
   /** broachId(文字列) → 所持数 (useOwnedBroachs 時に使用) */
   sharedBroachCounts: Record<string, number>;
+  /** cardId(文字列) → 所持 Lv（降順）。ownedOnly 時のみ使用。省略・欠けは Lv5 (ADR 0085) */
+  ownedSkillLevels?: Record<string, SkillLevel[]>;
 }
 
 /** SearchInput から導出した探索用の前計算データ (Worker 内で 1 回だけ作る) */
@@ -439,6 +442,8 @@ export interface DeckRecord {
   score: number;
   /** useOwnedBroachs 時の共通ブローチ割当 (slot ごとの broachId 配列) */
   sharedBroachIds?: number[][];
+  /** ownedOnly 時に評価に使ったスロットごとのスキル Lv (ADR 0085) */
+  skillLevels?: SkillLevel[];
   liveEndScore?: number;
   baseScore?: number;
   scoreUpExpected?: number;
@@ -476,14 +481,34 @@ export interface ChunkResult {
   aborted: boolean;
 }
 
-// 探索条件は全カード スキルLv5・特訓済みで固定 (移植元の旧 UI 実装と同値)。
+// 探索条件は全カード特訓済みで固定 (移植元の旧 UI 実装と同値)。
+// スキル Lv は既定 5。所持衣装検索ではスロット 0-4 を所持 Lv で評価する (ADR 0085)。
 // 共通ブローチは useOwnedBroachs=false ならなし固定、true なら編成ごとにグリーディ割当
-const SEARCH_SKILL_LEVELS: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
+const SEARCH_SKILL_LEVELS: SkillLevel[] = [5, 5, 5, 5, 5, 5];
 const SEARCH_TRAINED: boolean[] = [true, true, true, true, true, true];
 const SEARCH_EMPTY_SHARED: number[][] = [[], [], [], [], [], []];
 // グループ限定の固有ブローチ（種類4）は同グループ編成でなくても発動扱いで加算する (ADR 0072)。
 // 結果表示 (SearchResults.svelte) も同じオプションで解決すること。
 export const FINDER_BROACH_OPTIONS: ResolveBroachOptions = { assumeSameGroup: true };
+
+/**
+ * スロットごとの評価 Lv。所持衣装検索ではスロット 0-4 の衣装が手前に k 枚出ていれば
+ * 所持 Lv（降順）の k 番目を使い、範囲外とフレンド枠は 5。それ以外は全 5 (ADR 0085)
+ */
+export function deckSkillLevels(ctx: SearchContext, deck: (Card | null)[]): SkillLevel[] {
+  const { input } = ctx;
+  if (!input.ownedOnly || !input.ownedSkillLevels) return SEARCH_SKILL_LEVELS;
+  const seen = new Map<number, number>();
+  const out: SkillLevel[] = [5, 5, 5, 5, 5, 5];
+  for (let i = 0; i < 5; i++) {
+    const id = deck[i]?.ID;
+    if (id === null || id === undefined) continue;
+    const k = seen.get(id) ?? 0;
+    seen.set(id, k + 1);
+    out[i] = input.ownedSkillLevels[String(id)]?.[k] ?? 5;
+  }
+  return out;
+}
 
 export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRecord {
   const { input } = ctx;
@@ -494,9 +519,10 @@ export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRec
   if (input.useOwnedBroachs) {
     shared = assignBroachs(deck, input.sharedBroachCounts, ctx.attrWeights, ctx.hasFixedBroach);
   }
+  const skillLevels = deckSkillLevels(ctx, deck);
   const team = computeTeam(
     deck, input.broachs, input.song, tiers, SEARCH_TRAINED, undefined,
-    shared, SEARCH_SKILL_LEVELS, input.rabbitNotes, FINDER_BROACH_OPTIONS
+    shared, skillLevels, input.rabbitNotes, FINDER_BROACH_OPTIONS
   );
   const exclusion = computeShrinkExclusion(team, ctx.groupSizes);
   const notes = flattenNotes(input.song, FLATTEN_SEED, exclusion);
@@ -505,6 +531,7 @@ export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRec
     score: 0,
   };
   if (input.useOwnedBroachs) rec.sharedBroachIds = shared;
+  if (input.ownedOnly) rec.skillLevels = skillLevels;
   if (input.evalMode === 'expected') {
     const e = calcExpectedScore(team, notes, ctx.notesCount, input.scoreOptions);
     rec.score = e.finalScore;

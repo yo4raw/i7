@@ -102,7 +102,7 @@
       {/if}
     </div>
   </div>
-  <div class="mt-2 flex items-center justify-between border-t pt-2">
+  <div class="mt-2 flex items-start justify-between border-t pt-2">
     <span class="text-xs text-gray-500">所持数</span>
     <CountInput cardId={card.ID} />
   </div>

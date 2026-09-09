@@ -355,7 +355,7 @@
             <th class="px-3 py-2 w-28 text-center">所持数</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="table-body">
           {#each visible as card, idx (card.ID)}
             <CardTableRow
               {card}

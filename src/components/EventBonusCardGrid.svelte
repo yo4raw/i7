@@ -93,7 +93,7 @@
             <span class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-yellow-100 text-yellow-900">{card.apSkillReq}</span>
           {/if}
         </div>
-        <div class="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between">
+        <div class="mt-1.5 pt-1.5 border-t border-gray-100 flex items-start justify-between">
           <span class="text-[10px] text-gray-500">所持</span>
           <CountInput cardId={card.ID} />
         </div>

@@ -73,7 +73,7 @@
       >{card.cardname || ''}</button>
     </p>
     <p class="text-xs text-gray-500 leading-tight">{card.name || ''}</p>
-    <div class="mt-auto flex items-center justify-between border-t pt-1.5">
+    <div class="mt-auto flex items-start justify-between border-t pt-1.5">
       <span class="text-[10px] text-gray-500">所持</span>
       <CountInput cardId={card.ID} />
     </div>
