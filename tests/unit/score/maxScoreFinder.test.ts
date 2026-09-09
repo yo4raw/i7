@@ -15,6 +15,7 @@ import {
   evaluateChunk,
   mergeTopK,
   evaluateFriendSwap,
+  deckSkillLevels,
   TOP_K,
   type SearchInput,
   type DeckRecord,
@@ -444,5 +445,36 @@ describe('evaluateFriendSwap', () => {
     const shrinkIds = new Set(ctx.shrink.map((c) => c.ID));
     expect(friends.length).toBe(3);
     for (const f of friends) expect(shrinkIds.has(f.cardId)).toBe(true);
+  });
+});
+
+describe('所持スキル Lv の評価 (ADR 0085)', () => {
+  const a = testCandidates[0];
+  const b = testCandidates[3];
+  const ownedCounts = { [String(a.ID)]: 2, [String(b.ID)]: 1 };
+  const ownedSkillLevels = { [String(a.ID)]: [5, 3] as (1 | 2 | 3 | 4 | 5)[], [String(b.ID)]: [2] as (1 | 2 | 3 | 4 | 5)[] };
+  const deck = [a, a, b, a, b, a]; // a は 0-4 に 3 枚（所持 2 枚 → 3 枚目は 5）、フレンドは a
+
+  it('deckSkillLevels: ownedOnly のとき手前の出現回数を添字に所持 Lv を引き、範囲外とフレンドは 5', () => {
+    const ctx = createSearchContext(buildInput({ ownedOnly: true, ownedCounts, ownedSkillLevels }));
+    expect(deckSkillLevels(ctx, deck)).toEqual([5, 3, 2, 5, 5, 5]);
+  });
+
+  it('deckSkillLevels: ownedOnly でなければ全 5、ownedSkillLevels 省略時も全 5', () => {
+    expect(deckSkillLevels(createSearchContext(buildInput({ ownedCounts, ownedSkillLevels })), deck)).toEqual([5, 5, 5, 5, 5, 5]);
+    expect(deckSkillLevels(createSearchContext(buildInput({ ownedOnly: true, ownedCounts })), deck)).toEqual([5, 5, 5, 5, 5, 5]);
+  });
+
+  it('evaluateDeck: 所持 Lv を下げるとスコアが下がり、skillLevels が記録される', () => {
+    const full = evaluateDeck(createSearchContext(buildInput({ ownedOnly: true, ownedCounts })), deck);
+    const lowered = evaluateDeck(createSearchContext(buildInput({ ownedOnly: true, ownedCounts, ownedSkillLevels })), deck);
+    expect(full.skillLevels).toEqual([5, 5, 5, 5, 5, 5]);
+    expect(lowered.skillLevels).toEqual([5, 3, 2, 5, 5, 5]);
+    expect(lowered.score).toBeLessThan(full.score);
+  });
+
+  it('evaluateDeck: ownedOnly でなければ skillLevels を記録しない', () => {
+    const rec = evaluateDeck(createSearchContext(buildInput({ ownedCounts, ownedSkillLevels })), deck);
+    expect(rec.skillLevels).toBeUndefined();
   });
 });
