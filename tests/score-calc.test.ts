@@ -68,4 +68,38 @@ test.describe('スコア計算ページ', () => {
     // 1位の行にスコア値（数字）が出る
     await expect(items.first()).toContainText(/[\d,]+/);
   });
+
+  test('所持 Lv を登録した衣装を置くとスロットの既定 Lv になる', async ({ page }) => {
+    // ピッカーの先頭衣装を所持 1 枚・Lv3 として登録してから開き直す
+    await page.locator('[data-slot-btn="0"]').click();
+    await page.locator('#modal-owned-only').uncheck();
+    await page.locator('[data-pick-card]').first().waitFor({ timeout: 15000 });
+    const cardId = await page.locator('[data-pick-card]').first().getAttribute('data-pick-card');
+    await page.evaluate((id) => {
+      localStorage.setItem('i7_card_counts', JSON.stringify({ [id!]: 1 }));
+      localStorage.setItem('i7_card_skill_levels', JSON.stringify({ [id!]: [3] }));
+      localStorage.removeItem('i7_score_calc_state');
+    }, cardId);
+    await page.reload();
+    await page.waitForFunction(
+      () => document.querySelectorAll('#song-select option').length > 1,
+      undefined,
+      { timeout: 20000 },
+    );
+    await page.locator('[data-slot-btn="0"]').click();
+    await page.locator(`[data-pick-card="${cardId}"]`).first().waitFor({ timeout: 15000 });
+    await page.locator(`[data-pick-card="${cardId}"]`).first().click();
+    await expect(page.locator('#card-picker-modal')).toBeHidden();
+
+    await expect(page.locator('select[data-skill-slot="0"]')).toHaveValue('3');
+
+    // 未所持の衣装は従来どおり 5
+    await page.locator('[data-slot-btn="1"]').click();
+    await page.locator('#modal-owned-only').uncheck();
+    await page.locator('[data-pick-card]').nth(1).waitFor({ timeout: 15000 });
+    await page.locator('[data-pick-card]').nth(1).click();
+    await expect(page.locator('select[data-skill-slot="1"]')).toHaveValue('5');
+
+    await page.evaluate(() => localStorage.clear());
+  });
 });

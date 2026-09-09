@@ -10,7 +10,9 @@
   import { STORAGE_KEYS, loadJson, saveJson } from '../lib/storage';
   import { refreshData } from '../lib/data/clientRefresh';
   import { encodeDeckToParams, decodeParamsToDeck, isDeckEmpty } from '../lib/score/deckShareUrl';
-  import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, SLOT_LABELS } from '../lib/score/deckState';
+  import { createEmptyDeckState, swapSlots, clampSharedBroachs, setCard, clearSlot, defaultSkillLevelFor, SLOT_LABELS } from '../lib/score/deckState';
+  import { getCount, reloadFromStorage as reloadCardCounts } from '../lib/stores/cardCounts.svelte';
+  import { sortedLevels, reloadSkillLevelsFromStorage } from '../lib/stores/cardSkillLevels.svelte';
   import { DEFAULT_SCOREUP_BADGE_RATE } from '../lib/score/constants';
   import { broachViolations, hasRegisteredBroachCounts } from '../lib/score/broachInventory';
   import { SHARED_BROACHS } from '../lib/data/sharedBroachs';
@@ -112,7 +114,13 @@
     selectedSong = id !== null && id !== undefined ? allSongsState.find(s => s.id === id) || null : null;
     saveState();
   }
-  function handlePick(slot: number, card: Card) { setCard(deckState, slot, card, defaultTierFor(card), allBroachsState); saveState(); }
+  function handlePick(slot: number, card: Card) {
+    setCard(deckState, slot, card, defaultTierFor(card), allBroachsState);
+    // 所持 Lv（降順）から既定 Lv を決める。同じ衣装が他スロットに k 枚あれば k+1 枚目の Lv
+    const alreadyUsed = deckState.cards.filter((c, i) => i !== slot && c?.ID === card.ID).length;
+    deckState.skillLevels[slot] = defaultSkillLevelFor(sortedLevels(card.ID, getCount(card.ID)), alreadyUsed);
+    saveState();
+  }
   function handleClear(slot: number) { clearSlot(deckState, slot); saveState(); }
   function handleSlotClick(slot: number) { picker!.open(slot, SLOT_LABELS[slot]); }
   function handleSwap(a: number, b: number) { swapSlots(deckState, a, b); saveState(); }
@@ -288,6 +296,8 @@
 
   onMount(() => {
     reloadBroachCountsFromStorage();
+    reloadCardCounts();
+    reloadSkillLevelsFromStorage();
     if (!tryRestoreFromUrl()) restoreState();
     // 復元結果に楽曲が無ければイベント対象楽曲の先頭を既定に
     if (!selectedSong) {
