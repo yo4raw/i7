@@ -93,3 +93,4 @@
 | [0082](0082-event-bonus-panel-collapsible.md) | イベント詳細の特効パネルを折りたたみ可能にする | 承認 |
 | [0083](0083-event-share-image-pagination.md) | イベント SNS 共有画像を 1 枚 16 着（横 8 × 縦 2）に分割する | 承認 |
 | [0084](0084-event-songs-share-page.md) | イベント対象楽曲の SNS 共有ページを追加する | 承認 |
+| [0085](0085-owned-card-skill-levels.md) | 所持衣装のスキル Lv を 1 枚ごとに保存し、スコア計算・編成組合計算に反映する | 承認 |
