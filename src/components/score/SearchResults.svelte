@@ -53,7 +53,7 @@
       bonusTiers: tiers,
       trained: [true, true, true, true, true, true],
       sharedBroachs: rec.sharedBroachIds ?? [[], [], [], [], [], []],
-      skillLevels: [5, 5, 5, 5, 5, 5],
+      skillLevels: [...bestSkillLevels],
       // 探索時の評価条件をスコア計算画面へ引き継ぐ (キー名は ScoreCalc の applyState に合わせる)
       scoreUpAssist,
       badgeRate: Number(scoreUpBadgeRate) || 0,
@@ -62,12 +62,15 @@
     window.location.href = `${base}score-calc/`;
   }
 
+  const ALL_LV5: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
+  const bestSkillLevels = $derived(result.best.skillLevels ?? ALL_LV5);
+
   // 詳細用の計算
   const bestContext = $derived.by(() => {
     if (!selectedSong) return null;
     const deck = result.best.cardIds.map(getCardById);
     const tiers = buildTiersFromDeck(deck);
-    const skillLevels: (1 | 2 | 3 | 4 | 5)[] = [5, 5, 5, 5, 5, 5];
+    const skillLevels = bestSkillLevels;
     const trained: boolean[] = [true, true, true, true, true, true];
     const team = computeTeam(deck, allBroachs, selectedSong, tiers, trained, undefined, result.best.sharedBroachIds ?? [[], [], [], [], [], []], skillLevels, loadRabbitNotes(), FINDER_BROACH_OPTIONS);
     const resolvedBroachs = resolveDeckBroachs(deck, allBroachs, selectedSong, undefined, FINDER_BROACH_OPTIONS);
@@ -194,7 +197,7 @@
                 {@const tier = buildTiersFromDeck(result.best.cardIds.map(getCardById))[i]}
                 {@const bonusLabel = BONUS_LABEL[tier]}
                 {@const bonusClass = BONUS_CLASS[tier]}
-                {@const sl = getApSkillLevel(card, 5)}
+                {@const sl = getApSkillLevel(card, bestSkillLevels[i])}
                 {@const skillEffect = formatSkillEffect(card.ap_skill_type, card.ap_skill_req, sl)}
                 {@const labelColor = i === 0 ? 'text-gray-900 font-bold' : i === 5 ? 'text-amber-600 font-bold' : 'text-gray-500'}
                 {@const slotBroachs = bestContext.resolvedBroachs.get(i) ?? []}
