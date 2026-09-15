@@ -223,29 +223,31 @@
     if (!snapshot || !song) return;
 
     running = true;
+    try {
+      const iterations = Math.max(1, Math.floor(Number(mcIterationsValue) || MC_ITERATIONS));
 
-    const iterations = Math.max(1, Math.floor(Number(mcIterationsValue) || MC_ITERATIONS));
+      const scoreOptions: ScoreOptions = {
+        scoreUpAssist,
+        scoreUpBadgeRate: Number(scoreUpBadgeRate) || 0,
+        maxShrinkCoverage: maxShrinkCoverageOpt,
+        maxScoreUpCoverage: maxScoreUpCoverageOpt,
+      };
 
-    const scoreOptions: ScoreOptions = {
-      scoreUpAssist,
-      scoreUpBadgeRate: Number(scoreUpBadgeRate) || 0,
-      maxShrinkCoverage: maxShrinkCoverageOpt,
-      maxScoreUpCoverage: maxScoreUpCoverageOpt,
-    };
+      const result = await runSimulationParallel(snapshot.team, snapshot.notes, iterations, (pct) => {
+        const percent = Math.round(pct * 100);
+        progressPercent = percent;
+        progressText = `計算中... ${percent}%`;
+      }, undefined, scoreOptions);
 
-    const result = await runSimulationParallel(snapshot.team, snapshot.notes, iterations, (pct) => {
-      const percent = Math.round(pct * 100);
-      progressPercent = percent;
-      progressText = `計算中... ${percent}%`;
-    }, undefined, scoreOptions);
+      simulationResult = result;
+      mcIterationsUsed = iterations;
+      // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると引数が boolean になり壊れる
+      expectedScore = calcExpectedScore(snapshot.team, snapshot.notes, song.notes_count || snapshot.notes.length, scoreOptions);
 
-    simulationResult = result;
-    mcIterationsUsed = iterations;
-    // oxlint-disable-next-line unicorn/explicit-length-check -- 真偽判定ではなく notes.length は数値フォールバック値として使用。`.length > 0` にすると引数が boolean になり壊れる
-    expectedScore = calcExpectedScore(snapshot.team, snapshot.notes, song.notes_count || snapshot.notes.length, scoreOptions);
-
-    hasRunOnce = true;
-    running = false;
+      hasRunOnce = true;
+    } finally {
+      running = false;
+    }
   }
 </script>
 

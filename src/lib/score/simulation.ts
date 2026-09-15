@@ -52,7 +52,7 @@ interface NoteBucket {
   count: number;
 }
 
-// flattenNotes の結果は不変 (excluded を後から書き換える箇所はない) ので配列同一性でキャッシュできる。
+// FlatNote は readonly (types.ts) で生成後に書き換えられないため、配列同一性でキャッシュできる。
 // 編成組合計算は除外パターンごとに同じ配列を使い回すため、2 回目以降はこの集約もスキップされる
 const noteBucketCache = new WeakMap<FlatNote[], NoteBucket[]>();
 

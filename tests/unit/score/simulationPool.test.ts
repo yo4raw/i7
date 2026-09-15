@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { computeTeam, flattenNotes, runSimulation } from '../../../src/lib/score/engine';
 import { summarizeScores } from '../../../src/lib/score/simulation';
-import { mergeSimulationResults, splitIterations } from '../../../src/lib/score/simulationPool';
+import { mergeSimulationResults, runSimulationParallel, splitIterations } from '../../../src/lib/score/simulationPool';
+import { MC_CHUNK_SIZE } from '../../../src/lib/score/constants';
 import { findCardById, findSongById } from '../../fixtures';
 
 const song = findSongById(2);
@@ -36,5 +37,33 @@ describe('mergeSimulationResults', () => {
   it('1 件ならそのまま返す', async () => {
     const a = await runSimulation(team, notes, 10, undefined, 1);
     expect(mergeSimulationResults([a])).toBe(a);
+  });
+});
+
+describe('runSimulationParallel', () => {
+  it('Worker の生成に失敗したらメインスレッドの runSimulation にフォールバックする', async () => {
+    const created: { terminated: boolean }[] = [];
+    // `new Worker()` の代役。1 つ目は生成に成功し、2 つ目で例外 → 成功した 1 つ目が terminate されることを確認する
+    function brokenWorker(): Worker {
+      const self = { terminated: false };
+      created.push(self);
+      if (created.length > 1) throw new Error('boom');
+      return { terminate: () => { self.terminated = true; }, addEventListener() {}, postMessage() {} } as unknown as Worker;
+    }
+    vi.stubGlobal('Worker', brokenWorker);
+    vi.stubGlobal('navigator', { hardwareConcurrency: 4 });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const iterations = MC_CHUNK_SIZE * 2;
+      const result = await runSimulationParallel(team, notes, iterations, undefined, 7);
+      const expected = await runSimulation(team, notes, iterations, undefined, 7);
+      expect(result.scores).toEqual(expected.scores);
+      expect(created.length).toBeGreaterThan(1);
+      expect(created[0].terminated).toBe(true);
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+      warn.mockRestore();
+    }
   });
 });
