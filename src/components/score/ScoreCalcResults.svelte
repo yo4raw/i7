@@ -12,11 +12,11 @@
     calcCardSkillExpected,
     calcCardSkillMax,
     calcCardSkillMaxActivations,
-    runSimulation,
     flattenNotes,
     computeShrinkExclusion,
     computeGroupSizes,
   } from '../../lib/score/engine';
+  import { runSimulationParallel } from '../../lib/score/simulationPool';
   import { MC_ITERATIONS, NOTE_RATE, LIGHT_MULTIPLIER } from '../../lib/score/constants';
   import { renderHistogramSvg } from '../../lib/score/histogram';
   import { SONG_NOTE_GROUP_KEYS } from '../../lib/data/fetchSongsJson';
@@ -233,7 +233,7 @@
       maxScoreUpCoverage: maxScoreUpCoverageOpt,
     };
 
-    const result = await runSimulation(snapshot.team, snapshot.notes, iterations, (pct) => {
+    const result = await runSimulationParallel(snapshot.team, snapshot.notes, iterations, (pct) => {
       const percent = Math.round(pct * 100);
       progressPercent = percent;
       progressText = `計算中... ${percent}%`;
