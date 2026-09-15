@@ -54,7 +54,7 @@ export function flattenNotes(
     const isFullExcluded = exclusion?.fullGroups.has(groupKey) ?? false;
     const partialLimit = exclusion?.partialGroup === groupKey ? exclusion.partialCount : 0;
     for (let i = 0; i < groupNotes.length; i++) {
-      if (isFullExcluded || i < partialLimit) groupNotes[i].excluded = true;
+      if (isFullExcluded || i < partialLimit) groupNotes[i] = { ...groupNotes[i], excluded: true };
     }
 
     notes.push(...groupNotes);

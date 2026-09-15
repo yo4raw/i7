@@ -11,12 +11,13 @@ export function normalizeAttribute(attr: string | number | null): AttributeName 
   return 'Shout';
 }
 
+/** 生成後は不変 (simulation.ts が配列同一性でバケットをキャッシュする前提。ADR 0087) */
 export interface FlatNote {
-  attribute: AttributeName;
-  type: 'white' | 'color';
-  group: string;
+  readonly attribute: AttributeName;
+  readonly type: 'white' | 'color';
+  readonly group: string;
   /** 縮小スキルの発動判定・効果適用の対象外フラグ (flattenNotes で ShrinkExclusion から付与) */
-  excluded: boolean;
+  readonly excluded: boolean;
 }
 
 export interface CardSkill {

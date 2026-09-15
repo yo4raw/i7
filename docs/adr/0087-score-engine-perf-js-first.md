@@ -17,7 +17,7 @@
    - 仕様書の floor 位置や丸め規則を二重実装して保守する負担、Card / Song を wasm メモリへ詰め替える転送コスト、GHA への Rust ツールチェーン追加に対し、float と分岐中心のこのコードで見込める伸びは経験的に数倍で、下記のアルゴリズム改善と同じ桁にとどまる
 2. **素点合計をノーツ配列ではなく同値バケット（属性 × 種別 × グループ × 除外）の件数表で計算する**。バケット化は配列同一性でキャッシュし、`calcExpectedScore` / `calcMaxScoreBreakdown` / `calcMinScore` の公開シグネチャは変えない
 3. **編成組合計算では `flattenNotes` の結果を先頭除外ノーツ数ごとに `SearchContext` で使い回す**。除外は「グループ順に先頭から N 個」なので N だけで一意に決まる
-4. **MC シミュレーションは試行回数を Worker に分割して実行し、結果を合成する**（`simulationPool.ts`）。Worker 数は探索と同じ `min(8, hardwareConcurrency − 1)` を上限とし、1 Worker あたり最低 `MC_CHUNK_SIZE` 試行を割り当てる。Worker が使えない環境ではメインスレッドの `runSimulation` にフォールバックする
+4. **MC シミュレーションは試行回数を Worker に分割して実行し、結果を合成する**（`simulationPool.ts`）。Worker 数は探索と同じ `min(8, hardwareConcurrency − 1)` を上限とし、1 Worker あたり最低 `MC_CHUNK_SIZE` 試行を割り当てる。Worker が使えない環境と、Worker の生成・実行に失敗した場合は、残りの Worker を止めてメインスレッドの `runSimulation` に 1 回だけフォールバックする
 
 計測結果（同条件、`evaluateDeck` 1 コア）:
 

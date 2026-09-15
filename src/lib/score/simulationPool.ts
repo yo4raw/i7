@@ -36,9 +36,10 @@ export function mergeSimulationResults(parts: SimulationResult[]): SimulationRes
   };
 }
 
-function runInWorker(req: SimulationWorkerRequest, onProgress: (pct: number) => void): Promise<SimulationResult> {
+function runInWorker(workers: Worker[], req: SimulationWorkerRequest, onProgress: (pct: number) => void): Promise<SimulationResult> {
   return new Promise((resolve, reject) => {
     const w = new Worker(new URL('./simulation.worker.ts', import.meta.url), { type: 'module' });
+    workers.push(w);
     const done = () => w.terminate();
     w.addEventListener('error', (e) => { done(); reject(new Error(`シミュレーション Worker でエラーが発生しました: ${e.message}`)); });
     w.addEventListener('message', (e: MessageEvent<SimulationWorkerResponse>) => {
@@ -55,7 +56,8 @@ function runInWorker(req: SimulationWorkerRequest, onProgress: (pct: number) => 
 
 /**
  * runSimulation と同じシグネチャで、Worker に分散して実行する。
- * Worker が使えない環境 (SSR・単体テスト) ではメインスレッドの runSimulation にフォールバックする。
+ * Worker が使えない環境 (SSR・単体テスト) と、Worker の生成・実行に失敗した場合は
+ * メインスレッドの runSimulation にフォールバックする。
  */
 export async function runSimulationParallel(
   team: ComputedTeam,
@@ -75,11 +77,19 @@ export async function runSimulationParallel(
   const per = splitIterations(iterations, workerCount);
   const baseSeed = seed ?? Date.now();
   const pcts = per.map(() => 0);
-  const parts = await Promise.all(per.map((n, i) =>
-    runInWorker({ team, notes, iterations: n, seed: baseSeed + i, options }, (pct) => {
-      pcts[i] = pct;
-      onProgress?.(pcts.reduce((acc, p, j) => acc + p * per[j], 0) / iterations);
-    }),
-  ));
-  return mergeSimulationResults(parts);
+  const workers: Worker[] = [];
+  try {
+    const parts = await Promise.all(per.map((n, i) =>
+      runInWorker(workers, { team, notes, iterations: n, seed: baseSeed + i, options }, (pct) => {
+        pcts[i] = pct;
+        onProgress?.(pcts.reduce((acc, p, j) => acc + p * per[j], 0) / iterations);
+      }),
+    ));
+    return mergeSimulationResults(parts);
+  } catch (err) {
+    // 1 つでも失敗したら残りの Worker を止め、メインスレッドで 1 回だけやり直す
+    for (const w of workers) w.terminate();
+    console.warn('シミュレーション Worker に失敗したためメインスレッドで実行します', err);
+    return runSimulation(team, notes, iterations, onProgress, seed, options);
+  }
 }
