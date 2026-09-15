@@ -46,6 +46,49 @@ export function calcNoteScore(appeal: number, note: FlatNote): number {
   return Math.floor(perNoteBase * LIGHT_MULTIPLIER[note.group]);
 }
 
+/** ノーツ配列を (属性, 種別, グループ, 除外) の同値バケットに集約したもの。素点計算を O(バケット数) にする */
+interface NoteBucket {
+  note: FlatNote;
+  count: number;
+}
+
+// flattenNotes の結果は不変 (excluded を後から書き換える箇所はない) ので配列同一性でキャッシュできる。
+// 編成組合計算は除外パターンごとに同じ配列を使い回すため、2 回目以降はこの集約もスキップされる
+const noteBucketCache = new WeakMap<FlatNote[], NoteBucket[]>();
+
+function noteBuckets(notes: FlatNote[]): NoteBucket[] {
+  let buckets = noteBucketCache.get(notes);
+  if (buckets) return buckets;
+  const byKey = new Map<string, NoteBucket>();
+  for (const note of notes) {
+    const key = `${note.attribute}|${note.type}|${note.group}|${note.excluded ? 1 : 0}`;
+    const b = byKey.get(key);
+    if (b) b.count++;
+    else byKey.set(key, { note, count: 1 });
+  }
+  buckets = [...byKey.values()];
+  noteBucketCache.set(notes, buckets);
+  return buckets;
+}
+
+/** 全ノーツ素点合計・縮小対象 (excluded 以外) 素点合計・除外ノーツ数をバケット単位で求める */
+function sumNoteScores(
+  team: ComputedTeam,
+  notes: FlatNote[],
+  assist: boolean,
+): { baseScore: number; eligibleBaseScore: number; excludedCount: number } {
+  let baseScore = 0;
+  let eligibleBaseScore = 0;
+  let excludedCount = 0;
+  for (const { note, count } of noteBuckets(notes)) {
+    const s = calcNoteScore(getAppeal(team, note.attribute, assist), note) * count;
+    baseScore += s;
+    if (note.excluded) excludedCount += count;
+    else eligibleBaseScore += s;
+  }
+  return { baseScore, eligibleBaseScore, excludedCount };
+}
+
 /**
  * 先頭除外ノートに対応する秒数を、ノート密度一定の仮定で秒換算する。
  * 縮小スキルは先頭除外区間で発動できないため、カバー率の分母 (実効秒数) から控除する。
@@ -159,11 +202,7 @@ export function calcShrinkCoverage(
 /** スキル全不発の最低スコア */
 export function calcMinScore(team: ComputedTeam, notes: FlatNote[], options?: ScoreOptions): number {
   const assist = options?.scoreUpAssist ?? false;
-  let total = 0;
-  for (const note of notes) {
-    total += calcNoteScore(getAppeal(team, note.attribute, assist), note);
-  }
-  return applyFinalBonus(total, team, options);
+  return applyFinalBonus(sumNoteScores(team, notes, assist).baseScore, team, options);
 }
 
 /**
@@ -273,15 +312,7 @@ export function calcMaxScoreBreakdown(
   const notesCount = N;
 
   // 属性値素点(アシスト込み)と縮小対象素点(I1: excluded 除外)
-  let baseScore = 0;
-  let eligibleBaseScore = 0;
-  let excludedCount = 0;
-  for (const note of notes) {
-    const s = calcNoteScore(getAppeal(team, note.attribute, assist), note);
-    baseScore += s;
-    if (note.excluded) { excludedCount++; continue; }
-    eligibleBaseScore += s;
-  }
+  const { baseScore, eligibleBaseScore, excludedCount } = sumNoteScores(team, notes, assist);
 
   // スコアアップ理論値: カード別 floor((denom/count) × value) (H38 の B12=TRUE 形)
   let scoreUpMax = 0;
@@ -339,11 +370,8 @@ export function calcExpectedScore(
 ): ExpectedScore {
   const assist = options?.scoreUpAssist ?? false;
 
-  // 属性値による楽曲スコア（アシスト適用後の素点で合算）
-  let baseScore = 0;
-  for (const note of notes) {
-    baseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
-  }
+  // 属性値による楽曲スコア（アシスト適用後の素点で合算）と縮小対象素点 (excluded 除外、ADR 0036)
+  const { baseScore, eligibleBaseScore, excludedCount } = sumNoteScores(team, notes, assist);
 
   // スコアアップスキル期待値: カード別に (denom/count 小数のまま) × per/100 × value を
   // 計算し、カード単位で 1 回だけ floor して合算する (spec §6-6 H38 / B5)
@@ -358,13 +386,6 @@ export function calcExpectedScore(
   }
 
   // 縮小期待値: excluded ノートを除いた対象素点 × rate 加重期待カバー率 (ADR 0036)
-  const excludedCount = notes.filter(n => n.excluded).length;
-  let eligibleBaseScore = 0;
-  for (const note of notes) {
-    if (note.excluded) continue;
-    eligibleBaseScore += calcNoteScore(getAppeal(team, note.attribute, assist), note);
-  }
-
   let shrinkExpected = 0;
   const coverage = calcShrinkCoverage(team, notesCount, 0, excludedCount);
   if (coverage && coverage.effectiveSeconds > 0) {
@@ -694,17 +715,6 @@ export async function runSimulation(
     await new Promise<void>(r => { setTimeout(r, 0); });
   }
 
-  // 統計計算
-  const sorted = scores.toSorted((a, b) => a - b);
-  const sum = scores.reduce((a, b) => a + b, 0);
-  const mean = sum / scores.length;
-  const median = sorted.length % 2 === 0
-    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-    : sorted[Math.floor(sorted.length / 2)];
-  const variance = scores.reduce((acc, s) => acc + (s - mean) ** 2, 0) / scores.length;
-  const stddev = Math.sqrt(variance);
-  const p90 = sorted[Math.floor(sorted.length * 0.9)];
-
   // カードごとのスキル発動統計
   const cardStats: CardSkillStats[] = team.cards
     .filter(dc => dc.skill && dc.skill.skillType !== 'none')
@@ -724,18 +734,28 @@ export async function runSimulation(
       };
     });
 
+  return { minScore, maxScore, scores, ...summarizeScores(scores), cardStats, shrinkScores, scoreUpScores };
+}
+
+/** スコア配列から分布統計を求める (runSimulation と Worker 分割結果の合成で共用) */
+export function summarizeScores(
+  scores: number[],
+): Pick<SimulationResult, 'mean' | 'median' | 'stddev' | 'p90' | 'mcMin' | 'mcMax'> {
+  const sorted = scores.toSorted((a, b) => a - b);
+  const sum = scores.reduce((a, b) => a + b, 0);
+  const mean = sum / scores.length;
+  const median = sorted.length % 2 === 0
+    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+    : sorted[Math.floor(sorted.length / 2)];
+  const variance = scores.reduce((acc, s) => acc + (s - mean) ** 2, 0) / scores.length;
+  const stddev = Math.sqrt(variance);
+  const p90 = sorted[Math.floor(sorted.length * 0.9)];
   return {
-    minScore,
-    maxScore,
-    scores,
     mean: Math.round(mean),
     median: Math.round(median),
     stddev: Math.round(stddev),
     p90: Math.round(p90),
     mcMin: sorted[0],
     mcMax: sorted.at(-1)!,
-    cardStats,
-    shrinkScores,
-    scoreUpScores,
   };
 }

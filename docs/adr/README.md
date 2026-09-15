@@ -95,3 +95,4 @@
 | [0084](0084-event-songs-share-page.md) | イベント対象楽曲の SNS 共有ページを追加する | 承認 |
 | [0085](0085-owned-card-skill-levels.md) | 所持衣装のスキル Lv を 1 枚ごとに保存し、スコア計算・編成組合計算に反映する | 承認 |
 | [0086](0086-share-image-format-selection.md) | 共有画像の保存形式を PNG / JPG / WebP から選べるようにする | 承認 |
+| [0087](0087-score-engine-perf-js-first.md) | 計算速度の改善は Rust/wasm ではなく JS 側のアルゴリズム改善と Worker 分散で行う | 承認 |

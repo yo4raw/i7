@@ -8,7 +8,7 @@ import type { Card } from '../data/fetchCardsJson';
 import { SKILL_TYPE } from '../data/fetchCardsJson';
 import type { Song } from '../data/fetchSongsJson';
 import type { FixedBroach } from '../data/fetchFixedBroachsJson';
-import type { ScoreOptions } from './types';
+import type { FlatNote, ScoreOptions } from './types';
 import type { SkillLevel } from './deckState';
 import type { EventBonusTier } from '../data/eventBonusTiers';
 import type { RabbitNoteMap } from '../data/rabbitNote';
@@ -146,6 +146,11 @@ export interface SearchContext {
    * どちらかが有効なら非対称。所持衣装検索はプール自体が非対称なので常に false
    */
   friendSymmetric: boolean;
+  /**
+   * 先頭除外ノーツ数 → flattenNotes 結果。除外は「グループ順に先頭から totalExcluded 個」なので
+   * totalExcluded だけで一意に決まる。デッキごとの再展開を省き、simulation 側のバケット集約キャッシュも効かせる
+   */
+  notesByExclusion: Map<number, FlatNote[]>;
 }
 
 export function createSearchContext(input: SearchInput): SearchContext {
@@ -172,6 +177,7 @@ export function createSearchContext(input: SearchInput): SearchContext {
     hasFixedBroach: (c) => c.cardID !== null && fixedIds.has(c.cardID),
     posByCard: new Map(input.candidates.map((c, i) => [c, i])),
     friendSymmetric: !input.ownedOnly && !input.useOwnedBroachs && !hasRabbitNote,
+    notesByExclusion: new Map(),
   };
 }
 
@@ -525,7 +531,11 @@ export function evaluateDeck(ctx: SearchContext, deck: (Card | null)[]): DeckRec
     shared, skillLevels, input.rabbitNotes, FINDER_BROACH_OPTIONS
   );
   const exclusion = computeShrinkExclusion(team, ctx.groupSizes);
-  const notes = flattenNotes(input.song, FLATTEN_SEED, exclusion);
+  let notes = ctx.notesByExclusion.get(exclusion.totalExcluded);
+  if (!notes) {
+    notes = flattenNotes(input.song, FLATTEN_SEED, exclusion);
+    ctx.notesByExclusion.set(exclusion.totalExcluded, notes);
+  }
   const rec: DeckRecord = {
     cardIds: deck.map((c) => c!.ID!),
     score: 0,
