@@ -175,6 +175,9 @@ export function filterValidSongs(songs: Song[]): Song[] {
   return dedupeSameSong(songs.filter(s => s.category && s.artist && s.notes_count));
 }
 
+/** 曲選択ドロップダウンの先頭グループに使うイベント ID（`src/data/event-songs.json` の currentEventId） */
+export const CURRENT_EVENT_ID: number = eventSongsConfig.currentEventId;
+
 /**
  * `src/data/event-songs.json` の byEvent[eventId]（配列順を維持）。
  * eventId 省略時は currentEventId のイベント（曲選択ドロップダウンの先頭グループ用）。

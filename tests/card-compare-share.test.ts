@@ -1,48 +1,49 @@
 import { test, expect } from './helpers/fixtures';
+import { fetchEventsCsv } from '../src/lib/data/fetchEventsCsv';
+import { fetchSongsJson, filterValidSongs, getEventSongIds } from '../src/lib/data/fetchSongsJson';
 
 /** 共有パネルに載る上位件数（CompareSharePanel.svelte の TOP_N と揃える） */
 const TOP_N = 10;
 /** 共有画像が端末によらず同じになるよう固定しているパネル幅 */
 const PANEL_WIDTH = 1024;
 
-test.describe('衣装比較 SNS共有ページ', () => {
+let eventId = 0;
+let songCount = 0;
+
+test.beforeAll(async () => {
+  const [events, songs] = await Promise.all([fetchEventsCsv(), fetchSongsJson().then(filterValidSongs)]);
+  const songIds = new Set(songs.map((s) => s.id));
+  // 対象楽曲が最も多いイベントを対象にする（ADR 0090: 曲ごとに 1 枚）
+  const target = events
+    .map((ev) => ({ ev, count: getEventSongIds(ev.id).filter((id) => songIds.has(id)).length }))
+    .filter((x) => x.count > 1)
+    .toSorted((a, b) => b.count - a.count)[0];
+  if (!target) throw new Error('対象楽曲が 2 曲以上登録されたイベントが event-songs.json にありません');
+  eventId = target.ev.id;
+  songCount = target.count;
+});
+
+test.describe('イベント SNS 共有 (衣装比較)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/card-compare/share/');
+    await page.goto(`/events/${eventId}/share/card-compare/`);
+    await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
   });
 
-  test('スコアアップと判定縮小の両方が1枚のパネルに Top10 で並ぶ', async ({ page }) => {
-    await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText(`スコアアップ Top${TOP_N}`)).toBeVisible();
-    await expect(page.getByText(`判定縮小 Top${TOP_N}`)).toBeVisible();
+  test('対象楽曲ごとに 1 枚、スコアアップと判定縮小の Top10 が同じパネルに並ぶ', async ({ page }) => {
+    const panels = page.getByTestId('compare-share-panel');
+    await expect(panels).toHaveCount(songCount);
     // タブ切り替えなしで両方が同時に見えることが共有画像の前提
-    await expect(page.getByTestId('scoreup-bar')).toHaveCount(TOP_N);
-    await expect(page.getByTestId('shrink-col')).toHaveCount(TOP_N);
+    await expect(page.getByTestId('scoreup-bar')).toHaveCount(TOP_N * songCount);
+    await expect(page.getByTestId('shrink-col')).toHaveCount(TOP_N * songCount);
+    // 見出しにページ番号が出る
+    await expect(panels.first().getByRole('heading')).toContainText(`1/${songCount}`);
+    await expect(panels.last().getByRole('heading')).toContainText(`${songCount}/${songCount}`);
   });
 
-  test('パネルは幅固定で、画像ダウンロードの対象 id を持つ', async ({ page }) => {
-    const panel = page.locator('#compare-share-panel');
-    await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
-    const box = await panel.boundingBox();
+  test('パネルは幅固定で、枚数ぶんのダウンロードボタンがある', async ({ page }) => {
+    const box = await page.getByTestId('compare-share-panel').first().boundingBox();
     expect(box?.width).toBe(PANEL_WIDTH);
-    await expect(page.getByRole('button', { name: '画像をダウンロード' })).toBeVisible();
-  });
-
-  test('曲を変えるとパネルの見出しと集計が追従する', async ({ page }) => {
-    await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
-    const heading = page.locator('#compare-share-panel h2');
-    const before = await heading.innerText();
-
-    const songSelect = page.getByLabel('楽曲');
-    const current = await songSelect.inputValue();
-    const values = (await songSelect.locator('option').evaluateAll(
-      (opts) => opts.map((o) => (o as HTMLOptionElement).value),
-    )).filter((v) => v !== '');
-    const next = values.find((v) => v !== current);
-    expect(next, '切り替え先の曲が2曲目以降にあること').toBeDefined();
-    await songSelect.selectOption(next!);
-
-    await expect(heading).not.toHaveText(before, { timeout: 20000 });
-    await expect(page.getByTestId('scoreup-bar')).toHaveCount(TOP_N);
+    await expect(page.getByRole('button', { name: `画像をダウンロード（${songCount} 枚）` })).toBeVisible();
   });
 
   test('所持登録に関わらず UR 全着が母集団になる', async ({ page }) => {
@@ -50,7 +51,22 @@ test.describe('衣装比較 SNS共有ページ', () => {
     await page.reload();
     await expect(page.getByTestId('scoreup-bar').first()).toBeVisible({ timeout: 20000 });
     // 所持1着でも Top10 が埋まる（衣装比較の「所持のみ」は共有画像には効かせない）
-    await expect(page.getByTestId('scoreup-bar')).toHaveCount(TOP_N);
-    await expect(page.locator('#compare-share-panel')).toContainText(/UR 全 \d+ 着から Top10/);
+    await expect(page.getByTestId('scoreup-bar')).toHaveCount(TOP_N * songCount);
+    await expect(page.getByTestId('compare-share-panel').first()).toContainText(/UR 全 \d+ 着から Top10/);
+  });
+
+  test('ダウンロードボタンで曲数ぶんの PNG が保存される', async ({ page }) => {
+    // modern-screenshot で 1024px のパネルを曲数ぶん書き出す。並列実行で CPU が枯渇したときの最悪値（1 枚 30 秒超）に合わせる
+    test.setTimeout(300_000);
+    const downloads: string[] = [];
+    page.on('download', (d) => downloads.push(d.suggestedFilename()));
+
+    await page.getByRole('button', { name: /画像をダウンロード/ }).click();
+
+    await expect(() => expect(downloads.length).toBe(songCount)).toPass({ timeout: 280_000 });
+    expect(downloads[0]).toMatch(new RegExp(`^${eventId}_.+_衣装比較Top10_1\\.png$`));
+    for (const [i, name] of downloads.entries()) {
+      expect(name).toBe(`${downloads[0].replace(/_\d+\.png$/, '')}_${i + 1}.png`);
+    }
   });
 });

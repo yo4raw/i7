@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CardCompare from '../../components/CardCompare.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
-import { fetchSongsJson, filterValidSongs } from '../../lib/data/fetchSongsJson.ts';
+import { CURRENT_EVENT_ID, fetchSongsJson, filterValidSongs, getEventSongIds } from '../../lib/data/fetchSongsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
 import { fetchEventsCsv, toEventForBonus } from '../../lib/data/fetchEventsCsv.ts';
 import { PAGE_DESCRIPTIONS } from '../../lib/seo.ts';
@@ -18,6 +18,8 @@ const [allCards, allSongsRaw, allBroachs, allEvents] = await Promise.all([
 const allSongs = filterValidSongs(allSongsRaw);
 const eventsForBonus = allEvents.map((e) => toEventForBonus(e));
 const base = import.meta.env.BASE_URL;
+// 共有ページはイベント配下 (ADR 0090)。開催中イベントに対象楽曲が登録されているときだけリンクする
+const shareUrl = getEventSongIds().length > 0 ? `${base}events/${CURRENT_EVENT_ID}/share/card-compare/` : null;
 const breadcrumbs = [
   { name: 'ホーム', url: base },
   { name: '衣装比較', url: `${base}card-compare/` },
@@ -27,7 +29,7 @@ const breadcrumbs = [
 <BaseLayout title="衣装比較" description={PAGE_DESCRIPTIONS.cardCompare} breadcrumbs={breadcrumbs}>
   <div class="flex items-baseline justify-between gap-3 flex-wrap mb-1">
     <h1 class="text-2xl font-bold text-display">衣装比較</h1>
-    <a href={`${base}card-compare/share/`} class="text-sm underline">この結果を画像で共有</a>
+    {shareUrl && <a href={shareUrl} class="text-sm underline">この結果を画像で共有</a>}
   </div>
   <p class="text-xs text-gray-500 mb-4">
     UR 限定 / 全ノーツ Perfect 前提 / センタースキル除外 / 固有ブローチ装備込み。
