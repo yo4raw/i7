@@ -99,3 +99,4 @@
 | [0088](0088-song-image-local-fetch-script.md) | 楽曲画像の取り込みを cron が失敗するあいだはローカルスクリプトで手動実行する | 承認 |
 | [0089](0089-event-songs-share-two-per-image.md) | イベント対象楽曲の共有画像を 1 枚 2 曲に分割する | 承認 |
 | [0090](0090-event-card-compare-share-page.md) | 衣装比較の共有ページをイベント配下 (/events/{id}/share/card-compare/) へ移し、対象楽曲ぶんを一括で画像化する | 承認 |
+| [0091](0091-anniversary-member-bronze-tier.md) | グループ記念日イベントの `special3_member` に挙がるメンバー衣装を金銀でなければ銅特効として扱う | 承認 |

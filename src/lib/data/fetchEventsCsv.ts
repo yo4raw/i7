@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { EventForBonus } from './eventBonusTiers';
+import { parseBonusMembers, type EventForBonus } from './eventBonusTiers.ts';
 
 export interface EventSpecialTier {
   cardIds: number[];
@@ -157,6 +157,7 @@ export function toEventForBonus(e: EventRow): EventForBonus & { eventname: strin
     gold: e.gold.cardIds,
     silver: e.silver.cardIds,
     bronze: e.bronze.cardIds,
+    bronzeMembers: parseBonusMembers(e.special3_member),
   };
 }
 

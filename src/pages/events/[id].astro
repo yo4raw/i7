@@ -2,11 +2,11 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EventStatusBadge from '../../components/EventStatusBadge.svelte';
 import EventBonusCardGrid from '../../components/EventBonusCardGrid.svelte';
-import { fetchEventsCsv, formatEffectSummary, type EventRow, type EventSpecialTier } from '../../lib/data/fetchEventsCsv';
+import { fetchEventsCsv, formatEffectSummary, toEventForBonus, type EventRow, type EventSpecialTier } from '../../lib/data/fetchEventsCsv';
 import { fetchCardsJson, type Card } from '../../lib/data/fetchCardsJson';
 import { fetchSongsJson, filterValidSongs, getEventSongIds, type Song } from '../../lib/data/fetchSongsJson';
 import { cardThumbUrl, songImageUrl, starsText } from '../../lib/ui';
-import { isHighScoreEvent } from '../../lib/data/eventBonusTiers';
+import { buildTierMapForEvent, isHighScoreEvent, type EventBonusTier } from '../../lib/data/eventBonusTiers';
 import { formatEventPeriod, formatEventEnd, eventEndMs } from '../../lib/data/eventPeriod';
 
 export async function getStaticPaths() {
@@ -32,13 +32,17 @@ export async function getStaticPaths() {
       const picked = pick(ids);
       return urOnly ? picked.filter(c => c.rarity === 'UR') : picked;
     };
+    // special3_member（グループ記念日のメンバー衣装等）を銅に含めたティアマップから各段階の衣装を引く
+    const tierMap = buildTierMapForEvent(toEventForBonus(ev), new Map(), cards as Card[]);
+    const idsOf = (tier: EventBonusTier): number[] =>
+      [...tierMap].filter(([, t]) => t === tier).map(([id]) => id);
     return {
       params: { id: String(ev.id) },
       props: {
         event: ev,
-        goldCards: pickTier(ev.gold.cardIds),
-        silverCards: pickTier(ev.silver.cardIds),
-        bronzeCards: pickTier(ev.bronze.cardIds),
+        goldCards: pickTier(idsOf('gold')),
+        silverCards: pickTier(idsOf('silver')),
+        bronzeCards: pickTier(idsOf('bronze')),
         songs: getEventSongIds(ev.id)
           .map(id => songMap.get(id))
           .filter((s): s is Song => !!s),

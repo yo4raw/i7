@@ -3,7 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import CardCurrentBonus from '../../components/CardCurrentBonus.svelte';
 import { fetchCardsJson } from '../../lib/data/fetchCardsJson.ts';
 import { fetchFixedBroachsJson } from '../../lib/data/fetchFixedBroachsJson.ts';
-import { fetchEventsCsv } from '../../lib/data/fetchEventsCsv.ts';
+import { fetchEventsCsv, toEventForBonus } from '../../lib/data/fetchEventsCsv.ts';
+import { buildTierMapForEvent } from '../../lib/data/eventBonusTiers.ts';
 import { ATTR_HEX, RARITY_BADGE_CLASSES, ATTR_BADGE_BG, characterColor } from '../../lib/constants';
 import { ATTR_TEXT_CLASS, cardImageUrl } from '../../lib/ui';
 import { cardCreativeWorkLd } from '../../lib/seo';
@@ -16,23 +17,14 @@ export async function getStaticPaths() {
     fetchFixedBroachsJson(),
     fetchEventsCsv(),
   ]);
+  // イベントごとのティアマップ（special3_member のメンバー衣装を銅に含む）を先に作り、衣装ごとに引く
+  const tierMaps = events.map(e => buildTierMapForEvent(toEventForBonus(e), new Map(), cards as any[]));
   return (cards as any[]).map((card: any) => {
     const cardId = card.ID;
-    const relatedEvents = events
-      .filter(e =>
-        e.gold.cardIds.includes(cardId) ||
-        e.silver.cardIds.includes(cardId) ||
-        e.bronze.cardIds.includes(cardId)
-      )
-      .map(e => ({
-        id: e.id,
-        eventname: e.eventname,
-        start_date: e.start_date,
-        end_date: e.end_date,
-        tier: (e.gold.cardIds.includes(cardId)
-          ? 'gold'
-          : e.silver.cardIds.includes(cardId) ? 'silver' : 'bronze') as 'gold' | 'silver' | 'bronze',
-      }));
+    const relatedEvents = events.flatMap((e, i) => {
+      const tier = tierMaps[i].get(cardId);
+      return tier ? [{ id: e.id, eventname: e.eventname, start_date: e.start_date, end_date: e.end_date, tier }] : [];
+    });
     return {
       params: { id: String(cardId) },
       props: {

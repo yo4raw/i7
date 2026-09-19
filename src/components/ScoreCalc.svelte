@@ -61,7 +61,7 @@
     highScoreEvents.find((ev) => isEventLive(ev.start_date, ev.end_date))?.id ?? null,
   );
   const selectedEvent = $derived(highScoreEvents.find((ev) => ev.id === selectedEventId) ?? null);
-  const tierMap = $derived(selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>());
+  const tierMap = $derived(selectedEvent ? buildTierMapForEvent(selectedEvent, new Map(), allCardsState) : new Map<number, EventBonusTier>());
   function defaultTierFor(card: Card | null): EventBonusTier {
     return card?.ID !== null && card?.ID !== undefined ? (tierMap.get(card.ID) ?? 'none') : 'none';
   }

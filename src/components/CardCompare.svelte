@@ -97,7 +97,7 @@
     selectedEventId === null || selectedEventId === undefined ? null : highScoreEvents.find((e) => e.id === selectedEventId) ?? null,
   );
   const tierMap = $derived(
-    selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>(),
+    selectedEvent ? buildTierMapForEvent(selectedEvent, new Map(), allCardsState) : new Map<number, EventBonusTier>(),
   );
 
   function tierFor(card: Card): EventBonusTier {

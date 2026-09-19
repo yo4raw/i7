@@ -1,4 +1,5 @@
-import { classifyEventStatus } from './eventPeriod';
+import { classifyEventStatus } from './eventPeriod.ts';
+import type { Card } from './fetchCardsJson';
 
 export type EventBonusTier = 'none' | 'bronze' | 'silver' | 'gold';
 
@@ -34,6 +35,8 @@ export interface EventForBonus {
   gold: number[];
   silver: number[];
   bronze: number[];
+  /** special3_member 由来。ここに挙がるグループ／キャラの衣装は金銀でなければ銅（グループ記念日等） */
+  bronzeMembers?: string[];
 }
 
 export const TIER_RANK: Record<EventBonusTier, number> = { none: 0, bronze: 1, silver: 2, gold: 3 };
@@ -42,10 +45,27 @@ export function isEventLive(start_date: string, end_date: string, now: number = 
   return classifyEventStatus(start_date, end_date, now) === 'live';
 }
 
-/** 単一イベントの gold/silver/bronze を金>銀>銅優先でティアマップへ集約する（開催判定なし）。 */
+export type BonusMemberCard = Pick<Card, 'ID' | 'name' | 'groupname'>;
+
+/** イベント DB の special3_member（"TRIGGER" / "四葉環、九条天" など）をメンバー名の配列にする */
+export function parseBonusMembers(s: string | null | undefined): string[] {
+  return (s ?? '').split(/[、,]/).map(x => x.trim()).filter(Boolean);
+}
+
+/** メンバー名（グループ名 or キャラ名）に該当する衣装か。グループ衣装は name がグループ名になっている */
+export function isBonusMember(card: BonusMemberCard, members: string[]): boolean {
+  // ponytail: 表記ゆれ（ZOOL / ŹOOĻ）や「百＆千」のような合同衣装は拾わない。必要になったら名前の正規化を足す
+  return members.includes(card.name ?? '') || members.includes(card.groupname ?? '');
+}
+
+/**
+ * 単一イベントの gold/silver/bronze を金>銀>銅優先でティアマップへ集約する（開催判定なし）。
+ * bronzeMembers があれば該当する衣装を銅へ加える（金銀は上書きしない）。
+ */
 export function buildTierMapForEvent(
-  event: { gold: number[]; silver: number[]; bronze: number[] },
+  event: { gold: number[]; silver: number[]; bronze: number[]; bronzeMembers?: string[] },
   map: Map<number, EventBonusTier> = new Map(),
+  cards: BonusMemberCard[] = [],
 ): Map<number, EventBonusTier> {
   const upgrade = (id: number, tier: EventBonusTier) => {
     const cur = map.get(id) ?? 'none';
@@ -54,14 +74,23 @@ export function buildTierMapForEvent(
   for (const id of event.gold) upgrade(id, 'gold');
   for (const id of event.silver) upgrade(id, 'silver');
   for (const id of event.bronze) upgrade(id, 'bronze');
+  if (event.bronzeMembers?.length) {
+    for (const c of cards) {
+      if (c.ID !== null && isBonusMember(c, event.bronzeMembers)) upgrade(c.ID, 'bronze');
+    }
+  }
   return map;
 }
 
-export function buildLiveTierMap(events: EventForBonus[], now: number = Date.now()): Map<number, EventBonusTier> {
+export function buildLiveTierMap(
+  events: EventForBonus[],
+  now: number = Date.now(),
+  cards: BonusMemberCard[] = [],
+): Map<number, EventBonusTier> {
   const map = new Map<number, EventBonusTier>();
   for (const ev of events) {
     if (!isEventLive(ev.start_date, ev.end_date, now)) continue;
-    buildTierMapForEvent(ev, map);
+    buildTierMapForEvent(ev, map, cards);
   }
   return map;
 }

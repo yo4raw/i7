@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isEventLive, buildLiveTierMap, buildTierMapForEvent, type EventForBonus } from '../../../src/lib/data/eventBonusTiers';
+import { isEventLive, buildLiveTierMap, buildTierMapForEvent, parseBonusMembers, isBonusMember, type EventForBonus } from '../../../src/lib/data/eventBonusTiers';
 
 const T = (iso: string) => Date.parse(iso);
 
@@ -106,5 +106,52 @@ describe('buildTierMapForEvent (単一イベントの特効ティアマップ)',
   it('開催期間に関係なくマップを生成する（live 判定をしない）', () => {
     const map = buildTierMapForEvent({ gold: [7], silver: [], bronze: [] });
     expect(map.get(7)).toBe('gold');
+  });
+});
+
+describe('bronzeMembers (special3_member によるメンバー衣装の銅特効)', () => {
+  const cards = [
+    { ID: 1, name: '八乙女楽', groupname: 'TRIGGER' },
+    { ID: 2, name: '九条天', groupname: 'TRIGGER' },
+    { ID: 3, name: 'TRIGGER', groupname: null },   // グループ衣装
+    { ID: 4, name: '七瀬陸', groupname: 'IDOLiSH7' },
+    { ID: null, name: '十龍之介', groupname: 'TRIGGER' },
+  ];
+
+  it('parseBonusMembers は 、 と , で区切りトリムする', () => {
+    expect(parseBonusMembers('TRIGGER')).toEqual(['TRIGGER']);
+    expect(parseBonusMembers('四葉環、九条天')).toEqual(['四葉環', '九条天']);
+    expect(parseBonusMembers(' 百 , 千 ')).toEqual(['百', '千']);
+    expect(parseBonusMembers('')).toEqual([]);
+    expect(parseBonusMembers(null)).toEqual([]);
+  });
+
+  it('isBonusMember はグループ名・キャラ名のどちらでも一致する', () => {
+    expect(isBonusMember(cards[0], ['TRIGGER'])).toBe(true);
+    expect(isBonusMember(cards[2], ['TRIGGER'])).toBe(true);
+    expect(isBonusMember(cards[1], ['九条天'])).toBe(true);
+    expect(isBonusMember(cards[3], ['TRIGGER'])).toBe(false);
+  });
+
+  it('グループ記念日: メンバー衣装は金銀でなければ銅になる', () => {
+    const map = buildTierMapForEvent({ gold: [1], silver: [], bronze: [], bronzeMembers: ['TRIGGER'] }, new Map(), cards);
+    expect(map.get(1)).toBe('gold');
+    expect(map.get(2)).toBe('bronze');
+    expect(map.get(3)).toBe('bronze');
+    expect(map.get(4)).toBeUndefined();
+    expect(map.size).toBe(3);
+  });
+
+  it('bronzeMembers が空・未指定なら衣装リストを渡しても何も足さない', () => {
+    expect(buildTierMapForEvent({ gold: [], silver: [], bronze: [], bronzeMembers: [] }, new Map(), cards).size).toBe(0);
+    expect(buildTierMapForEvent({ gold: [], silver: [], bronze: [] }, new Map(), cards).size).toBe(0);
+  });
+
+  it('buildLiveTierMap も開催中イベントのメンバー衣装を銅にする', () => {
+    const now = T('2026-09-19T12:00:00+09:00');
+    const ev: EventForBonus = { id: 241, start_date: '2026-09-18', end_date: '2026-09-25', gold: [], silver: [2], bronze: [], bronzeMembers: ['TRIGGER'] };
+    const map = buildLiveTierMap([ev], now, cards);
+    expect(map.get(1)).toBe('bronze');
+    expect(map.get(2)).toBe('silver');
   });
 });
