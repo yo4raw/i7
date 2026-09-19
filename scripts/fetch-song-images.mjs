@@ -2,8 +2,8 @@
 /**
  * IDOLiSH7 Wiki (idolish7.miraheze.org) から不足している楽曲ジャケット画像をクローリングし、
  * Google Spreadsheet の楽曲 ID をファイル名として public/assets/songs/ に保存する。
- * 実行: node scripts/fetch-song-images.mjs
- * 頻度: GitHub Actions cron から定期実行（.github/workflows/fetch-new-songs.yml、毎時 00 分 UTC）。手動実行も可
+ * 実行: npm run fetch-songs（取得 + コミット）または node scripts/fetch-song-images.mjs（取得のみ）
+ * 頻度: 新曲が追加されたときにローカルで手動実行する。cron ワークフローは Miraheze の 403 で動かなくなったため削除済み（ADR 0092）
  */
 
 import { writeFile, mkdir } from 'node:fs/promises';
