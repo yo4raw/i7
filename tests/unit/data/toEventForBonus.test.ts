@@ -17,5 +17,11 @@ describe('toEventForBonus', () => {
     expect(out.eventtype).toBe('ハイスコアライブイベント');
     expect(out.eventname).toBe('テストイベント');
     expect(out.gold).toEqual([10]);
+    expect(out.bronzeMembers).toEqual([]);
+  });
+
+  it('special3_member をメンバー名の配列 bronzeMembers にする', () => {
+    expect(toEventForBonus(makeRow({ special3_member: 'TRIGGER' })).bronzeMembers).toEqual(['TRIGGER']);
+    expect(toEventForBonus(makeRow({ special3_member: '四葉環、九条天' })).bronzeMembers).toEqual(['四葉環', '九条天']);
   });
 });

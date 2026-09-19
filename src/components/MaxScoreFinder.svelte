@@ -140,7 +140,7 @@
 
   const selectedEvent = $derived(highScoreEvents.find((ev) => ev.id === selectedEventId) ?? null);
   const currentTierMap = $derived(
-    selectedEvent ? buildTierMapForEvent(selectedEvent) : new Map<number, EventBonusTier>(),
+    selectedEvent ? buildTierMapForEvent(selectedEvent, new Map(), allCards) : new Map<number, EventBonusTier>(),
   );
   const currentCandidates = $derived.by(() => {
     if (!selectedEvent) return [] as Card[];

@@ -15,7 +15,7 @@
   import ScoreUpChart from './compare/ScoreUpChart.svelte';
   import ShrinkChart from './compare/ShrinkChart.svelte';
   import {
-    buildTierMapForEvent, EVENT_BONUS_MULTIPLIER, isHighScoreEvent, type EventBonusTier,
+    buildTierMapForEvent, EVENT_BONUS_MULTIPLIER, isHighScoreEvent, parseBonusMembers, type EventBonusTier,
   } from '../lib/data/eventBonusTiers';
   import {
     buildCardStrengthEntry, classifyCard, compareScoreUpBy, compareShrinkBy,
@@ -61,9 +61,13 @@
 
   // 特効はこのイベント自身。ハイスコアイベント以外は特効なしで計算する（衣装比較の特効セレクトと同じ規則）
   const hasBonus = isHighScoreEvent(event.eventtype);
-  const tierMap = hasBonus
-    ? buildTierMapForEvent({ gold: event.gold.cardIds, silver: event.silver.cardIds, bronze: event.bronze.cardIds })
-    : new Map<number, EventBonusTier>();
+  const tierMap = $derived(hasBonus
+    ? buildTierMapForEvent(
+        { gold: event.gold.cardIds, silver: event.silver.cardIds, bronze: event.bronze.cardIds, bronzeMembers: parseBonusMembers(event.special3_member) },
+        new Map(),
+        allCardsState,
+      )
+    : new Map<number, EventBonusTier>());
   const tierFor = (card: Card): EventBonusTier => (card.ID === null ? 'none' : tierMap.get(card.ID) ?? 'none');
   const tierOf = (entry: CardStrengthEntry) => tierFor(entry.card);
 

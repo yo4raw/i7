@@ -26,7 +26,7 @@
   let { cards: initialCards, events, base, thumbUrl, pageSize = 100, skillTypes }: Props = $props();
 
   let allCards = $state<Card[]>(initialCards);
-  const tierMap = $derived(buildLiveTierMap(events));
+  const tierMap = $derived(buildLiveTierMap(events, Date.now(), allCards));
   const hasAnyLive = $derived(tierMap.size > 0);
 
   let text = $state('');
