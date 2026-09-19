@@ -102,9 +102,8 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 |-------------|------------|------|
 | `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規カード画像（フルサイズ + サムネイル）の前方スキャンと、既存 ID 範囲のギャップ埋め。PNG 取得後 WebP へ変換 |
 | `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
-| `fetch-new-songs.yml` | 6 時間おき (UTC 0/6/12/18 時、ADR 0076) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得し WebP へ変換 |
 
-楽曲ジャケット画像は `public/assets/songs/` に配置される（`SONG_IMAGE_BASE_URL` 経由で参照）。Wiki クローラー本体は `scripts/fetch-song-images.mjs`。外部フェッチは `scripts/lib/util.mjs` の `fetchRetry`（指数バックオフ + 連絡先入り User-Agent、非 2xx / 非 JSON も再試行）と `curl --retry` で run 内リトライする（ADR 0075）。 cron が Miraheze の 403 で失敗しているあいだは `npm run fetch-songs` でワークフローと同じ取り込みをローカル実行し、コミットしてリリースする（ADR 0088）。
+楽曲ジャケット画像は `public/assets/songs/` に配置される（`SONG_IMAGE_BASE_URL` 経由で参照）。Wiki クローラー本体は `scripts/fetch-song-images.mjs`。外部フェッチは `scripts/lib/util.mjs` の `fetchRetry`（指数バックオフ + 連絡先入り User-Agent、非 2xx / 非 JSON も再試行）と `curl --retry` で run 内リトライする（ADR 0075）。 楽曲画像の cron ワークフローは Miraheze が GitHub Actions の IP 帯を 403 で弾くため削除済み（ADR 0092）。新曲が追加されたら `npm run fetch-songs` でローカル取り込みし、コミットしてリリースする（ADR 0088）。
 
 ### Page Patterns
 
@@ -144,7 +143,7 @@ IDOLiSH7 カードデータベースの Astro 7 静的サイト（Cloudflare Wor
 | `dependabot/` | Dependabot の依存更新 | `main` | `main` | squash |
 
 - **通常の作業は `develop` から切って `develop` に PR を出す**。マージしても本番には出ない
-- **毎時のアセット自動取り込み（cron 4 本）は `main` 直行の例外**。マージ直後に `tag-release.yml` が自動採番タグ（PATCH）を打ち即デプロイされるため、`main` の不変条件は崩れない。新カード画像が 1 時間以内に本番へ出る即時性を維持するための例外
+- **毎時のアセット自動取り込み（cron 2 本）は `main` 直行の例外**。マージ直後に `tag-release.yml` が自動採番タグ（PATCH）を打ち即デプロイされるため、`main` の不変条件は崩れない。新カード画像が 1 時間以内に本番へ出る即時性を維持するための例外
 - **Dependabot の依存更新も `main` 直行**（ADR 0061）。`.github/dependabot.yml` の `target-branch: main` で指定している。CI が通ったら `main` へマージし、そのままリリースされる（MINOR が上がる）。`develop` に溜めると PR 同士で `package-lock.json` が衝突し、リベースが必要になるため
 - **`main` への push は `sync-main-to-develop.yml` が `develop` へ自動 back-merge する**。これにより「`main` は常に `develop` の祖先」が保たれ、リリースが fast-forward で通る
 - **`release/*` ブランチは作らない**。`main` にブランチ保護は設定していない

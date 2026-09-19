@@ -91,18 +91,16 @@ Cloudflare Workers (Static Assets) にデプロイしています（公開 URL: 
 | ワークフロー | スケジュール | 内容 |
 |-------------|-------------|------|
 | `fetch-new-cards.yml` | 毎時 00 分 (UTC) | 新規衣装画像（フルサイズ + サムネイル）の前方スキャン + ギャップ埋め |
-| `fetch-gap-cards.yml` | 毎時 00 分 (UTC) | 衣装 ID ギャップの補完 |
 | `fetch-event-db.yml` | 毎時 00 分 (UTC) | イベント DB CSV を `public/events/events.csv` に取得 |
-| `fetch-new-songs.yml` | 6 時間おき (UTC 0/6/12/18 時) | IDOLiSH7 Wiki から不足楽曲ジャケット画像を取得 |
 
 取り込んだアセットは `main` へ自動マージされ、パッチ版タグが自動採番されて本番へ反映されます（新規衣装が 1 時間以内にサイトへ出ます）。画像は取得時に WebP へ変換されます（[ADR 0033](docs/adr/0033-webp-image-format.md)）。
 
 ### 楽曲ジャケット画像をローカルで取り込む
 
-Miraheze（IDOLiSH7 Wiki）が GitHub Actions の IP 帯を 403 で弾いて `fetch-new-songs.yml` が失敗するあいだは、同じ取り込みをローカルで実行します（[ADR 0088](docs/adr/0088-song-image-local-fetch-script.md)）:
+楽曲ジャケット画像は cron では取得しません。Miraheze（IDOLiSH7 Wiki）が GitHub Actions の IP 帯を 403 で弾くため、cron ワークフローは削除し、新曲が追加されたときにローカルで取り込みます（[ADR 0088](docs/adr/0088-song-image-local-fetch-script.md) / [ADR 0092](docs/adr/0092-remove-song-fetch-workflow.md)）:
 
 ```bash
-npm run fetch-songs      # 不足画像を取得し、新規があれば cron と同じ件名でコミットまで行う
+npm run fetch-songs      # 不足画像を取得し、新規があれば衣装画像 cron と同じ形式の件名でコミットまで行う
 ```
 
 - 中身は `scripts/fetch-song-images-local.sh` → クローラー本体 `scripts/fetch-song-images.mjs`。スプレッドシートの楽曲一覧と `public/assets/songs/` を突き合わせ、不足している曲だけ Wiki から取得して WebP に変換します
