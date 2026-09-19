@@ -1,0 +1,88 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import CompareSharePanel from '../../../../components/CompareSharePanel.svelte';
+import { formatEventEnd } from '../../../../lib/data/eventPeriod';
+import { fetchEventsCsv, type EventRow } from '../../../../lib/data/fetchEventsCsv';
+import { fetchCardsJson, type Card } from '../../../../lib/data/fetchCardsJson';
+import { fetchFixedBroachsJson, type FixedBroach } from '../../../../lib/data/fetchFixedBroachsJson';
+import { fetchSongsJson, filterValidSongs, getEventSongIds, type Song } from '../../../../lib/data/fetchSongsJson';
+import { songImageUrl } from '../../../../lib/ui';
+
+export async function getStaticPaths() {
+  const [events, songs, cards, broachs] = await Promise.all([
+    fetchEventsCsv(),
+    fetchSongsJson().then(filterValidSongs),
+    fetchCardsJson(),
+    fetchFixedBroachsJson(),
+  ]);
+  const songMap = new Map<number, Song>();
+  for (const s of songs as Song[]) {
+    if (s.id !== null) songMap.set(s.id, s);
+  }
+  // 母集団は UR 全着 (ADR 0074)。全レアリティを埋め込むとページ 1 枚が 2MB 超になるため UR に絞る (ADR 0090)
+  const urCards = (cards as Card[]).filter(c => c.rarity === 'UR');
+
+  return (events as EventRow[])
+    .map(ev => ({
+      ev,
+      songs: getEventSongIds(ev.id)
+        .map(id => songMap.get(id))
+        .filter((s): s is Song => !!s),
+    }))
+    .filter(({ songs: list }) => list.length > 0)
+    .map(({ ev, songs: list }) => ({
+      params: { id: String(ev.id) },
+      props: { event: ev, songs: list, cards: urCards, broachs },
+    }));
+}
+
+interface Props {
+  event: EventRow;
+  songs: Song[];
+  cards: Card[];
+  broachs: FixedBroach[];
+}
+
+const { event, songs, cards, broachs } = Astro.props as Props;
+const base = import.meta.env.BASE_URL;
+
+const songNames = songs.map(s => s.song_name).filter(Boolean).slice(0, 3).join('・');
+const description = `${event.eventname}（${event.eventtype}）の対象楽曲ごとにスコアアップ・判定縮小の上位10着をまとめた画像（SNS共有用）。${event.start_date}〜${formatEventEnd(event.end_date)}${songNames ? ` 対象楽曲: ${songNames}` : ''}`;
+const firstSongId = songs[0]?.id;
+const ogImage = typeof firstSongId === 'number' ? songImageUrl(firstSongId) : undefined;
+
+// ダウンロード画像のファイル名（拡張子なし）。ファイル名に使えない文字を除去
+const safeName = event.eventname.replaceAll(/[\\/:*?"<>|]/g, '').replaceAll(/\s+/g, '_');
+const shareFilename = `${event.id}_${safeName}_衣装比較Top10`;
+
+const breadcrumbs = [
+  { name: 'ホーム', url: base },
+  { name: 'イベント情報', url: `${base}events/` },
+  { name: event.eventname, url: `${base}events/${event.id}/` },
+  { name: 'SNS共有 (衣装比較)', url: `${base}events/${event.id}/share/card-compare/` },
+];
+---
+
+<BaseLayout
+  noindex
+  title={`${event.eventname} 衣装比較`}
+  description={description}
+  image={ogImage}
+  ogType="article"
+  breadcrumbs={breadcrumbs}
+>
+  <h1 class="text-2xl font-bold text-display mb-1">{event.eventname} 衣装比較 SNS共有</h1>
+  <p class="text-xs text-gray-500 mb-4">
+    対象楽曲ごとに、UR 全着からスコアアップ・判定縮小それぞれの上位10着を 1 枚のパネルにまとめます。
+    <a href={`${base}card-compare/`} class="underline">衣装比較</a>と同じ計算です。
+  </p>
+
+  <CompareSharePanel
+    event={event}
+    songs={songs}
+    cards={cards}
+    broachs={broachs}
+    shareFilename={shareFilename}
+    client:only="svelte"
+  />
+</BaseLayout>
