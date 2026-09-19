@@ -18,19 +18,19 @@ interface Props {
 
 const { event, songs, shareFilename } = Astro.props as Props;
 
+/** 1 枚あたりの曲数（ADR 0089）。tests/event-share.test.ts の SONGS_PER_IMAGE と揃える */
+const SONGS_PER_IMAGE = 2;
+
 // 最短曲（秒数が最小の曲）。同秒の曲が複数あればすべてに付ける
 const durations = songs.map(s => s.duration).filter((d): d is number => typeof d === 'number' && d > 0);
 const minDuration = durations.length > 0 ? Math.min(...durations) : null;
 
-// 1 曲 = 1 パネル = 1 枚の PNG
-const panels = songs.map((song, i) => {
+const rows = songs.map(song => {
   const sr = song.shout_ratio || 0;
   const br = song.beat_ratio || 0;
   const mr = song.melody_ratio || 0;
   const total = sr + br + mr;
   return {
-    id: `share-panel-${i}`,
-    suffix: `_${i + 1}`,
     song,
     ratios: total > 0
       ? ([
@@ -44,11 +44,19 @@ const panels = songs.map((song, i) => {
     isShortest: minDuration !== null && song.duration === minDuration,
   };
 });
+
+// 2 曲 = 1 パネル = 1 枚の画像。端数の最後の 1 枚は 1 曲だけ
+const panels = Array.from({ length: Math.ceil(rows.length / SONGS_PER_IMAGE) }, (_, i) => ({
+  id: `share-panel-${i}`,
+  suffix: `_${i + 1}`,
+  page: i + 1,
+  rows: rows.slice(i * SONGS_PER_IMAGE, (i + 1) * SONGS_PER_IMAGE),
+}));
 ---
 
 <div class="mb-3 flex items-center justify-between gap-3 flex-wrap max-w-3xl">
   <p class="text-sm text-gray-600">
-    下の枠をスクリーンショット、または右のボタンで画像保存して SNS でシェアできます。1 曲につき 1 枚、全 {panels.length} 枚に分けて保存します。
+    下の枠をスクリーンショット、または右のボタンで画像保存して SNS でシェアできます。{SONGS_PER_IMAGE} 曲につき 1 枚、全 {panels.length} 枚に分けて保存します。
   </p>
   <EventShareImage
     filename={shareFilename}
@@ -65,7 +73,7 @@ const panels = songs.map((song, i) => {
       <div class="bg-chrome-ink text-white px-4 py-3">
         <div class="flex items-baseline justify-between gap-2 flex-wrap">
           <!-- whitespace-nowrap: modern-screenshot が幅を小数 3 桁に丸めて固定するため、見出しが 1 行ぶんの高さのまま折り返して下の行に重なる。折り返し自体を禁止する -->
-          <h2 class="text-lg sm:text-xl font-bold leading-snug whitespace-nowrap">{event.eventname}<span class="ml-2 text-sm font-semibold text-gray-300">対象楽曲</span></h2>
+          <h2 class="text-lg sm:text-xl font-bold leading-snug whitespace-nowrap">{event.eventname}<span class="ml-2 text-sm font-semibold text-gray-300">対象楽曲{panels.length > 1 ? ` ${panel.page}/${panels.length}` : ''}</span></h2>
           <span class="text-xs font-semibold text-gray-300 whitespace-nowrap">{SITE_NAME}</span>
         </div>
         <div class="mt-1 text-xs text-gray-300 space-x-2">
@@ -75,55 +83,59 @@ const panels = songs.map((song, i) => {
         </div>
       </div>
 
-      <div class="p-4 flex gap-4">
-        <!-- ジャケット + 曲情報 -->
-        <div class="w-44 shrink-0">
-          <div class="relative">
-            <img
-              src={songImageUrl(panel.song.id!)}
-              alt={panel.song.song_name || ''}
-              width="200"
-              height="200"
-              class="w-full aspect-square object-cover rounded-lg bg-gray-100"
-            />
-            {panel.isShortest && (
-              <span class="absolute top-1.5 left-1.5 rounded-md bg-chrome-ink px-2 py-1 text-xs font-bold text-white shadow-md">最短曲</span>
+      <div class="divide-y divide-gray-200">
+        {panel.rows.map(row => (
+          <div data-testid="share-song" class="p-4 flex gap-4">
+            <!-- ジャケット + 曲情報 -->
+            <div class="w-44 shrink-0">
+              <div class="relative">
+                <img
+                  src={songImageUrl(row.song.id!)}
+                  alt={row.song.song_name || ''}
+                  width="200"
+                  height="200"
+                  class="w-full aspect-square object-cover rounded-lg bg-gray-100"
+                />
+                {row.isShortest && (
+                  <span class="absolute top-1.5 left-1.5 rounded-md bg-chrome-ink px-2 py-1 text-xs font-bold text-white shadow-md">最短曲</span>
+                )}
+              </div>
+              <p class="mt-2 text-base font-bold leading-snug text-gray-900">{row.song.song_name}</p>
+              <p class="text-xs text-gray-600">{row.song.artist}</p>
+              <p class="mt-1 text-xs text-gray-600 tabular-nums">
+                {row.song.difficulty}{row.song.stars ? ` ${starsText(row.song.stars)}` : ''}
+              </p>
+              <p class="text-xs text-gray-600 tabular-nums">
+                {row.song.duration ?? '?'}秒 / {(row.song.notes_count ?? 0).toLocaleString()}ノーツ
+              </p>
+            </div>
+
+            <!-- 属性比率 -->
+            {row.ratios.length > 0 && (
+              <div class="w-40 shrink-0">
+                <p class="text-xs font-semibold text-gray-500 mb-2">属性比率</p>
+                <div class="size-24 mx-auto" set:html={row.donutHtml} />
+                <div class="mt-2 space-y-1">
+                  {row.ratios.map(r => (
+                    <div class="flex items-center gap-2">
+                      <span class={`size-2.5 rounded-full inline-block ${ATTR_BADGE_BG[r.attr]}`}></span>
+                      <span class="text-xs font-medium w-14">{r.attr}</span>
+                      <span class="text-xs tabular-nums">{r.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <!-- 共通ブローチ スコア寄与 -->
+            {row.ranking.length > 0 && (
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-gray-500 mb-2">共通ブローチ スコア寄与 TOP{row.ranking.length}</p>
+                <BroachRankingChart ranking={row.ranking} />
+              </div>
             )}
           </div>
-          <p class="mt-2 text-base font-bold leading-snug text-gray-900">{panel.song.song_name}</p>
-          <p class="text-xs text-gray-600">{panel.song.artist}</p>
-          <p class="mt-1 text-xs text-gray-600 tabular-nums">
-            {panel.song.difficulty}{panel.song.stars ? ` ${starsText(panel.song.stars)}` : ''}
-          </p>
-          <p class="text-xs text-gray-600 tabular-nums">
-            {panel.song.duration ?? '?'}秒 / {(panel.song.notes_count ?? 0).toLocaleString()}ノーツ
-          </p>
-        </div>
-
-        <!-- 属性比率 -->
-        {panel.ratios.length > 0 && (
-          <div class="w-40 shrink-0">
-            <p class="text-xs font-semibold text-gray-500 mb-2">属性比率</p>
-            <div class="size-24 mx-auto" set:html={panel.donutHtml} />
-            <div class="mt-2 space-y-1">
-              {panel.ratios.map(r => (
-                <div class="flex items-center gap-2">
-                  <span class={`size-2.5 rounded-full inline-block ${ATTR_BADGE_BG[r.attr]}`}></span>
-                  <span class="text-xs font-medium w-14">{r.attr}</span>
-                  <span class="text-xs tabular-nums">{r.pct}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <!-- 共通ブローチ スコア寄与 -->
-        {panel.ranking.length > 0 && (
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-gray-500 mb-2">共通ブローチ スコア寄与 TOP{panel.ranking.length}</p>
-            <BroachRankingChart ranking={panel.ranking} />
-          </div>
-        )}
+        ))}
       </div>
     </div>
   ))}

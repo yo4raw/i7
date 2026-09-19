@@ -6,6 +6,8 @@ import { fetchSongsJson, filterValidSongs, getEventSongIds } from '../src/lib/da
 const BASE = '';
 /** 1 枚あたりの掲載数（横 8 × 縦 2）。EventSharePanel.astro と揃える */
 const PER_IMAGE = 16;
+/** 対象楽曲の共有画像 1 枚あたりの曲数。EventSongSharePanel.astro と揃える（ADR 0089） */
+const SONGS_PER_IMAGE = 2;
 
 let eventId = 0;
 let expectedPanels = 0;
@@ -118,8 +120,22 @@ test.describe('イベント SNS 共有 (対象楽曲)', () => {
     await page.goto(`${BASE}/events/${songEventId}/share/songs/`);
   });
 
-  test('1 曲 1 枚のパネルになる', async ({ page }) => {
-    await expect(page.locator('[id^="share-panel-"]')).toHaveCount(songCount);
+  test('2 曲 1 枚のパネルに分割される', async ({ page }) => {
+    const expected = Math.ceil(songCount / SONGS_PER_IMAGE);
+    const panels = page.locator('[id^="share-panel-"]');
+    await expect(panels).toHaveCount(expected);
+
+    // 全曲が漏れなく載り、どのパネルも 2 曲以下。最後の 1 枚以外は 2 曲ちょうど
+    const counts = await panels.evaluateAll((els) =>
+      els.map((el) => el.querySelectorAll('[data-testid="share-song"]').length)
+    );
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(songCount);
+    for (const [i, n] of counts.entries()) {
+      expect(n).toBe(i < counts.length - 1 ? SONGS_PER_IMAGE : songCount - SONGS_PER_IMAGE * i);
+    }
+
+    // 見出しにページ番号が出る
+    await expect(panels.first().getByRole('heading')).toContainText(`1/${expected}`);
   });
 
   test('最短の曲にだけ「最短曲」バッジが付く', async ({ page }) => {
@@ -128,14 +144,15 @@ test.describe('イベント SNS 共有 (対象楽曲)', () => {
     expect(shortestCount).toBeLessThan(songCount);
   });
 
-  test('ダウンロードボタンで曲数ぶんの PNG が保存される', async ({ page }) => {
+  test('ダウンロードボタンでパネル枚数ぶんの PNG が保存される', async ({ page }) => {
     test.slow(); // modern-screenshot で複数枚を書き出すため時間がかかる
     const downloads: string[] = [];
     page.on('download', (d) => downloads.push(d.suggestedFilename()));
 
     await page.getByRole('button', { name: /画像をダウンロード/ }).click();
 
-    await expect(() => expect(downloads.length).toBe(songCount)).toPass({ timeout: 120_000 });
+    const expected = Math.ceil(songCount / SONGS_PER_IMAGE);
+    await expect(() => expect(downloads.length).toBe(expected)).toPass({ timeout: 120_000 });
     for (const [i, name] of downloads.entries()) {
       expect(name).toBe(`${downloads[0].replace(/_\d+\.png$/, '')}_${i + 1}.png`);
     }
