@@ -16,6 +16,7 @@
     "lint:fix": "oxlint --fix",
     "extract-fixtures": "node scripts/extract-test-fixtures.ts",
     "extract-point-calc-golden": "node scripts/extract-point-calc-golden.mjs",
+    "fetch-songs": "bash scripts/fetch-song-images-local.sh",
     "prepare": "git config core.hooksPath .husky"
   },
   "dependencies": {
