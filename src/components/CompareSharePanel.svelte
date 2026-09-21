@@ -8,7 +8,6 @@
   import { fetchFixedBroachsJson } from '../lib/data/fetchFixedBroachsJson';
   // 型だけを取り込む。fetchEventsCsv は node:fs を使うため実行時 import はクライアントで動かない
   import type { EventRow } from '../lib/data/fetchEventsCsv';
-  import { formatEventPeriod } from '../lib/data/eventPeriod';
   import { refreshData } from '../lib/data/clientRefresh';
   import SongAttrRatio from './SongAttrRatio.svelte';
   import EventShareImage from './EventShareImage.svelte';
@@ -21,7 +20,7 @@
     buildCardStrengthEntry, classifyCard, compareScoreUpBy, compareShrinkBy,
     type CardStrengthEntry,
   } from '../lib/score/cardStrength';
-  import { SITE_NAME } from '../lib/constants';
+  import { songImageUrl, starsText } from '../lib/ui';
 
   type Props = {
     event: EventRow;
@@ -35,8 +34,9 @@
   };
   let { event, songs: initialSongs, cards: initialCards, broachs: initialBroachs, shareFilename }: Props = $props();
 
-  /** 共有パネルに載せる上位件数 */
-  const TOP_N = 10;
+  /** 共有パネルに載せる上位件数（ADR 0093: スコアアップは 15、判定縮小は 10） */
+  const SCORE_UP_TOP_N = 15;
+  const SHRINK_TOP_N = 10;
   /** 並び順は衣装比較の既定と揃える（スコアアップ = 期待スコア合計 / 判定縮小 = 属性値由来スコア） */
   const SCORE_UP_SORT = 'expected' as const;
   const SHRINK_SORT = 'attr' as const;
@@ -82,9 +82,8 @@
         suffix: `_${i + 1}`,
         page: i + 1,
         song,
-        total: entries.length,
-        topScoreUp: entries.filter((e) => classifyCard(e.card) === 'scoreUp').toSorted(compareScoreUpBy(SCORE_UP_SORT)).slice(0, TOP_N),
-        topShrink: entries.filter((e) => classifyCard(e.card) === 'shrink').toSorted(compareShrinkBy(SHRINK_SORT)).slice(0, TOP_N),
+        topScoreUp: entries.filter((e) => classifyCard(e.card) === 'scoreUp').toSorted(compareScoreUpBy(SCORE_UP_SORT)).slice(0, SCORE_UP_TOP_N),
+        topShrink: entries.filter((e) => classifyCard(e.card) === 'shrink').toSorted(compareShrinkBy(SHRINK_SORT)).slice(0, SHRINK_TOP_N),
       };
     }),
   );
@@ -101,36 +100,37 @@
 <div class="overflow-x-auto pb-2 space-y-4">
   {#each panels as panel (panel.id)}
     <div id={panel.id} data-testid="compare-share-panel" class="w-[1024px] shrink-0 rounded-xl border border-gray-200 shadow-lg overflow-hidden bg-white">
-      <div class="bg-chrome-ink text-white px-4 py-3">
-        <div class="flex items-baseline justify-between gap-2 flex-wrap">
-          <!-- whitespace-nowrap: modern-screenshot が幅を小数 3 桁に丸めて固定するため、見出しが 1 行ぶんの高さのまま折り返して下の行に重なる。折り返し自体を禁止する -->
-          <h2 class="text-lg font-bold leading-snug whitespace-nowrap">
-            {event.eventname}
-            <span class="ml-2 text-sm font-semibold text-gray-300">衣装比較 Top{TOP_N}{panels.length > 1 ? ` ${panel.page}/${panels.length}` : ''}</span>
-          </h2>
-          <span class="text-xs font-semibold text-gray-300 whitespace-nowrap">{SITE_NAME}</span>
-        </div>
-        <div class="mt-1 flex items-baseline gap-x-2 flex-wrap">
-          <span class="text-base font-bold leading-snug">{panel.song.song_name}</span>
-          <span class="text-sm font-semibold text-gray-300">{panel.song.difficulty || ''}</span>
-          <span class="text-xs text-gray-300 tabular-nums">/ {panel.song.duration || '?'}秒 / {panel.song.notes_count || '?'}ノーツ</span>
-          <span class="text-xs text-gray-300">/ UR 全 {panel.total} 着から Top{TOP_N}</span>
-          <span class="text-xs text-gray-300">/ {hasBonus ? `特効 ${event.eventname}` : '特効なし'}</span>
-        </div>
-        <div class="mt-1 text-xs text-gray-300 space-x-2">
-          <span>{event.eventtype}</span>
-          <span>/</span>
-          <span>{formatEventPeriod(event.start_date, event.end_date)}</span>
-        </div>
+      <!-- ヘッダー帯はイベント名 + ページ番号の 1 行だけ (ADR 0093)。サイト名・種別・期間・特効・母集団は載せない -->
+      <div class="bg-chrome-ink text-white px-4 py-1.5">
+        <!-- whitespace-nowrap: modern-screenshot が幅を小数 3 桁に丸めて固定するため、見出しが 1 行ぶんの高さのまま折り返して下の行に重なる。折り返し自体を禁止する -->
+        <h2 class="text-base font-bold leading-snug whitespace-nowrap">
+          {event.eventname}
+          <span class="ml-2 text-sm font-semibold text-gray-300">衣装比較{panels.length > 1 ? ` ${panel.page}/${panels.length}` : ''}</span>
+        </h2>
       </div>
 
-      <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
-        <SongAttrRatio song={panel.song} />
+      <!-- 曲行: ジャケット + 曲情報 + 属性比率 -->
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-4">
+        <img
+          src={songImageUrl(panel.song.id ?? '')}
+          alt={panel.song.song_name || ''}
+          width="112"
+          height="112"
+          class="size-28 shrink-0 object-cover rounded-lg bg-gray-100"
+          data-testid="share-song-jacket"
+        />
+        <div class="min-w-0 flex-1">
+          <p class="text-2xl font-bold leading-snug text-gray-900 truncate">{panel.song.song_name}</p>
+          <p class="mt-1 text-sm text-gray-600 tabular-nums">
+            {panel.song.difficulty || ''}{panel.song.stars ? ` ${starsText(panel.song.stars)}` : ''} / {panel.song.duration || '?'}秒 / {panel.song.notes_count || '?'}ノーツ
+          </p>
+          <div class="mt-2"><SongAttrRatio song={panel.song} sizeClass="size-12 flex-shrink-0" /></div>
+        </div>
       </div>
 
       <section class="pt-3">
         <div class="flex items-center gap-2 px-3">
-          <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold whitespace-nowrap bg-chrome-ink text-white">スコアアップ Top{TOP_N}</span>
+          <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold whitespace-nowrap bg-chrome-ink text-white">スコアアップ Top{SCORE_UP_TOP_N}</span>
           <span class="text-xs text-gray-500">期待スコア合計の降順</span>
         </div>
         <ScoreUpChart entries={panel.topScoreUp} {tierOf} sortKey={SCORE_UP_SORT} compact />
@@ -138,7 +138,7 @@
 
       <section class="pt-2 border-t border-gray-200">
         <div class="flex items-center gap-2 px-3 pt-2">
-          <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold whitespace-nowrap bg-chrome-ink text-white">判定縮小 Top{TOP_N}</span>
+          <span class="inline-block px-3 py-0.5 rounded-full text-sm font-bold whitespace-nowrap bg-chrome-ink text-white">判定縮小 Top{SHRINK_TOP_N}</span>
           <span class="text-xs text-gray-500">属性値由来スコアの降順</span>
         </div>
         <ShrinkChart entries={panel.topShrink} {tierOf} sortKey={SHRINK_SORT} songDuration={panel.song.duration || 0} compact />

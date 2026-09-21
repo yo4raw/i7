@@ -15,7 +15,7 @@
     sortKey: ScoreUpSortKey;
     /**
      * 共有画像向けの表示。横スクロールとタップ選択を無効化し、サムネを大きくする。
-     * Top10 が共有パネルの固定幅 1024px に収まる列幅 (96px + gap 4px = 996px) になる。
+     * 列は流動幅 (flex-1) で、共有パネルの固定幅 1024px を件数で等分する（Top15 で約 63px。ADR 0093）。
      */
     compact?: boolean;
   };
@@ -42,16 +42,16 @@
         <button
           type="button"
           disabled={compact}
-          class="flex flex-col items-center shrink-0 {compact ? 'w-24' : 'w-16 cursor-pointer'}"
+          class="flex flex-col items-center {compact ? 'flex-1 min-w-0 px-1' : 'w-16 shrink-0 cursor-pointer'}"
           data-testid="scoreup-bar"
           data-card-id={entry.card.ID ?? ''}
           title={entry.card.cardname}
           onclick={() => onToggle?.(entry)}
         >
-          <span class="text-[10px] font-bold text-gray-700 leading-tight text-center">
+          <span class="{compact ? 'text-xs' : 'text-[10px]'} font-bold text-gray-700 leading-tight text-center whitespace-nowrap">
             {formatScore(sortKey === 'max' ? entry.maxTotalScore : entry.totalScore)}
           </span>
-          <span class="flex flex-col justify-end {compact ? 'w-12' : 'w-9'}" style={`height:${CHART_HEIGHT}px`}>
+          <span class="flex flex-col justify-end {compact ? 'w-full' : 'w-9'}" style={`height:${CHART_HEIGHT}px`}>
             <!-- 上乗せ: スキル最大値 − スキル期待値（発動率による目減り分） -->
             <span class="block w-full bg-amber-200 rounded-t-sm" style={`height:${px(entry.skillMax) - px(entry.skillExpected)}px`}></span>
             <!-- 実体: スキル期待値 -->
@@ -63,19 +63,24 @@
             src={cardThumbUrl(entry.card.ID ?? '')}
             alt={entry.card.cardname || ''}
             loading="lazy"
-            class="mt-1.5 rounded border-[3px] object-cover {compact ? 'size-20' : 'size-12'}"
+            class="mt-1.5 rounded border-[3px] object-cover {compact ? 'w-full aspect-square' : 'size-12'}"
             class:ring-2={selected}
             class:ring-chrome-ink={selected}
             class:ring-offset-1={selected}
             style={`border-color:${ATTR_HEX[entry.attribute]}`}
           />
-          <!-- compact はスキル種別を省く。狭い列では「スコアアップ（タイマー）」が折り返し、
-               列の高さと下のバッジ位置が不揃いになるため。種別はセクション見出しで判別できる。 -->
-          <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
-            期待 {formatScore(entry.totalScore)}<br />
-            最大 {formatScore(entry.maxTotalScore)}
-            {#if !compact}<br />{skillTypeShortLabel(entry.skill?.originalType ?? entry.card.ap_skill_type)}{/if}
-          </span>
+          {#if compact}
+            <!-- compact はシリーズ名を 2 行固定で出し、棒の上の数値と同じ「期待」とスキル種別を省く (ADR 0093)。
+                 種別は「スコアアップ（タイマー）」が折り返して列の高さと下のバッジ位置が不揃いになるため。セクション見出しで判別できる。 -->
+            <span class="text-[10px] font-semibold text-gray-700 mt-1 leading-tight text-center line-clamp-2 min-h-[2.5em] break-words w-full" data-testid="compare-series">{entry.card.cardname}</span>
+            <span class="text-[10px] text-gray-500 leading-tight text-center whitespace-nowrap w-full">最大 {formatScore(entry.maxTotalScore)}</span>
+          {:else}
+            <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
+              期待 {formatScore(entry.totalScore)}<br />
+              最大 {formatScore(entry.maxTotalScore)}<br />
+              {skillTypeShortLabel(entry.skill?.originalType ?? entry.card.ap_skill_type)}
+            </span>
+          {/if}
           {@html bonusBadgeHtml(tierOf(entry))}
         </button>
       {/each}
