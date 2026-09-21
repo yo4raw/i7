@@ -66,12 +66,12 @@
         {@const er = expRate(entry)}
         {@const overflow = mr > 1}
         <div class="flex flex-col items-center shrink-0 {compact ? 'w-24' : 'w-20'}" data-testid="shrink-col">
-          <span class="text-[11px] font-bold text-gray-700">
+          <span class="{compact ? 'text-xs' : 'text-[11px]'} font-bold text-gray-700">
             {#if sortKey === 'attr'}{formatScore(entry.baseScore)}{:else}{pct(sortKey === 'max' ? mr : er)}{/if}
           </span>
           <span class="flex items-end justify-center gap-0.5" style={`height:${CHART_HEIGHT}px`}>
             <!-- 左: カバー率バー（2段積み） -->
-            <span class="relative flex flex-col justify-end {compact ? 'w-6' : 'w-4'}">
+            <span class="relative flex flex-col justify-end {compact ? 'w-9' : 'w-4'}">
               {#if overflow}
                 <span class="absolute -top-0.5 inset-x-0 text-center text-[9px] leading-none text-amber-600">▲</span>
               {/if}
@@ -81,7 +81,7 @@
               <span class="block w-full bg-amber-500 rounded-t-sm" style={`height:${px(er)}px`}></span>
             </span>
             <!-- 右: 属性値由来スコアバー（表示中の最大を 100% とした相対高さ） -->
-            <span class="relative flex flex-col justify-end {compact ? 'w-6' : 'w-4'}">
+            <span class="relative flex flex-col justify-end {compact ? 'w-9' : 'w-4'}">
               <span class="block w-full bg-gray-300 rounded-t-sm" style={`height:${attrPx(entry)}px`} data-testid="shrink-attr-bar"></span>
             </span>
           </span>
@@ -102,11 +102,15 @@
               class:ring-offset-1={selected}
               style={`border-color:${ATTR_HEX[entry.attribute]}`}
             />
-            <span class="text-[10px] text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
+            {#if compact}
+              <!-- compact はシリーズ名を 2 行固定で出し、棒の上の数値と同じ「属性」を省く (ADR 0093) -->
+              <span class="text-[11px] font-semibold text-gray-700 mt-1 leading-tight text-center line-clamp-2 min-h-[2.5em] break-words w-full" data-testid="compare-series">{entry.card.cardname}</span>
+            {/if}
+            <span class="{compact ? 'text-[11px]' : 'text-[10px]'} text-gray-500 mt-0.5 leading-tight text-center break-words w-full">
               最大 {pct(mr)}{compact ? '' : ` (${sec(entry.maxCoverSec)}s)`}<br />
               期待 {pct(er)}{compact ? '' : ` (${sec(entry.expectedCoverSec)}s)`}<br />
-              {condLabel(entry)} / {entry.skill?.per ?? 0}%<br />
-              属性 {formatScore(entry.baseScore)}
+              {condLabel(entry)} / {entry.skill?.per ?? 0}%
+              {#if !compact}<br />属性 {formatScore(entry.baseScore)}{/if}
             </span>
             {@html bonusBadgeHtml(tierOf(entry))}
           </button>
