@@ -150,7 +150,7 @@
   - `v` が `'あ'.repeat(15)` と `'あ'.repeat(150)` → **違反 0 件**（強制境界が 10〜200 であることを固定する。Review Focus 4）
   - `v` に `placeholder` / `TODO` / `カード画像` / `不明` / `これは?` を含む → それぞれ禁則違反
   - `v` が `'御堂虎於が黒衣を着ている'` → キャラクター名違反
-  - `v` が `'百 BND の少女が'` → **違反 0 件**（`百` を検査から除外していることの固定）
+  - `v` が `'百人の少女が'` → **違反 0 件**（`百` を検査から除外していることの固定）
   - `v` が `'千のの利用者が'` → **違反 0 件**
   - `n` が `string` なら通る（`cards` の孤児レコードが正）
   - `n` が `123`（number）→ 構造違反
@@ -381,7 +381,7 @@ ID は昇順に並べる（安定性のため）。バッチはカード 34 本�
 
 - [ ] **Step 2: 指示文 `scripts/image-alt/describe-images.md` を書く**
 
-  spec 4 章の 10 /rules をそのまま写成する。「やること / 書き方のルール / 出力形式」の 3 段構え。出力先は `tmp/image-alt/pilot.jsonl` 固定にする。Global Constraints と同じ文言を 1 か所にまとめ、Master Prompt と二重管理にしない。
+  spec 4 章の 10 ルールをそのまま写成する。「やること / 書き方のルール / 出力形式」の 3 段構え。**書き出し先のパスはこのファイルに書かない**（Task 7 は 1 本ごとに違うパスを渡すが、パイロットは `tmp/image-alt/pilot.jsonl`）。書き出し先は常に dispatch が `## 今回の担当` で指定する。Global Constraints と同じ文言を 1 か所にまとめ、Master Prompt と二重管理にしない。
 
 - [ ] **Step 3: sub-agent 1 本をパイロットとして走らせる** — `tmp/image-alt/pilot.jsonl` に書き出させる
 
@@ -429,7 +429,7 @@ ID は昇順に並べる（安定性のため）。バッチはカード 34 本�
   | 4 | batch-24 … batch-31 | 8 |
   | 5 | batch-32 … batch-35 | 4 |
 
-  各 sub-agent へ渡すプロンプトは次の形（`tmp/image-alt/batches.json` の当該バッチの `items` をそのまま JSON 化して貼る）:
+  各 sub-agent へ渡すプロンプトは次の形（`tmp/image-alt/batches.json` の当該バッチの `items` を**そのまま** JSON 化して貼る。`ManifestItem` の 5 フィールドすべてを含める）:
 
   ````
   <scripts/image-alt/describe-images.md の全文をそのまま貼る>
@@ -439,7 +439,7 @@ ID は昇順に並べる（安定性のため）。バッチはカード 34 本�
   書き出し先: tmp/image-alt/batch-07.jsonl
   担当スライス（この 100 件だけ）:
   ```json
-  [{"kind":"card","id":"…","readPath":"…","needPrintedName":false}, …]
+  [{"kind":"card","id":"…","readPath":"…","fallbackPath":null,"needPrintedName":false}, …]
   ```
 
   全件を書き終えたら「書き終えた」とだけ報告してください。レコード本文を報告に含めないでください。
