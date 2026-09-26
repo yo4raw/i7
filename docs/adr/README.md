@@ -102,4 +102,4 @@
 | [0091](0091-anniversary-member-bronze-tier.md) | グループ記念日イベントの `special3_member` に挙がるメンバー衣装を金銀でなければ銅特効として扱う | 承認 |
 | [0092](0092-remove-song-fetch-workflow.md) | 楽曲画像の cron ワークフロー `fetch-new-songs.yml` を削除し、ローカルスクリプトによる手動取り込みに一本化する | 承認 |
 | [0093](0093-card-compare-share-dense-layout.md) | 衣装比較の共有画像を SNS の縮小表示向けに詰める（ヘッダー 1 行・ジャケット付き曲行・棒を列幅いっぱい・シリーズ名を追加） | 承認 |
-| [0094](0094-image-alt-catalog-generation.md) | 画像 alt を「識別情報 + ビジュアル描写」のカタログとして sub-agent で生成し、アプリへの結線は別タスクとする | 提案 |
+| [0094](0094-image-alt-catalog-generation.md) | 画像 alt を「識別情報 + ビジュアル描写」のカタログとして sub-agent で生成し、アプリへの結線は別タスクとする | 承認 |
