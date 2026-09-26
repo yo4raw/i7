@@ -187,15 +187,17 @@ describe('merge-visual.mjs', () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it('数値 id も、種別はファイル由来で振り分けられ、n は cards にだけ残って 2 スペースで書かれる', async () => {
+  it('レコードの kind がバッチと矛盾しても、ファイル由来で振り分けられ 2 スペースで書かれる', async () => {
     await setupWorkspace();
-    // id は数値で書く。sub-agent が `{"id":1000}` と書くことがあるため
     await writeBatch('batch-00', jsonl([
+      // id は数値で書く。sub-agent が `{"id":1000}` と書くことがあるため
       { kind: 'card', id: 1000, v: CARD_V_1000, n: 'Yuki Aoi' },
-      { kind: 'card', id: 1001, v: CARD_V_1001 },
+      // kind を書かない sub-agent を想定して `kind` ごと落とす
+      { id: 1001, v: CARD_V_1001 },
     ]));
-    // songs 側に n が混ざっていても引き継がない
-    await writeBatch('batch-01', jsonl([{ kind: 'song', id: '100', v: SONG_V_100, n: 'iam-a-song' }]));
+    // 楽曲バッチなのに kind が card。振り分けはレコードの kind ではなく、どのファイルに
+    // 由来するかで行うので songs に入る（n も songs 側なので持ち越さない）
+    await writeBatch('batch-01', jsonl([{ kind: 'card', id: '100', v: SONG_V_100, n: 'iam-a-song' }]));
 
     const { code, stdout } = await runMerge(root);
 
