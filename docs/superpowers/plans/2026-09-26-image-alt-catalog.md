@@ -193,7 +193,7 @@
 - Test: `tests/unit/scripts/buildManifest.test.ts`
 
 **Interfaces:**
-- Consumes: `scripts/lib/util.mjs` の `fetchRetry`
+- Consumes: `scripts/lib/util.mjs` の `fetchRetry`（`{ json: true }` なし — GViz は JS として返す）
 - Produces:
   ```js
   /** 純粋関数。ID 集合とシート行から Manifest とバッチ分割を作る */
@@ -237,7 +237,9 @@ ID は昇順に並べる（安定性のため）。バッチはカード 34 本�
 
 - [ ] **Step 3: `scripts/image-alt/build-manifest.mjs` を実装する**
 
-  `main()` は `fetchRetry(url, { json: true })` で GViz 応答を取り、`google.visualization.Query.setResponse(...)` を JSONP として剥がして列ラベルの配列と行の配列にする。カードは列ラベル `ID`、楽曲は `ID` / `曲名` / `アーティスト名` を読む。
+  `main()` は `fetchRetry(url)`（**`{ json: true }` は使わない**）で GViz 応答を取り、`google.visualization.Query.setResponse(...)` を JSONP として剥がして列ラベルの配列と行の配列にする。カードは列ラベル `ID`、楽曲は `ID` / `曲名` / `アーティスト名` を読む。
+
+  GViz は `content-type: application/javascript` で返すので `JSON.parse` は必ず落ちる。`{ json: true }` を付けると 4 回リトライして必ず失敗する。
 
 - [ ] **Step 4: テストが通ることを確認する**
 
