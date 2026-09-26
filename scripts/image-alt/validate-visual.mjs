@@ -2,23 +2,12 @@
  * `src/data/image-visual.json` のカタログを検査する。
  *
  * 検査の順序と境界は設計書 5 章に固定されている
- * （網羅性 → 空 v → 長さ → 禁止語 → キャラクター名混入 → 構造）。
+ * （網羅性 → 空 v → 長さ → 禁止語 → 構造）。
  * 検査対象はすべて引数で受け取る。ネットワークもファイル IO も読まない。
+ *
+ * キャラクター名は `v` の冒頭が持つ設計のため、混入検査は行わない。
+ * `百` / `千` を含む 16 名すべてを検査から外している（設計書 5.5 / ADR 0094 改訂）。
  */
-
-/**
- * `src/lib/constants.ts` の `CHARACTERS`（全 16 名）から `百` / `千` を除いた 14 名。
- * `百` / `千` は一般語彙と衝突するためこの検査から外し、手動目視で確認する（設計書 5.5）。
- * 定数をハードコードしているのは、`.mjs` から `constants.ts` を import すると
- * 素の Node 実行時に TS 依存が入るため。等価性は `tests/unit/scripts/validateVisual.test.ts` が担保する。
- */
-export const LEAK_CHECK_NAMES = [
-  '和泉一織', '二階堂大和', '和泉三月', '四葉環',
-  '逢坂壮五', '六弥ナギ', '七瀬陸',
-  '八乙女楽', '九条天', '十龍之介',
-  '亥清悠', '狗丸トウマ', '棗巳波',
-  '御堂虎於',
-];
 
 /** 禁止語。`g` を付けないのは `String#match` で状態が共有されるのを避けるため */
 const FORBIDDEN_WORDS = /TODO|placeholder|画像|不明|[?？]/;
@@ -59,11 +48,6 @@ export function validateEntry(record, kind, id) {
     const forbidden = v.match(FORBIDDEN_WORDS)?.[0];
     if (forbidden) {
       violations.push(`${prefix}: 禁止語「${forbidden}」を含んでいます`);
-    }
-
-    const leaked = LEAK_CHECK_NAMES.find((name) => v.includes(name));
-    if (leaked) {
-      violations.push(`${prefix}: キャラクター名「${leaked}」が混入しています`);
     }
   }
 

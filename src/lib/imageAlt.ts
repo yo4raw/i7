@@ -1,22 +1,25 @@
 /**
  * 画像 alt テキストの合成。
  *
- * alt は「識別情報（誰の / 何の絵か） + ビジュアル描写」の順に並べる。
- * ビジュアル描写は `src/data/image-visual.json`（sub-agent が書いた絵の中身の描写カタログ）を
- * 受け取る形で、ここでは一切読まない。値の欠けはすべて空文字として扱い、
- * 括弧や区切りの句点は中身が空なら付けない。
+ * alt は「識別情報（どのカードか / どの楽曲か） + ビジュアル描写」の順に並べる。
+ * 識別情報はカード名・レアリティ・属性・楽曲名など、シート由来の「何の絵か」の情報だけを
+ * 使う。キャラクター名はここでは足さない。`v`（ビジュアル描写）の冒頭に既にキャラクター名が
+ * 入っている前提で、単独人物のカードは `七瀬陸が…`、集合絵は `七瀬陸を含む7人が…` の形で
+ * `src/data/image-visual.json` 側が持つ。
+ *
+ * ビジュアル描写は `image-visual.json` を受け取る形で、ここでは一切読まない。
+ * 値の欠けはすべて空文字として扱い、括弧や区切りの句点は中身が空なら付けない。
  * import は葉モジュールのままにして、JSON をクライアントバンドルへ引き込まない。
  */
 
-/** `image-visual.json` の 1 件。`n` はシートに対応行が無いカードの印字名。 */
+/** `image-visual.json` の 1 件。`n` はシートに対応行が無いカードの印字名（参考用）。 */
 export interface VisualEntry {
   v?: string | null;
   n?: string | null;
 }
 
-/** `cardAlt` に渡す衣装の最小フィールド */
+/** `cardAlt` に渡す衣装の最小フィールド。`name` は alt には出さない */
 export interface CardAltSource {
-  name?: string | null;
   cardname?: string | null;
   rarity?: string | null;
   attribute?: string | null;
@@ -41,17 +44,15 @@ function withVisual(head: string, v: string): string {
 
 /**
  * カード画像の alt を合成する。
+ * キャラクター名は `v` の冒頭が持つため、ここでは「何の絵か」（カード名・レアリティ・属性）だけを出す。
  * @param card 衣装データ
  * @param entry ビジュアル描写のカタログ 1 件（無い / `v` が空でも識別情報だけの文字列を返す）
  */
 export function cardAlt(card: CardAltSource, entry?: VisualEntry | null): string {
   const v = clean(entry?.v);
-  const name = clean(card.name);
-  if (!name) return v;
-
   const cardname = clean(card.cardname);
   const spec = [clean(card.rarity), clean(card.attribute)].filter(Boolean).join('・');
-  const head = `${name}の${cardname ? `「${cardname}」` : ''}カードイラスト${spec ? `（${spec}）` : ''}`;
+  const head = `${cardname ? `「${cardname}」` : ''}カードイラスト${spec ? `（${spec}）` : ''}`;
   return withVisual(head, v);
 }
 
@@ -63,19 +64,18 @@ export function cardAlt(card: CardAltSource, entry?: VisualEntry | null): string
 export function songAlt(song: SongAltSource, entry?: VisualEntry | null): string {
   const v = clean(entry?.v);
   const artist = clean(song.artist);
-  if (!artist) return v;
-
   const songName = clean(song.song_name);
-  return withVisual(`${artist}の楽曲${songName ? `「${songName}」` : ''}ジャケット`, v);
+  return withVisual(`${artist ? `${artist}の` : ''}楽曲${songName ? `「${songName}」` : ''}ジャケット`, v);
 }
 
 /**
  * シートに対応行が無いカードの alt を合成する。
- * キャラクター名を alt に出せないため、絵に印字されていた名前（`n`）で識別する。
+ * カード名が無いため、印字名（`n`）を参考情報として前に置く。
+ * `v` の冒頭にも日本語名が入っているので、本文側では名前が繰り返される。
  * @param entry ビジュアル描写のカタログ 1 件（`n` が無ければ描写のみを返す）
  */
 export function orphanCardAlt(entry: VisualEntry): string {
   const v = clean(entry.v);
   const n = clean(entry.n);
-  return withVisual(n ? `${n}のカードイラスト` : '', v);
+  return withVisual(n ? `${n}のカードイラスト` : 'カードイラスト', v);
 }

@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CHARACTERS } from '../../../src/lib/constants';
-import {
-  LEAK_CHECK_NAMES,
-  validateCatalog,
-  validateEntry,
-} from '../../../scripts/image-alt/validate-visual.mjs';
+import { validateCatalog, validateEntry } from '../../../scripts/image-alt/validate-visual.mjs';
 
 // 生成の目標長は 40〜70 文字だが、落とすのは強制境界（10〜200 文字）の外だけ
-const OK_CARD_V = '夕暮れの屋上で、スカートの少女が持ったマフラーを風に翻されている';
+// v 冒頭は既にキャラクター名を持つ（設計書 / ADR 0094 改訂）
+const OK_CARD_V = '御堂虎於が黒い中国風ジャケット姿で赤い中国結を掲げている';
 const OK_SONG_V = '幾何学模様の背景に、重なる人物の名前が英字で添えられている';
-
-describe('LEAK_CHECK_NAMES', () => {
-  it('CHARACTERS から百と千を除いた名前と一致する', () => {
-    // CHARACTERS は全 16 名。百・千を除くと 14 名
-    const expected = CHARACTERS.filter((name) => name !== '百' && name !== '千');
-    expect(LEAK_CHECK_NAMES).toHaveLength(expected.length);
-    expect(new Set(LEAK_CHECK_NAMES)).toEqual(new Set(expected));
-  });
-});
 
 describe('validateEntry', () => {
   it('規則を守ったレコードは違反 0 件', () => {
@@ -66,18 +53,8 @@ describe('validateEntry', () => {
     expect(violations[0]).toContain('禁止語');
   });
 
-  it('キャラクター名が混入したら違反（メッセージに id を含む）', () => {
-    const violations = validateEntry({ v: '御堂虎於が黒衣を着ている' }, 'card', '1000');
-    expect(violations).toHaveLength(1);
-    expect(violations[0]).toContain('1000');
-    expect(violations[0]).toContain('御堂虎於');
-  });
-
-  it.each([
-    { label: '百', v: '百人の少女が夕暮れの坂道で笑っている' },
-    { label: '千', v: '千の利用者が屋台の前で並んでいる' },
-  ])('$label は一般語彙と衝突するためキャラクター名混入の検査から外す', ({ v }) => {
-    expect(validateEntry({ v }, 'card', '1000')).toEqual([]);
+  it('キャラクター名が含まれていても違反にしない（v 冒頭が名前を持つ設計のため）', () => {
+    expect(validateEntry({ v: '御堂虎於が黒衣を着ている' }, 'card', '1000')).toEqual([]);
   });
 
   it('n が string の孤児カードレコードは通る', () => {
