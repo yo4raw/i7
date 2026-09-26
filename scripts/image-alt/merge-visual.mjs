@@ -21,6 +21,11 @@
  *   - 数値で `id` を書く → `parseBatch` が文字列に正規化する
  *   - 1 バッチだけファイルが無い / 0 件 → `checkBatches` が入口で止める
  *
+ * 読み取れなかった画像（`note: "判読不能"`）は `note` をカタログへ持ち越す。
+ * そうしないと空 `v` が「そもそも読めなかった」のか「書き忘れた」のか区別できなくなり、
+ * ⑤ の再投一覧に載り続けて同じ空 `v` を返し続ける。`withoutUnreadableRetries` が
+ * そのエントリだけを再投一覧から抜き、他の違反はこれまでどおり落とす。
+ *
  * `IMAGE_ALT_ROOT` を指定するとリポジトリ根を差し替える（テストと pilot のフィクスチャ用）。
  * 未指定のときはこのスクリプトのあるリポジトリを使う。`public/` の元画像は読み取りのみで、
  * 書くのは `src/data/image-visual.json` だけ。
@@ -56,6 +61,7 @@ const SONG_IMAGE_DIR = 'public/assets/songs';
  * @typedef {object} CatalogEntry
  * @property {string} v
  * @property {string} [n]
+ * @property {string} [note] 読み取れなかった印。`v` が空のときにだけ入る
  */
 
 /**
@@ -134,6 +140,39 @@ export function checkBatches(batches, existsFn) {
   }
 
   return violations;
+}
+
+/**
+ * 読み取れなかったことを表す `note` の値。`describe-images.md` のルール 9 と揃える
+ * @type {string}
+ */
+export const UNREADABLE_NOTE = '判読不能';
+
+/**
+ * `validateEntry` の「空 v」違反の行頭。`${kind} ${id}: v が空です（再投の対象）`
+ * 種別と ID だけを取り出すためのもので、**再投に載せない違反はこの書式 1 種だけ**。
+ * 他の違反（長さ、禁止語、キャラクター名、構造）は `note` があっても落とす
+ */
+const EMPTY_V_VIOLATION = /^(card|song) (\d+): v が空です（再投の対象）$/;
+
+/**
+ * `note` が {@link UNREADABLE_NOTE} のエントリに付く「空 v」違反を落とす
+ *
+ * 読み直しても読めない画像を再投しても `v` は空のままで返る。一覧に出しても
+ * 読み取れなかった画像と空 `v` を区別できず、同じ ID を際限なく再投してしまう。
+ * `note` をカタログへ持ち越したうえで、ここで止める
+ * @param {string[]} violations `validateCatalog` が返した違反
+ * @param {{ cards: Record<string, { note?: string }>, songs: Record<string, { note?: string }> }} catalog
+ *   組み立て済みのカタログ。違反の `kind` に応じて `cards` / `songs` を見る
+ * @returns {string[]} `note` が `判読不能` のエントリの「空 v」違反を除いた違反
+ */
+export function withoutUnreadableRetries(violations, catalog) {
+  return violations.filter((violation) => {
+    const match = EMPTY_V_VIOLATION.exec(violation);
+    if (match === null) return true;
+    const entry = match[1] === 'card' ? catalog.cards[match[2]] : catalog.songs[match[2]];
+    return entry?.note !== UNREADABLE_NOTE;
+  });
 }
 
 /** ディレクトリ内の `<数字>.webp` から ID を採る（並びはカタログ組み立ての順に任せる） */
@@ -222,13 +261,22 @@ async function main() {
       if (scope === 'cards' && record.n !== undefined && record.n !== null) {
         entry.n = /** @type {string} */ (record.n);
       }
+      // `note` はカード / 楽曲を問わない。空 `v` の理由を読むための目印で、
+      // alt 合成（`imageAlt.ts`）は `v` と `n` しか読まないので持ち越しても害はない
+      if (typeof record.note === 'string') {
+        entry.note = record.note;
+      }
       catalog[scope][record.id] = entry;
     }
   }
   if (!fail('④ カタログの組み立て', duplicates)) return;
 
-  // ⑤ 検証（設計書 5 章）
-  if (!fail('⑤ カタログの検証', validateCatalog(catalog, { cardIds, songIds }))) return;
+  // ⑤ 検証（設計書 5 章）。`note: "判読不能"` の空 `v` だけは再投一覧に載せない
+  const violations = withoutUnreadableRetries(
+    validateCatalog(catalog, { cardIds, songIds }),
+    catalog,
+  );
+  if (!fail('⑤ カタログの検証', violations)) return;
 
   // ⑥ 書出
   const outPath = resolve(PROJECT_ROOT, OUT_PATH);
@@ -236,9 +284,19 @@ async function main() {
   await writeFile(outPath, toJson(catalog), 'utf-8');
 
   const namedCount = Object.values(catalog.cards).filter((entry) => entry.n !== undefined).length;
+  // 読み取れなかった件数は「再投しても空 `v` のまま」のもの。再投しないので残る
+  const unreadableCount = [
+    ...Object.values(catalog.cards),
+    ...Object.values(catalog.songs),
+  ].filter((entry) => entry.note === UNREADABLE_NOTE).length;
   console.log(
     JSON.stringify(
-      { cardCount: cardIds.length, songCount: songIds.length, cardWithNameCount: namedCount },
+      {
+        cardCount: cardIds.length,
+        songCount: songIds.length,
+        cardWithNameCount: namedCount,
+        unreadableCount,
+      },
       null,
       2,
     ),

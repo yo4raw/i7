@@ -5,7 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { checkBatches, parseBatch } from '../../../scripts/image-alt/merge-visual.mjs';
+import {
+  UNREADABLE_NOTE,
+  checkBatches,
+  parseBatch,
+  withoutUnreadableRetries,
+} from '../../../scripts/image-alt/merge-visual.mjs';
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(
@@ -62,6 +67,54 @@ describe('parseBatch', () => {
     expect(records).toHaveLength(1);
     expect(records[0].id).toBe('1000');
     expect(errors).toEqual([]);
+  });
+});
+
+describe('withoutUnreadableRetries', () => {
+  it('note が判読不能のエントリの「空 v」違反だけを落とす', () => {
+    const catalog = {
+      cards: { '1001': { note: UNREADABLE_NOTE } },
+      songs: {},
+    };
+
+    const violations = withoutUnreadableRetries(
+      [
+        'card 1000: v が空です（再投の対象）',
+        'card 1001: v が空です（再投の対象）',
+        'card 1002: v が 4 文字で短すぎます（10 文字未満）',
+      ],
+      catalog,
+    );
+
+    expect(violations).toEqual([
+      'card 1000: v が空です（再投の対象）',
+      'card 1002: v が 4 文字で短すぎます（10 文字未満）',
+    ]);
+  });
+
+  it('song 側の note も同じ扱いにする', () => {
+    const catalog = { cards: {}, songs: { '100': { note: UNREADABLE_NOTE } } };
+
+    expect(withoutUnreadableRetries(['song 100: v が空です（再投の対象）'], catalog)).toEqual([]);
+  });
+
+  it('判読不能のエントリでも「空 v」以外の違反は落とす（書式外レコードを隠さない）', () => {
+    const catalog = { cards: { '1001': { note: UNREADABLE_NOTE } }, songs: {} };
+
+    const violations = withoutUnreadableRetries(
+      ['card 1001: キャラクター名「御堂虎於」が混入しています'],
+      catalog,
+    );
+
+    expect(violations).toHaveLength(1);
+  });
+
+  it('note が無いエントリの「空 v」違反は落とす（書き忘れは再投する）', () => {
+    const catalog = { cards: { '1001': {} }, songs: {} };
+
+    expect(withoutUnreadableRetries(['card 1001: v が空です（再投の対象）'], catalog)).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -215,7 +268,63 @@ describe('merge-visual.mjs', () => {
         2,
       )}\n`,
     );
-    expect(JSON.parse(stdout)).toEqual({ cardCount: 2, songCount: 1, cardWithNameCount: 1 });
+    expect(JSON.parse(stdout)).toEqual({
+      cardCount: 2,
+      songCount: 1,
+      cardWithNameCount: 1,
+      unreadableCount: 0,
+    });
+  });
+
+  it('note が判読不能の空 v はカタログに残り、再投一覧に載らない（exit 0）', async () => {
+    await setupWorkspace();
+    await writeBatch('batch-00', jsonl([
+      { kind: 'card', id: 1000, v: CARD_V_1000 },
+      { kind: 'card', id: 1001, v: '', note: UNREADABLE_NOTE },
+    ]));
+    await writeBatch('batch-01', jsonl([{ kind: 'song', id: '100', v: SONG_V_100 }]));
+
+    const { code, stdout, stderr } = await runMerge(root);
+
+    expect(code).toBe(0);
+    expect(stderr).not.toContain('v が空');
+    // note を落とすと「読み取れなかった」と「書き忘れた」が読めなくなる
+    expect(JSON.parse(await readCatalog())).toEqual({
+      cards: { '1000': { v: CARD_V_1000 }, '1001': { v: '', note: UNREADABLE_NOTE } },
+      songs: { '100': { v: SONG_V_100 } },
+    });
+    expect(JSON.parse(stdout).unreadableCount).toBe(1);
+  });
+
+  it('note が無く v が空なら再投として列挙して exit≠0', async () => {
+    await setupWorkspace();
+    await writeBatch('batch-00', jsonl([
+      { kind: 'card', id: 1000, v: CARD_V_1000 },
+      { kind: 'card', id: 1001, v: '' },
+    ]));
+    await writeBatch('batch-01', jsonl([{ kind: 'song', id: '100', v: SONG_V_100 }]));
+
+    const { code, stderr } = await runMerge(root);
+
+    expect(code).not.toBe(0);
+    expect(stderr).toContain('card 1001: v が空です（再投の対象）');
+    await expect(readCatalog()).rejects.toThrow();
+  });
+
+  it('note が判読不能でも「空 v」以外の違反は落とす', async () => {
+    await setupWorkspace();
+    await writeBatch('batch-00', jsonl([
+      { kind: 'card', id: 1000, v: CARD_V_1000 },
+      // 短すぎる v を持つ判読不能レコード
+      { kind: 'card', id: 1001, v: '短い', note: UNREADABLE_NOTE },
+    ]));
+    await writeBatch('batch-01', jsonl([{ kind: 'song', id: '100', v: SONG_V_100 }]));
+
+    const { code, stderr } = await runMerge(root);
+
+    expect(code).not.toBe(0);
+    expect(stderr).toContain('card 1001');
+    await expect(readCatalog()).rejects.toThrow();
   });
 
   it('バッチのファイルが 1 本でも無ければその name を列挙して exit≠0（中途半端なカタログは書かない）', async () => {
