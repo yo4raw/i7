@@ -18,7 +18,7 @@
 - `v` は **日本語 40〜70 文字**。生成時はこの長さを指示し、検証は **10 文字未満または 200 字超**で落とす
 - `v` に **キャラクター名・カード名・レアリティ・属性・ローマ字・主観語**（`美しい` `かわいい` `かっこいい`）を書かない。識別情報は合成段で足す
 - 検証の禁則語: `TODO` / `placeholder` / `画像` / `不明` / `?` / `？`
-- キャラクター名混入検査は `CHARACTERS` を使うが、`百` と `千` は一般語彙と衝突するため**除外**する
+- キャラクター名混入検査は `CHARACTERS`（16 名）を使うが、`百` と `千` は一般語彙と衝突するため**除外**する（検査対象は 14 名）
 - 作業領域は `tmp/image-alt/` すべて（gitignore 済み）。**`public/` の元画像を書き換えてはならない**
 - アプリへの結線は行わない。`src/` の `<img>` 21 箇所は `cardname` のまま据え置き
 - `src/lib/**` は Vitest のカバレッジしきい値 95%（statements / branches / functions / lines）が課される。新しい `src/lib` モジュールには必ず対応する単体テストを置く
@@ -131,16 +131,16 @@
   export function validateEntry(record, kind, id) -> string[]
   /** カタログ全体の違反を文字列の配列で返す。違反が無ければ [] */
   export function validateCatalog(catalog, { cardIds, songIds }) -> string[]
-  /** `百` / `千` を除いた `CHARACTERS`。Task 2 のテストで src/lib/constants.ts との一致を固定する */
+  /** `CHARACTERS` 16 名から `百` / `千` を除いた 14 名。Task 2 のテストで src/lib/constants.ts との一致を固定する */
   export const LEAK_CHECK_NAMES
   ```
 
-**Notes:** `LEAK_CHECK_NAMES` はこのファイルにハードコードする（16 名）。`src/lib/constants.ts` を `.mjs` から import すると素の Node 実行時に TS 依存が入るため避け、同等性はテストで担保する。
+**Notes:** `LEAK_CHECK_NAMES` はこのファイルにハードコードする（14 名 = `CHARACTERS` 16 名 − `百` `千`）。`src/lib/constants.ts` を `.mjs` から import すると素の Node 実行時に TS 依存が入るため避け、同等性はテストで担保する。
 
 - [ ] **Step 1: 失敗するテストを書く** — `tests/unit/scripts/validateVisual.test.ts`
 
   `LEAK_CHECK_NAMES`:
-  - `src/lib/constants.ts` の `CHARACTERS` から `百` と `千` を除いた 16 名と、`set` として一致する
+  - `src/lib/constants.ts` の `CHARACTERS`（16 名）から `百` と `千` を除いた 14 名と、`set` として一致する
 
   `validateEntry`:
   - 正常なレコード → `[]`
@@ -150,9 +150,10 @@
   - `v` が `'あ'.repeat(15)` と `'あ'.repeat(150)` → **違反 0 件**（強制境界が 10〜200 であることを固定する。Review Focus 4）
   - `v` に `placeholder` / `TODO` / `カード画像` / `不明` / `これは?` を含む → それぞれ禁則違反
   - `v` が `'御堂虎於が黒衣を着ている'` → キャラクター名違反
-  - `v` が `'百人の少女が'` → **違反 0 件**（`百` を検査から除外していることの固定）
-  - `v` が `'千のの利用者が'` → **違反 0 件**
+  - `v` が `'百人の少女が夕暮れの坂道で笑っている'`（18 文字）→ **違反 0 件**（`百` を検査から除外していることの固定。10 文字未満だと長さ違反も同時に出るため、必ず 10 文字以上にする）
+  - `v` が `'千の利用者が屋台の前で並んでいる'`（16 文字）→ **違反 0 件**（同じく 10 文字以上にする）
   - `n` が `string` なら通る（`cards` の孤児レコードが正）
+  - `kind === 'song'` で `n` が入っている → 構造違反（`n` は `cards` 側だけが持つ）
   - `n` が `123`（number）→ 構造違反
 
   `validateCatalog`:
