@@ -55,6 +55,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # スプレッドシートの列構成がコードの列マッピングと一致するか検証する。
+      # 存在しない gid 指定時に GViz が先頭シートを返す仕様のため、
+      # spreadsheetId / gid のミスは列ラベルの不一致として検出できる。
+      - run: node scripts/verify-sheet-schema.mjs
       - run: npm run build
 
   lint:

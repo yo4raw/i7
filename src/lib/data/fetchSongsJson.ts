@@ -1,4 +1,4 @@
-import { SPREADSHEET_ID, extractCellValue, fetchSheetRaw, type GVizCell } from './gviz.ts';
+import { extractCellValue, fetchSheetRaw, type GVizCell } from './gviz.ts';
 import eventSongsConfig from '../../data/event-songs.json' with { type: 'json' };
 
 export interface SongNoteGroup {
@@ -47,6 +47,10 @@ export const SONG_NOTE_GROUP_KEYS = [
 ] as const;
 
 const SONGS_GID = 1083871743;
+// 楽曲マスターはカード等とは別スプレッドシートで管理されている。
+// gviz.ts の SPREADSHEET_ID（カード用）を使うと gid が別シートを指し、
+// 列がずれて壊れたデータを取り込む (2026-09 障害)。
+const SONGS_SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
 
 // フラットカラム定義 (col index → key)
 const FLAT_COLUMNS: Record<number, string> = {
@@ -205,7 +209,7 @@ export function firstEventSongId(songs: Song[]): number | null {
  * 楽曲データをGoogle Spreadsheetから取得してネスト構造のJSON配列で返す
  */
 export async function fetchSongsJson(): Promise<Song[]> {
-  const table = await fetchSheetRaw(SPREADSHEET_ID, SONGS_GID);
+  const table = await fetchSheetRaw(SONGS_SPREADSHEET_ID, SONGS_GID);
 
   return table.rows
     .map((row) => convertRow(row.c || []))

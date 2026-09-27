@@ -1,4 +1,4 @@
-import { SPREADSHEET_ID, fetchSheetAsJson } from './gviz.ts';
+import { fetchSheetAsJson } from './gviz.ts';
 
 export interface FixedBroach {
   id: number | null;
@@ -22,12 +22,17 @@ export interface FixedBroach {
 }
 
 const GID = 1087762308;
+// 固有ブローチは楽曲と同じスプレッドシート（手動管理マスター）にある。
+// gviz.ts の SPREADSHEET_ID（カード用）にはこの gid が存在せず、
+// 存在しない gid 指定時に GViz が先頭シート（衣装データ）を返すため
+// 列がずれて壊れたデータを取り込んでいた (2026-09 障害)。
+const BROACHS_SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
 
 /**
  * 固定ブローチデータをGoogle Spreadsheetから取得してJSON配列で返す
  */
 export async function fetchFixedBroachsJson(): Promise<FixedBroach[]> {
-  const rows = await fetchSheetAsJson(SPREADSHEET_ID, GID, {
+  const rows = await fetchSheetAsJson(BROACHS_SPREADSHEET_ID, GID, {
     0: 'id',              // ID → id
     1: 'card_id',         // cardID → card_id
     2: 'card_name',       // cardname → card_name
