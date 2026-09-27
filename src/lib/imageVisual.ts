@@ -2,14 +2,11 @@
  * `src/data/image-visual.json` の読み込みと lookup。
  *
  * `cardAlt` / `songAlt` / `orphanCardAlt` が必要とする `VisualEntry` を
- * `cards.<id>` / `songs.<id>` から取り出す。JSON を直接 import せず、
- * ここだけがファイルを読む。
+ * `cards.<id>` / `songs.<id>` から取り出す。JSON import なのでビルド時に
+ * バンドルされ、ランタイムでファイルを読まない。
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-const CATALOG_PATH = resolve(import.meta.dirname, '..', 'data', 'image-visual.json');
+import catalogJson from '../data/image-visual.json';
 
 export interface VisualEntry {
   v?: string | null;
@@ -21,21 +18,14 @@ interface Catalog {
   songs: Record<string, VisualEntry>;
 }
 
-let catalog: Catalog | null = null;
-
-function load(): Catalog {
-  if (!catalog) {
-    catalog = JSON.parse(readFileSync(CATALOG_PATH, 'utf-8')) as Catalog;
-  }
-  return catalog!;
-}
+const catalog: Catalog = catalogJson as Catalog;
 
 /** カード ID で `VisualEntry` を引く。見つからなければ `undefined`。 */
 export function cardVisualEntry(id: string | number): VisualEntry | undefined {
-  return load().cards[String(id)];
+  return catalog.cards[String(id)];
 }
 
 /** 楽曲 ID で `VisualEntry` を引く。見つからなければ `undefined`。 */
 export function songVisualEntry(id: string | number): VisualEntry | undefined {
-  return load().songs[String(id)];
+  return catalog.songs[String(id)];
 }

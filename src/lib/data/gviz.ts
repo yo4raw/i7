@@ -25,7 +25,7 @@ export interface GVizResponse {
   table: GVizTable;
 }
 
-export const SPREADSHEET_ID = '1UxM2ekw7KlTTbCfPFMa6ihywrUMTryP5Zrv1DVEUKy4';
+export const SPREADSHEET_ID = '1LifgqDiRlQOIhP8blqEngJhI_Nnagbo8uspwmfg72fY';
 
 /**
  * GVizセルから値を抽出する
