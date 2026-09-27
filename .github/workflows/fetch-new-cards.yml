@@ -20,7 +20,8 @@ jobs:
           # default branch が develop になっても main を見続ける。
           # PR の base だけでなく、タグ採番が参照する origin/main の解決にも効く
           # （checkout は checkout したブランチ向けに remote.origin.fetch を設定するため）。
-          ref: main
+          # refs/heads/main と明示してタグ refspec との曖昧さを回避する。
+          ref: refs/heads/main
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
